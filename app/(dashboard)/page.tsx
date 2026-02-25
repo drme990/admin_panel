@@ -89,7 +89,7 @@ export default async function DashboardPage() {
           value={stats.totalProducts}
           icon={Package}
           href="/products"
-          color="bg-primary"
+          color="bg-orange-500"
         />
         <StatCard
           title={t('stats.totalUsers')}

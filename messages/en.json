@@ -1,0 +1,449 @@
+{
+  "orders": {
+    "pageTitle": "Order History",
+    "orderDetails": "Order Details",
+    "viewDetails": "View Details",
+    "noOrders": "No orders found",
+    "total": "Total",
+    "items": "Products",
+    "customerInfo": "Customer Information",
+    "email": "Email",
+    "phone": "Phone Number",
+    "country": "Country",
+    "paymentMethod": "Payment Method",
+    "referral": "Referral",
+    "paymobInfo": "Paymob Info",
+    "filters": {
+      "all": "All",
+      "search": "Search by name, email, or order number...",
+      "status": "Status",
+      "referral": "Referral",
+      "allReferrals": "All Referrals"
+    },
+    "status": {
+      "pending": "Pending",
+      "processing": "Processing",
+      "paid": "Paid",
+      "failed": "Failed",
+      "refunded": "Refunded",
+      "cancelled": "Cancelled"
+    },
+    "table": {
+      "orderNumber": "Order Number",
+      "customer": "Customer",
+      "amount": "Amount",
+      "status": "Status",
+      "date": "Date",
+      "actions": "Actions"
+    }
+  },
+  "admin": {
+    "navigation": {
+      "dashboard": "Dashboard",
+      "products": "Products",
+      "orders": "Orders",
+      "coupons": "Coupons",
+      "countries": "Countries",
+      "users": "Users",
+      "referrals": "Referrals",
+      "paymentSettings": "Payment Settings",
+      "activityLogs": "Activity Logs"
+    },
+    "loading": "Loading dashboard...",
+    "redirecting": "Redirecting to login...",
+    "userMenu": {
+      "logout": "Logout"
+    },
+    "login": {
+      "title": "Admin Login",
+      "subtitle": "Sign in to access the admin dashboard",
+      "form": {
+        "email": "Email",
+        "password": "Password"
+      },
+      "buttons": {
+        "login": "Login",
+        "loggingIn": "Logging in..."
+      },
+      "errors": {
+        "invalidCredentials": "Invalid credentials",
+        "loginFailed": "Failed to login. Please try again.",
+        "tooManyAttempts": "Too many login attempts. Please try again later."
+      }
+    },
+    "dashboard": {
+      "title": "Dashboard",
+      "welcome": "Welcome to the admin dashboard",
+      "stats": {
+        "totalProducts": "Total Products",
+        "totalUsers": "Total Users",
+        "orders": "Orders",
+        "countries": "Countries"
+      },
+      "quickActions": {
+        "title": "Quick Actions",
+        "manageProducts": "Manage Products",
+        "manageOrders": "Manage Orders",
+        "manageCountries": "Manage Countries"
+      }
+    },
+    "products": {
+      "title": "Products",
+      "description": "Manage your products",
+      "addProduct": "Add Product",
+      "reorderButton": "Reorder Products",
+      "reorderModal": {
+        "title": "Reorder Products",
+        "description": "Use the arrows to set the display order, then save.",
+        "save": "Save Order",
+        "cancel": "Cancel"
+      },
+      "editProduct": "Edit Product",
+      "deleteConfirm": "Are you sure you want to delete this product?",
+      "deleteConfirmTitle": "Delete Product",
+      "deleteConfirmButton": "Delete",
+      "deleteCancelButton": "Cancel",
+      "emptyMessage": "No products found. Create your first product!",
+      "table": {
+        "order": "Order",
+        "image": "Image",
+        "nameAr": "Name (AR)",
+        "price": "Price",
+        "inStock": "In Stock",
+        "actions": "Actions"
+      },
+      "status": {
+        "inStock": "In Stock",
+        "outOfStock": "Out of Stock"
+      },
+      "form": {
+        "nameAr": "Name (Arabic) *",
+        "nameEn": "Name (English) *",
+        "contentAr": "Content (Arabic)",
+        "contentEn": "Content (English)",
+        "contentHelp": "Use the toolbar to format text with headings, lists, bold, colors, and more",
+        "contentPlaceholder": "Write product details here...",
+        "price": "Price *",
+        "currency": "Currency *",
+        "mainCurrency": "Main Currency",
+        "basePrice": "Base Price",
+        "currencyPrices": "Prices by Currency",
+        "autoCalculatePrices": "Auto Calculate Prices",
+        "calculating": "Calculating...",
+        "manual": "Manual",
+        "auto": "Auto",
+        "manualLocked": "Manual (locked)",
+        "autoCalculated": "Auto-calculated",
+        "loadingCurrencies": "Loading currencies...",
+        "enterBasePriceAlert": "Please enter a valid base price first",
+        "calculateFailedAlert": "Failed to calculate prices. Please try again.",
+        "manualPriceHelp": "Manual prices are set by you and won't be overwritten by auto-calculation",
+        "autoPriceHelp": "Auto prices are calculated from the base price and will update when you click \"Auto Calculate Prices\"",
+        "productImage": "Product Image",
+        "chooseImage": "Choose Image",
+        "imageHelp": "Upload up to 10 images. First image will be the main image.",
+        "inStockLabel": "In Stock",
+        "isActiveLabel": "Active (visible on site)",
+        "preview": "Preview",
+        "addedPrice": "Added Price (%)",
+        "addedPriceHelp": "Optionally add a percentage increase to all prices. For example, enter 3 to add 3% to all prices. Make sure to set the base price first.",
+        "addedPricePlaceholder": "Enter percentage (e.g., 3)",
+        "applyButton": "Apply",
+        "allowPartialPayment": "Allow Partial Payment",
+        "minimumPaymentType": "Minimum Payment Type",
+        "minimumPaymentPercentage": "Percentage",
+        "minimumPaymentFixed": "Fixed Amount",
+        "minimumPaymentValue": "Minimum Payment Value",
+        "baseMinimumPercentage": "Base Minimum (%)",
+        "baseMinimumFixed": "Base Minimum Amount",
+        "enterBaseMinimumAlert": "Please enter a valid base minimum value first",
+        "minimumPaymentsCalculated": "Minimum payments calculated successfully",
+        "autoCalculateMinimums": "Auto Calculate Minimums",
+        "currencyMinimums": "Minimum Payments by Currency",
+        "priceLabel": "Price",
+        "manualMinimumHelp": "Manual minimum payments are set by you and won't be overwritten by auto-calculation",
+        "autoMinimumHelp": "Auto minimum payments are calculated from the base value and will update when you click \"Auto Calculate Minimums\"",
+        "percentageMinimumHelp": "When using percentage type, the same percentage will apply to all currencies based on their respective prices. No currency-specific settings needed.",
+        "productImages": "Product Images",
+        "addImages": "Add Images",
+        "mainImage": "Main Image",
+        "setAsMain": "Set as main image",
+        "sizes": "Product Sizes (Optional)",
+        "sizesHelp": "Add size variants for this product. When sizes exist, each size holds its own price (the product-level price is hidden).",
+        "addSize": "Add Size",
+        "removeSize": "Remove Size",
+        "sizeNumber": "Size {number}",
+        "sizeNameAr": "Size Name (Arabic)",
+        "sizeNameEn": "Size Name (English)",
+        "sizePrice": "Size Price",
+        "sizeBasePrice": "Base Price",
+        "noSizes": "No size variants added",
+        "easykashLinks": "Easy Kash Payment Links",
+        "easykashLinksHelp": "Add direct payment links for Easy Kash. These are used when Easy Kash is the active payment method.",
+        "fullPaymentLink": "Full Payment Link",
+        "halfPaymentLink": "Half Payment Link",
+        "customPaymentLink": "Custom Payment Link",
+        "sacrificeSection": "Aqiqah / Sacrifice Settings",
+        "workAsSacrificeLabel": "Use as Sacrifice (Aqiqah/Udhiyah)",
+        "sacrificeCountLabel": "Number of Sacrifices this Product Covers",
+        "sacrificeCountHelp": "How many sacrifice slots does a single unit of this product fulfill? (e.g. 2 for a male Aqiqah)",
+        "feedsUpLabel": "Feeds Up To (people)",
+        "feedsUpHelp": "Approximate number of people this product/size feeds. Leave 0 to hide.",
+        "pricesOnSizesNote": "Prices are managed on each size below."
+      },
+      "buttons": {
+        "cancel": "Cancel",
+        "addProduct": "Add Product",
+        "updateProduct": "Update Product",
+        "uploading": "Uploading..."
+      },
+      "messages": {
+        "uploadFailed": "Failed to upload images",
+        "loadFailed": "Failed to load product",
+        "saveFailed": "Failed to save product",
+        "deleteFailed": "Failed to delete product",
+        "createSuccess": "Product created successfully",
+        "updateSuccess": "Product updated successfully",
+        "deleteSuccess": "Product deleted successfully",
+        "invalidPercentage": "Please enter a valid percentage",
+        "setPriceFirst": "Please set the base price first",
+        "priceIncreased": "Price increased by {percentage}%",
+        "minOneSize": "Product must have at least one size",
+        "imagesUploaded": "Images uploaded successfully",
+        "maxImagesReached": "Maximum number of images reached",
+        "refreshDisabled": "Page refresh is disabled while editing to prevent data loss",
+        "reorderFailed": "Failed to reorder products",
+        "reorderSuccess": "Products reordered successfully"
+      }
+    },
+    "paymentSettings": {
+      "title": "Payment Settings",
+      "description": "Choose which payment gateway to use. API credentials are configured via environment variables.",
+      "selectMethod": "Select Payment Method",
+      "paymob": "Paymob",
+      "paymobDesc": "Full checkout with quantity selection",
+      "easykash": "Easy Kash",
+      "easykashDesc": "Direct payment links without checkout",
+      "saveSettings": "Save Settings",
+      "settingsSaved": "Payment settings saved successfully"
+    },
+    "countries": {
+      "title": "Countries Management",
+      "description": "Activate or deactivate countries for the platform",
+      "searchPlaceholder": "Search countries by name, code or currency...",
+      "noResults": "No countries match your search.",
+      "emptyMessage": "No countries found. Run the seed script to populate.",
+      "loadingCountries": "Loading countries...",
+      "table": {
+        "flag": "Flag",
+        "code": "Code",
+        "nameEn": "Name (EN)",
+        "nameAr": "Name (AR)",
+        "currency": "Currency",
+        "status": "Status"
+      },
+      "status": {
+        "active": "Active",
+        "inactive": "Inactive"
+      },
+      "filter": {
+        "all": "All",
+        "active": "Active",
+        "inactive": "Inactive"
+      },
+      "messages": {
+        "saveFailed": "Failed to update country",
+        "updateSuccess": "Country updated successfully"
+      }
+    },
+    "coupons": {
+      "title": "Coupons",
+      "description": "Manage discount coupons",
+      "addCoupon": "Add Coupon",
+      "editCoupon": "Edit Coupon",
+      "deleteConfirm": "Are you sure you want to delete this coupon?",
+      "deleteConfirmTitle": "Delete Coupon",
+      "deleteButton": "Delete",
+      "emptyMessage": "No coupons found. Create your first coupon!",
+      "table": {
+        "code": "Code",
+        "type": "Type",
+        "uses": "Uses",
+        "status": "Status",
+        "validUntil": "Valid Until",
+        "actions": "Actions"
+      },
+      "status": {
+        "active": "Active",
+        "expired": "Expired",
+        "disabled": "Disabled"
+      },
+      "form": {
+        "code": "Coupon Code *",
+        "type": "Discount Type *",
+        "typePercentage": "Percentage",
+        "typeFixed": "Fixed Amount",
+        "value": "Discount Value *",
+        "validFrom": "Valid From *",
+        "validUntil": "Valid Until",
+        "maxUses": "Maximum Uses",
+        "unlimited": "Unlimited",
+        "minOrderAmount": "Minimum Order Amount",
+        "maxDiscountAmount": "Maximum Discount Amount",
+        "noLimit": "No limit",
+        "descriptionAr": "Description (Arabic)",
+        "descriptionEn": "Description (English)",
+        "status": "Status"
+      },
+      "buttons": {
+        "cancelButton": "Cancel",
+        "addCoupon": "Add Coupon",
+        "updateCoupon": "Update Coupon"
+      },
+      "messages": {
+        "saveFailed": "Failed to save coupon",
+        "deleteFailed": "Failed to delete coupon",
+        "createSuccess": "Coupon created successfully",
+        "updateSuccess": "Coupon updated successfully",
+        "deleteSuccess": "Coupon deleted successfully"
+      }
+    },
+    "users": {
+      "title": "Users",
+      "description": "Manage admin users",
+      "addUser": "Add User",
+      "editUser": "Edit User",
+      "cannotDeleteSelf": "You cannot delete your own account",
+      "cannotDeleteSuperAdmin": "Only super admins can delete super admin accounts",
+      "deleteConfirm": "Are you sure you want to delete this user?",
+      "deleteConfirmTitle": "Delete User",
+      "deleteConfirmButton": "Delete",
+      "deleteCancelButton": "Cancel",
+      "emptyMessage": "No users found",
+      "loading": "Loading...",
+      "pagesAccess": "pages access",
+      "table": {
+        "name": "Name",
+        "email": "Email",
+        "role": "Role",
+        "createdAt": "Created At",
+        "actions": "Actions"
+      },
+      "roles": {
+        "admin": "Admin",
+        "super_admin": "Super Admin"
+      },
+      "form": {
+        "name": "Name *",
+        "email": "Email *",
+        "password": "Password *",
+        "passwordOptional": "Password (leave blank to keep current)",
+        "passwordPlaceholder": "Minimum 6 characters",
+        "passwordOptionalPlaceholder": "Leave blank to keep current password",
+        "role": "Role *",
+        "allowedPages": "Allowed Pages",
+        "allowedPagesHelp": "Select which admin pages this user can access"
+      },
+      "pageLabels": {
+        "products": "Products",
+        "orders": "Orders",
+        "coupons": "Coupons",
+        "countries": "Countries",
+        "users": "Users",
+        "referrals": "Referrals",
+        "activityLogs": "Activity Logs",
+        "paymentSettings": "Payment Settings"
+      },
+      "buttons": {
+        "cancel": "Cancel",
+        "addUser": "Add User",
+        "updateUser": "Save Changes"
+      },
+      "messages": {
+        "saveFailed": "Failed to save user",
+        "cannotEditSelf": "You cannot edit your own account",
+        "deleteFailed": "Failed to delete user",
+        "createFailed": "Failed to create user",
+        "createSuccess": "User created successfully",
+        "deleteSuccess": "User deleted successfully",
+        "updateSuccess": "User updated successfully",
+        "updateFailed": "Failed to update user"
+      }
+    },
+    "referrals": {
+      "title": "Referrals",
+      "description": "Manage referral partners",
+      "addReferral": "Add Referral",
+      "editReferral": "Edit Referral",
+      "deleteConfirm": "Are you sure you want to delete this referral?",
+      "deleteConfirmTitle": "Delete Referral",
+      "deleteButton": "Delete",
+      "cancelButton": "Cancel",
+      "searchPlaceholder": "Search by name, ID, or phone...",
+      "emptyMessage": "No referrals found. Create your first referral!",
+      "table": {
+        "name": "Name",
+        "referralId": "Referral ID",
+        "phone": "Phone",
+        "createdAt": "Created At",
+        "actions": "Actions"
+      },
+      "form": {
+        "name": "Name *",
+        "namePlaceholder": "Enter referral name",
+        "referralId": "Referral ID *",
+        "referralIdPlaceholder": "Enter unique referral ID",
+        "phone": "Phone Number *",
+        "phonePlaceholder": "+966XXXXXXXXX"
+      },
+      "buttons": {
+        "cancel": "Cancel",
+        "addReferral": "Add Referral",
+        "updateReferral": "Update Referral"
+      },
+      "messages": {
+        "saveFailed": "Failed to save referral",
+        "deleteFailed": "Failed to delete referral",
+        "createSuccess": "Referral created successfully",
+        "updateSuccess": "Referral updated successfully",
+        "deleteSuccess": "Referral deleted successfully"
+      }
+    },
+    "logs": {
+      "title": "Activity Logs",
+      "description": "Track admin activities and changes",
+      "refresh": "Refresh",
+      "emptyMessage": "No activity logs found",
+      "filters": {
+        "title": "Filters",
+        "actionLabel": "Action",
+        "resourceLabel": "Resource"
+      },
+      "table": {
+        "user": "User",
+        "action": "Action",
+        "resource": "Resource",
+        "details": "Details",
+        "date": "Date"
+      },
+      "actions": {
+        "allActions": "All Actions",
+        "create": "Create",
+        "update": "Update",
+        "delete": "Delete",
+        "login": "Login",
+        "logout": "Logout"
+      },
+      "resources": {
+        "allResources": "All Resources",
+        "product": "Product",
+        "user": "User",
+        "auth": "Auth",
+        "country": "Country",
+        "order": "Order",
+        "referral": "Referral",
+        "paymentSettings": "Payment Settings"
+      }
+    }
+  }
+}

@@ -1,0 +1,449 @@
+{
+  "orders": {
+    "pageTitle": "سجل الطلبات",
+    "orderDetails": "تفاصيل الطلب",
+    "viewDetails": "عرض التفاصيل",
+    "noOrders": "لا توجد طلبات",
+    "total": "الإجمالي",
+    "items": "المنتجات",
+    "customerInfo": "معلومات العميل",
+    "email": "البريد الإلكتروني",
+    "phone": "رقم الهاتف",
+    "country": "الدولة",
+    "paymentMethod": "طريقة الدفع",
+    "referral": "الإحالة",
+    "paymobInfo": "معلومات بيموب",
+    "filters": {
+      "all": "الكل",
+      "search": "بحث بالاسم أو البريد أو رقم الطلب...",
+      "status": "الحالة",
+      "referral": "الإحالة",
+      "allReferrals": "كل الإحالات"
+    },
+    "status": {
+      "pending": "قيد الانتظار",
+      "processing": "جاري المعالجة",
+      "paid": "مدفوع",
+      "failed": "فشل",
+      "refunded": "مسترد",
+      "cancelled": "ملغي"
+    },
+    "table": {
+      "orderNumber": "رقم الطلب",
+      "customer": "العميل",
+      "amount": "المبلغ",
+      "status": "الحالة",
+      "date": "التاريخ",
+      "actions": "إجراءات"
+    }
+  },
+  "admin": {
+    "navigation": {
+      "dashboard": "لوحة التحكم",
+      "products": "المنتجات",
+      "orders": "الطلبات",
+      "coupons": "الكوبونات",
+      "countries": "البلدان",
+      "users": "المستخدمين",
+      "referrals": "الإحالات",
+      "paymentSettings": "إعدادات الدفع",
+      "activityLogs": "سجل النشاطات"
+    },
+    "loading": "جاري التحميل...",
+    "redirecting": "جاري التوجيه للدخول...",
+    "userMenu": {
+      "logout": "تسجيل الخروج"
+    },
+    "login": {
+      "title": "تسجيل دخول المسؤول",
+      "subtitle": "سجّل الدخول للوصول إلى لوحة التحكم",
+      "form": {
+        "email": "البريد الإلكتروني",
+        "password": "كلمة المرور"
+      },
+      "buttons": {
+        "login": "تسجيل دخول",
+        "loggingIn": "جاري تسجيل الدخول..."
+      },
+      "errors": {
+        "invalidCredentials": "البريد الإلكتروني أو كلمة المرور غير صحيحة",
+        "loginFailed": "فشل تسجيل الدخول. حاول مرة أخرى.",
+        "tooManyAttempts": "محاولات تسجيل دخول كثيرة جداً. يرجى المحاولة لاحقاً."
+      }
+    },
+    "dashboard": {
+      "title": "لوحة التحكم",
+      "welcome": "مرحبًا بك في لوحة التحكم الإدارية",
+      "stats": {
+        "totalProducts": "إجمالي المنتجات",
+        "totalUsers": "إجمالي المستخدمين",
+        "orders": "الطلبات",
+        "countries": "البلدان"
+      },
+      "quickActions": {
+        "title": "إجراءات سريعة",
+        "manageProducts": "إدارة المنتجات",
+        "manageOrders": "إدارة الطلبات",
+        "manageCountries": "إدارة البلدان"
+      }
+    },
+    "products": {
+      "title": "المنتجات",
+      "description": "إدارة منتجاتك",
+      "addProduct": "إضافة منتج",
+      "reorderButton": "إعادة ترتيب المنتجات",
+      "reorderModal": {
+        "title": "إعادة ترتيب المنتجات",
+        "description": "استخدم الأسهم لتحديد ترتيب العرض، ثم احفظ.",
+        "save": "حفظ الترتيب",
+        "cancel": "إلغاء"
+      },
+      "editProduct": "تعديل منتج",
+      "deleteConfirm": "هل أنت متأكد من حذف هذا المنتج؟",
+      "deleteConfirmTitle": "حذف المنتج",
+      "deleteConfirmButton": "حذف",
+      "deleteCancelButton": "إلغاء",
+      "emptyMessage": "لا توجد منتجات. أضف منتجك الأول!",
+      "table": {
+        "order": "الترتيب",
+        "image": "الصورة",
+        "nameAr": "الاسم (عربي)",
+        "price": "السعر",
+        "inStock": "متوفر",
+        "actions": "إجراءات"
+      },
+      "status": {
+        "inStock": "متوفر",
+        "outOfStock": "غير متوفر"
+      },
+      "form": {
+        "nameAr": "الاسم (عربي) *",
+        "nameEn": "الاسم (إنجليزي) *",
+        "contentAr": "المحتوى (عربي)",
+        "contentEn": "المحتوى (إنجليزي)",
+        "contentHelp": "استخدم شريط الأدوات لتنسيق النص بالعناوين والقوائم والنص العريض والألوان والمزيد",
+        "contentPlaceholder": "اكتب تفاصيل المنتج هنا...",
+        "price": "السعر *",
+        "currency": "العملة *",
+        "mainCurrency": "العملة الأساسية",
+        "basePrice": "السعر الأساسي",
+        "currencyPrices": "الأسعار حسب العملة",
+        "autoCalculatePrices": "حساب الأسعار تلقائياً",
+        "calculating": "جاري الحساب...",
+        "manual": "يدوي",
+        "auto": "تلقائي",
+        "manualLocked": "يدوي (مقفل)",
+        "autoCalculated": "محسوب تلقائياً",
+        "loadingCurrencies": "جاري تحميل العملات...",
+        "enterBasePriceAlert": "يرجى إدخال سعر أساسي صحيح أولاً",
+        "calculateFailedAlert": "فشل حساب الأسعار. يرجى المحاولة مرة أخرى.",
+        "manualPriceHelp": "الأسعار اليدوية يتم تعيينها من قبلك ولن يتم الكتابة عليها عند الحساب التلقائي",
+        "autoPriceHelp": "الأسعار التلقائية يتم حسابها من السعر الأساسي وستتحدث عند النقر على \"حساب الأسعار تلقائياً\"",
+        "productImage": "صورة المنتج",
+        "chooseImage": "اختر صورة",
+        "imageHelp": "ارفع حتى 10 صور. الصورة الأولى ستكون الصورة الرئيسية.",
+        "inStockLabel": "متوفر",
+        "isActiveLabel": "نشط (مرئي على الموقع)",
+        "preview": "معاينة",
+        "addedPrice": "سعر إضافي (%)",
+        "addedPriceHelp": "أضف نسبة مئوية زيادة اختيارية لجميع الأسعار. على سبيل المثال، أدخل 3 لإضافة 3٪ لجميع الأسعار. تأكد من تعيين السعر الأساسي أولاً.",
+        "addedPricePlaceholder": "أدخل النسبة المئوية (مثال: 3)",
+        "applyButton": "تطبيق",
+        "allowPartialPayment": "السماح بالدفع الجزئي",
+        "minimumPaymentType": "نوع الحد الأدنى للدفع",
+        "minimumPaymentPercentage": "نسبة مئوية",
+        "minimumPaymentFixed": "مبلغ ثابت",
+        "minimumPaymentValue": "قيمة الحد الأدنى للدفع",
+        "baseMinimumPercentage": "الحد الأدنى الأساسي (%)",
+        "baseMinimumFixed": "مبلغ الحد الأدنى الأساسي",
+        "enterBaseMinimumAlert": "يرجى إدخال قيمة حد أدنى أساسية صحيحة أولاً",
+        "minimumPaymentsCalculated": "تم حساب الحدود الدنيا بنجاح",
+        "autoCalculateMinimums": "حساب الحدود الدنيا تلقائياً",
+        "currencyMinimums": "الحدود الدنيا للدفع حسب العملة",
+        "priceLabel": "السعر",
+        "manualMinimumHelp": "الحدود الدنيا اليدوية يتم تعيينها من قبلك ولن يتم الكتابة عليها عند الحساب التلقائي",
+        "autoMinimumHelp": "الحدود الدنيا التلقائية يتم حسابها من القيمة الأساسية وستتحدث عند النقر على \"حساب الحدود الدنيا تلقائياً\"",
+        "percentageMinimumHelp": "عند استخدام نوع النسبة المئوية، ستطبق نفس النسبة على جميع العملات بناءً على أسعارها. لا حاجة لإعدادات خاصة بكل عملة.",
+        "productImages": "صور المنتج",
+        "addImages": "إضافة صور",
+        "mainImage": "الصورة الرئيسية",
+        "setAsMain": "تعيين كصورة رئيسية",
+        "sizes": "مقاسات المنتج (اختياري)",
+        "sizesHelp": "أضف أحجام مختلفة لهذا المنتج. عند وجود أحجام، كل حجم يحتوي على سعره الخاص (يُخفى السعر الأساسي للمنتج).",
+        "addSize": "إضافة مقاس",
+        "removeSize": "حذف الحجم",
+        "sizeNumber": "الحجم {number}",
+        "sizeNameAr": "اسم الحجم (عربي)",
+        "sizeNameEn": "اسم الحجم (إنجليزي)",
+        "sizePrice": "سعر الحجم",
+        "sizeBasePrice": "السعر الأساسي",
+        "noSizes": "لم يتم إضافة مقاسات",
+        "easykashLinks": "روابط الدفع عبر إيزي كاش",
+        "easykashLinksHelp": "أضف روابط الدفع المباشرة لإيزي كاش. تُستخدم عندما يكون إيزي كاش هو طريقة الدفع النشطة.",
+        "fullPaymentLink": "رابط الدفع الكامل",
+        "halfPaymentLink": "رابط نصف الدفع",
+        "customPaymentLink": "رابط المبلغ المخصص",
+        "sacrificeSection": "إعدادات العقيقة / الذبيحة",
+        "workAsSacrificeLabel": "استخدام كذبيحة (عقيقة / أضحية)",
+        "sacrificeCountLabel": "عدد الذبائح التي يكافئها هذا المنتج",
+        "sacrificeCountHelp": "كم عدد فتحات الذبيحة التي تُغطيها وحدة واحدة من هذا المنتج؟ (مثال: 2 لعقيقة الذكر)",
+        "feedsUpLabel": "يكفي حتى (شخص)",
+        "feedsUpHelp": "العدد التقريبي للأشخاص الذين يغطيهم هذا المنتج/الحجم. اتركه صفراً لإخفائه.",
+        "pricesOnSizesNote": "يتم إدارة الأسعار في كل حجم أدناه."
+      },
+      "buttons": {
+        "cancel": "إلغاء",
+        "addProduct": "إضافة منتج",
+        "updateProduct": "تحديث المنتج",
+        "uploading": "جاري الرفع..."
+      },
+      "messages": {
+        "uploadFailed": "فشل في رفع الصور",
+        "loadFailed": "فشل في تحميل المنتج",
+        "saveFailed": "فشل حفظ المنتج",
+        "deleteFailed": "فشل حذف المنتج",
+        "createSuccess": "تم إنشاء المنتج بنجاح",
+        "updateSuccess": "تم تحديث المنتج بنجاح",
+        "deleteSuccess": "تم حذف المنتج بنجاح",
+        "invalidPercentage": "يرجى إدخال نسبة مئوية صحيحة",
+        "setPriceFirst": "يرجى تعيين السعر الأساسي أولاً",
+        "priceIncreased": "تمت زيادة السعر بنسبة {percentage}٪",
+        "minOneSize": "يجب أن يحتوي المنتج على مقاس واحد على الأقل",
+        "imagesUploaded": "تم رفع الصور بنجاح",
+        "maxImagesReached": "تم الوصول إلى الحد الأقصى لعدد الصور",
+        "refreshDisabled": "تم تعطيل تحديث الصفحة أثناء التحرير لمنع فقدان البيانات",
+        "reorderFailed": "فشل في إعادة ترتيب المنتجات",
+        "reorderSuccess": "تم إعادة ترتيب المنتجات بنجاح"
+      }
+    },
+    "paymentSettings": {
+      "title": "إعدادات الدفع",
+      "description": "اختر بوابة الدفع المراد استخدامها. يتم تكوين بيانات الاعتماد عبر متغيرات البيئة.",
+      "selectMethod": "اختر طريقة الدفع",
+      "paymob": "باي موب",
+      "paymobDesc": "صفحة دفع كاملة مع اختيار الكمية",
+      "easykash": "إيزي كاش",
+      "easykashDesc": "روابط دفع مباشرة بدون صفحة دفع",
+      "saveSettings": "حفظ الإعدادات",
+      "settingsSaved": "تم حفظ إعدادات الدفع بنجاح"
+    },
+    "countries": {
+      "title": "إدارة البلدان",
+      "description": "تفعيل أو إلغاء تفعيل البلدان في المنصة",
+      "searchPlaceholder": "ابحث عن بلد بالاسم أو الرمز أو العملة...",
+      "noResults": "لا توجد بلدان مطابقة لبحثك.",
+      "emptyMessage": "لا توجد بلدان. قم بتشغيل سكريبت التهيئة لإضافة البلدان.",
+      "loadingCountries": "جاري تحميل البلدان...",
+      "table": {
+        "flag": "العلم",
+        "code": "الرمز",
+        "nameEn": "الاسم (إنجليزي)",
+        "nameAr": "الاسم (عربي)",
+        "currency": "العملة",
+        "status": "الحالة"
+      },
+      "status": {
+        "active": "نشط",
+        "inactive": "غير نشط"
+      },
+      "filter": {
+        "all": "الكل",
+        "active": "نشط",
+        "inactive": "غير نشط"
+      },
+      "messages": {
+        "saveFailed": "فشل تحديث البلد",
+        "updateSuccess": "تم تحديث البلد بنجاح"
+      }
+    },
+    "coupons": {
+      "title": "الكوبونات",
+      "description": "إدارة كوبونات الخصم",
+      "addCoupon": "إضافة كوبون",
+      "editCoupon": "تعديل كوبون",
+      "deleteConfirm": "هل أنت متأكد من حذف هذا الكوبون؟",
+      "deleteConfirmTitle": "حذف كوبون",
+      "deleteButton": "حذف",
+      "emptyMessage": "لا توجد كوبونات. أنشئ كوبونك الأول!",
+      "table": {
+        "code": "الكود",
+        "type": "النوع",
+        "uses": "مرات الاستخدام",
+        "status": "الحالة",
+        "validUntil": "صالح حتى",
+        "actions": "الإجراءات"
+      },
+      "status": {
+        "active": "نشط",
+        "expired": "منتهي",
+        "disabled": "معطل"
+      },
+      "form": {
+        "code": "كود الكوبون *",
+        "type": "نوع الخصم *",
+        "typePercentage": "نسبة مئوية",
+        "typeFixed": "مبلغ ثابت",
+        "value": "قيمة الخصم *",
+        "validFrom": "صالح من *",
+        "validUntil": "صالح حتى",
+        "maxUses": "الحد الأقصى للاستخدام",
+        "unlimited": "غير محدود",
+        "minOrderAmount": "الحد الأدنى لمبلغ الطلب",
+        "maxDiscountAmount": "الحد الأقصى لمبلغ الخصم",
+        "noLimit": "بدون حد",
+        "descriptionAr": "الوصف (عربي)",
+        "descriptionEn": "الوصف (إنجليزي)",
+        "status": "الحالة"
+      },
+      "buttons": {
+        "cancelButton": "إلغاء",
+        "addCoupon": "إضافة كوبون",
+        "updateCoupon": "تحديث الكوبون"
+      },
+      "messages": {
+        "saveFailed": "فشل حفظ الكوبون",
+        "deleteFailed": "فشل حذف الكوبون",
+        "createSuccess": "تم إنشاء الكوبون بنجاح",
+        "updateSuccess": "تم تحديث الكوبون بنجاح",
+        "deleteSuccess": "تم حذف الكوبون بنجاح"
+      }
+    },
+    "users": {
+      "title": "المستخدمين",
+      "description": "إدارة المستخدمين الإداريين",
+      "addUser": "إضافة مستخدم",
+      "editUser": "تعديل المستخدم",
+      "cannotDeleteSelf": "لا يمكنك حذف حسابك الخاص",
+      "cannotDeleteSuperAdmin": "فقط المسؤول الرئيسي يمكنه حذف حسابات المسؤولين الرئيسيين",
+      "deleteConfirm": "هل أنت متأكد من حذف هذا المستخدم؟",
+      "deleteConfirmTitle": "حذف المستخدم",
+      "deleteConfirmButton": "حذف",
+      "deleteCancelButton": "إلغاء",
+      "emptyMessage": "لا يوجد مستخدمين",
+      "loading": "جاري التحميل...",
+      "pagesAccess": "صفحات متاحة",
+      "table": {
+        "name": "الاسم",
+        "email": "البريد الإلكتروني",
+        "role": "الدور",
+        "createdAt": "تاريخ الإنشاء",
+        "actions": "إجراءات"
+      },
+      "roles": {
+        "admin": "مسؤول",
+        "super_admin": "مسؤول رئيسي"
+      },
+      "form": {
+        "name": "الاسم *",
+        "email": "البريد الإلكتروني *",
+        "password": "كلمة المرور *",
+        "passwordOptional": "كلمة المرور (اتركها فارغة للإبقاء على الحالية)",
+        "passwordPlaceholder": "6 أحرف على الأقل",
+        "passwordOptionalPlaceholder": "اتركها فارغة للإبقاء على كلمة المرور الحالية",
+        "role": "الدور *",
+        "allowedPages": "الصفحات المسموحة",
+        "allowedPagesHelp": "حدد صفحات لوحة التحكم التي يمكن لهذا المستخدم الوصول إليها"
+      },
+      "pageLabels": {
+        "products": "المنتجات",
+        "orders": "الطلبات",
+        "coupons": "الكوبونات",
+        "countries": "البلدان",
+        "users": "المستخدمين",
+        "referrals": "الإحالات",
+        "activityLogs": "سجل النشاطات",
+        "paymentSettings": "إعدادات الدفع"
+      },
+      "buttons": {
+        "cancel": "إلغاء",
+        "addUser": "إضافة مستخدم",
+        "updateUser": "حفظ التغييرات"
+      },
+      "messages": {
+        "saveFailed": "فشل حفظ المستخدم",
+        "cannotEditSelf": "لا يمكنك تعديل حسابك الخاص",
+        "deleteFailed": "فشل حذف المستخدم",
+        "createFailed": "فشل إنشاء المستخدم",
+        "createSuccess": "تم إنشاء المستخدم بنجاح",
+        "deleteSuccess": "تم حذف المستخدم بنجاح",
+        "updateSuccess": "تم تحديث المستخدم بنجاح",
+        "updateFailed": "فشل تحديث المستخدم"
+      }
+    },
+    "referrals": {
+      "title": "الإحالات",
+      "description": "إدارة شركاء الإحالة",
+      "addReferral": "إضافة إحالة",
+      "editReferral": "تعديل إحالة",
+      "deleteConfirm": "هل أنت متأكد من حذف هذه الإحالة؟",
+      "deleteConfirmTitle": "حذف الإحالة",
+      "deleteButton": "حذف",
+      "cancelButton": "إلغاء",
+      "searchPlaceholder": "بحث بالاسم أو المعرف أو الهاتف...",
+      "emptyMessage": "لا توجد إحالات. أنشئ أول إحالة!",
+      "table": {
+        "name": "الاسم",
+        "referralId": "معرف الإحالة",
+        "phone": "الهاتف",
+        "createdAt": "تاريخ الإنشاء",
+        "actions": "الإجراءات"
+      },
+      "form": {
+        "name": "الاسم *",
+        "namePlaceholder": "أدخل اسم الإحالة",
+        "referralId": "معرف الإحالة *",
+        "referralIdPlaceholder": "أدخل معرف إحالة فريد",
+        "phone": "رقم الهاتف *",
+        "phonePlaceholder": "+966XXXXXXXXX"
+      },
+      "buttons": {
+        "cancel": "إلغاء",
+        "addReferral": "إضافة إحالة",
+        "updateReferral": "تحديث الإحالة"
+      },
+      "messages": {
+        "saveFailed": "فشل حفظ الإحالة",
+        "deleteFailed": "فشل حذف الإحالة",
+        "createSuccess": "تم إنشاء الإحالة بنجاح",
+        "updateSuccess": "تم تحديث الإحالة بنجاح",
+        "deleteSuccess": "تم حذف الإحالة بنجاح"
+      }
+    },
+    "logs": {
+      "title": "سجل النشاطات",
+      "description": "تتبع نشاطات المسؤولين والتغييرات",
+      "refresh": "تحديث",
+      "emptyMessage": "لا يوجد سجلات نشاط",
+      "filters": {
+        "title": "الفلاتر",
+        "actionLabel": "الإجراء",
+        "resourceLabel": "المورد"
+      },
+      "table": {
+        "user": "المستخدم",
+        "action": "الإجراء",
+        "resource": "المورد",
+        "details": "التفاصيل",
+        "date": "التاريخ"
+      },
+      "actions": {
+        "allActions": "كل الإجراءات",
+        "create": "إنشاء",
+        "update": "تحديث",
+        "delete": "حذف",
+        "login": "تسجيل دخول",
+        "logout": "تسجيل خروج"
+      },
+      "resources": {
+        "allResources": "كل الموارد",
+        "product": "منتج",
+        "user": "مستخدم",
+        "auth": "مصادقة",
+        "country": "بلد",
+        "order": "طلب",
+        "referral": "إحالة",
+        "paymentSettings": "إعدادات الدفع"
+      }
+    }
+  }
+}

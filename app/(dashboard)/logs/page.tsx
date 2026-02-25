@@ -6,6 +6,7 @@ import { ActivityLog } from '@/types/ActivityLog';
 import { Filter, RefreshCw } from 'lucide-react';
 import Table from '@/components/ui/table';
 import Dropdown from '@/components/ui/dropdown';
+import Button from '@/components/ui/button';
 
 export default function LogsPage() {
   const [logs, setLogs] = useState<ActivityLog[]>([]);
@@ -164,13 +165,10 @@ export default function LogsPage() {
           </h1>
           <p className="text-secondary">{t('description')}</p>
         </div>
-        <button
-          onClick={fetchLogs}
-          className="flex items-center gap-2 px-4 py-2 bg-primary text-background rounded-lg hover:bg-primary/90 transition-colors"
-        >
+        <Button onClick={fetchLogs} className="flex gap-2">
           <RefreshCw size={18} />
           {t('refresh')}
-        </button>
+        </Button>
       </div>
 
       <div className="bg-card-bg border border-stroke rounded-site p-4">

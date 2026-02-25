@@ -14,7 +14,8 @@ export interface IActivityLog {
     | 'order'
     | 'coupon'
     | 'referral'
-    | 'paymentSettings';
+    | 'paymentSettings'
+    | 'appearance';
   resourceId?: string;
   details: string;
   metadata?: mongoose.Schema.Types.Mixed;

@@ -16,6 +16,13 @@
   --warning: #f59e0b;
   --info: #3b82f6;
   --radius-site: 0.75rem;
+  --gradient-site: linear-gradient(
+    135deg,
+    #1e3a8a 0%,
+    #2563eb 60%,
+    #3b82f6 100%
+  );
+  --gradient-text: #ffffff;
 }
 
 /* ─── Dark Theme (Black) ─────────────────────────────────────── */
@@ -32,6 +39,13 @@
   --warning: #f59e0b;
   --info: #60a5fa;
   --radius-site: 0.75rem;
+  --gradient-site: linear-gradient(
+    135deg,
+    #1d4ed8 0%,
+    #3b82f6 60%,
+    #60a5fa 100%
+  );
+  --gradient-text: #ffffff;
 }
 
 @theme inline {
@@ -59,6 +73,15 @@ body {
 
 button {
   cursor: pointer;
+}
+
+/* ─── Gradient Utilities ──────────────────────────────────────── */
+.gradient-site {
+  background: var(--gradient-site);
+}
+
+.gradient-text {
+  color: var(--gradient-text);
 }
 
 /* ─── Scrollbar ───────────────────────────────────────────────── */

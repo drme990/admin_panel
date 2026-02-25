@@ -15,6 +15,7 @@ import {
   Ticket,
   UserRoundPlus,
   CreditCard,
+  Palette,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import Logo from '@/components/shared/logo';
@@ -36,6 +37,12 @@ const navItems = [
     key: 'referrals',
     href: '/referrals',
     icon: UserRoundPlus,
+    superAdminOnly: false,
+  },
+  {
+    key: 'appearance',
+    href: '/appearance',
+    icon: Palette,
     superAdminOnly: false,
   },
   { key: 'activityLogs', href: '/logs', icon: FileText, superAdminOnly: false },
@@ -155,7 +162,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                     className={cn(
                       'flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200',
                       isActive
-                        ? 'bg-primary text-background'
+                        ? 'gradient-site gradient-text'
                         : 'hover:bg-background hover:text-primary text-foreground',
                     )}
                   >

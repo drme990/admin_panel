@@ -47,7 +47,8 @@
       "users": "المستخدمين",
       "referrals": "الإحالات",
       "paymentSettings": "إعدادات الدفع",
-      "activityLogs": "سجل النشاطات"
+      "activityLogs": "سجل النشاطات",
+      "appearance": "المظهر"
     },
     "loading": "جاري التحميل...",
     "redirecting": "جاري التوجيه للدخول...",
@@ -352,7 +353,8 @@
         "users": "المستخدمين",
         "referrals": "الإحالات",
         "activityLogs": "سجل النشاطات",
-        "paymentSettings": "إعدادات الدفع"
+        "paymentSettings": "إعدادات الدفع",
+        "appearance": "المظهر"
       },
       "buttons": {
         "cancel": "إلغاء",
@@ -444,6 +446,25 @@
         "referral": "إحالة",
         "paymentSettings": "إعدادات الدفع"
       }
+    },
+    "appearance": {
+      "title": "المظهر",
+      "description": "تحكم في مظهر مواقعك الإلكترونية",
+      "worksImages": "صور الأعمال",
+      "worksDescription": "إدارة الصور المعروضة في قسم أعمالنا. التغييرات تُطبق فوراً.",
+      "row1": "الصف الأول (المتحرك الأول)",
+      "row2": "الصف الثاني (المتحرك الثاني)",
+      "addImage": "إضافة صورة",
+      "uploading": "جاري الرفع...",
+      "moveToRow1": "نقل إلى الصف الأول",
+      "moveToRow2": "نقل إلى الصف الثاني",
+      "saveChanges": "حفظ التغييرات",
+      "saving": "جاري الحفظ...",
+      "loadFailed": "فشل تحميل إعدادات المظهر",
+      "saveFailed": "فشل حفظ إعدادات المظهر",
+      "saveSuccess": "تم حفظ إعدادات المظهر بنجاح",
+      "noImages": "لا توجد صور. انقر على 'إضافة صورة' للرفع.",
+      "uploadFailed": "فشل رفع الصورة"
     }
   }
 }

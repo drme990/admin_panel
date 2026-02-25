@@ -47,7 +47,8 @@
       "users": "Users",
       "referrals": "Referrals",
       "paymentSettings": "Payment Settings",
-      "activityLogs": "Activity Logs"
+      "activityLogs": "Activity Logs",
+      "appearance": "Appearance"
     },
     "loading": "Loading dashboard...",
     "redirecting": "Redirecting to login...",
@@ -352,7 +353,8 @@
         "users": "Users",
         "referrals": "Referrals",
         "activityLogs": "Activity Logs",
-        "paymentSettings": "Payment Settings"
+        "paymentSettings": "Payment Settings",
+        "appearance": "Appearance"
       },
       "buttons": {
         "cancel": "Cancel",
@@ -444,6 +446,25 @@
         "referral": "Referral",
         "paymentSettings": "Payment Settings"
       }
+    },
+    "appearance": {
+      "title": "Appearance",
+      "description": "Control the look and feel of your websites",
+      "worksImages": "Works Images",
+      "worksDescription": "Manage the images displayed in the Our Works slider section. Changes apply instantly.",
+      "row1": "Row 1 (First Slider)",
+      "row2": "Row 2 (Second Slider)",
+      "addImage": "Add Image",
+      "uploading": "Uploading...",
+      "moveToRow1": "Move to Row 1",
+      "moveToRow2": "Move to Row 2",
+      "saveChanges": "Save Changes",
+      "saving": "Saving...",
+      "loadFailed": "Failed to load appearance settings",
+      "saveFailed": "Failed to save appearance settings",
+      "saveSuccess": "Appearance settings saved successfully",
+      "noImages": "No images yet. Click 'Add Image' to upload.",
+      "uploadFailed": "Failed to upload image"
     }
   }
 }

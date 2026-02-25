@@ -10,6 +10,7 @@ import Dropdown from '@/components/ui/dropdown';
 import { useTranslations } from 'next-intl';
 import { toast } from 'react-toastify';
 import ConfirmModal, { useConfirmModal } from '@/components/ui/confirm-modal';
+import Button from '@/components/ui/button';
 
 export default function CouponsPage() {
   const [coupons, setCoupons] = useState<Coupon[]>([]);
@@ -257,13 +258,10 @@ export default function CouponsPage() {
           </h1>
           <p className="text-secondary">{t('description')}</p>
         </div>
-        <button
-          onClick={() => openModal()}
-          className="flex items-center gap-2 px-4 py-2 bg-primary text-background rounded-lg hover:bg-primary/90 transition-colors"
-        >
+        <Button onClick={() => openModal()}>
           <Plus size={20} />
           {t('addCoupon')}
-        </button>
+        </Button>
       </div>
 
       <Table

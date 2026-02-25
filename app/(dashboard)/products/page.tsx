@@ -17,6 +17,7 @@ import Modal from '@/components/ui/modal';
 import { useTranslations } from 'next-intl';
 import { toast } from 'react-toastify';
 import ConfirmModal, { useConfirmModal } from '@/components/ui/confirm-modal';
+import Button from '@/components/ui/button';
 
 export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -203,20 +204,14 @@ export default function ProductsPage() {
           <p className="text-secondary">{t('description')}</p>
         </div>
         <div className="flex items-center gap-3">
-          <button
-            onClick={openReorderModal}
-            className="flex items-center gap-2 px-4 py-2 bg-card-bg border border-stroke text-foreground rounded-lg hover:bg-muted transition-colors"
-          >
+          <Button variant='secondary' onClick={openReorderModal}>
             <ListOrdered size={20} />
             {t('reorderButton')}
-          </button>
-          <button
-            onClick={() => router.push('/products/new')}
-            className="flex items-center gap-2 px-4 py-2 bg-primary text-background rounded-lg hover:bg-primary/90 transition-colors"
-          >
+          </Button>
+          <Button onClick={() => router.push('/products/new')}>
             <Plus size={20} />
             {t('addProduct')}
-          </button>
+          </Button>
         </div>
       </div>
 

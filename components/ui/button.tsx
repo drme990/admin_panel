@@ -33,7 +33,7 @@ export default function Button({
 
   const variants = {
     primary:
-      'bg-gradient-to-r from-[#ffa401] via-[#FFB201] to-[#ffc001] gradient-text font-medium hover:from-[#ffc001]/90 hover:via-[#FFB201]/90 hover:to-[#ffa401]/90 shadow-lg hover:shadow-xl',
+      'gradient-site gradient-text font-medium hover:opacity-90 shadow-lg hover:shadow-xl',
     secondary: 'bg-secondary text-white hover:bg-secondary/90',
     outline:
       'border-1 border-stroke text-foreground hover:bg-foreground hover:text-background',

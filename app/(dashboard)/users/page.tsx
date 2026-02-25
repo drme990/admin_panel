@@ -11,6 +11,7 @@ import Input from '@/components/ui/input';
 import { toast } from 'react-toastify';
 import ConfirmModal, { useConfirmModal } from '@/components/ui/confirm-modal';
 import { useAuth } from '@/components/providers/auth-provider';
+import Button from '@/components/ui/button';
 
 type ModalMode = 'add' | 'edit';
 
@@ -269,13 +270,10 @@ export default function UsersPage() {
           </h1>
           <p className="text-secondary">{t('description')}</p>
         </div>
-        <button
-          onClick={openAddModal}
-          className="flex items-center gap-2 px-4 py-2 bg-primary text-background rounded-lg hover:bg-primary/90 transition-colors"
-        >
+        <Button onClick={openAddModal}>
           <Plus size={20} />
           {t('addUser')}
-        </button>
+        </Button>
       </div>
 
       <Table<User>

@@ -10,6 +10,7 @@ import Pagination from '@/components/ui/pagination';
 import { toast } from 'react-toastify';
 import ConfirmModal, { useConfirmModal } from '@/components/ui/confirm-modal';
 import { Referral } from '@/types/Referral';
+import Button from '@/components/ui/button';
 
 export default function ReferralsPage() {
   const [referrals, setReferrals] = useState<Referral[]>([]);
@@ -213,13 +214,10 @@ export default function ReferralsPage() {
           </h1>
           <p className="text-secondary">{t('description')}</p>
         </div>
-        <button
-          onClick={() => setShowModal(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-primary text-background rounded-md hover:bg-primary/90 transition-colors"
-        >
+        <Button onClick={() => setShowModal(true)}>
           <Plus size={20} />
           {t('addReferral')}
-        </button>
+        </Button>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3">

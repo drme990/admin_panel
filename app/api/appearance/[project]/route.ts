@@ -5,11 +5,25 @@ import { requireAuth } from '@/lib/auth-middleware';
 import { logActivity } from '@/lib/logger';
 import { TokenPayload } from '@/lib/jwt';
 
-// GET: Fetch appearance settings (public, singleton)
-export async function GET() {
+const VALID_PROJECTS = ['ghadaq', 'manasik'] as const;
+
+// GET: Fetch appearance settings for a specific project
+export async function GET(
+  _request: NextRequest,
+  { params }: { params: Promise<{ project: string }> },
+) {
   try {
+    const { project } = await params;
+
+    if (!VALID_PROJECTS.includes(project as (typeof VALID_PROJECTS)[number])) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid project name' },
+        { status: 400 },
+      );
+    }
+
     await dbConnect();
-    const appearance = (await Appearance.findOne().lean()) as {
+    const appearance = (await Appearance.findOne({ project }).lean()) as {
       worksImages?: { row1: string[]; row2: string[] };
     } | null;
 
@@ -36,12 +50,24 @@ export async function GET() {
   }
 }
 
-// PUT: Update appearance settings (admin only, singleton upsert)
+// PUT: Update appearance settings for a specific project (admin only)
 async function updateAppearanceHandler(
   request: NextRequest,
-  context: { user: TokenPayload },
+  context: { user: TokenPayload; params?: Promise<Record<string, string>> },
 ) {
   try {
+    const { project } = (await context.params) ?? {};
+
+    if (
+      !project ||
+      !VALID_PROJECTS.includes(project as (typeof VALID_PROJECTS)[number])
+    ) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid project name' },
+        { status: 400 },
+      );
+    }
+
     await dbConnect();
 
     const body = await request.json();
@@ -59,8 +85,8 @@ async function updateAppearanceHandler(
     }
 
     const appearance = await Appearance.findOneAndUpdate(
-      {},
-      { worksImages },
+      { project },
+      { project, worksImages },
       { new: true, upsert: true, runValidators: true },
     );
 
@@ -70,8 +96,8 @@ async function updateAppearanceHandler(
       userEmail: context.user.email,
       action: 'update',
       resource: 'appearance',
-      resourceId: 'singleton',
-      details: `Updated appearance (${worksImages.row1.length} row1 imgs, ${worksImages.row2.length} row2 imgs)`,
+      resourceId: project,
+      details: `Updated ${project} appearance (${worksImages.row1.length} row1 imgs, ${worksImages.row2.length} row2 imgs)`,
     });
 
     return NextResponse.json({ success: true, data: appearance });

@@ -1,5 +1,14 @@
 import { ThemeProvider } from 'next-themes';
 
+export const ADMIN_THEMES = [
+  'light',
+  'black',
+  'manasik',
+  'ghadaq',
+  'colors',
+] as const;
+export type AdminTheme = (typeof ADMIN_THEMES)[number];
+
 export default function OurThemeProvider({
   children,
 }: {
@@ -8,9 +17,9 @@ export default function OurThemeProvider({
   return (
     <ThemeProvider
       attribute="class"
-      themes={['light', 'dark']}
+      themes={[...ADMIN_THEMES]}
       enableSystem={false}
-      defaultTheme="dark"
+      defaultTheme="black"
       storageKey="admin-panel-theme"
     >
       {children}

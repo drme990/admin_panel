@@ -6,11 +6,20 @@ import { toast } from 'react-toastify';
 import Image from 'next/image';
 import { Trash2, Upload, MoveDown, MoveUp, Save } from 'lucide-react';
 import { PageLoading } from '@/components/ui/loading';
-import { WorksImages } from '@/types/Appearance';
+import { WorksImages, ProjectName } from '@/types/Appearance';
+
+const PROJECTS: { key: ProjectName; label: string }[] = [
+  { key: 'ghadaq', label: 'Ghadaq' },
+  { key: 'manasik', label: 'Manasik' },
+];
 
 export default function AppearancePage() {
   const t = useTranslations('admin.appearance');
-  const [images, setImages] = useState<WorksImages>({ row1: [], row2: [] });
+  const [activeProject, setActiveProject] = useState<ProjectName>('ghadaq');
+  const [images, setImages] = useState<Record<ProjectName, WorksImages>>({
+    ghadaq: { row1: [], row2: [] },
+    manasik: { row1: [], row2: [] },
+  });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploadingRow, setUploadingRow] = useState<'row1' | 'row2' | null>(
@@ -20,9 +29,20 @@ export default function AppearancePage() {
   const loadAppearance = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/appearance');
-      const data = await res.json();
-      setImages(data.success ? data.data : { row1: [], row2: [] });
+      const [ghadaqRes, manasikRes] = await Promise.all([
+        fetch('/api/appearance/ghadaq'),
+        fetch('/api/appearance/manasik'),
+      ]);
+      const [ghadaqData, manasikData] = await Promise.all([
+        ghadaqRes.json(),
+        manasikRes.json(),
+      ]);
+      setImages({
+        ghadaq: ghadaqData.success ? ghadaqData.data : { row1: [], row2: [] },
+        manasik: manasikData.success
+          ? manasikData.data
+          : { row1: [], row2: [] },
+      });
     } catch {
       toast.error(t('loadFailed'));
     } finally {
@@ -33,6 +53,8 @@ export default function AppearancePage() {
   useEffect(() => {
     loadAppearance();
   }, [loadAppearance]);
+
+  const currentImages = images[activeProject];
 
   const handleUpload = useCallback(
     async (file: File, row: 'row1' | 'row2') => {
@@ -51,7 +73,10 @@ export default function AppearancePage() {
 
         setImages((prev) => ({
           ...prev,
-          [row]: [...prev[row], data.data.url],
+          [activeProject]: {
+            ...prev[activeProject],
+            [row]: [...prev[activeProject][row], data.data.url],
+          },
         }));
       } catch {
         toast.error(t('uploadFailed'));
@@ -59,37 +84,39 @@ export default function AppearancePage() {
         setUploadingRow(null);
       }
     },
-    [t],
+    [t, activeProject],
   );
 
   const handleDelete = (row: 'row1' | 'row2', index: number) => {
     setImages((prev) => ({
       ...prev,
-      [row]: prev[row].filter((_, i) => i !== index),
+      [activeProject]: {
+        ...prev[activeProject],
+        [row]: prev[activeProject][row].filter((_, i) => i !== index),
+      },
     }));
   };
 
   const handleMove = (fromRow: 'row1' | 'row2', index: number) => {
-    const imgUrl = images[fromRow][index];
+    const toRow = fromRow === 'row1' ? 'row2' : 'row1';
+    const imgUrl = currentImages[fromRow][index];
     setImages((prev) => ({
-      row1:
-        fromRow === 'row1'
-          ? prev.row1.filter((_, i) => i !== index)
-          : [...prev.row1, imgUrl],
-      row2:
-        fromRow === 'row2'
-          ? prev.row2.filter((_, i) => i !== index)
-          : [...prev.row2, imgUrl],
+      ...prev,
+      [activeProject]: {
+        ...prev[activeProject],
+        [fromRow]: prev[activeProject][fromRow].filter((_, i) => i !== index),
+        [toRow]: [...prev[activeProject][toRow], imgUrl],
+      },
     }));
   };
 
   const handleSave = async () => {
     setSaving(true);
     try {
-      const res = await fetch('/api/appearance', {
+      const res = await fetch(`/api/appearance/${activeProject}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ worksImages: images }),
+        body: JSON.stringify({ worksImages: currentImages }),
       });
       const data = await res.json();
       if (!data.success) throw new Error(data.error);
@@ -123,6 +150,32 @@ export default function AppearancePage() {
         </button>
       </div>
 
+      {/* Project Tabs */}
+      <div className="flex gap-2 border-b border-stroke">
+        {PROJECTS.map((p) => (
+          <button
+            key={p.key}
+            onClick={() => setActiveProject(p.key)}
+            className={`px-5 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
+              activeProject === p.key
+                ? 'border-current font-bold'
+                : 'border-transparent text-secondary hover:text-foreground'
+            }`}
+            style={
+              activeProject === p.key
+                ? {
+                    background: 'var(--gradient-site)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                  }
+                : undefined
+            }
+          >
+            {p.label}
+          </button>
+        ))}
+      </div>
+
       {/* Works Images Section */}
       <div className="space-y-5">
         <div>
@@ -136,7 +189,7 @@ export default function AppearancePage() {
 
         <ImageRowEditor
           label={t('row1')}
-          images={images.row1}
+          images={currentImages.row1}
           row="row1"
           uploading={uploadingRow === 'row1'}
           onUpload={(file) => handleUpload(file, 'row1')}
@@ -150,7 +203,7 @@ export default function AppearancePage() {
 
         <ImageRowEditor
           label={t('row2')}
-          images={images.row2}
+          images={currentImages.row2}
           row="row2"
           uploading={uploadingRow === 'row2'}
           onUpload={(file) => handleUpload(file, 'row2')}

@@ -449,9 +449,9 @@
     },
     "appearance": {
       "title": "Appearance",
-      "description": "Control the look and feel of your websites",
+      "description": "Control the look and feel of each website separately",
       "worksImages": "Works Images",
-      "worksDescription": "Manage the images displayed in the Our Works slider section. Changes apply instantly.",
+      "worksDescription": "Manage the images displayed in the Our Works slider section. Select a project tab to manage its images.",
       "row1": "Row 1 (First Slider)",
       "row2": "Row 2 (Second Slider)",
       "addImage": "Add Image",

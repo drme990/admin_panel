@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 
 export interface IPaymentSettings {
   _id?: string;
+  project: 'ghadaq' | 'manasik';
   paymentMethod: 'paymob' | 'easykash';
   createdAt?: Date;
   updatedAt?: Date;
@@ -9,6 +10,13 @@ export interface IPaymentSettings {
 
 const PaymentSettingsSchema = new mongoose.Schema<IPaymentSettings>(
   {
+    project: {
+      type: String,
+      required: true,
+      unique: true,
+      index: true,
+      enum: ['ghadaq', 'manasik'],
+    },
     paymentMethod: {
       type: String,
       enum: ['paymob', 'easykash'],

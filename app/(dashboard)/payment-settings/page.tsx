@@ -7,10 +7,20 @@ import Button from '@/components/ui/button';
 import PageTitle from '@/components/shared/page-title';
 import { Loader2 } from 'lucide-react';
 
+type ProjectName = 'ghadaq' | 'manasik';
+type PaymentMethod = 'paymob' | 'easykash';
+
+const PROJECTS: { key: ProjectName; label: string }[] = [
+  { key: 'ghadaq', label: 'Ghadaq' },
+  { key: 'manasik', label: 'Manasik' },
+];
+
 export default function PaymentSettingsPage() {
-  const [paymentMethod, setPaymentMethod] = useState<'paymob' | 'easykash'>(
-    'paymob',
-  );
+  const [settings, setSettings] = useState<Record<ProjectName, PaymentMethod>>({
+    ghadaq: 'paymob',
+    manasik: 'paymob',
+  });
+  const [activeProject, setActiveProject] = useState<ProjectName>('ghadaq');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const t = useTranslations('admin.paymentSettings');
@@ -23,8 +33,17 @@ export default function PaymentSettingsPage() {
     try {
       const res = await fetch('/api/admin/payment-settings');
       const data = await res.json();
-      if (data.success) {
-        setPaymentMethod(data.data.paymentMethod);
+      if (data.success && Array.isArray(data.data)) {
+        const newSettings: Record<ProjectName, PaymentMethod> = {
+          ghadaq: 'paymob',
+          manasik: 'paymob',
+        };
+        data.data.forEach(
+          (item: { project: ProjectName; paymentMethod: PaymentMethod }) => {
+            newSettings[item.project] = item.paymentMethod;
+          },
+        );
+        setSettings(newSettings);
       }
     } catch (error) {
       console.error('Failed to fetch payment settings:', error);
@@ -39,7 +58,10 @@ export default function PaymentSettingsPage() {
       const res = await fetch('/api/admin/payment-settings', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ paymentMethod }),
+        body: JSON.stringify({
+          project: activeProject,
+          paymentMethod: settings[activeProject],
+        }),
       });
       const data = await res.json();
       if (data.success) {
@@ -66,6 +88,32 @@ export default function PaymentSettingsPage() {
     <div className="space-y-6">
       <PageTitle>{t('title')}</PageTitle>
 
+      {/* Project Tabs */}
+      <div className="flex gap-2 border-b border-stroke">
+        {PROJECTS.map((p) => (
+          <button
+            key={p.key}
+            onClick={() => setActiveProject(p.key)}
+            className={`px-5 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
+              activeProject === p.key
+                ? 'border-current font-bold'
+                : 'border-transparent text-secondary hover:text-foreground'
+            }`}
+            style={
+              activeProject === p.key
+                ? {
+                    background: 'var(--gradient-site)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                  }
+                : undefined
+            }
+          >
+            {p.label}
+          </button>
+        ))}
+      </div>
+
       <div className="bg-card-bg border border-stroke rounded-lg p-6 space-y-6">
         <div>
           <h2 className="text-lg font-bold mb-1">{t('selectMethod')}</h2>
@@ -75,7 +123,7 @@ export default function PaymentSettingsPage() {
         <div className="space-y-3">
           <label
             className={`flex items-center gap-4 border rounded-lg p-4 cursor-pointer transition-colors ${
-              paymentMethod === 'paymob'
+              settings[activeProject] === 'paymob'
                 ? 'border-primary bg-primary/5'
                 : 'border-stroke hover:border-primary/50'
             }`}
@@ -84,8 +132,10 @@ export default function PaymentSettingsPage() {
               type="radio"
               name="paymentMethod"
               value="paymob"
-              checked={paymentMethod === 'paymob'}
-              onChange={() => setPaymentMethod('paymob')}
+              checked={settings[activeProject] === 'paymob'}
+              onChange={() =>
+                setSettings((prev) => ({ ...prev, [activeProject]: 'paymob' }))
+              }
               className="accent-primary w-4 h-4"
             />
             <div>
@@ -96,7 +146,7 @@ export default function PaymentSettingsPage() {
 
           <label
             className={`flex items-center gap-4 border rounded-lg p-4 cursor-pointer transition-colors ${
-              paymentMethod === 'easykash'
+              settings[activeProject] === 'easykash'
                 ? 'border-primary bg-primary/5'
                 : 'border-stroke hover:border-primary/50'
             }`}
@@ -105,8 +155,13 @@ export default function PaymentSettingsPage() {
               type="radio"
               name="paymentMethod"
               value="easykash"
-              checked={paymentMethod === 'easykash'}
-              onChange={() => setPaymentMethod('easykash')}
+              checked={settings[activeProject] === 'easykash'}
+              onChange={() =>
+                setSettings((prev) => ({
+                  ...prev,
+                  [activeProject]: 'easykash',
+                }))
+              }
               className="accent-primary w-4 h-4"
             />
             <div>

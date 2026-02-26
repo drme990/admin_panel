@@ -5,23 +5,65 @@ import { requireAuth } from '@/lib/auth-middleware';
 import { logActivity } from '@/lib/logger';
 import { TokenPayload } from '@/lib/jwt';
 
-async function getPaymentSettingsHandler() {
+const VALID_PROJECTS = ['ghadaq', 'manasik'] as const;
+
+async function getPaymentSettingsHandler(request: NextRequest) {
   try {
     await dbConnect();
 
-    let settings = await PaymentSettings.findOne().lean();
+    const { searchParams } = new URL(request.url);
+    const project = searchParams.get('project');
 
-    if (!settings) {
-      // Create default settings if none exist
-      settings = await PaymentSettings.create({ paymentMethod: 'paymob' });
-      settings = settings.toObject();
+    // If project specified, return single
+    if (project) {
+      if (
+        !VALID_PROJECTS.includes(project as (typeof VALID_PROJECTS)[number])
+      ) {
+        return NextResponse.json(
+          { success: false, error: 'Invalid project name' },
+          { status: 400 },
+        );
+      }
+
+      let settings = await PaymentSettings.findOne({ project }).lean();
+      if (!settings) {
+        settings = await PaymentSettings.create({
+          project,
+          paymentMethod: 'paymob',
+        });
+        settings = settings.toObject();
+      }
+
+      return NextResponse.json({
+        success: true,
+        data: {
+          project: settings.project,
+          paymentMethod: settings.paymentMethod,
+        },
+      });
     }
+
+    // Return all projects
+    const allSettings = await Promise.all(
+      VALID_PROJECTS.map(async (p) => {
+        let settings = await PaymentSettings.findOne({ project: p }).lean();
+        if (!settings) {
+          const created = await PaymentSettings.create({
+            project: p,
+            paymentMethod: 'paymob',
+          });
+          settings = created.toObject();
+        }
+        return {
+          project: settings.project,
+          paymentMethod: settings.paymentMethod,
+        };
+      }),
+    );
 
     return NextResponse.json({
       success: true,
-      data: {
-        paymentMethod: settings.paymentMethod,
-      },
+      data: allSettings,
     });
   } catch (error) {
     console.error('Error fetching payment settings:', error);
@@ -40,7 +82,14 @@ async function updatePaymentSettingsHandler(
     await dbConnect();
 
     const body = await request.json();
-    const { paymentMethod } = body;
+    const { project, paymentMethod } = body;
+
+    if (!project || !VALID_PROJECTS.includes(project)) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid or missing project name' },
+        { status: 400 },
+      );
+    }
 
     if (!paymentMethod || !['paymob', 'easykash'].includes(paymentMethod)) {
       return NextResponse.json(
@@ -50,8 +99,8 @@ async function updatePaymentSettingsHandler(
     }
 
     const settings = await PaymentSettings.findOneAndUpdate(
-      {},
-      { paymentMethod },
+      { project },
+      { project, paymentMethod },
       { new: true, upsert: true, runValidators: true },
     );
 
@@ -63,12 +112,13 @@ async function updatePaymentSettingsHandler(
       action: 'update',
       resource: 'paymentSettings',
       resourceId: settings._id.toString(),
-      details: `Updated payment method to ${paymentMethod}`,
+      details: `Updated ${project} payment method to ${paymentMethod}`,
     });
 
     return NextResponse.json({
       success: true,
       data: {
+        project: settings.project,
         paymentMethod: settings.paymentMethod,
       },
       message: 'Payment settings updated successfully',

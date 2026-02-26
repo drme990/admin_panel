@@ -60,7 +60,7 @@ export default function UserMenu() {
       </button>
 
       {isOpen && (
-        <div className="absolute bottom-full left-0 right-0 mb-2 bg-background border border-stroke rounded-lg shadow-lg overflow-hidden z-50">
+        <div className="absolute bottom-full left-0 right-0 mb-2 bg-background border border-stroke rounded-lg shadow-lg z-50">
           <div className="p-3 border-b border-stroke">
             <div className="flex items-center justify-center gap-2">
               <LangToggle />

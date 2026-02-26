@@ -60,7 +60,7 @@ export default function Loading({
       <span className={cn('inline-flex items-center gap-2', className)}>
         <Loader2
           className={cn(
-            'animate-spin text-success',
+            'animate-spin text-primary',
             sizeClasses[size],
             spinnerClassName,
           )}
@@ -83,7 +83,7 @@ export default function Loading({
     >
       <Loader2
         className={cn(
-          'animate-spin text-success',
+          'animate-spin text-primary',
           sizeClasses[size],
           spinnerClassName,
         )}

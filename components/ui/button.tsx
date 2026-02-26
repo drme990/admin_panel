@@ -38,7 +38,7 @@ export default function Button({
     outline:
       'border-1 border-stroke text-foreground hover:bg-foreground hover:text-background',
     ghost: 'text-foreground hover:bg-foreground/10',
-    icon: 'p-3 rounded-md text-success bg-background border border-stroke',
+    icon: 'p-3 rounded-md text-primary bg-background border border-stroke',
     custom: '',
   };
 

@@ -4,6 +4,7 @@ import { useTheme } from 'next-themes';
 import { Sun, Moon, Leaf, Sparkles, Palette } from 'lucide-react';
 import { ADMIN_THEMES, type AdminTheme } from '../providers/theme-provider';
 import { useState, useRef, useEffect } from 'react';
+import Button from '../ui/button';
 
 const THEME_CONFIG: Record<AdminTheme, { icon: typeof Sun; label: string }> = {
   light: { icon: Sun, label: 'Light' },
@@ -33,13 +34,14 @@ export default function ThemeToggle() {
 
   return (
     <div className="relative" ref={ref}>
-      <button
+      <Button
+        variant="icon"
+        size="custom"
         onClick={() => setOpen(!open)}
-        className="p-3 rounded-md text-success bg-background border border-stroke flex items-center justify-center transition-colors hover:bg-muted"
         aria-label="Change theme"
       >
         <CurrentIcon size={19} />
-      </button>
+      </Button>
 
       {open && (
         <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-background border border-stroke rounded-lg shadow-lg overflow-hidden z-50 min-w-35">

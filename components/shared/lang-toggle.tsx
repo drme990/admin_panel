@@ -17,7 +17,7 @@ export default function LangToggle() {
       variant="icon"
       onClick={toggleLang}
       size="custom"
-      className="text-sm"
+      className="text-[13px]"
       aria-label={`Switch to ${locale === 'ar' ? 'English' : 'العربية'}`}
     >
       {locale === 'ar' ? 'EN' : 'AR'}

@@ -45,7 +45,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
             'placeholder:text-secondary/50',
             error
               ? 'border-error focus:ring-error/20 focus:border-error'
-              : 'border-stroke focus:ring-success/20 focus:border-success',
+              : 'border-stroke focus:ring-primary focus:border-success',
             className,
           )}
           {...props}

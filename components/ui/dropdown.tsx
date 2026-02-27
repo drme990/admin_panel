@@ -65,7 +65,7 @@ export default function Dropdown<T = string>({
         type="button"
         onClick={() => !disabled && setIsOpen(!isOpen)}
         disabled={disabled}
-        className="w-full px-4 py-2 rounded-lg border border-stroke bg-background focus:outline-none focus:ring-2 focus:ring-success/20 focus:border-success transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-between"
+        className="w-full px-4 py-2 rounded-lg border border-stroke bg-background focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-between"
       >
         <span className="flex items-center gap-2">
           {selectedOption?.icon}
@@ -87,7 +87,7 @@ export default function Dropdown<T = string>({
               type="button"
               onClick={() => handleSelect(option.value)}
               className={`w-full px-4 py-2 text-right hover:bg-background transition-colors flex items-center gap-2 ${
-                option.value === value ? 'bg-success/10 text-success' : ''
+                option.value === value ? 'bg-primary/10 text-primary' : ''
               }`}
             >
               {option.icon}

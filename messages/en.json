@@ -234,14 +234,23 @@
       "searchPlaceholder": "Search countries by name, code or currency...",
       "noResults": "No countries match your search.",
       "emptyMessage": "No countries found. Run the seed script to populate.",
+      "emptyActive": "No active countries to reorder.",
       "loadingCountries": "Loading countries...",
+      "reorderButton": "Reorder Currencies",
+      "reorderModal": {
+        "title": "Reorder Currencies",
+        "description": "Use the arrows to set the display order in the currency selector, then save.",
+        "save": "Save Order",
+        "cancel": "Cancel"
+      },
       "table": {
         "flag": "Flag",
         "code": "Code",
         "nameEn": "Name (EN)",
         "nameAr": "Name (AR)",
         "currency": "Currency",
-        "status": "Status"
+        "status": "Status",
+        "order": "Order"
       },
       "status": {
         "active": "Active",
@@ -254,7 +263,10 @@
       },
       "messages": {
         "saveFailed": "Failed to update country",
-        "updateSuccess": "Country updated successfully"
+        "updateSuccess": "Country updated successfully",
+        "orderSaved": "Currency order saved successfully",
+        "reorderSuccess": "Currency order saved successfully",
+        "reorderFailed": "Failed to save currency order"
       }
     },
     "coupons": {

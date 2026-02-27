@@ -11,6 +11,7 @@ export interface ICountry {
   currencySymbol: string; // e.g., "ر.س", "$"
   flagEmoji: string; // e.g., "🇸🇦"
   isActive: boolean;
+  sortOrder: number | null;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -58,6 +59,10 @@ const CountrySchema = new mongoose.Schema<ICountry>(
       type: Boolean,
       default: true,
     },
+    sortOrder: {
+      type: Number,
+      default: null,
+    },
   },
   {
     timestamps: true,
@@ -66,6 +71,7 @@ const CountrySchema = new mongoose.Schema<ICountry>(
 
 CountrySchema.index({ currencyCode: 1 });
 CountrySchema.index({ isActive: 1 });
+CountrySchema.index({ sortOrder: 1 });
 
 const Country =
   mongoose.models.Country || mongoose.model<ICountry>('Country', CountrySchema);

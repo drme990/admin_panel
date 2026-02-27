@@ -14,7 +14,9 @@ export async function GET(request: NextRequest) {
     const activeOnly = searchParams.get('active') !== 'false';
 
     const query = activeOnly ? { isActive: true } : {};
-    const countries = await Country.find(query).sort({ 'name.ar': 1 }).lean();
+    const countries = await Country.find(query)
+      .sort({ sortOrder: 1, 'name.ar': 1 })
+      .lean();
 
     return NextResponse.json({
       success: true,

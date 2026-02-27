@@ -9,6 +9,7 @@ export interface Country {
   currencySymbol: string;
   flagEmoji: string;
   isActive: boolean;
+  sortOrder: number | null;
   createdAt?: string;
   updatedAt?: string;
 }

@@ -132,7 +132,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
       {!isDeepRoute && (
         <aside
           className={cn(
-            'fixed top-0 h-screen w-64 bg-card-bg border-stroke z-40 transition-all duration-300 hover:shadow-lg',
+            'fixed top-0 h-dvh w-64 bg-card-bg border-stroke z-40 transition-all duration-300 hover:shadow-lg',
             isRTL ? 'right-0 border-l' : 'left-0 border-r',
             isRTL
               ? sidebarOpen

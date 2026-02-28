@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/providers/auth-provider';
-import Logo from '@/components/shared/logo';
 import { LogIn } from 'lucide-react';
 import Input from '@/components/ui/input';
 import { useTranslations } from 'next-intl';
@@ -51,10 +50,6 @@ export default function LoginPage() {
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="bg-card-bg border border-stroke rounded-site p-8 space-y-6">
-          <div className="flex justify-center mb-6">
-            <Logo />
-          </div>
-
           <div className="text-center">
             <h1 className="text-2xl font-bold text-foreground mb-2">
               {t('title')}

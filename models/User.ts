@@ -61,6 +61,7 @@ const UserSchema = new mongoose.Schema<IUser, UserModel>(
         'referrals',
         'activityLogs',
         'paymentSettings',
+        'appearance',
       ],
       default: [],
     },

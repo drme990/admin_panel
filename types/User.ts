@@ -6,7 +6,6 @@ export type AdminPage =
   | 'users'
   | 'referrals'
   | 'activityLogs'
-  | 'paymentSettings'
   | 'appearance';
 
 export const ALL_ADMIN_PAGES: AdminPage[] = [
@@ -17,7 +16,6 @@ export const ALL_ADMIN_PAGES: AdminPage[] = [
   'users',
   'referrals',
   'activityLogs',
-  'paymentSettings',
   'appearance',
 ];
 

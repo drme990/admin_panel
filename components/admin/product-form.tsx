@@ -35,11 +35,6 @@ export default function ProductForm({
     price: 0,
     prices: [] as CurrencyPrice[],
     feedsUp: 0,
-    easykashLinks: {
-      fullPayment: '',
-      halfPayment: '',
-      customPayment: '',
-    },
   };
 
   const [formData, setFormData] = useState({
@@ -61,11 +56,6 @@ export default function ProductForm({
       price: number;
       prices: CurrencyPrice[];
       feedsUp: number;
-      easykashLinks: {
-        fullPayment: string;
-        halfPayment: string;
-        customPayment: string;
-      };
     }[],
     workAsSacrifice: false,
     sacrificeCount: 1,
@@ -104,11 +94,6 @@ export default function ProductForm({
                 price: s.price || 0,
                 prices: s.prices || [],
                 feedsUp: s.feedsUp ?? 0,
-                easykashLinks: {
-                  fullPayment: s.easykashLinks?.fullPayment || '',
-                  halfPayment: s.easykashLinks?.halfPayment || '',
-                  customPayment: s.easykashLinks?.customPayment || '',
-                },
               }))
             : [{ ...defaultSize }],
         workAsSacrifice: product.workAsSacrifice || false,
@@ -230,21 +215,6 @@ export default function ProductForm({
       size.price = value as number;
     } else if (field === 'prices') {
       size.prices = value as CurrencyPrice[];
-    } else if (field === 'easykashLinks.fullPayment') {
-      size.easykashLinks = {
-        ...size.easykashLinks,
-        fullPayment: value as string,
-      };
-    } else if (field === 'easykashLinks.halfPayment') {
-      size.easykashLinks = {
-        ...size.easykashLinks,
-        halfPayment: value as string,
-      };
-    } else if (field === 'easykashLinks.customPayment') {
-      size.easykashLinks = {
-        ...size.easykashLinks,
-        customPayment: value as string,
-      };
     } else if (field === 'feedsUp') {
       size.feedsUp = value as number;
     }
@@ -517,41 +487,6 @@ export default function ProductForm({
                   compact
                 />
               )}
-            </div>
-
-            {/* Easy Kash Links for this size */}
-            <div className="space-y-2">
-              <label className="text-xs font-medium text-secondary">
-                {t('form.easykashLinks')}
-              </label>
-              <Input
-                label={t('form.fullPaymentLink')}
-                type="url"
-                value={size.easykashLinks.fullPayment}
-                onChange={(e) =>
-                  updateSize(index, 'easykashLinks.fullPayment', e.target.value)
-                }
-              />
-              <Input
-                label={t('form.halfPaymentLink')}
-                type="url"
-                value={size.easykashLinks.halfPayment}
-                onChange={(e) =>
-                  updateSize(index, 'easykashLinks.halfPayment', e.target.value)
-                }
-              />
-              <Input
-                label={t('form.customPaymentLink')}
-                type="url"
-                value={size.easykashLinks.customPayment}
-                onChange={(e) =>
-                  updateSize(
-                    index,
-                    'easykashLinks.customPayment',
-                    e.target.value,
-                  )
-                }
-              />
             </div>
 
             {/* Feeds up (per size) */}

@@ -381,28 +381,28 @@ export default function OrderHistoryPage() {
               </div>
             </div>
 
-            {(selectedOrder.paymobOrderId ||
-              selectedOrder.paymobTransactionId) && (
+            {(selectedOrder.easykashRef ||
+              selectedOrder.easykashProductCode) && (
               <div>
-                <h3 className="font-semibold mb-3">{t('paymobInfo')}</h3>
+                <h3 className="font-semibold mb-3">{t('easykashInfo')}</h3>
                 <div className="grid grid-cols-1 gap-2 text-xs font-mono">
-                  {selectedOrder.paymobOrderId && (
+                  {selectedOrder.easykashRef && (
                     <div className="flex justify-between py-1 px-3 rounded bg-background border border-stroke">
-                      <span className="text-secondary">Paymob Order</span>
-                      <span>{selectedOrder.paymobOrderId}</span>
+                      <span className="text-secondary">EasyKash Ref</span>
+                      <span>{selectedOrder.easykashRef}</span>
                     </div>
                   )}
-                  {selectedOrder.paymobTransactionId && (
+                  {selectedOrder.easykashProductCode && (
                     <div className="flex justify-between py-1 px-3 rounded bg-background border border-stroke">
-                      <span className="text-secondary">Transaction</span>
-                      <span>{selectedOrder.paymobTransactionId}</span>
+                      <span className="text-secondary">Product Code</span>
+                      <span>{selectedOrder.easykashProductCode}</span>
                     </div>
                   )}
-                  {selectedOrder.paymobIntentionId && (
+                  {selectedOrder.easykashVoucher && (
                     <div className="flex justify-between py-1 px-3 rounded bg-background border border-stroke">
-                      <span className="text-secondary">Intention</span>
+                      <span className="text-secondary">Voucher</span>
                       <span className="truncate max-w-50">
-                        {selectedOrder.paymobIntentionId}
+                        {selectedOrder.easykashVoucher}
                       </span>
                     </div>
                   )}

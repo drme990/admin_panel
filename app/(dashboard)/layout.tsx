@@ -14,7 +14,6 @@ import {
   Globe,
   Ticket,
   UserRoundPlus,
-  CreditCard,
   Palette,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
@@ -46,12 +45,6 @@ const navItems = [
     superAdminOnly: false,
   },
   { key: 'activityLogs', href: '/logs', icon: FileText, superAdminOnly: false },
-  {
-    key: 'paymentSettings',
-    href: '/payment-settings',
-    icon: CreditCard,
-    superAdminOnly: false,
-  },
 ];
 
 function DashboardLayoutContent({ children }: { children: React.ReactNode }) {

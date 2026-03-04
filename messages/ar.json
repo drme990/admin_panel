@@ -12,7 +12,7 @@
     "country": "الدولة",
     "paymentMethod": "طريقة الدفع",
     "referral": "الإحالة",
-    "paymobInfo": "معلومات بيموب",
+    "easykashInfo": "معلومات إيزي كاش",
     "filters": {
       "all": "الكل",
       "search": "بحث بالاسم أو البريد أو رقم الطلب...",
@@ -46,7 +46,6 @@
       "countries": "البلدان",
       "users": "المستخدمين",
       "referrals": "الإحالات",
-      "paymentSettings": "إعدادات الدفع",
       "activityLogs": "سجل النشاطات",
       "appearance": "المظهر"
     },
@@ -179,11 +178,6 @@
         "sizePrice": "سعر الحجم",
         "sizeBasePrice": "السعر الأساسي",
         "noSizes": "لم يتم إضافة مقاسات",
-        "easykashLinks": "روابط الدفع عبر إيزي كاش",
-        "easykashLinksHelp": "أضف روابط الدفع المباشرة لإيزي كاش. تُستخدم عندما يكون إيزي كاش هو طريقة الدفع النشطة.",
-        "fullPaymentLink": "رابط الدفع الكامل",
-        "halfPaymentLink": "رابط نصف الدفع",
-        "customPaymentLink": "رابط المبلغ المخصص",
         "sacrificeSection": "إعدادات العقيقة / الذبيحة",
         "workAsSacrificeLabel": "استخدام كذبيحة (عقيقة / أضحية)",
         "sacrificeCountLabel": "عدد الذبائح التي يكافئها هذا المنتج",
@@ -216,17 +210,6 @@
         "reorderFailed": "فشل في إعادة ترتيب المنتجات",
         "reorderSuccess": "تم إعادة ترتيب المنتجات بنجاح"
       }
-    },
-    "paymentSettings": {
-      "title": "إعدادات الدفع",
-      "description": "اختر بوابة الدفع المراد استخدامها. يتم تكوين بيانات الاعتماد عبر متغيرات البيئة.",
-      "selectMethod": "اختر طريقة الدفع",
-      "paymob": "باي موب",
-      "paymobDesc": "صفحة دفع كاملة مع اختيار الكمية",
-      "easykash": "إيزي كاش",
-      "easykashDesc": "روابط دفع مباشرة بدون صفحة دفع",
-      "saveSettings": "حفظ الإعدادات",
-      "settingsSaved": "تم حفظ إعدادات الدفع بنجاح"
     },
     "countries": {
       "title": "إدارة البلدان",
@@ -365,7 +348,6 @@
         "users": "المستخدمين",
         "referrals": "الإحالات",
         "activityLogs": "سجل النشاطات",
-        "paymentSettings": "إعدادات الدفع",
         "appearance": "المظهر"
       },
       "buttons": {
@@ -455,8 +437,7 @@
         "auth": "مصادقة",
         "country": "بلد",
         "order": "طلب",
-        "referral": "إحالة",
-        "paymentSettings": "إعدادات الدفع"
+        "referral": "إحالة"
       }
     },
     "appearance": {

@@ -11,8 +11,7 @@ export interface ActivityLog {
     | 'country'
     | 'order'
     | 'coupon'
-    | 'referral'
-    | 'paymentSettings';
+    | 'referral';
   resourceId?: string;
   details: string;
   metadata?: { [key: string]: unknown };

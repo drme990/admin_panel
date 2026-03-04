@@ -10,12 +10,6 @@ export interface CurrencyMinimumPayment {
   isManual: boolean;
 }
 
-export interface EasykashLinks {
-  fullPayment: string;
-  halfPayment: string;
-  customPayment: string;
-}
-
 export interface ProductSize {
   _id?: string;
   name: {
@@ -26,7 +20,6 @@ export interface ProductSize {
   price: number;
   /** Multi-currency converted / manually-set prices */
   prices: CurrencyPrice[];
-  easykashLinks?: EasykashLinks;
   /** How many people / slots this size feeds / covers */
   feedsUp?: number;
 }
@@ -52,7 +45,7 @@ export interface PartialPayment {
  *  - `sizes` is always present and always has at least 1 item.
  *  - `sizes.length === 1`  → single-option product;  hide size selector; use sizes[0].
  *  - `sizes.length > 1`    → multi-option product;   show size selector.
- *  - All pricing (price, prices, easykashLinks, feedsUp) lives inside each ProductSize.
+ *  - All pricing (price, prices, feedsUp) lives inside each ProductSize.
  *  - `baseCurrency` is the single canonical currency for all base prices.
  *  - `images[0]` is the primary / thumbnail image.
  */

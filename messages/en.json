@@ -12,7 +12,7 @@
     "country": "Country",
     "paymentMethod": "Payment Method",
     "referral": "Referral",
-    "paymobInfo": "Paymob Info",
+    "easykashInfo": "EasyKash Info",
     "filters": {
       "all": "All",
       "search": "Search by name, email, or order number...",
@@ -46,7 +46,6 @@
       "countries": "Countries",
       "users": "Users",
       "referrals": "Referrals",
-      "paymentSettings": "Payment Settings",
       "activityLogs": "Activity Logs",
       "appearance": "Appearance"
     },
@@ -179,11 +178,6 @@
         "sizePrice": "Size Price",
         "sizeBasePrice": "Base Price",
         "noSizes": "No size variants added",
-        "easykashLinks": "Easy Kash Payment Links",
-        "easykashLinksHelp": "Add direct payment links for Easy Kash. These are used when Easy Kash is the active payment method.",
-        "fullPaymentLink": "Full Payment Link",
-        "halfPaymentLink": "Half Payment Link",
-        "customPaymentLink": "Custom Payment Link",
         "sacrificeSection": "Aqiqah / Sacrifice Settings",
         "workAsSacrificeLabel": "Use as Sacrifice (Aqiqah/Udhiyah)",
         "sacrificeCountLabel": "Number of Sacrifices this Product Covers",
@@ -216,17 +210,6 @@
         "reorderFailed": "Failed to reorder products",
         "reorderSuccess": "Products reordered successfully"
       }
-    },
-    "paymentSettings": {
-      "title": "Payment Settings",
-      "description": "Choose which payment gateway to use. API credentials are configured via environment variables.",
-      "selectMethod": "Select Payment Method",
-      "paymob": "Paymob",
-      "paymobDesc": "Full checkout with quantity selection",
-      "easykash": "Easy Kash",
-      "easykashDesc": "Direct payment links without checkout",
-      "saveSettings": "Save Settings",
-      "settingsSaved": "Payment settings saved successfully"
     },
     "countries": {
       "title": "Countries Management",
@@ -365,7 +348,6 @@
         "users": "Users",
         "referrals": "Referrals",
         "activityLogs": "Activity Logs",
-        "paymentSettings": "Payment Settings",
         "appearance": "Appearance"
       },
       "buttons": {
@@ -455,8 +437,7 @@
         "auth": "Auth",
         "country": "Country",
         "order": "Order",
-        "referral": "Referral",
-        "paymentSettings": "Payment Settings"
+        "referral": "Referral"
       }
     },
     "appearance": {

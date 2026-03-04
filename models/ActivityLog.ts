@@ -14,7 +14,6 @@ export interface IActivityLog {
     | 'order'
     | 'coupon'
     | 'referral'
-    | 'paymentSettings'
     | 'appearance';
   resourceId?: string;
   details: string;
@@ -54,7 +53,6 @@ const ActivityLogSchema = new mongoose.Schema<IActivityLog>(
         'order',
         'coupon',
         'referral',
-        'paymentSettings',
       ],
       index: true,
     },

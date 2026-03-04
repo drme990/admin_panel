@@ -53,7 +53,7 @@ The admin panel writes data; both client apps read from the shared database thro
 - View all customer orders with full details
 - Order status tracking (pending, processing, paid, failed, refunded, cancelled)
 - Filter and search orders by name, email, order number, status, and referral
-- View Paymob transaction info
+- View EasyKash transaction info
 
 ### Coupon Management
 
@@ -86,12 +86,6 @@ The admin panel writes data; both client apps read from the shared database thro
 - Drag images between rows with move up/down controls
 - Changes reflect immediately on the respective public site
 
-### Payment Settings (Per-Project)
-
-- Set the active payment method independently for **Ghadaq** and **Manasik**
-- Supported gateways: **Paymob** and **EasyKash**
-- Changes take effect immediately on the next checkout
-
 ### Activity Log
 
 - Complete audit trail of all admin actions
@@ -102,32 +96,32 @@ The admin panel writes data; both client apps read from the shared database thro
 
 5 built-in admin themes, switchable from the user menu:
 
-| Theme | Description |
-|---|---|
-| **Light** | White background, blue gradient accents |
-| **Black** | Pure dark background, blue gradient accents |
-| **Manasik** | Navy blue background, green gradient matching the Manasik brand |
-| **Ghadaq** | Forest green background, gold gradient matching the Ghadaq brand |
-| **Colors** | Deep purple background, vibrant rainbow gradient |
+| Theme       | Description                                                      |
+| ----------- | ---------------------------------------------------------------- |
+| **Light**   | White background, blue gradient accents                          |
+| **Black**   | Pure dark background, blue gradient accents                      |
+| **Manasik** | Navy blue background, green gradient matching the Manasik brand  |
+| **Ghadaq**  | Forest green background, gold gradient matching the Ghadaq brand |
+| **Colors**  | Deep purple background, vibrant rainbow gradient                 |
 
 ---
 
 ## 🛠️ Tech Stack
 
-| Category | Technology |
-|---|---|
-| Framework | Next.js 16.1.6 (App Router, Turbopack) |
-| Language | TypeScript |
-| Database | MongoDB + Mongoose v9 |
-| Authentication | JWT (jsonwebtoken) + bcryptjs |
-| Styling | Tailwind CSS v4 with CSS custom properties |
-| Internationalization | next-intl v4.8.3 |
-| Rich Text | react-quill-new (Quill editor) |
-| Image Upload | Cloudinary v2 |
-| Toast Notifications | react-toastify |
-| Themes | next-themes v0.4.6 |
-| Icons | Lucide React + React Icons |
-| Country Flags | country-flag-icons |
+| Category             | Technology                                 |
+| -------------------- | ------------------------------------------ |
+| Framework            | Next.js 16.1.6 (App Router, Turbopack)     |
+| Language             | TypeScript                                 |
+| Database             | MongoDB + Mongoose v9                      |
+| Authentication       | JWT (jsonwebtoken) + bcryptjs              |
+| Styling              | Tailwind CSS v4 with CSS custom properties |
+| Internationalization | next-intl v4.8.3                           |
+| Rich Text            | react-quill-new (Quill editor)             |
+| Image Upload         | Cloudinary v2                              |
+| Toast Notifications  | react-toastify                             |
+| Themes               | next-themes v0.4.6                         |
+| Icons                | Lucide React + React Icons                 |
+| Country Flags        | country-flag-icons                         |
 
 ---
 
@@ -206,12 +200,9 @@ admin_panel/
 │   │   ├── users/              # Admin user management
 │   │   ├── referrals/          # Referral partner management
 │   │   ├── appearance/         # Per-project works image management (Ghadaq / Manasik tabs)
-│   │   ├── payment-settings/   # Per-project payment method config (Ghadaq / Manasik tabs)
 │   │   └── logs/               # Activity log viewer
 │   ├── login/                  # Login page (bypasses dashboard layout)
 │   └── api/                    # Admin API routes
-│       ├── admin/
-│       │   └── payment-settings/ # GET (all projects) / PUT (by project)
 │       ├── appearance/
 │       │   └── [project]/      # GET + PUT appearance for 'ghadaq' or 'manasik'
 │       ├── auth/               # Login / logout / me
@@ -254,7 +245,6 @@ admin_panel/
 │   ├── Country.ts              # Countries and currencies
 │   ├── Coupon.ts               # Discount coupons
 │   ├── Order.ts                # Customer orders
-│   ├── PaymentSettings.ts      # Payment method per project
 │   ├── Product.ts              # Islamic service products
 │   ├── Referral.ts             # Referral partners
 │   └── User.ts                 # Admin users
@@ -333,20 +323,15 @@ All components use `var(--background)`, `var(--foreground)`, `var(--gradient-sit
 ## 📡 API Reference
 
 ### Public Appearance API
+
 ```
 GET  /api/appearance/ghadaq    → Fetch ghadaq works images
 GET  /api/appearance/manasik   → Fetch manasik works images
 PUT  /api/appearance/:project  → Update works images (auth required)
 ```
 
-### Payment Settings API
-```
-GET  /api/admin/payment-settings           → Fetch all projects' payment methods
-GET  /api/admin/payment-settings?project=ghadaq  → Fetch one project
-PUT  /api/admin/payment-settings           → Update { project, paymentMethod }
-```
-
 ### Auth API
+
 ```
 POST /api/auth/login    → Login with email + password
 POST /api/auth/logout   → Clear admin-token cookie

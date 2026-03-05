@@ -1,35 +1,168 @@
-# Admin Panel — Centralized Management Dashboard
+# Admin Panel — Management Dashboard
 
-A dedicated, secure admin dashboard built with Next.js 16 for managing both **Ghadaq Association** and **Manasik Foundation** platforms. Runs independently on port 3001 and shares the same MongoDB database with both client applications.
-
----
-
-## 🏗️ Architecture Overview
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                     Shared MongoDB Database                      │
-│                  mongodb://localhost:27017/manasik               │
-└──────────┬────────────────────┬──────────────────────────┬──────┘
-           │                    │                          │
-    ┌──────▼──────┐     ┌───────▼──────┐       ┌──────────▼───────────┐
-    │   ghadaq/   │     │  manasik-v2/ │       │    admin_panel/      │
-    │  :3002      │     │   :3001      │       │       :3000          │
-    │ Public site │     │ Public site  │       │  Admin dashboard     │
-    └─────────────┘     └──────────────┘       └──────────────────────┘
-```
-
-The admin panel writes data; both client apps read from the shared database through their own public APIs.
-
-> **Port Note:** `ghadaq` and `manasik-v2` both use port 3000 and cannot run simultaneously. Run them one at a time during development. The admin panel always runs on port 3001.
+A secure **Next.js 16** admin dashboard for managing both **Ghadaq Association** and **Manasik Foundation** platforms.
 
 ---
 
-## ✨ Features
+## Architecture
+
+This app is a **client-only frontend**. It has no direct database connection. All data operations are handled by the shared `next-backend` Next.js serverless API, which this app communicates with via Next.js rewrites.
+
+```
+admin_panel (:3003)  →  /api/* rewrite  →  next-backend (:3000) → /api/admin/*  →  MongoDB Atlas
+```
+
+> The admin panel's `/api/*` calls are automatically prefixed with `/api/admin/` by the rewrite, so the backend can apply `requireAuth` middleware to all of them.
+
+---
+
+## Tech Stack
+
+| Concern       | Technology                              |
+| ------------- | --------------------------------------- |
+| Framework     | Next.js 16.1.6 (App Router)             |
+| Language      | TypeScript                              |
+| Styling       | Tailwind CSS v4                         |
+| i18n          | next-intl v4 (Arabic RTL + English LTR) |
+| Rich text     | react-quill-new (Quill editor)          |
+| Notifications | react-toastify                          |
+| Theme         | next-themes (5 custom themes)           |
+| Icons         | Lucide React + React Icons              |
+
+---
+
+## Features
 
 ### Authentication & Access Control
 
-- **JWT Authentication** — Secure login via `admin-token` HTTP-only cookie
+- JWT auth via `admin-token` HTTP-only cookie (managed by backend)
+- Two roles: `super_admin` (full access) and `admin` (configurable page access)
+- Per-page permissions — `super_admin` can restrict which pages each `admin` can see
+- Automatic redirect on session expiry
+
+### Dashboard
+
+- Stats overview: total products, orders, users, countries
+- Fetched from `GET /api/admin/stats` at runtime (dynamic page)
+
+### Product Management
+
+- Create, edit, delete Islamic service products
+- Rich text description editor (Quill)
+- Multi-image upload via Cloudinary (through backend)
+- Multi-currency pricing per country/currency
+- Product categories, display ordering, visibility control
+- Partial payment configuration
+
+### Order Management
+
+- Full order list with status, source (manasik/ghadaq), and search
+- Filter by status and source
+- View complete order details and EasyKash transaction info
+- Manually mark orders as paid (triggers order confirmation email via backend)
+
+### Coupon Management
+
+- Percentage or fixed-amount coupons
+- Validity dates, max uses, minimum order amount
+- Per-product restrictions
+
+### Country Management
+
+- Activate/deactivate countries for platform availability
+- Bulk management of supported regions
+
+### User Management
+
+- Create and manage admin users
+- Assign `admin` or `super_admin` roles
+- Configure per-page access for `admin` role
+
+### Referral Management
+
+- Create and manage referral partners
+- Referral IDs linked to orders
+
+### Appearance Management (Per-Project)
+
+- Manage works gallery images separately for **Ghadaq** and **Manasik**
+- Two image rows per project
+- Upload directly to Cloudinary via backend
+- Changes reflect live on the respective public site
+
+### Activity Log
+
+- Complete audit trail of all admin actions
+- Filter by action type and resource
+
+### Themes
+
+5 built-in admin themes, switchable from the user menu:
+
+| Theme       | Description                              |
+| ----------- | ---------------------------------------- |
+| **Light**   | White background, blue gradient          |
+| **Black**   | Pure dark background, blue gradient      |
+| **Manasik** | Navy background, green gradient          |
+| **Ghadaq**  | Forest green background, gold gradient   |
+| **Colors**  | Deep purple background, rainbow gradient |
+
+---
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js 18+
+- `next-backend` running on port 3000 (or configured via `BACKEND_URL`)
+- First admin user created via `npm run create-admin` in `next-backend/`
+
+### Install & run
+
+```bash
+cd admin_panel
+npm install
+npm run dev   # http://localhost:3001
+```
+
+### Environment variables
+
+Create a `.env.local` file:
+
+```env
+# Backend API (the shared Next.js serverless API)
+BACKEND_URL=http://localhost:3000
+```
+
+That is the **only** environment variable required. All auth, DB, Cloudinary, and payment credentials live in `next-backend/.env.local`.
+
+---
+
+## Scripts
+
+| Command         | Description                                       |
+| --------------- | ------------------------------------------------- |
+| `npm run dev`   | Start development server (Turbopack) on port 3003 |
+| `npm run build` | Production build                                  |
+| `npm start`     | Start production server                           |
+| `npm run lint`  | Run ESLint                                        |
+
+---
+
+## Related Projects
+
+| Project         | Role                                |
+| --------------- | ----------------------------------- |
+| `next-backend/` | Shared API server (required to run) |
+| `manasik-v2/`   | Public app — Manasik Foundation     |
+| `ghadaq/`       | Public app — Ghadaq Association     |
+
+---
+
+## License
+
+Private and proprietary. Shared infrastructure for **Ghadaq Association** and **Manasik Foundation**.
+
 - **Two Roles**: `super_admin` (full access) and `admin` (configurable page access)
 - **Per-Page Permissions** — `super_admin` can restrict which pages each `admin` user can access
 - **Session Management** — Token-based with automatic redirect on expiry

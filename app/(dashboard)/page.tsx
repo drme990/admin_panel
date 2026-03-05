@@ -1,30 +1,33 @@
 import { Package, Users, ShoppingCart, Globe } from 'lucide-react';
 import Link from 'next/link';
-import dbConnect from '@/lib/db';
-import ProductModel from '@/models/Product';
-import UserModel from '@/models/User';
-import OrderModel from '@/models/Order';
-import CountryModel from '@/models/Country';
+import { cookies } from 'next/headers';
 import { getTranslations } from 'next-intl/server';
+
+const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3000';
 
 async function getStats() {
   try {
-    await dbConnect();
+    const cookieStore = await cookies();
+    const token = cookieStore.get('admin-token')?.value;
 
-    const [totalProducts, totalUsers, totalOrders, totalCountries] =
-      await Promise.all([
-        ProductModel.countDocuments(),
-        UserModel.countDocuments(),
-        OrderModel.countDocuments(),
-        CountryModel.countDocuments(),
-      ]);
+    const res = await fetch(`${BACKEND_URL}/api/admin/stats`, {
+      cache: 'no-store',
+      headers: token ? { Cookie: `admin-token=${token}` } : {},
+    });
 
-    return {
-      totalProducts,
-      totalUsers,
-      totalOrders,
-      totalCountries,
-    };
+    if (!res.ok) {
+      return {
+        totalProducts: 0,
+        totalUsers: 0,
+        totalOrders: 0,
+        totalCountries: 0,
+      };
+    }
+
+    const data = await res.json();
+    return data.success
+      ? data.data
+      : { totalProducts: 0, totalUsers: 0, totalOrders: 0, totalCountries: 0 };
   } catch (error) {
     console.error('Error fetching stats:', error);
     return {

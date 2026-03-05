@@ -38,10 +38,14 @@ export default function AppearancePage() {
         manasikRes.json(),
       ]);
       setImages({
-        ghadaq: ghadaqData.success ? ghadaqData.data : { row1: [], row2: [] },
-        manasik: manasikData.success
-          ? manasikData.data
-          : { row1: [], row2: [] },
+        ghadaq:
+          ghadaqData.success && ghadaqData.data?.worksImages
+            ? ghadaqData.data.worksImages
+            : { row1: [], row2: [] },
+        manasik:
+          manasikData.success && manasikData.data?.worksImages
+            ? manasikData.data.worksImages
+            : { row1: [], row2: [] },
       });
     } catch {
       toast.error(t('loadFailed'));

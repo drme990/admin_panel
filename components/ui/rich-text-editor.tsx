@@ -9,9 +9,12 @@ const ReactQuill = dynamic(() => import('react-quill-new'), { ssr: false });
 /**
  * Clean Quill HTML output:
  * - Replace &nbsp; with normal spaces (prevents non-breaking space wrapping issues)
+ * - Strip background-color inline styles (not wanted in stored content)
  */
 function cleanQuillHtml(html: string): string {
-  return html.replace(/&nbsp;/g, ' ');
+  return html
+    .replace(/&nbsp;/g, ' ')
+    .replace(/background-color\s*:\s*[^;"]+;?\s*/gi, '');
 }
 
 interface RichTextEditorProps {
@@ -40,7 +43,7 @@ export default function RichTextEditor({
         [{ header: [1, 2, 3, false] }],
         ['bold', 'italic', 'underline', 'strike'],
         [{ list: 'ordered' }, { list: 'bullet' }],
-        [{ color: [] }, { background: [] }],
+        [{ color: [] }],
         [{ align: [] }],
         ['link'],
         ['clean'],
@@ -58,7 +61,6 @@ export default function RichTextEditor({
       'strike',
       'list',
       'color',
-      'background',
       'align',
       'link',
     ],

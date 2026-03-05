@@ -47,7 +47,8 @@
       "users": "Users",
       "referrals": "Referrals",
       "activityLogs": "Activity Logs",
-      "appearance": "Appearance"
+      "appearance": "Appearance",
+      "exchange": "Exchange Rates"
     },
     "loading": "Loading dashboard...",
     "redirecting": "Redirecting to login...",
@@ -348,7 +349,8 @@
         "users": "Users",
         "referrals": "Referrals",
         "activityLogs": "Activity Logs",
-        "appearance": "Appearance"
+        "appearance": "Appearance",
+        "exchange": "Exchange Rates"
       },
       "buttons": {
         "cancel": "Cancel",
@@ -458,6 +460,31 @@
       "saveSuccess": "Appearance settings saved successfully",
       "noImages": "No images yet. Click 'Add Image' to upload.",
       "uploadFailed": "Failed to upload image"
+    },
+    "exchange": {
+      "title": "Exchange Rates",
+      "description": "Manage product pricing based on currency exchange rates",
+      "updatePrices": "Update All Prices Now",
+      "updating": "Updating prices...",
+      "updateSuccess": "Prices updated successfully",
+      "updateFailed": "Failed to update prices",
+      "cronLogs": "Price Update History",
+      "cronLogsDescription": "Shows the last 20 automatic and manual price update runs",
+      "noLogs": "No price update logs yet",
+      "refresh": "Refresh",
+      "table": {
+        "date": "Date",
+        "status": "Status",
+        "products": "Products Updated",
+        "currencies": "Currencies",
+        "duration": "Duration",
+        "error": "Error"
+      },
+      "status": {
+        "success": "Success",
+        "failed": "Failed"
+      },
+      "manualNote": "Manual prices will not be changed"
     }
   }
 }

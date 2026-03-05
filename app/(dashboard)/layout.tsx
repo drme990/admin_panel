@@ -15,6 +15,7 @@ import {
   Ticket,
   UserRoundPlus,
   Palette,
+  RefreshCw,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import Logo from '@/components/shared/logo';
@@ -42,6 +43,12 @@ const navItems = [
     key: 'appearance',
     href: '/appearance',
     icon: Palette,
+    superAdminOnly: false,
+  },
+  {
+    key: 'exchange',
+    href: '/exchange',
+    icon: RefreshCw,
     superAdminOnly: false,
   },
   { key: 'activityLogs', href: '/logs', icon: FileText, superAdminOnly: false },

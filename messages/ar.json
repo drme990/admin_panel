@@ -47,7 +47,8 @@
       "users": "المستخدمين",
       "referrals": "الإحالات",
       "activityLogs": "سجل النشاطات",
-      "appearance": "المظهر"
+      "appearance": "المظهر",
+      "exchange": "أسعار الصرف"
     },
     "loading": "جاري التحميل...",
     "redirecting": "جاري التوجيه للدخول...",
@@ -348,7 +349,8 @@
         "users": "المستخدمين",
         "referrals": "الإحالات",
         "activityLogs": "سجل النشاطات",
-        "appearance": "المظهر"
+        "appearance": "المظهر",
+        "exchange": "أسعار الصرف"
       },
       "buttons": {
         "cancel": "إلغاء",
@@ -458,6 +460,31 @@
       "saveSuccess": "تم حفظ إعدادات المظهر بنجاح",
       "noImages": "لا توجد صور. انقر على 'إضافة صورة' للرفع.",
       "uploadFailed": "فشل رفع الصورة"
+    },
+    "exchange": {
+      "title": "أسعار الصرف",
+      "description": "إدارة تسعير المنتجات بناءً على أسعار صرف العملات",
+      "updatePrices": "تحديث جميع الأسعار الآن",
+      "updating": "جاري تحديث الأسعار...",
+      "updateSuccess": "تم تحديث الأسعار بنجاح",
+      "updateFailed": "فشل تحديث الأسعار",
+      "cronLogs": "سجل تحديثات الأسعار",
+      "cronLogsDescription": "يعرض آخر 20 عملية تحديث أسعار تلقائية ويدوية",
+      "noLogs": "لا توجد سجلات تحديث أسعار بعد",
+      "refresh": "تحديث",
+      "table": {
+        "date": "التاريخ",
+        "status": "الحالة",
+        "products": "المنتجات المحدثة",
+        "currencies": "العملات",
+        "duration": "المدة",
+        "error": "الخطأ"
+      },
+      "status": {
+        "success": "ناجح",
+        "failed": "فاشل"
+      },
+      "manualNote": "لن يتم تغيير الأسعار اليدوية"
     }
   }
 }

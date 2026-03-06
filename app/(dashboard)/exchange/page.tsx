@@ -3,7 +3,14 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { toast } from 'react-toastify';
-import { RefreshCw, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
+import {
+  RefreshCw,
+  AlertTriangle,
+  CheckCircle,
+  XCircle,
+  Clock,
+  User,
+} from 'lucide-react';
 import Button from '@/components/ui/button';
 import Table from '@/components/ui/table';
 
@@ -11,6 +18,7 @@ interface CronLog {
   _id: string;
   jobName: string;
   status: 'success' | 'failed';
+  source: 'cron' | 'manual';
   totalProducts: number;
   updatedCount: number;
   targetCurrencies: string[];
@@ -97,6 +105,21 @@ export default function ExchangePage() {
             <XCircle size={12} />
           )}
           {t(`status.${log.status}`)}
+        </span>
+      ),
+    },
+    {
+      header: t('table.source'),
+      accessor: (log: CronLog) => (
+        <span
+          className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
+            log.source === 'cron'
+              ? 'bg-blue-500/10 text-blue-500'
+              : 'bg-purple-500/10 text-purple-500'
+          }`}
+        >
+          {log.source === 'cron' ? <Clock size={12} /> : <User size={12} />}
+          {t(`source.${log.source}`)}
         </span>
       ),
     },

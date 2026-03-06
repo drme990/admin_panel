@@ -475,6 +475,7 @@
       "table": {
         "date": "Date",
         "status": "Status",
+        "source": "Source",
         "products": "Products Updated",
         "currencies": "Currencies",
         "duration": "Duration",
@@ -483,6 +484,10 @@
       "status": {
         "success": "Success",
         "failed": "Failed"
+      },
+      "source": {
+        "cron": "Cron Job",
+        "manual": "Manual"
       },
       "manualNote": "Manual prices will not be changed"
     }

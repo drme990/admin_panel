@@ -475,6 +475,7 @@
       "table": {
         "date": "التاريخ",
         "status": "الحالة",
+        "source": "المصدر",
         "products": "المنتجات المحدثة",
         "currencies": "العملات",
         "duration": "المدة",
@@ -483,6 +484,10 @@
       "status": {
         "success": "ناجح",
         "failed": "فاشل"
+      },
+      "source": {
+        "cron": "مهمة مجدولة",
+        "manual": "يدوي"
       },
       "manualNote": "لن يتم تغيير الأسعار اليدوية"
     }

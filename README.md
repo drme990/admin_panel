@@ -90,6 +90,12 @@ admin_panel (:3003)  →  /api/* rewrite  →  next-backend (:3000) → /api/adm
 - Upload directly to Cloudinary via backend
 - Changes reflect live on the respective public site
 
+### Exchange Rates
+
+- View current exchange rates and cron execution history
+- Source column distinguishes **Cron Job** (automatic) vs **Manual** (admin-triggered) updates
+- Trigger manual price updates across all products
+
 ### Activity Log
 
 - Complete audit trail of all admin actions
@@ -218,6 +224,13 @@ Private and proprietary. Shared infrastructure for **Ghadaq Association** and **
 - Upload images directly to Cloudinary
 - Drag images between rows with move up/down controls
 - Changes reflect immediately on the respective public site
+
+### Exchange Rates
+
+- View current exchange rates and cron job execution history
+- Source column shows whether each update was triggered by **Cron Job** (automatic daily) or **Manual** (admin)
+- Trigger manual price recalculation across all products
+- Currency-specific rounding rules applied (see backend README)
 
 ### Activity Log
 

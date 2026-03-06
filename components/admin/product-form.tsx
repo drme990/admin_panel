@@ -561,7 +561,7 @@ export default function ProductForm({
         <Button
           type="button"
           variant="outline"
-          onClick={() => router.replace('/admin/products')}
+          onClick={() => router.replace('/products')}
           className="flex-1"
         >
           {t('buttons.cancel')}

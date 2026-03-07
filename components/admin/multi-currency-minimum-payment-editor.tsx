@@ -8,6 +8,7 @@ import Dropdown from '@/components/ui/dropdown';
 import Button from '@/components/ui/button';
 import { toast } from 'react-toastify';
 import { CurrencyPrice } from '@/types/Product';
+import { roundPrice } from '@/lib/currency-rounding';
 
 export interface CurrencyMinimumPayment {
   currencyCode: string;
@@ -140,7 +141,7 @@ export default function MultiCurrencyMinimumPaymentEditor({
 
             const rate = rates[code.toLowerCase()];
             const convertedValue = rate
-              ? Math.ceil(baseMinimumValue * rate)
+              ? roundPrice(baseMinimumValue * rate, code)
               : 0;
 
             return {

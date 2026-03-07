@@ -88,14 +88,11 @@ export default function ProductsPage() {
   const saveReorder = async () => {
     setReorderSaving(true);
     try {
-      const orders = reorderList.map((p, i) => ({
-        id: p._id,
-        displayOrder: i,
-      }));
+      const orderedIds = reorderList.map((p) => p._id);
       const res = await fetch('/api/products/reorder', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orders }),
+        body: JSON.stringify({ orderedIds }),
       });
       if (res.ok) {
         setProducts(reorderList);
@@ -204,7 +201,7 @@ export default function ProductsPage() {
           <p className="text-secondary">{t('description')}</p>
         </div>
         <div className="flex items-center gap-3">
-          <Button variant='secondary' onClick={openReorderModal}>
+          <Button variant="secondary" onClick={openReorderModal}>
             <ListOrdered size={20} />
             {t('reorderButton')}
           </Button>

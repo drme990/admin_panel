@@ -7,6 +7,7 @@ import Input from '@/components/ui/input';
 import Dropdown from '@/components/ui/dropdown';
 import Button from '@/components/ui/button';
 import { toast } from 'react-toastify';
+import { roundPrice } from '@/lib/currency-rounding';
 
 export interface CurrencyPrice {
   currencyCode: string;
@@ -112,7 +113,7 @@ export default function MultiCurrencyPriceEditor({
         }
 
         const rate = rates[code.toLowerCase()];
-        const convertedAmount = rate ? Math.ceil(basePrice * rate) : 0;
+        const convertedAmount = rate ? roundPrice(basePrice * rate, code) : 0;
 
         return {
           currencyCode: code,

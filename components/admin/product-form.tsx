@@ -18,6 +18,7 @@ import { useTranslations } from 'next-intl';
 import { toast } from 'react-toastify';
 import { Plus, X } from 'lucide-react';
 import Loading from '../ui/loading';
+import { roundPrice } from '@/lib/currency-rounding';
 
 interface ProductFormProps {
   product?: Product | null;
@@ -169,7 +170,7 @@ export default function ProductForm({
       price: Math.ceil(size.price * multiplier),
       prices: size.prices.map((p) => ({
         ...p,
-        amount: Math.ceil(p.amount * multiplier),
+        amount: roundPrice(p.amount * multiplier, p.currencyCode),
       })),
     }));
     setFormData({ ...formData, sizes: updatedSizes });
@@ -350,14 +351,14 @@ export default function ProductForm({
               step="0.1"
             />
           </div>
-          <button
+          <Button
             type="button"
             onClick={handleApplyPriceIncrease}
             disabled={!addedPricePercentage || addedPricePercentage <= 0}
-            className="px-6 py-3 bg-success text-white rounded-lg hover:bg-success/90 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            className="disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {t('form.applyButton')}
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -416,14 +417,14 @@ export default function ProductForm({
             <h3 className="text-sm font-medium">{t('form.sizes')}</h3>
             <p className="text-xs text-secondary mt-1">{t('form.sizesHelp')}</p>
           </div>
-          <button
+          <Button
             type="button"
             onClick={addSize}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-success text-white rounded-lg hover:bg-success/90 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm"
           >
             <Plus size={16} />
             {t('form.addSize')}
-          </button>
+          </Button>
         </div>
 
         {formData.sizes.map((size, index) => (
@@ -435,14 +436,15 @@ export default function ProductForm({
               <h4 className="text-sm font-semibold">
                 {t('form.sizeNumber', { number: index + 1 })}
               </h4>
-              <button
+              <Button
+                variant="custom"
                 type="button"
                 onClick={() => removeSize(index)}
                 className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-950 rounded-lg transition-colors"
                 title={t('form.removeSize')}
               >
                 <X size={16} />
-              </button>
+              </Button>
             </div>
 
             {/* Size Name */}

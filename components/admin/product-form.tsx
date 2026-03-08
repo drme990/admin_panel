@@ -77,7 +77,7 @@ export default function ProductForm({
 
   // Fetch all products for upgrade dropdown
   useEffect(() => {
-    fetch('/api/admin/products')
+    fetch('/api/products')
       .then((r) => r.json())
       .then((d) => {
         if (d.success) setAllProducts(d.data.products || []);

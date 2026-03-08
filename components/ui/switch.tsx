@@ -44,7 +44,6 @@ const Switch = forwardRef<HTMLButtonElement, SwitchProps>(
               'text-sm text-foreground',
               disabled ? 'opacity-50' : 'cursor-pointer',
             )}
-            onClick={() => !disabled && onChange(!checked)}
           >
             {label}
           </label>

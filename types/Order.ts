@@ -33,6 +33,15 @@ export interface BillingData {
   country: string;
 }
 
+export interface ReservationOrderField {
+  label: {
+    ar: string;
+    en: string;
+  };
+  type: 'text' | 'textarea' | 'number' | 'date' | 'select' | 'picture';
+  value: string;
+}
+
 export interface Order {
   _id: string;
   orderNumber: string;
@@ -57,7 +66,7 @@ export interface Order {
   referralId?: string;
   // Terms
   termsAgreedAt?: string;
-  notes?: string;
+  reservationData?: ReservationOrderField[];
   countryCode?: string;
   locale?: string;
   createdAt: string;

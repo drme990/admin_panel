@@ -38,6 +38,19 @@ export interface PartialPayment {
   minimumPayments: CurrencyMinimumPayment[];
 }
 
+export interface ReservationFieldOption {
+  ar: string;
+  en: string;
+}
+
+export interface ReservationField {
+  type: 'text' | 'textarea' | 'number' | 'date' | 'select' | 'picture';
+  label: { ar: string; en: string };
+  required: boolean;
+  maxLength?: number;
+  options?: ReservationFieldOption[];
+}
+
 /**
  * Enhanced Product shape.
  *
@@ -75,8 +88,13 @@ export interface Product {
   sizes: ProductSize[];
   /** Partial-payment configuration */
   partialPayment: PartialPayment;
+  /** Product ID to suggest as an upgrade on checkout */
+  upgradeTo?: string;
+  /** Discount percentage when upgrading (0 = same price, 100 = free) */
+  upgradeDiscount?: number;
   workAsSacrifice?: boolean;
   sacrificeCount?: number;
+  reservationFields?: ReservationField[];
   displayOrder?: number;
   createdAt?: string;
   updatedAt?: string;

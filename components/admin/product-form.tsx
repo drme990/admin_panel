@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Product } from '@/types/Product';
+import { Product, ReservationField } from '@/types/Product';
 import Input from '@/components/ui/input';
 import Switch from '@/components/ui/switch';
 import Button from '@/components/ui/button';
@@ -16,8 +16,9 @@ import MultiImageUpload from '@/components/admin/multi-image-upload';
 import RichTextEditor from '@/components/ui/rich-text-editor';
 import { useTranslations } from 'next-intl';
 import { toast } from 'react-toastify';
-import { Plus, X } from 'lucide-react';
+import { Plus, X, ClipboardList } from 'lucide-react';
 import Loading from '../ui/loading';
+import Dropdown from '@/components/ui/dropdown';
 import { roundPrice } from '@/lib/currency-rounding';
 
 interface ProductFormProps {
@@ -51,6 +52,7 @@ export default function ProductForm({
       isAllowed: false,
       minimumType: 'percentage' as 'percentage' | 'fixed',
       minimumPayments: [] as CurrencyMinimumPayment[],
+      baseMinimumValue: 50,
     },
     sizes: [{ ...defaultSize }] as {
       name: { ar: string; en: string };
@@ -60,13 +62,28 @@ export default function ProductForm({
     }[],
     workAsSacrifice: false,
     sacrificeCount: 1,
+    upgradeTo: '' as string,
+    upgradeDiscount: 0,
+    canBeUpgraded: false,
+    reservationFields: [] as ReservationField[],
   });
   const [addedPricePercentage, setAddedPricePercentage] = useState<number>(0);
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [hasChanges, setHasChanges] = useState(false);
   const [isFormDataReady, setIsFormDataReady] = useState(false);
   const isInitialMount = useRef(true);
   const t = useTranslations('admin.products');
   const router = useRouter();
+
+  // Fetch all products for upgrade dropdown
+  useEffect(() => {
+    fetch('/api/admin/products')
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.success) setAllProducts(d.data.products || []);
+      })
+      .catch(() => {});
+  }, []);
 
   // Initialize form data when product prop changes
   useEffect(() => {
@@ -87,6 +104,8 @@ export default function ProductForm({
           isAllowed: product.partialPayment?.isAllowed || false,
           minimumType: product.partialPayment?.minimumType || 'percentage',
           minimumPayments: product.partialPayment?.minimumPayments || [],
+          baseMinimumValue:
+            product.partialPayment?.minimumPayments?.[0]?.value || 50,
         },
         sizes:
           product.sizes?.length > 0
@@ -99,6 +118,10 @@ export default function ProductForm({
             : [{ ...defaultSize }],
         workAsSacrifice: product.workAsSacrifice || false,
         sacrificeCount: product.sacrificeCount ?? 1,
+        upgradeTo: product.upgradeTo || '',
+        upgradeDiscount: product.upgradeDiscount ?? 0,
+        canBeUpgraded: !!product.upgradeTo,
+        reservationFields: product.reservationFields || [],
       });
 
       // Use setTimeout to ensure state is updated before setting ready
@@ -245,6 +268,9 @@ export default function ProductForm({
       sizes: formData.sizes,
       workAsSacrifice: formData.workAsSacrifice,
       sacrificeCount: formData.workAsSacrifice ? formData.sacrificeCount : 1,
+      upgradeTo: formData.upgradeTo || null,
+      upgradeDiscount: formData.upgradeTo ? formData.upgradeDiscount : 0,
+      reservationFields: formData.reservationFields,
     };
 
     try {
@@ -383,7 +409,7 @@ export default function ProductForm({
             <MultiCurrencyMinimumPaymentEditor
               mainCurrency={formData.baseCurrency}
               minimumPaymentType={formData.partialPayment.minimumType}
-              baseMinimumValue={50}
+              baseMinimumValue={formData.partialPayment.baseMinimumValue}
               minimumPayments={formData.partialPayment.minimumPayments}
               prices={formData.sizes[0]?.prices || []}
               onChange={(minimumPayments) =>
@@ -404,7 +430,15 @@ export default function ProductForm({
                   },
                 })
               }
-              onBaseValueChange={() => {}}
+              onBaseValueChange={(value) =>
+                setFormData({
+                  ...formData,
+                  partialPayment: {
+                    ...formData.partialPayment,
+                    baseMinimumValue: value,
+                  },
+                })
+              }
             />
           </div>
         )}
@@ -540,6 +574,325 @@ export default function ProductForm({
             helperText={t('form.sacrificeCountHelp')}
           />
         )}
+      </div>
+
+      {/* Upgrade To Product */}
+      <div className="space-y-3 p-4 border border-stroke rounded-site">
+        <p className="text-sm font-semibold text-foreground">
+          {t('form.upgradeSection')}
+        </p>
+        <Switch
+          id="canBeUpgraded"
+          checked={formData.canBeUpgraded}
+          onChange={(checked) => {
+            if (!checked) {
+              setFormData({
+                ...formData,
+                canBeUpgraded: false,
+                upgradeTo: '',
+                upgradeDiscount: 0,
+              });
+            } else {
+              setFormData({ ...formData, canBeUpgraded: true });
+            }
+          }}
+          label={t('form.canBeUpgradedLabel')}
+        />
+        {formData.canBeUpgraded && (
+          <div className="space-y-3">
+            <div>
+              <label className="block text-xs font-medium text-secondary mb-1">
+                {t('form.upgradeToLabel')}
+              </label>
+              <select
+                value={formData.upgradeTo}
+                onChange={(e) =>
+                  setFormData({ ...formData, upgradeTo: e.target.value })
+                }
+                className="w-full px-3 py-2 text-sm border border-stroke rounded-site bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-success"
+              >
+                <option value="">{t('form.upgradeToPlaceholder')}</option>
+                {allProducts
+                  .filter((p) => p._id !== product?._id)
+                  .map((p) => (
+                    <option key={p._id} value={p._id}>
+                      {p.name.ar} — {p.name.en}
+                    </option>
+                  ))}
+              </select>
+            </div>
+            {formData.upgradeTo && (
+              <Input
+                label={t('form.upgradeDiscountLabel')}
+                type="number"
+                value={formData.upgradeDiscount || ''}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    upgradeDiscount: Math.min(
+                      100,
+                      Math.max(0, parseFloat(e.target.value) || 0),
+                    ),
+                  })
+                }
+                min="0"
+                max="100"
+                step="1"
+                helperText={t('form.upgradeDiscountHelp')}
+              />
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Reservation Fields */}
+      <div className="space-y-3 p-4 border border-stroke rounded-site">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <ClipboardList size={16} className="text-success" />
+            <p className="text-sm font-semibold text-foreground">
+              {t('form.reservationSection')}
+            </p>
+          </div>
+          <Button
+            type="button"
+            onClick={() =>
+              setFormData({
+                ...formData,
+                reservationFields: [
+                  ...formData.reservationFields,
+                  { type: 'text', label: { ar: '', en: '' }, required: false },
+                ],
+              })
+            }
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm"
+          >
+            <Plus size={16} />
+            {t('form.addReservationField')}
+          </Button>
+        </div>
+        <p className="text-xs text-secondary">{t('form.reservationHelp')}</p>
+
+        {formData.reservationFields.map((field, index) => (
+          <div
+            key={index}
+            className="border border-stroke rounded-lg p-4 space-y-3"
+          >
+            <div className="flex items-center justify-between">
+              <h4 className="text-sm font-semibold">
+                {t('form.reservationFieldNumber', { number: index + 1 })}
+              </h4>
+              <Button
+                variant="custom"
+                type="button"
+                onClick={() =>
+                  setFormData({
+                    ...formData,
+                    reservationFields: formData.reservationFields.filter(
+                      (_, i) => i !== index,
+                    ),
+                  })
+                }
+                className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-950 rounded-lg transition-colors"
+              >
+                <X size={16} />
+              </Button>
+            </div>
+
+            {/* Field Type */}
+            <Dropdown
+              label={t('form.reservationFieldType')}
+              value={field.type}
+              options={[
+                { label: t('form.reservationTypeText'), value: 'text' },
+                { label: t('form.reservationTypeTextarea'), value: 'textarea' },
+                { label: t('form.reservationTypeNumber'), value: 'number' },
+                { label: t('form.reservationTypeDate'), value: 'date' },
+                { label: t('form.reservationTypeSelect'), value: 'select' },
+                { label: t('form.reservationTypePicture'), value: 'picture' },
+              ]}
+              onChange={(value) => {
+                const updated = [...formData.reservationFields];
+                updated[index] = {
+                  ...updated[index],
+                  type: value as
+                    | 'text'
+                    | 'textarea'
+                    | 'number'
+                    | 'date'
+                    | 'select'
+                    | 'picture',
+                  // clear options/maxLength when type changes
+                  options:
+                    value === 'select'
+                      ? (updated[index].options ?? [])
+                      : undefined,
+                  maxLength:
+                    value === 'text' || value === 'textarea'
+                      ? updated[index].maxLength
+                      : undefined,
+                };
+                setFormData({ ...formData, reservationFields: updated });
+              }}
+            />
+
+            {/* Labels */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <Input
+                label={t('form.reservationLabelAr')}
+                type="text"
+                required
+                value={field.label.ar}
+                onChange={(e) => {
+                  const updated = [...formData.reservationFields];
+                  updated[index] = {
+                    ...updated[index],
+                    label: { ...updated[index].label, ar: e.target.value },
+                  };
+                  setFormData({ ...formData, reservationFields: updated });
+                }}
+              />
+              <Input
+                label={t('form.reservationLabelEn')}
+                type="text"
+                required
+                value={field.label.en}
+                onChange={(e) => {
+                  const updated = [...formData.reservationFields];
+                  updated[index] = {
+                    ...updated[index],
+                    label: { ...updated[index].label, en: e.target.value },
+                  };
+                  setFormData({ ...formData, reservationFields: updated });
+                }}
+              />
+            </div>
+
+            {/* Max Length (text + textarea) */}
+            {(field.type === 'text' || field.type === 'textarea') && (
+              <Input
+                label={t('form.reservationMaxLength')}
+                type="number"
+                min={1}
+                value={field.maxLength || ''}
+                onChange={(e) => {
+                  const updated = [...formData.reservationFields];
+                  const val = parseInt(e.target.value) || undefined;
+                  updated[index] = { ...updated[index], maxLength: val };
+                  setFormData({ ...formData, reservationFields: updated });
+                }}
+                helperText={t('form.reservationMaxLengthHelp')}
+              />
+            )}
+
+            {/* Select Options (select only) */}
+            {field.type === 'select' && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-medium text-secondary">
+                    {t('form.reservationSelectOptions')}
+                  </label>
+                  <Button
+                    type="button"
+                    variant="custom"
+                    onClick={() => {
+                      const updated = [...formData.reservationFields];
+                      updated[index] = {
+                        ...updated[index],
+                        options: [
+                          ...(updated[index].options ?? []),
+                          { ar: '', en: '' },
+                        ],
+                      };
+                      setFormData({ ...formData, reservationFields: updated });
+                    }}
+                    className="flex items-center gap-1 px-2 py-1 text-xs border border-stroke rounded-lg hover:border-success hover:text-success transition-colors"
+                  >
+                    <Plus size={12} />
+                    {t('form.reservationAddOption')}
+                  </Button>
+                </div>
+                {(field.options ?? []).length === 0 && (
+                  <p className="text-xs text-secondary italic">
+                    {t('form.reservationNoOptions')}
+                  </p>
+                )}
+                {(field.options ?? []).map((opt, optIdx) => (
+                  <div key={optIdx} className="flex items-center gap-2">
+                    <div className="grid grid-cols-2 gap-2 flex-1">
+                      <Input
+                        placeholder={t('form.reservationOptionAr')}
+                        type="text"
+                        value={opt.ar}
+                        onChange={(e) => {
+                          const updated = [...formData.reservationFields];
+                          const opts = [...(updated[index].options ?? [])];
+                          opts[optIdx] = {
+                            ...opts[optIdx],
+                            ar: e.target.value,
+                          };
+                          updated[index] = { ...updated[index], options: opts };
+                          setFormData({
+                            ...formData,
+                            reservationFields: updated,
+                          });
+                        }}
+                      />
+                      <Input
+                        placeholder={t('form.reservationOptionEn')}
+                        type="text"
+                        value={opt.en}
+                        onChange={(e) => {
+                          const updated = [...formData.reservationFields];
+                          const opts = [...(updated[index].options ?? [])];
+                          opts[optIdx] = {
+                            ...opts[optIdx],
+                            en: e.target.value,
+                          };
+                          updated[index] = { ...updated[index], options: opts };
+                          setFormData({
+                            ...formData,
+                            reservationFields: updated,
+                          });
+                        }}
+                      />
+                    </div>
+                    <Button
+                      variant="custom"
+                      type="button"
+                      onClick={() => {
+                        const updated = [...formData.reservationFields];
+                        const opts = (updated[index].options ?? []).filter(
+                          (_, i) => i !== optIdx,
+                        );
+                        updated[index] = { ...updated[index], options: opts };
+                        setFormData({
+                          ...formData,
+                          reservationFields: updated,
+                        });
+                      }}
+                      className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-950 rounded-lg transition-colors shrink-0"
+                    >
+                      <X size={14} />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Required */}
+            <Switch
+              id={`reservationRequired_${index}`}
+              checked={field.required}
+              onChange={(checked) => {
+                const updated = [...formData.reservationFields];
+                updated[index] = { ...updated[index], required: checked };
+                setFormData({ ...formData, reservationFields: updated });
+              }}
+              label={t('form.reservationRequired')}
+            />
+          </div>
+        ))}
       </div>
 
       {/* In Stock */}

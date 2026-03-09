@@ -2,6 +2,16 @@
 
 A secure **Next.js 16** admin dashboard for managing both **Ghadaq Association** and **Manasik Foundation** platforms.
 
+## Latest Updates (2026-03-09)
+
+- Both storefront apps now use a 2-step checkout: **Billing Information** then **Reservation Details**.
+- Coupons are now handled from the storefront **Order Summary** panel.
+- Terms acceptance and payment option selection are now handled in Billing step.
+- Products with empty `reservationFields` still skip Reservation and proceed directly to payment.
+- No admin migration is required for this update.
+- Product `upgradeFeatures` are now editable independently from `upgradeTo` and can be configured for any product.
+- Storefront upgrade modal now uses a top-positioned large visual countdown for discount offers.
+
 ---
 
 ## Architecture

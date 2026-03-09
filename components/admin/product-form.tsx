@@ -64,6 +64,8 @@ export default function ProductForm({
     sacrificeCount: 1,
     upgradeTo: '' as string,
     upgradeDiscount: 0,
+    upgradeFeaturesAr: '',
+    upgradeFeaturesEn: '',
     canBeUpgraded: false,
     reservationFields: [] as ReservationField[],
   });
@@ -120,6 +122,8 @@ export default function ProductForm({
         sacrificeCount: product.sacrificeCount ?? 1,
         upgradeTo: product.upgradeTo || '',
         upgradeDiscount: product.upgradeDiscount ?? 0,
+        upgradeFeaturesAr: (product.upgradeFeatures?.ar || []).join('\n'),
+        upgradeFeaturesEn: (product.upgradeFeatures?.en || []).join('\n'),
         canBeUpgraded: !!product.upgradeTo,
         reservationFields: product.reservationFields || [],
       });
@@ -270,6 +274,19 @@ export default function ProductForm({
       sacrificeCount: formData.workAsSacrifice ? formData.sacrificeCount : 1,
       upgradeTo: formData.upgradeTo || null,
       upgradeDiscount: formData.upgradeTo ? formData.upgradeDiscount : 0,
+      upgradeFeatures: (() => {
+        const ar = formData.upgradeFeaturesAr
+          .split('\n')
+          .map((v) => v.trim())
+          .filter(Boolean);
+        const en = formData.upgradeFeaturesEn
+          .split('\n')
+          .map((v) => v.trim())
+          .filter(Boolean);
+
+        if (ar.length === 0 && en.length === 0) return null;
+        return { ar, en };
+      })(),
       reservationFields: formData.reservationFields,
     };
 
@@ -294,622 +311,681 @@ export default function ProductForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Name */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Input
-          label={t('form.nameAr')}
-          type="text"
-          required
-          value={formData.name_ar}
-          onChange={(e) =>
-            setFormData({ ...formData, name_ar: e.target.value })
-          }
-        />
-        <Input
-          label={t('form.nameEn')}
-          type="text"
-          required
-          value={formData.name_en}
-          onChange={(e) =>
-            setFormData({ ...formData, name_en: e.target.value })
-          }
-        />
-      </div>
-
-      {/* Content (Arabic) */}
-      <RichTextEditor
-        key={`content_ar_${product?._id || 'new'}`}
-        label={t('form.contentAr')}
-        helperText={t('form.contentHelp')}
-        value={formData.content_ar}
-        onChange={(value) =>
-          setFormData((prev) => ({ ...prev, content_ar: value }))
-        }
-        placeholder={t('form.contentPlaceholder')}
-        dir="rtl"
-      />
-
-      {/* Content (English) */}
-      <RichTextEditor
-        key={`content_en_${product?._id || 'new'}`}
-        label={t('form.contentEn')}
-        helperText={t('form.contentHelp')}
-        value={formData.content_en}
-        onChange={(value) =>
-          setFormData((prev) => ({ ...prev, content_en: value }))
-        }
-        placeholder={t('form.contentPlaceholder')}
-        dir="ltr"
-      />
-
-      {/* Main Currency selector (always visible) */}
-      <MultiCurrencyPriceEditor
-        mainCurrency={formData.baseCurrency}
-        basePrice={formData.sizes[0]?.price ?? 0}
-        prices={[]}
-        onChange={() => {}}
-        onMainCurrencyChange={(currency) => {
-          setFormData({
-            ...formData,
-            baseCurrency: currency,
-          });
-        }}
-        onBasePriceChange={() => {}}
-        hidePrice
-      />
-
-      {/* Added Price Percentage */}
-      <div className="border border-stroke rounded-lg p-4 bg-background space-y-3">
-        <label className="block text-sm font-medium">
-          {t('form.addedPrice')}
-        </label>
-        <p className="text-xs text-secondary">{t('form.addedPriceHelp')}</p>
-        <div className="flex items-end gap-3">
-          <div className="flex-1">
-            <Input
-              type="number"
-              value={addedPricePercentage || ''}
-              onChange={(e) =>
-                setAddedPricePercentage(parseFloat(e.target.value) || 0)
-              }
-              placeholder={t('form.addedPricePlaceholder')}
-              min="0"
-              step="0.1"
-            />
-          </div>
-          <Button
-            type="button"
-            onClick={handleApplyPriceIncrease}
-            disabled={!addedPricePercentage || addedPricePercentage <= 0}
-            className="disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {t('form.applyButton')}
-          </Button>
+      {/* Basic product information */}
+      <section className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Input
+            label={t('form.nameAr')}
+            type="text"
+            required
+            value={formData.name_ar}
+            onChange={(e) =>
+              setFormData({ ...formData, name_ar: e.target.value })
+            }
+          />
+          <Input
+            label={t('form.nameEn')}
+            type="text"
+            required
+            value={formData.name_en}
+            onChange={(e) =>
+              setFormData({ ...formData, name_en: e.target.value })
+            }
+          />
         </div>
-      </div>
 
-      {/* Partial Payment Settings */}
-      <div className="border border-stroke rounded-lg p-4 bg-background space-y-4">
-        <Switch
-          id="allowPartialPayment"
-          checked={formData.partialPayment.isAllowed}
-          onChange={(checked) =>
+        <RichTextEditor
+          key={`content_ar_${product?._id || 'new'}`}
+          label={t('form.contentAr')}
+          helperText={t('form.contentHelp')}
+          value={formData.content_ar}
+          onChange={(value) =>
+            setFormData((prev) => ({ ...prev, content_ar: value }))
+          }
+          placeholder={t('form.contentPlaceholder')}
+          dir="rtl"
+        />
+
+        <RichTextEditor
+          key={`content_en_${product?._id || 'new'}`}
+          label={t('form.contentEn')}
+          helperText={t('form.contentHelp')}
+          value={formData.content_en}
+          onChange={(value) =>
+            setFormData((prev) => ({ ...prev, content_en: value }))
+          }
+          placeholder={t('form.contentPlaceholder')}
+          dir="ltr"
+        />
+
+        <MultiImageUpload
+          images={formData.images}
+          onChange={(images) => setFormData({ ...formData, images })}
+        />
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <Switch
+            id="inStock"
+            checked={formData.inStock}
+            onChange={(checked) =>
+              setFormData({ ...formData, inStock: checked })
+            }
+            label={t('form.inStockLabel')}
+          />
+          <Switch
+            id="isActive"
+            checked={formData.isActive}
+            onChange={(checked) =>
+              setFormData({ ...formData, isActive: checked })
+            }
+            label={t('form.isActiveLabel', { defaultValue: 'Active' })}
+          />
+        </div>
+      </section>
+
+      <hr className="border-stroke" />
+
+      {/* Pricing and payment setup */}
+      <section className="space-y-4">
+        <MultiCurrencyPriceEditor
+          mainCurrency={formData.baseCurrency}
+          basePrice={formData.sizes[0]?.price ?? 0}
+          prices={[]}
+          onChange={() => {}}
+          onMainCurrencyChange={(currency) => {
             setFormData({
               ...formData,
-              partialPayment: {
-                ...formData.partialPayment,
-                isAllowed: checked,
-              },
-            })
-          }
-          label={t('form.allowPartialPayment')}
+              baseCurrency: currency,
+            });
+          }}
+          onBasePriceChange={() => {}}
+          hidePrice
         />
-        {formData.partialPayment.isAllowed && (
-          <div className="pt-2">
-            <MultiCurrencyMinimumPaymentEditor
-              mainCurrency={formData.baseCurrency}
-              minimumPaymentType={formData.partialPayment.minimumType}
-              baseMinimumValue={formData.partialPayment.baseMinimumValue}
-              minimumPayments={formData.partialPayment.minimumPayments}
-              prices={formData.sizes[0]?.prices || []}
-              onChange={(minimumPayments) =>
-                setFormData({
-                  ...formData,
-                  partialPayment: {
-                    ...formData.partialPayment,
-                    minimumPayments,
-                  },
-                })
-              }
-              onTypeChange={(type) =>
-                setFormData({
-                  ...formData,
-                  partialPayment: {
-                    ...formData.partialPayment,
-                    minimumType: type,
-                  },
-                })
-              }
-              onBaseValueChange={(value) =>
-                setFormData({
-                  ...formData,
-                  partialPayment: {
-                    ...formData.partialPayment,
-                    baseMinimumValue: value,
-                  },
-                })
-              }
-            />
-          </div>
-        )}
-      </div>
 
-      {/* Product Sizes (Required - at least one) */}
-      <div className="border border-stroke rounded-lg p-4 bg-background space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-sm font-medium">{t('form.sizes')}</h3>
-            <p className="text-xs text-secondary mt-1">{t('form.sizesHelp')}</p>
+        <div className="border border-stroke rounded-lg p-4 bg-background space-y-3">
+          <label className="block text-sm font-medium">
+            {t('form.addedPrice')}
+          </label>
+          <p className="text-xs text-secondary">{t('form.addedPriceHelp')}</p>
+          <div className="flex items-end gap-3">
+            <div className="flex-1">
+              <Input
+                type="number"
+                value={addedPricePercentage || ''}
+                onChange={(e) =>
+                  setAddedPricePercentage(parseFloat(e.target.value) || 0)
+                }
+                placeholder={t('form.addedPricePlaceholder')}
+                min="0"
+                step="0.1"
+              />
+            </div>
+            <Button
+              type="button"
+              onClick={handleApplyPriceIncrease}
+              disabled={!addedPricePercentage || addedPricePercentage <= 0}
+              className="disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {t('form.applyButton')}
+            </Button>
           </div>
-          <Button
-            type="button"
-            onClick={addSize}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm"
-          >
-            <Plus size={16} />
-            {t('form.addSize')}
-          </Button>
         </div>
 
-        {formData.sizes.map((size, index) => (
-          <div
-            key={index}
-            className="border border-stroke rounded-lg p-4 space-y-3"
-          >
-            <div className="flex items-center justify-between">
-              <h4 className="text-sm font-semibold">
-                {t('form.sizeNumber', { number: index + 1 })}
-              </h4>
-              <Button
-                variant="custom"
-                type="button"
-                onClick={() => removeSize(index)}
-                className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-950 rounded-lg transition-colors"
-                title={t('form.removeSize')}
-              >
-                <X size={16} />
-              </Button>
-            </div>
-
-            {/* Size Name */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <Input
-                label={t('form.sizeNameAr')}
-                type="text"
-                value={size.name.ar}
-                onChange={(e) => updateSize(index, 'name.ar', e.target.value)}
-              />
-              <Input
-                label={t('form.sizeNameEn')}
-                type="text"
-                value={size.name.en}
-                onChange={(e) => updateSize(index, 'name.en', e.target.value)}
-              />
-            </div>
-
-            {/* Size Price */}
-            <div className="space-y-2">
-              <label className="text-xs font-medium text-secondary">
-                {t('form.sizePrice')}
-              </label>
-              <Input
-                label={`${t('form.sizeBasePrice')} (${formData.baseCurrency})`}
-                type="number"
-                value={size.price || ''}
-                onChange={(e) =>
-                  updateSize(index, 'price', parseFloat(e.target.value) || 0)
-                }
-                min="0"
-                step="0.01"
-              />
-              {size.price > 0 && (
-                <MultiCurrencyPriceEditor
-                  mainCurrency={formData.baseCurrency}
-                  basePrice={size.price}
-                  prices={size.prices}
-                  onChange={(prices) => updateSize(index, 'prices', prices)}
-                  onMainCurrencyChange={() => {}}
-                  onBasePriceChange={() => {}}
-                  compact
-                />
-              )}
-            </div>
-
-            {/* Feeds up (per size) */}
-            <Input
-              label={t('form.feedsUpLabel')}
-              type="number"
-              value={size.feedsUp || ''}
-              onChange={(e) =>
-                updateSize(index, 'feedsUp', parseInt(e.target.value) || 0)
-              }
-              min="0"
-              helperText={t('form.feedsUpHelp')}
-            />
-          </div>
-        ))}
-      </div>
-
-      {/* Multi-Image Upload */}
-      <MultiImageUpload
-        images={formData.images}
-        onChange={(images) => setFormData({ ...formData, images })}
-      />
-
-      {/* Sacrifice / Aqeqa Settings */}
-      <div className="space-y-3 p-4 border border-stroke rounded-site">
-        <p className="text-sm font-semibold text-foreground">
-          {t('form.sacrificeSection')}
-        </p>
-        <Switch
-          id="workAsSacrifice"
-          checked={formData.workAsSacrifice}
-          onChange={(checked) =>
-            setFormData({ ...formData, workAsSacrifice: checked })
-          }
-          label={t('form.workAsSacrificeLabel')}
-        />
-        {formData.workAsSacrifice && (
-          <Input
-            label={t('form.sacrificeCountLabel')}
-            type="number"
-            min={1}
-            value={formData.sacrificeCount}
-            onChange={(e) =>
+        <div className="border border-stroke rounded-lg p-4 bg-background space-y-4">
+          <Switch
+            id="allowPartialPayment"
+            checked={formData.partialPayment.isAllowed}
+            onChange={(checked) =>
               setFormData({
                 ...formData,
-                sacrificeCount: Math.max(1, parseInt(e.target.value) || 1),
+                partialPayment: {
+                  ...formData.partialPayment,
+                  isAllowed: checked,
+                },
               })
             }
-            helperText={t('form.sacrificeCountHelp')}
+            label={t('form.allowPartialPayment')}
           />
-        )}
-      </div>
+          {formData.partialPayment.isAllowed && (
+            <div className="pt-2">
+              <MultiCurrencyMinimumPaymentEditor
+                mainCurrency={formData.baseCurrency}
+                minimumPaymentType={formData.partialPayment.minimumType}
+                baseMinimumValue={formData.partialPayment.baseMinimumValue}
+                minimumPayments={formData.partialPayment.minimumPayments}
+                prices={formData.sizes[0]?.prices || []}
+                onChange={(minimumPayments) =>
+                  setFormData({
+                    ...formData,
+                    partialPayment: {
+                      ...formData.partialPayment,
+                      minimumPayments,
+                    },
+                  })
+                }
+                onTypeChange={(type) =>
+                  setFormData({
+                    ...formData,
+                    partialPayment: {
+                      ...formData.partialPayment,
+                      minimumType: type,
+                    },
+                  })
+                }
+                onBaseValueChange={(value) =>
+                  setFormData({
+                    ...formData,
+                    partialPayment: {
+                      ...formData.partialPayment,
+                      baseMinimumValue: value,
+                    },
+                  })
+                }
+              />
+            </div>
+          )}
+        </div>
 
-      {/* Upgrade To Product */}
-      <div className="space-y-3 p-4 border border-stroke rounded-site">
-        <p className="text-sm font-semibold text-foreground">
-          {t('form.upgradeSection')}
-        </p>
-        <Switch
-          id="canBeUpgraded"
-          checked={formData.canBeUpgraded}
-          onChange={(checked) => {
-            if (!checked) {
-              setFormData({
-                ...formData,
-                canBeUpgraded: false,
-                upgradeTo: '',
-                upgradeDiscount: 0,
-              });
-            } else {
-              setFormData({ ...formData, canBeUpgraded: true });
+        <div className="border border-stroke rounded-lg p-4 bg-background space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-medium">{t('form.sizes')}</h3>
+              <p className="text-xs text-secondary mt-1">
+                {t('form.sizesHelp')}
+              </p>
+            </div>
+            <Button
+              type="button"
+              onClick={addSize}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm"
+            >
+              <Plus size={16} />
+              {t('form.addSize')}
+            </Button>
+          </div>
+
+          {formData.sizes.map((size, index) => (
+            <div
+              key={index}
+              className="border border-stroke rounded-lg p-4 space-y-3"
+            >
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-semibold">
+                  {t('form.sizeNumber', { number: index + 1 })}
+                </h4>
+                <Button
+                  variant="custom"
+                  type="button"
+                  onClick={() => removeSize(index)}
+                  className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-950 rounded-lg transition-colors"
+                  title={t('form.removeSize')}
+                >
+                  <X size={16} />
+                </Button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <Input
+                  label={t('form.sizeNameAr')}
+                  type="text"
+                  value={size.name.ar}
+                  onChange={(e) => updateSize(index, 'name.ar', e.target.value)}
+                />
+                <Input
+                  label={t('form.sizeNameEn')}
+                  type="text"
+                  value={size.name.en}
+                  onChange={(e) => updateSize(index, 'name.en', e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-secondary">
+                  {t('form.sizePrice')}
+                </label>
+                <Input
+                  label={`${t('form.sizeBasePrice')} (${formData.baseCurrency})`}
+                  type="number"
+                  value={size.price || ''}
+                  onChange={(e) =>
+                    updateSize(index, 'price', parseFloat(e.target.value) || 0)
+                  }
+                  min="0"
+                  step="0.01"
+                />
+                {size.price > 0 && (
+                  <MultiCurrencyPriceEditor
+                    mainCurrency={formData.baseCurrency}
+                    basePrice={size.price}
+                    prices={size.prices}
+                    onChange={(prices) => updateSize(index, 'prices', prices)}
+                    onMainCurrencyChange={() => {}}
+                    onBasePriceChange={() => {}}
+                    compact
+                  />
+                )}
+              </div>
+
+              <Input
+                label={t('form.feedsUpLabel')}
+                type="number"
+                value={size.feedsUp || ''}
+                onChange={(e) =>
+                  updateSize(index, 'feedsUp', parseInt(e.target.value) || 0)
+                }
+                min="0"
+                helperText={t('form.feedsUpHelp')}
+              />
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <hr className="border-stroke" />
+
+      {/* Advanced product behavior */}
+      <section className="space-y-4">
+        <div className="space-y-3 p-4 border border-stroke rounded-site">
+          <p className="text-sm font-semibold text-foreground">
+            {t('form.sacrificeSection')}
+          </p>
+          <Switch
+            id="workAsSacrifice"
+            checked={formData.workAsSacrifice}
+            onChange={(checked) =>
+              setFormData({ ...formData, workAsSacrifice: checked })
             }
-          }}
-          label={t('form.canBeUpgradedLabel')}
-        />
-        {formData.canBeUpgraded && (
-          <div className="space-y-3">
+            label={t('form.workAsSacrificeLabel')}
+          />
+          {formData.workAsSacrifice && (
+            <Input
+              label={t('form.sacrificeCountLabel')}
+              type="number"
+              min={1}
+              value={formData.sacrificeCount}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  sacrificeCount: Math.max(1, parseInt(e.target.value) || 1),
+                })
+              }
+              helperText={t('form.sacrificeCountHelp')}
+            />
+          )}
+        </div>
+
+        <div className="space-y-3 p-4 border border-stroke rounded-site">
+          <p className="text-sm font-semibold text-foreground">
+            {t('form.upgradeSection')}
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-medium text-secondary mb-1">
-                {t('form.upgradeToLabel')}
+                {t('form.upgradeFeaturesArLabel')}
               </label>
-              <select
-                value={formData.upgradeTo}
+              <textarea
+                value={formData.upgradeFeaturesAr}
                 onChange={(e) =>
-                  setFormData({ ...formData, upgradeTo: e.target.value })
+                  setFormData({
+                    ...formData,
+                    upgradeFeaturesAr: e.target.value,
+                  })
                 }
+                rows={5}
                 className="w-full px-3 py-2 text-sm border border-stroke rounded-site bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-success"
-              >
-                <option value="">{t('form.upgradeToPlaceholder')}</option>
-                {allProducts
-                  .filter((p) => p._id !== product?._id)
-                  .map((p) => (
-                    <option key={p._id} value={p._id}>
-                      {p.name.ar} — {p.name.en}
-                    </option>
-                  ))}
-              </select>
+                placeholder={t('form.upgradeFeaturesPlaceholder')}
+              />
             </div>
-            {formData.upgradeTo && (
-              <Input
-                label={t('form.upgradeDiscountLabel')}
-                type="number"
-                value={formData.upgradeDiscount || ''}
+
+            <div>
+              <label className="block text-xs font-medium text-secondary mb-1">
+                {t('form.upgradeFeaturesEnLabel')}
+              </label>
+              <textarea
+                value={formData.upgradeFeaturesEn}
                 onChange={(e) =>
                   setFormData({
                     ...formData,
-                    upgradeDiscount: Math.min(
-                      100,
-                      Math.max(0, parseFloat(e.target.value) || 0),
-                    ),
+                    upgradeFeaturesEn: e.target.value,
                   })
                 }
-                min="0"
-                max="100"
-                step="1"
-                helperText={t('form.upgradeDiscountHelp')}
-              />
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Reservation Fields */}
-      <div className="space-y-3 p-4 border border-stroke rounded-site">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <ClipboardList size={16} className="text-success" />
-            <p className="text-sm font-semibold text-foreground">
-              {t('form.reservationSection')}
-            </p>
-          </div>
-          <Button
-            type="button"
-            onClick={() =>
-              setFormData({
-                ...formData,
-                reservationFields: [
-                  ...formData.reservationFields,
-                  { type: 'text', label: { ar: '', en: '' }, required: false },
-                ],
-              })
-            }
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm"
-          >
-            <Plus size={16} />
-            {t('form.addReservationField')}
-          </Button>
-        </div>
-        <p className="text-xs text-secondary">{t('form.reservationHelp')}</p>
-
-        {formData.reservationFields.map((field, index) => (
-          <div
-            key={index}
-            className="border border-stroke rounded-lg p-4 space-y-3"
-          >
-            <div className="flex items-center justify-between">
-              <h4 className="text-sm font-semibold">
-                {t('form.reservationFieldNumber', { number: index + 1 })}
-              </h4>
-              <Button
-                variant="custom"
-                type="button"
-                onClick={() =>
-                  setFormData({
-                    ...formData,
-                    reservationFields: formData.reservationFields.filter(
-                      (_, i) => i !== index,
-                    ),
-                  })
-                }
-                className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-950 rounded-lg transition-colors"
-              >
-                <X size={16} />
-              </Button>
-            </div>
-
-            {/* Field Type */}
-            <Dropdown
-              label={t('form.reservationFieldType')}
-              value={field.type}
-              options={[
-                { label: t('form.reservationTypeText'), value: 'text' },
-                { label: t('form.reservationTypeTextarea'), value: 'textarea' },
-                { label: t('form.reservationTypeNumber'), value: 'number' },
-                { label: t('form.reservationTypeDate'), value: 'date' },
-                { label: t('form.reservationTypeSelect'), value: 'select' },
-                { label: t('form.reservationTypePicture'), value: 'picture' },
-              ]}
-              onChange={(value) => {
-                const updated = [...formData.reservationFields];
-                updated[index] = {
-                  ...updated[index],
-                  type: value as
-                    | 'text'
-                    | 'textarea'
-                    | 'number'
-                    | 'date'
-                    | 'select'
-                    | 'picture',
-                  // clear options/maxLength when type changes
-                  options:
-                    value === 'select'
-                      ? (updated[index].options ?? [])
-                      : undefined,
-                  maxLength:
-                    value === 'text' || value === 'textarea'
-                      ? updated[index].maxLength
-                      : undefined,
-                };
-                setFormData({ ...formData, reservationFields: updated });
-              }}
-            />
-
-            {/* Labels */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <Input
-                label={t('form.reservationLabelAr')}
-                type="text"
-                required
-                value={field.label.ar}
-                onChange={(e) => {
-                  const updated = [...formData.reservationFields];
-                  updated[index] = {
-                    ...updated[index],
-                    label: { ...updated[index].label, ar: e.target.value },
-                  };
-                  setFormData({ ...formData, reservationFields: updated });
-                }}
-              />
-              <Input
-                label={t('form.reservationLabelEn')}
-                type="text"
-                required
-                value={field.label.en}
-                onChange={(e) => {
-                  const updated = [...formData.reservationFields];
-                  updated[index] = {
-                    ...updated[index],
-                    label: { ...updated[index].label, en: e.target.value },
-                  };
-                  setFormData({ ...formData, reservationFields: updated });
-                }}
+                rows={5}
+                className="w-full px-3 py-2 text-sm border border-stroke rounded-site bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-success"
+                placeholder={t('form.upgradeFeaturesPlaceholder')}
               />
             </div>
+          </div>
+          <p className="text-xs text-secondary">
+            {t('form.upgradeFeaturesHelp')}
+          </p>
 
-            {/* Max Length (text + textarea) */}
-            {(field.type === 'text' || field.type === 'textarea') && (
-              <Input
-                label={t('form.reservationMaxLength')}
-                type="number"
-                min={1}
-                value={field.maxLength || ''}
-                onChange={(e) => {
-                  const updated = [...formData.reservationFields];
-                  const val = parseInt(e.target.value) || undefined;
-                  updated[index] = { ...updated[index], maxLength: val };
-                  setFormData({ ...formData, reservationFields: updated });
-                }}
-                helperText={t('form.reservationMaxLengthHelp')}
-              />
-            )}
+          <hr className="border-stroke" />
 
-            {/* Select Options (select only) */}
-            {field.type === 'select' && (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-medium text-secondary">
-                    {t('form.reservationSelectOptions')}
-                  </label>
-                  <Button
-                    type="button"
-                    variant="custom"
-                    onClick={() => {
-                      const updated = [...formData.reservationFields];
-                      updated[index] = {
-                        ...updated[index],
-                        options: [
-                          ...(updated[index].options ?? []),
-                          { ar: '', en: '' },
-                        ],
-                      };
-                      setFormData({ ...formData, reservationFields: updated });
-                    }}
-                    className="flex items-center gap-1 px-2 py-1 text-xs border border-stroke rounded-lg hover:border-success hover:text-success transition-colors"
-                  >
-                    <Plus size={12} />
-                    {t('form.reservationAddOption')}
-                  </Button>
+          <Switch
+            id="canBeUpgraded"
+            checked={formData.canBeUpgraded}
+            onChange={(checked) => {
+              if (!checked) {
+                setFormData({
+                  ...formData,
+                  canBeUpgraded: false,
+                  upgradeTo: '',
+                  upgradeDiscount: 0,
+                });
+              } else {
+                setFormData({ ...formData, canBeUpgraded: true });
+              }
+            }}
+            label={t('form.canBeUpgradedLabel')}
+          />
+          {formData.canBeUpgraded && (
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-medium text-secondary mb-1">
+                  {t('form.upgradeToLabel')}
+                </label>
+                <select
+                  value={formData.upgradeTo}
+                  onChange={(e) =>
+                    setFormData({ ...formData, upgradeTo: e.target.value })
+                  }
+                  className="w-full px-3 py-2 text-sm border border-stroke rounded-site bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-success"
+                >
+                  <option value="">{t('form.upgradeToPlaceholder')}</option>
+                  {allProducts
+                    .filter((p) => p._id !== product?._id)
+                    .map((p) => (
+                      <option key={p._id} value={p._id}>
+                        {p.name.ar} — {p.name.en}
+                      </option>
+                    ))}
+                </select>
+              </div>
+              {formData.upgradeTo && (
+                <div className="space-y-3">
+                  <Input
+                    label={t('form.upgradeDiscountLabel')}
+                    type="number"
+                    value={formData.upgradeDiscount || ''}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        upgradeDiscount: Math.min(
+                          100,
+                          Math.max(0, parseFloat(e.target.value) || 0),
+                        ),
+                      })
+                    }
+                    min="0"
+                    max="100"
+                    step="1"
+                    helperText={t('form.upgradeDiscountHelp')}
+                  />
                 </div>
-                {(field.options ?? []).length === 0 && (
-                  <p className="text-xs text-secondary italic">
-                    {t('form.reservationNoOptions')}
-                  </p>
-                )}
-                {(field.options ?? []).map((opt, optIdx) => (
-                  <div key={optIdx} className="flex items-center gap-2">
-                    <div className="grid grid-cols-2 gap-2 flex-1">
-                      <Input
-                        placeholder={t('form.reservationOptionAr')}
-                        type="text"
-                        value={opt.ar}
-                        onChange={(e) => {
-                          const updated = [...formData.reservationFields];
-                          const opts = [...(updated[index].options ?? [])];
-                          opts[optIdx] = {
-                            ...opts[optIdx],
-                            ar: e.target.value,
-                          };
-                          updated[index] = { ...updated[index], options: opts };
-                          setFormData({
-                            ...formData,
-                            reservationFields: updated,
-                          });
-                        }}
-                      />
-                      <Input
-                        placeholder={t('form.reservationOptionEn')}
-                        type="text"
-                        value={opt.en}
-                        onChange={(e) => {
-                          const updated = [...formData.reservationFields];
-                          const opts = [...(updated[index].options ?? [])];
-                          opts[optIdx] = {
-                            ...opts[optIdx],
-                            en: e.target.value,
-                          };
-                          updated[index] = { ...updated[index], options: opts };
-                          setFormData({
-                            ...formData,
-                            reservationFields: updated,
-                          });
-                        }}
-                      />
-                    </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className="space-y-3 p-4 border border-stroke rounded-site">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <ClipboardList size={16} className="text-success" />
+              <p className="text-sm font-semibold text-foreground">
+                {t('form.reservationSection')}
+              </p>
+            </div>
+            <Button
+              type="button"
+              onClick={() =>
+                setFormData({
+                  ...formData,
+                  reservationFields: [
+                    ...formData.reservationFields,
+                    {
+                      type: 'text',
+                      label: { ar: '', en: '' },
+                      required: false,
+                    },
+                  ],
+                })
+              }
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm"
+            >
+              <Plus size={16} />
+              {t('form.addReservationField')}
+            </Button>
+          </div>
+          <p className="text-xs text-secondary">{t('form.reservationHelp')}</p>
+
+          {formData.reservationFields.map((field, index) => (
+            <div
+              key={index}
+              className="border border-stroke rounded-lg p-4 space-y-3"
+            >
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-semibold">
+                  {t('form.reservationFieldNumber', { number: index + 1 })}
+                </h4>
+                <Button
+                  variant="custom"
+                  type="button"
+                  onClick={() =>
+                    setFormData({
+                      ...formData,
+                      reservationFields: formData.reservationFields.filter(
+                        (_, i) => i !== index,
+                      ),
+                    })
+                  }
+                  className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-950 rounded-lg transition-colors"
+                >
+                  <X size={16} />
+                </Button>
+              </div>
+
+              <Dropdown
+                label={t('form.reservationFieldType')}
+                value={field.type}
+                options={[
+                  { label: t('form.reservationTypeText'), value: 'text' },
+                  {
+                    label: t('form.reservationTypeTextarea'),
+                    value: 'textarea',
+                  },
+                  { label: t('form.reservationTypeNumber'), value: 'number' },
+                  { label: t('form.reservationTypeDate'), value: 'date' },
+                  { label: t('form.reservationTypeSelect'), value: 'select' },
+                  { label: t('form.reservationTypePicture'), value: 'picture' },
+                ]}
+                onChange={(value) => {
+                  const updated = [...formData.reservationFields];
+                  updated[index] = {
+                    ...updated[index],
+                    type: value as
+                      | 'text'
+                      | 'textarea'
+                      | 'number'
+                      | 'date'
+                      | 'select'
+                      | 'picture',
+                    options:
+                      value === 'select'
+                        ? (updated[index].options ?? [])
+                        : undefined,
+                    maxLength:
+                      value === 'text' || value === 'textarea'
+                        ? updated[index].maxLength
+                        : undefined,
+                  };
+                  setFormData({ ...formData, reservationFields: updated });
+                }}
+              />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <Input
+                  label={t('form.reservationLabelAr')}
+                  type="text"
+                  required
+                  value={field.label.ar}
+                  onChange={(e) => {
+                    const updated = [...formData.reservationFields];
+                    updated[index] = {
+                      ...updated[index],
+                      label: { ...updated[index].label, ar: e.target.value },
+                    };
+                    setFormData({ ...formData, reservationFields: updated });
+                  }}
+                />
+                <Input
+                  label={t('form.reservationLabelEn')}
+                  type="text"
+                  required
+                  value={field.label.en}
+                  onChange={(e) => {
+                    const updated = [...formData.reservationFields];
+                    updated[index] = {
+                      ...updated[index],
+                      label: { ...updated[index].label, en: e.target.value },
+                    };
+                    setFormData({ ...formData, reservationFields: updated });
+                  }}
+                />
+              </div>
+
+              {(field.type === 'text' || field.type === 'textarea') && (
+                <Input
+                  label={t('form.reservationMaxLength')}
+                  type="number"
+                  min={1}
+                  value={field.maxLength || ''}
+                  onChange={(e) => {
+                    const updated = [...formData.reservationFields];
+                    const val = parseInt(e.target.value) || undefined;
+                    updated[index] = { ...updated[index], maxLength: val };
+                    setFormData({ ...formData, reservationFields: updated });
+                  }}
+                  helperText={t('form.reservationMaxLengthHelp')}
+                />
+              )}
+
+              {field.type === 'select' && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-medium text-secondary">
+                      {t('form.reservationSelectOptions')}
+                    </label>
                     <Button
-                      variant="custom"
                       type="button"
+                      variant="custom"
                       onClick={() => {
                         const updated = [...formData.reservationFields];
-                        const opts = (updated[index].options ?? []).filter(
-                          (_, i) => i !== optIdx,
-                        );
-                        updated[index] = { ...updated[index], options: opts };
+                        updated[index] = {
+                          ...updated[index],
+                          options: [
+                            ...(updated[index].options ?? []),
+                            { ar: '', en: '' },
+                          ],
+                        };
                         setFormData({
                           ...formData,
                           reservationFields: updated,
                         });
                       }}
-                      className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-950 rounded-lg transition-colors shrink-0"
+                      className="flex items-center gap-1 px-2 py-1 text-xs border border-stroke rounded-lg hover:border-success hover:text-success transition-colors"
                     >
-                      <X size={14} />
+                      <Plus size={12} />
+                      {t('form.reservationAddOption')}
                     </Button>
                   </div>
-                ))}
-              </div>
-            )}
+                  {(field.options ?? []).length === 0 && (
+                    <p className="text-xs text-secondary italic">
+                      {t('form.reservationNoOptions')}
+                    </p>
+                  )}
+                  {(field.options ?? []).map((opt, optIdx) => (
+                    <div key={optIdx} className="flex items-center gap-2">
+                      <div className="grid grid-cols-2 gap-2 flex-1">
+                        <Input
+                          placeholder={t('form.reservationOptionAr')}
+                          type="text"
+                          value={opt.ar}
+                          onChange={(e) => {
+                            const updated = [...formData.reservationFields];
+                            const opts = [...(updated[index].options ?? [])];
+                            opts[optIdx] = {
+                              ...opts[optIdx],
+                              ar: e.target.value,
+                            };
+                            updated[index] = {
+                              ...updated[index],
+                              options: opts,
+                            };
+                            setFormData({
+                              ...formData,
+                              reservationFields: updated,
+                            });
+                          }}
+                        />
+                        <Input
+                          placeholder={t('form.reservationOptionEn')}
+                          type="text"
+                          value={opt.en}
+                          onChange={(e) => {
+                            const updated = [...formData.reservationFields];
+                            const opts = [...(updated[index].options ?? [])];
+                            opts[optIdx] = {
+                              ...opts[optIdx],
+                              en: e.target.value,
+                            };
+                            updated[index] = {
+                              ...updated[index],
+                              options: opts,
+                            };
+                            setFormData({
+                              ...formData,
+                              reservationFields: updated,
+                            });
+                          }}
+                        />
+                      </div>
+                      <Button
+                        variant="custom"
+                        type="button"
+                        onClick={() => {
+                          const updated = [...formData.reservationFields];
+                          const opts = (updated[index].options ?? []).filter(
+                            (_, i) => i !== optIdx,
+                          );
+                          updated[index] = { ...updated[index], options: opts };
+                          setFormData({
+                            ...formData,
+                            reservationFields: updated,
+                          });
+                        }}
+                        className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-950 rounded-lg transition-colors shrink-0"
+                      >
+                        <X size={14} />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
 
-            {/* Required */}
-            <Switch
-              id={`reservationRequired_${index}`}
-              checked={field.required}
-              onChange={(checked) => {
-                const updated = [...formData.reservationFields];
-                updated[index] = { ...updated[index], required: checked };
-                setFormData({ ...formData, reservationFields: updated });
-              }}
-              label={t('form.reservationRequired')}
-            />
-          </div>
-        ))}
-      </div>
-
-      {/* In Stock */}
-      <Switch
-        id="inStock"
-        checked={formData.inStock}
-        onChange={(checked) => setFormData({ ...formData, inStock: checked })}
-        label={t('form.inStockLabel')}
-      />
-
-      {/* Is Active */}
-      <Switch
-        id="isActive"
-        checked={formData.isActive}
-        onChange={(checked) => setFormData({ ...formData, isActive: checked })}
-        label={t('form.isActiveLabel', { defaultValue: 'Active' })}
-      />
+              <Switch
+                id={`reservationRequired_${index}`}
+                checked={field.required}
+                onChange={(checked) => {
+                  const updated = [...formData.reservationFields];
+                  updated[index] = { ...updated[index], required: checked };
+                  setFormData({ ...formData, reservationFields: updated });
+                }}
+                label={t('form.reservationRequired')}
+              />
+            </div>
+          ))}
+        </div>
+      </section>
 
       {/* Buttons */}
       <div className="flex items-center gap-3 pt-4 border-t border-stroke">

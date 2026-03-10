@@ -42,6 +42,7 @@ export default function ProductForm({
   const [formData, setFormData] = useState({
     name_ar: '',
     name_en: '',
+    slug: '',
     content_ar: '',
     content_en: '',
     baseCurrency: 'SAR',
@@ -96,6 +97,7 @@ export default function ProductForm({
       setFormData({
         name_ar: product.name.ar,
         name_en: product.name.en,
+        slug: product.slug || '',
         content_ar: product.content?.ar || '',
         content_en: product.content?.en || '',
         baseCurrency: product.baseCurrency || 'SAR',
@@ -256,6 +258,16 @@ export default function ProductForm({
 
     const productData = {
       name: { ar: formData.name_ar, en: formData.name_en },
+      slug: (() => {
+        const normalized = formData.slug
+          .trim()
+          .toLowerCase()
+          .replace(/[^a-z0-9-\s]/g, '')
+          .replace(/\s+/g, '-')
+          .replace(/-+/g, '-')
+          .replace(/^-|-$/g, '');
+        return normalized || undefined;
+      })(),
       content: {
         ar: formData.content_ar.replace(/&nbsp;/g, ' '),
         en: formData.content_en.replace(/&nbsp;/g, ' '),
@@ -333,6 +345,15 @@ export default function ProductForm({
             }
           />
         </div>
+
+        <Input
+          label={t('form.slug')}
+          type="text"
+          value={formData.slug}
+          onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
+          placeholder={t('form.slugPlaceholder')}
+          helperText={t('form.slugHelp')}
+        />
 
         <RichTextEditor
           key={`content_ar_${product?._id || 'new'}`}

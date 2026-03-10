@@ -20,6 +20,12 @@ export default function AppearancePage() {
     ghadaq: { row1: [], row2: [] },
     manasik: { row1: [], row2: [] },
   });
+  const [defaultMessages, setDefaultMessages] = useState<
+    Record<ProjectName, string>
+  >({
+    ghadaq: '',
+    manasik: '',
+  });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploadingRow, setUploadingRow] = useState<'row1' | 'row2' | null>(
@@ -47,6 +53,18 @@ export default function AppearancePage() {
             ? manasikData.data.worksImages
             : { row1: [], row2: [] },
       });
+      setDefaultMessages({
+        ghadaq:
+          ghadaqData.success &&
+          typeof ghadaqData.data?.whatsAppDefaultMessage === 'string'
+            ? ghadaqData.data.whatsAppDefaultMessage
+            : '',
+        manasik:
+          manasikData.success &&
+          typeof manasikData.data?.whatsAppDefaultMessage === 'string'
+            ? manasikData.data.whatsAppDefaultMessage
+            : '',
+      });
     } catch {
       toast.error(t('loadFailed'));
     } finally {
@@ -59,6 +77,7 @@ export default function AppearancePage() {
   }, [loadAppearance]);
 
   const currentImages = images[activeProject];
+  const currentMessage = defaultMessages[activeProject] || '';
 
   const handleUpload = useCallback(
     async (file: File, row: 'row1' | 'row2') => {
@@ -120,7 +139,10 @@ export default function AppearancePage() {
       const res = await fetch(`/api/appearance/${activeProject}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ worksImages: currentImages }),
+        body: JSON.stringify({
+          worksImages: currentImages,
+          whatsAppDefaultMessage: currentMessage,
+        }),
       });
       const data = await res.json();
       if (!data.success) throw new Error(data.error);
@@ -217,6 +239,34 @@ export default function AppearancePage() {
           emptyText={t('noImages')}
           addLabel={t('addImage')}
           uploadingLabel={t('uploading')}
+        />
+      </div>
+
+      {/* WhatsApp Section */}
+      <div className="space-y-3 border border-stroke rounded-xl p-5 bg-card-bg">
+        <div>
+          <h2 className="text-lg font-semibold text-foreground">
+            {t('whatsAppTitle')}
+          </h2>
+          <p className="text-sm text-secondary mt-0.5">
+            {t('whatsAppDescription')}
+          </p>
+        </div>
+
+        <label className="block text-sm font-medium text-foreground">
+          {t('whatsAppDefaultMessageLabel')}
+        </label>
+        <textarea
+          value={currentMessage}
+          onChange={(e) =>
+            setDefaultMessages((prev) => ({
+              ...prev,
+              [activeProject]: e.target.value,
+            }))
+          }
+          rows={4}
+          className="w-full px-3 py-2 text-sm border border-stroke rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-success"
+          placeholder={t('whatsAppDefaultMessagePlaceholder')}
         />
       </div>
     </div>

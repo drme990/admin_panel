@@ -9,6 +9,7 @@ export interface Appearance {
   _id: string;
   project: ProjectName;
   worksImages: WorksImages;
+  whatsAppDefaultMessage?: string;
   createdAt: string;
   updatedAt: string;
 }

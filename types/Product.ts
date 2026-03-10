@@ -74,7 +74,7 @@ export interface Product {
     en: string;
   };
   /** SEO-friendly URL slug (e.g. "aqeeqa-sheep") */
-  slug?: string;
+  slug: string;
   content?: {
     ar: string;
     en: string;

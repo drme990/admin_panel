@@ -256,18 +256,22 @@ export default function ProductForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    const normalizedSlug = formData.slug
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9-\s]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '');
+
+    if (!normalizedSlug) {
+      toast.error(t('form.slugHelp'));
+      return;
+    }
+
     const productData = {
       name: { ar: formData.name_ar, en: formData.name_en },
-      slug: (() => {
-        const normalized = formData.slug
-          .trim()
-          .toLowerCase()
-          .replace(/[^a-z0-9-\s]/g, '')
-          .replace(/\s+/g, '-')
-          .replace(/-+/g, '-')
-          .replace(/^-|-$/g, '');
-        return normalized || undefined;
-      })(),
+      slug: normalizedSlug,
       content: {
         ar: formData.content_ar.replace(/&nbsp;/g, ' '),
         en: formData.content_en.replace(/&nbsp;/g, ' '),
@@ -349,6 +353,7 @@ export default function ProductForm({
         <Input
           label={t('form.slug')}
           type="text"
+          required
           value={formData.slug}
           onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
           placeholder={t('form.slugPlaceholder')}

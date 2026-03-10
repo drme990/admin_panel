@@ -122,7 +122,7 @@
         "nameEn": "Name (English) *",
         "slug": "Slug (SEO URL)",
         "slugPlaceholder": "e.g. aqeeqa-sheep",
-        "slugHelp": "Optional. Used for product page URL. Leave empty to use product ID.",
+        "slugHelp": "Required. Used for product page URL. Only lowercase letters, numbers, and hyphens are allowed.",
         "contentAr": "Content (Arabic)",
         "contentEn": "Content (English)",
         "contentHelp": "Use the toolbar to format text with headings, lists, bold, colors, and more",

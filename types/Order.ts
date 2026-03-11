@@ -38,7 +38,14 @@ export interface ReservationOrderField {
     ar: string;
     en: string;
   };
-  type: 'text' | 'textarea' | 'number' | 'date' | 'select' | 'picture';
+  type:
+    | 'text'
+    | 'textarea'
+    | 'number'
+    | 'date'
+    | 'select'
+    | 'radio'
+    | 'picture';
   value: string;
 }
 

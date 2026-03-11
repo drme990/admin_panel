@@ -822,6 +822,7 @@ export default function ProductForm({
                   { label: t('form.reservationTypeNumber'), value: 'number' },
                   { label: t('form.reservationTypeDate'), value: 'date' },
                   { label: t('form.reservationTypeSelect'), value: 'select' },
+                  { label: t('form.reservationTypeRadio'), value: 'radio' },
                   { label: t('form.reservationTypePicture'), value: 'picture' },
                 ]}
                 onChange={(value) => {
@@ -834,9 +835,10 @@ export default function ProductForm({
                       | 'number'
                       | 'date'
                       | 'select'
+                      | 'radio'
                       | 'picture',
                     options:
-                      value === 'select'
+                      value === 'select' || value === 'radio'
                         ? (updated[index].options ?? [])
                         : undefined,
                     maxLength:
@@ -895,11 +897,13 @@ export default function ProductForm({
                 />
               )}
 
-              {field.type === 'select' && (
+              {(field.type === 'select' || field.type === 'radio') && (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <label className="text-xs font-medium text-secondary">
-                      {t('form.reservationSelectOptions')}
+                      {field.type === 'radio'
+                        ? t('form.reservationRadioOptions')
+                        : t('form.reservationSelectOptions')}
                     </label>
                     <Button
                       type="button"

@@ -78,6 +78,9 @@ export default function MultiCurrencyMinimumPaymentEditor({
     try {
       setAutoCalculating(true);
 
+      const now = new Date();
+      const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
       // Get all unique currency codes
       const targetCurrencies = [
         ...new Set(countries.map((c) => c.currencyCode)),
@@ -106,7 +109,7 @@ export default function MultiCurrencyMinimumPaymentEditor({
       } else {
         // For fixed amounts, convert based on exchange rates
         const res = await fetch(
-          `https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/${mainCurrency.toLowerCase()}.json`,
+          `https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@${today}/v1/currencies/${mainCurrency.toLowerCase()}.json`,
         );
 
         if (!res.ok) {

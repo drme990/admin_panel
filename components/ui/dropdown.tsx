@@ -1,5 +1,5 @@
 import { ReactNode, useState, useRef, useEffect } from 'react';
-import { ChevronDown } from 'lucide-react';
+import { LuChevronDown } from 'react-icons/lu';
 
 interface DropdownOption<T = string> {
   label: string;
@@ -71,7 +71,7 @@ export default function Dropdown<T = string>({
           {selectedOption?.icon}
           {selectedOption?.label || placeholder}
         </span>
-        <ChevronDown
+        <LuChevronDown
           size={16}
           className={`transition-transform duration-200 ${
             isOpen ? 'rotate-180' : ''

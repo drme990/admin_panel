@@ -24,9 +24,22 @@
       "pending": "Pending",
       "processing": "Processing",
       "paid": "Paid",
+      "completed": "Completed",
       "failed": "Failed",
       "refunded": "Refunded",
       "cancelled": "Cancelled"
+    },
+    "statusEditor": {
+      "label": "Order Status",
+      "save": "Update Status",
+      "saving": "Updating..."
+    },
+    "bulkAction": {
+      "selectedCount": "{count} orders selected",
+      "statusLabel": "Bulk status",
+      "apply": "Apply to selected",
+      "applying": "Applying...",
+      "clear": "Clear selection"
     },
     "table": {
       "orderNumber": "Order Number",
@@ -475,7 +488,9 @@
         "auth": "Auth",
         "country": "Country",
         "order": "Order",
-        "referral": "Referral"
+        "referral": "Referral",
+        "coupon": "Coupon",
+        "appearance": "Appearance"
       }
     },
     "appearance": {

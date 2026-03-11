@@ -3,7 +3,7 @@
 import { useLocale } from 'next-intl';
 import Button from '../ui/button';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, ArrowRight } from 'lucide-react';
+import { LuArrowLeft, LuArrowRight } from 'react-icons/lu';
 import { useState } from 'react';
 
 export default function BackButton({ className }: { className?: string }) {
@@ -21,7 +21,7 @@ export default function BackButton({ className }: { className?: string }) {
     }
   };
 
-  const ArrowIcon = locale === 'ar' ? ArrowRight : ArrowLeft;
+  const ArrowIcon = locale === 'ar' ? LuArrowRight : LuArrowLeft;
 
   return (
     <Button

@@ -4,8 +4,10 @@ import { useState, useEffect, useCallback } from 'react';
 import Table from '@/components/ui/table';
 import Pagination from '@/components/ui/pagination';
 import Button from '@/components/ui/button';
+import BulkAction from '@/components/ui/bulk-action';
 import Modal from '@/components/ui/modal';
 import Dropdown from '@/components/ui/dropdown';
+import { toast } from 'react-toastify';
 import { useTranslations, useLocale } from 'next-intl';
 import { Order, OrderStatus } from '@/types/Order';
 import {
@@ -22,6 +24,7 @@ import {
   UserRoundPlus,
 } from 'lucide-react';
 import { Referral } from '@/types/Referral';
+import Checkbox from '@/components/ui/checkbox';
 
 const STATUS_COLORS: Record<OrderStatus, string> = {
   pending:
@@ -29,6 +32,8 @@ const STATUS_COLORS: Record<OrderStatus, string> = {
   processing:
     'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
   paid: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
+  completed:
+    'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400',
   failed: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
   refunded:
     'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400',
@@ -60,6 +65,11 @@ export default function OrderHistoryPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalStatus, setModalStatus] = useState<OrderStatus>('pending');
+  const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
+  const [bulkStatus, setBulkStatus] = useState('');
+  const [bulkUpdating, setBulkUpdating] = useState(false);
 
   useEffect(() => {
     const fetchReferrals = async () => {
@@ -95,6 +105,7 @@ export default function OrderHistoryPage() {
         setOrders(result.orders);
         setTotalPages(result.pagination.totalPages);
         setTotalOrders(result.pagination.totalOrders);
+        setSelectedOrderIds([]);
       }
     } catch (error) {
       console.error('Error fetching orders:', error);
@@ -109,7 +120,102 @@ export default function OrderHistoryPage() {
 
   const viewOrder = (order: Order) => {
     setSelectedOrder(order);
+    setModalStatus(order.status);
     setIsModalOpen(true);
+  };
+
+  const toggleOrderSelection = (orderId: string) => {
+    setSelectedOrderIds((prev) =>
+      prev.includes(orderId)
+        ? prev.filter((id) => id !== orderId)
+        : [...prev, orderId],
+    );
+  };
+
+  const toggleSelectAllVisible = () => {
+    const visibleOrderIds = orders.map((order) => order._id);
+    const allSelected =
+      visibleOrderIds.length > 0 &&
+      visibleOrderIds.every((id) => selectedOrderIds.includes(id));
+
+    setSelectedOrderIds(allSelected ? [] : visibleOrderIds);
+  };
+
+  const applyBulkStatus = async () => {
+    if (selectedOrderIds.length === 0 || !bulkStatus) return;
+
+    try {
+      setBulkUpdating(true);
+      const res = await fetch('/api/orders/bulk-status', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orderIds: selectedOrderIds,
+          status: bulkStatus,
+        }),
+      });
+      const data = await res.json();
+
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to bulk update orders');
+      }
+
+      const nextStatus = bulkStatus as OrderStatus;
+
+      setOrders((prev) =>
+        prev.map((order) =>
+          selectedOrderIds.includes(order._id)
+            ? { ...order, status: nextStatus }
+            : order,
+        ),
+      );
+
+      setSelectedOrder((prev) =>
+        prev && selectedOrderIds.includes(prev._id)
+          ? { ...prev, status: nextStatus }
+          : prev,
+      );
+
+      toast.success(`Updated ${data.data.updatedCount} orders`);
+      setSelectedOrderIds([]);
+      setBulkStatus('');
+    } catch (error) {
+      console.error('Error bulk updating order statuses:', error);
+      toast.error('Failed to bulk update orders');
+    } finally {
+      setBulkUpdating(false);
+    }
+  };
+
+  const updateOrderStatus = async () => {
+    if (!selectedOrder || modalStatus === selectedOrder.status) return;
+
+    try {
+      setUpdatingStatus(true);
+      const res = await fetch(`/api/orders/${selectedOrder._id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: modalStatus }),
+      });
+      const data = await res.json();
+
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to update order status');
+      }
+
+      setSelectedOrder(data.data as Order);
+      setOrders((prev) =>
+        prev.map((order) =>
+          order._id === selectedOrder._id
+            ? { ...order, status: modalStatus }
+            : order,
+        ),
+      );
+    } catch (error) {
+      console.error('Error updating order status:', error);
+    } finally {
+      setUpdatingStatus(false);
+    }
   };
 
   const formatDate = (dateStr: string) => {
@@ -130,12 +236,49 @@ export default function OrderHistoryPage() {
     { label: t('status.pending'), value: 'pending' },
     { label: t('status.processing'), value: 'processing' },
     { label: t('status.paid'), value: 'paid' },
+    { label: t('status.completed'), value: 'completed' },
     { label: t('status.failed'), value: 'failed' },
     { label: t('status.refunded'), value: 'refunded' },
     { label: t('status.cancelled'), value: 'cancelled' },
   ];
 
+  const modalStatusOptions = [
+    { label: t('status.completed'), value: 'completed' },
+    { label: t('status.refunded'), value: 'refunded' },
+    { label: t('status.cancelled'), value: 'cancelled' },
+  ];
+
+  const bulkStatusOptions = [
+    { label: t('status.completed'), value: 'completed' },
+    { label: t('status.cancelled'), value: 'cancelled' },
+    { label: t('status.refunded'), value: 'refunded' },
+  ];
+
+  const allVisibleSelected =
+    orders.length > 0 &&
+    orders.every((order) => selectedOrderIds.includes(order._id));
+
   const columns = [
+    {
+      header: (
+        <Checkbox
+          checked={allVisibleSelected}
+          onChange={toggleSelectAllVisible}
+          aria-label="Select all visible orders"
+        />
+      ),
+      accessor: (row: Order) => (
+        <Checkbox
+          checked={selectedOrderIds.includes(row._id)}
+          onChange={() => {
+            toggleOrderSelection(row._id);
+          }}
+          onClick={(e) => e?.stopPropagation()}
+          aria-label={`Select ${row.orderNumber}`}
+        />
+      ),
+      className: 'w-12',
+    },
     {
       header: t('table.orderNumber'),
       accessor: (row: Order) => (
@@ -267,6 +410,27 @@ export default function OrderHistoryPage() {
         </span>
       </div>
 
+      <BulkAction
+        selectedCount={selectedOrderIds.length}
+        value={bulkStatus}
+        options={bulkStatusOptions}
+        onValueChange={setBulkStatus}
+        onApply={applyBulkStatus}
+        onClear={() => {
+          setSelectedOrderIds([]);
+          setBulkStatus('');
+        }}
+        applyLabel={t('bulkAction.apply')}
+        applyingLabel={t('bulkAction.applying')}
+        clearLabel={t('bulkAction.clear')}
+        selectionLabel={t('bulkAction.selectedCount', {
+          count: selectedOrderIds.length,
+        })}
+        dropdownLabel={t('bulkAction.statusLabel')}
+        disabled={!bulkStatus}
+        loading={bulkUpdating}
+      />
+
       <Table
         columns={columns}
         data={orders}
@@ -302,6 +466,29 @@ export default function OrderHistoryPage() {
               <span className="text-sm text-secondary">
                 {formatDate(selectedOrder.createdAt)}
               </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3 items-end">
+              <Dropdown
+                label={t('statusEditor.label')}
+                value={modalStatus}
+                options={modalStatusOptions}
+                onChange={(value) => setModalStatus(value as OrderStatus)}
+              />
+              <Button
+                type="button"
+                variant="primary"
+                onClick={updateOrderStatus}
+                disabled={
+                  updatingStatus ||
+                  !selectedOrder ||
+                  modalStatus === selectedOrder.status
+                }
+              >
+                {updatingStatus
+                  ? t('statusEditor.saving')
+                  : t('statusEditor.save')}
+              </Button>
             </div>
 
             <div className="bg-background rounded-site p-4 border border-stroke text-center">

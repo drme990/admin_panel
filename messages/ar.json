@@ -24,9 +24,22 @@
       "pending": "قيد الانتظار",
       "processing": "جاري المعالجة",
       "paid": "مدفوع",
+      "completed": "مكتمل",
       "failed": "فشل",
       "refunded": "مسترد",
       "cancelled": "ملغي"
+    },
+    "statusEditor": {
+      "label": "حالة الطلب",
+      "save": "تحديث الحالة",
+      "saving": "جارٍ التحديث..."
+    },
+    "bulkAction": {
+      "selectedCount": "تم تحديد {count} طلبات",
+      "statusLabel": "حالة جماعية",
+      "apply": "تطبيق على المحدد",
+      "applying": "جارٍ التطبيق...",
+      "clear": "مسح التحديد"
     },
     "table": {
       "orderNumber": "رقم الطلب",
@@ -475,7 +488,9 @@
         "auth": "مصادقة",
         "country": "بلد",
         "order": "طلب",
-        "referral": "إحالة"
+        "referral": "إحالة",
+        "coupon": "كوبون",
+        "appearance": "مظهر"
       }
     },
     "appearance": {

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { ChevronDown, LogOut, User } from 'lucide-react';
+import { LuChevronDown, LuLogOut, LuUser } from 'react-icons/lu';
 import { useAuth } from '@/components/providers/auth-provider';
 import { useTranslations } from 'next-intl';
 import LangToggle from './lang-toggle';
@@ -42,7 +42,7 @@ export default function UserMenu() {
       >
         <div className="flex items-center gap-2 min-w-0">
           <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-            <User size={16} className="text-primary" />
+            <LuUser size={16} className="text-primary" />
           </div>
           <div className="flex flex-col items-start min-w-0">
             <span className="text-sm font-medium truncate max-w-full">
@@ -53,7 +53,7 @@ export default function UserMenu() {
             </span>
           </div>
         </div>
-        <ChevronDown
+        <LuChevronDown
           size={16}
           className={`text-secondary shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
         />
@@ -71,7 +71,7 @@ export default function UserMenu() {
             onClick={logout}
             className="w-full flex items-center gap-2 px-4 py-3 hover:bg-error/10 transition-colors text-error font-medium"
           >
-            <LogOut size={16} />
+            <LuLogOut size={16} />
             <span>{t('logout')}</span>
           </button>
         </div>

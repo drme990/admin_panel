@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Modal from './modal';
 import Button from './button';
-import { AlertTriangle, CheckCircle, Info, AlertCircle } from 'lucide-react';
+import { LuTriangleAlert, LuCircleCheck, LuInfo, LuCircleAlert } from 'react-icons/lu';
 
 export type ConfirmType = 'danger' | 'success' | 'warning' | 'info';
 
@@ -21,25 +21,25 @@ interface ConfirmModalProps {
 const typeConfig = {
   danger: {
     confirmButton: 'bg-error! hover:bg-error/90! text-white',
-    icon: AlertTriangle,
+    icon: LuTriangleAlert,
     iconColor: 'text-error',
     bgColor: 'bg-error/10',
   },
   success: {
     confirmButton: 'bg-success! hover:bg-success/90! text-white',
-    icon: CheckCircle,
+    icon: LuCircleCheck,
     iconColor: 'text-success',
     bgColor: 'bg-success/10',
   },
   warning: {
     confirmButton: 'bg-warning! hover:bg-warning/90! text-white',
-    icon: AlertCircle,
+    icon: LuCircleAlert,
     iconColor: 'text-warning',
     bgColor: 'bg-warning/10',
   },
   info: {
     confirmButton: 'bg-info! hover:bg-info/90! text-white',
-    icon: Info,
+    icon: LuInfo,
     iconColor: 'text-info',
     bgColor: 'bg-info/10',
   },

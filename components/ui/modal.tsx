@@ -1,5 +1,5 @@
 import { ReactNode, useEffect, useRef } from 'react';
-import { X } from 'lucide-react';
+import { LuX } from 'react-icons/lu';
 
 interface ModalProps {
   isOpen: boolean;
@@ -137,7 +137,7 @@ export default function Modal({
             type="button"
             aria-label="Close modal"
           >
-            <X size={20} />
+            <LuX size={20} />
           </button>
         </div>
 

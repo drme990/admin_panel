@@ -1,6 +1,5 @@
-import React from 'react';
 import { cn } from '@/lib/utils';
-import { Loader2 } from 'lucide-react';
+import { LuLoaderCircle } from 'react-icons/lu';
 
 interface LoadingProps {
   /**
@@ -58,7 +57,7 @@ export default function Loading({
   if (inline) {
     return (
       <span className={cn('inline-flex items-center gap-2', className)}>
-        <Loader2
+        <LuLoaderCircle
           className={cn(
             'animate-spin text-primary',
             sizeClasses[size],
@@ -81,7 +80,7 @@ export default function Loading({
         className,
       )}
     >
-      <Loader2
+      <LuLoaderCircle
         className={cn(
           'animate-spin text-primary',
           sizeClasses[size],

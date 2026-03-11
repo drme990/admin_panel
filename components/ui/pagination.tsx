@@ -1,4 +1,5 @@
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { useLocale } from 'next-intl';
+import { LuChevronLeft, LuChevronRight } from 'react-icons/lu';
 
 interface PaginationProps {
   currentPage: number;
@@ -17,6 +18,7 @@ export default function Pagination({
 }: PaginationProps) {
   const canGoPrev = hasPrevPage ?? currentPage > 1;
   const canGoNext = hasNextPage ?? currentPage < totalPages;
+  const locale = useLocale();
 
   if (totalPages <= 1) return null;
 
@@ -63,7 +65,10 @@ export default function Pagination({
           disabled={!canGoPrev}
           className="p-2 rounded-lg hover:bg-background transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <ChevronRight size={18} />
+          <LuChevronRight
+            size={18}
+            className={locale === 'en' ? 'rotate-180' : ''}
+          />
         </button>
 
         {getPageNumbers().map((page, index) =>
@@ -91,7 +96,10 @@ export default function Pagination({
           disabled={!canGoNext}
           className="p-2 rounded-lg hover:bg-background transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <ChevronLeft size={18} />
+          <LuChevronLeft
+            size={18}
+            className={locale === 'en' ? 'rotate-180' : ''}
+          />
         </button>
       </div>
     </div>

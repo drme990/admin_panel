@@ -1,18 +1,19 @@
 'use client';
 
 import { useTheme } from 'next-themes';
-import { Sun, Moon, Leaf, Sparkles, Palette } from 'lucide-react';
+import { LuSun, LuMoon, LuLeaf, LuSparkles, LuPalette } from 'react-icons/lu';
 import { ADMIN_THEMES, type AdminTheme } from '../providers/theme-provider';
 import { useState, useRef, useEffect } from 'react';
 import Button from '../ui/button';
 
-const THEME_CONFIG: Record<AdminTheme, { icon: typeof Sun; label: string }> = {
-  light: { icon: Sun, label: 'Light' },
-  black: { icon: Moon, label: 'Black' },
-  manasik: { icon: Leaf, label: 'Manasik' },
-  ghadaq: { icon: Sparkles, label: 'Ghadaq' },
-  colors: { icon: Palette, label: 'Colors' },
-};
+const THEME_CONFIG: Record<AdminTheme, { icon: typeof LuSun; label: string }> =
+  {
+    light: { icon: LuSun, label: 'Light' },
+    black: { icon: LuMoon, label: 'Black' },
+    manasik: { icon: LuLeaf, label: 'Manasik' },
+    ghadaq: { icon: LuSparkles, label: 'Ghadaq' },
+    colors: { icon: LuPalette, label: 'Colors' },
+  };
 
 export default function ThemeToggle() {
   const { theme, setTheme } = useTheme();
@@ -20,7 +21,7 @@ export default function ThemeToggle() {
   const ref = useRef<HTMLDivElement>(null);
 
   const currentTheme = (theme as AdminTheme) || 'black';
-  const CurrentIcon = THEME_CONFIG[currentTheme]?.icon ?? Moon;
+  const CurrentIcon = THEME_CONFIG[currentTheme]?.icon ?? LuMoon;
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {

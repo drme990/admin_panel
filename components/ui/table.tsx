@@ -2,7 +2,7 @@ import { ReactNode } from 'react';
 import Loading from '@/components/ui/loading';
 
 interface Column<T> {
-  header: string;
+  header: ReactNode;
   accessor: keyof T | ((row: T, index?: number) => ReactNode);
   className?: string;
 }

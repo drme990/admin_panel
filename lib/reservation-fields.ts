@@ -53,7 +53,7 @@ export const RESERVATION_FIELD_PRESETS: ReservationFieldPreset[] = [
     key: 'sacrificeFor',
     type: 'text',
     label: {
-      ar: 'اسم الشخص الذي يذبح عنه',
+      ar: 'اسم الشخص المؤدى عنه',
       en: 'Name of the person the sacrifice is for',
     },
   },
@@ -64,6 +64,7 @@ export const RESERVATION_FIELD_PRESETS: ReservationFieldPreset[] = [
     options: [
       { ar: 'ذكر', en: 'male' },
       { ar: 'انثى', en: 'female' },
+      { ar: 'مذكر ومؤنث (أكثر من اسم واحد)', en: 'Males and females (more than one name)' },
     ],
   },
   {

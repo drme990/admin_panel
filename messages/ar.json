@@ -55,6 +55,7 @@
       "dashboard": "لوحة التحكم",
       "products": "المنتجات",
       "orders": "الطلبات",
+      "booking": "الحجز",
       "coupons": "الكوبونات",
       "countries": "البلدان",
       "users": "المستخدمين",
@@ -213,7 +214,8 @@
         "upgradeFeaturesPlaceholder": "ميزة واحدة في كل سطر",
         "upgradeFeaturesHelp": "يمكن تعيين هذه النقاط لأي منتج، وتظهر داخل نافذة مقارنة الترقية في صفحة الدفع.",
         "reservationSection": "حقول الحجز",
-        "reservationHelp": "حدد حقولاً مخصصة يجب على العملاء تعبئتها أثناء الدفع (مثل الاسم، التاريخ، عدد الأشخاص)",
+        "reservationHelp": "استخدم حقول الحجز الثابتة بالأسفل وحدد الحقول المفعلة لهذا المنتج.",
+        "reservationEnabled": "مفعل",
         "addReservationField": "إضافة حقل",
         "reservationFieldNumber": "حقل {number}",
         "reservationFieldType": "نوع الحقل",
@@ -393,6 +395,7 @@
       "pageLabels": {
         "products": "المنتجات",
         "orders": "الطلبات",
+        "booking": "الحجز",
         "coupons": "الكوبونات",
         "countries": "البلدان",
         "users": "المستخدمين",
@@ -515,6 +518,19 @@
       "saveSuccess": "تم حفظ إعدادات المظهر بنجاح",
       "noImages": "لا توجد صور. انقر على 'إضافة صورة' للرفع.",
       "uploadFailed": "فشل رفع الصورة"
+    },
+    "booking": {
+      "title": "الحجز",
+      "description": "حظر تواريخ التنفيذ حتى لا يتمكن العملاء من اختيارها أثناء الدفع.",
+      "blockedDates": "تواريخ التنفيذ المحظورة",
+      "addDate": "إضافة تاريخ",
+      "noDates": "لا توجد تواريخ محظورة بعد",
+      "saveChanges": "حفظ التغييرات",
+      "saving": "جاري الحفظ...",
+      "loadFailed": "فشل تحميل إعدادات الحجز",
+      "saveFailed": "فشل حفظ إعدادات الحجز",
+      "saveSuccess": "تم حفظ إعدادات الحجز بنجاح",
+      "removeDate": "حذف"
     },
     "exchange": {
       "title": "أسعار الصرف",

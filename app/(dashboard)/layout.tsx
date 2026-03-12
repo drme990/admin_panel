@@ -16,6 +16,7 @@ import {
   UserRoundPlus,
   Palette,
   RefreshCw,
+  CalendarDays,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import Logo from '@/components/shared/logo';
@@ -30,6 +31,12 @@ const navItems = [
   { key: 'dashboard', href: '/', icon: LayoutDashboard, superAdminOnly: false },
   { key: 'products', href: '/products', icon: Package, superAdminOnly: false },
   { key: 'orders', href: '/orders', icon: ShoppingCart, superAdminOnly: false },
+  {
+    key: 'booking',
+    href: '/booking',
+    icon: CalendarDays,
+    superAdminOnly: false,
+  },
   { key: 'coupons', href: '/coupons', icon: Ticket, superAdminOnly: false },
   { key: 'countries', href: '/countries', icon: Globe, superAdminOnly: false },
   { key: 'users', href: '/users', icon: Users, superAdminOnly: false },
@@ -144,12 +151,12 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
             isRTL ? 'lg:translate-x-0' : 'lg:translate-x-0',
           )}
         >
-          <div className="flex flex-col h-full">
-            <div className="hidden lg:flex items-center justify-center p-6 border-b border-stroke">
+          <div className="flex h-full min-h-0 flex-col">
+            <div className="hidden shrink-0 lg:flex items-center justify-center p-6 border-b border-stroke">
               <Logo />
             </div>
 
-            <nav className="flex-1 p-4 space-y-2 mt-16 lg:mt-0">
+            <nav className="mt-16 flex-1 min-h-0 overflow-y-auto p-4 space-y-2 lg:mt-0">
               {filteredNavItems.map((item) => {
                 const isActive = pathname === item.href;
                 const Icon = item.icon;
@@ -175,7 +182,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
               })}
             </nav>
 
-            <div className="p-4 border-t border-stroke text-foreground">
+            <div className="shrink-0 p-4 border-t border-stroke text-foreground bg-card-bg">
               <UserMenu />
             </div>
           </div>

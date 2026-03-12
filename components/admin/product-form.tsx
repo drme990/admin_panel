@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Product, ReservationField } from '@/types/Product';
+import { Product } from '@/types/Product';
 import Input from '@/components/ui/input';
 import Switch from '@/components/ui/switch';
 import Button from '@/components/ui/button';
@@ -18,8 +18,14 @@ import { useTranslations } from 'next-intl';
 import { toast } from 'react-toastify';
 import { Plus, X, ClipboardList } from 'lucide-react';
 import Loading from '../ui/loading';
-import Dropdown from '@/components/ui/dropdown';
 import { roundPrice } from '@/lib/currency-rounding';
+import {
+  getReservationPreset,
+  normalizeReservationFields,
+  RESERVATION_FIELD_PRESETS,
+  ReservationField,
+  ReservationFieldKey,
+} from '@/lib/reservation-fields';
 
 interface ProductFormProps {
   product?: Product | null;
@@ -127,7 +133,9 @@ export default function ProductForm({
         upgradeFeaturesAr: (product.upgradeFeatures?.ar || []).join('\n'),
         upgradeFeaturesEn: (product.upgradeFeatures?.en || []).join('\n'),
         canBeUpgraded: !!product.upgradeTo,
-        reservationFields: product.reservationFields || [],
+        reservationFields: normalizeReservationFields(
+          product.reservationFields,
+        ),
       });
 
       // Use setTimeout to ensure state is updated before setting ready
@@ -251,6 +259,55 @@ export default function ProductForm({
 
     updatedSizes[index] = size;
     setFormData({ ...formData, sizes: updatedSizes });
+  };
+
+  const toggleReservationField = (
+    key: ReservationFieldKey,
+    isActive: boolean,
+  ) => {
+    if (!isActive) {
+      setFormData({
+        ...formData,
+        reservationFields: formData.reservationFields.filter(
+          (field) => field.key !== key,
+        ),
+      });
+      return;
+    }
+
+    const preset = getReservationPreset(key);
+    if (!preset) return;
+
+    const existing = formData.reservationFields.find(
+      (field) => field.key === key,
+    );
+    if (existing) return;
+
+    setFormData({
+      ...formData,
+      reservationFields: [
+        ...formData.reservationFields,
+        {
+          key: preset.key,
+          type: preset.type,
+          label: preset.label,
+          options: preset.options,
+          required: false,
+        },
+      ],
+    });
+  };
+
+  const updateReservationField = (
+    key: ReservationFieldKey,
+    updater: (field: ReservationField) => ReservationField,
+  ) => {
+    setFormData({
+      ...formData,
+      reservationFields: formData.reservationFields.map((field) =>
+        field.key === key ? updater(field) : field,
+      ),
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -761,259 +818,100 @@ export default function ProductForm({
                 {t('form.reservationSection')}
               </p>
             </div>
-            <Button
-              type="button"
-              onClick={() =>
-                setFormData({
-                  ...formData,
-                  reservationFields: [
-                    ...formData.reservationFields,
-                    {
-                      type: 'text',
-                      label: { ar: '', en: '' },
-                      required: false,
-                    },
-                  ],
-                })
-              }
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm"
-            >
-              <Plus size={16} />
-              {t('form.addReservationField')}
-            </Button>
           </div>
           <p className="text-xs text-secondary">{t('form.reservationHelp')}</p>
 
-          {formData.reservationFields.map((field, index) => (
-            <div
-              key={index}
-              className="border border-stroke rounded-lg p-4 space-y-3"
-            >
-              <div className="flex items-center justify-between">
-                <h4 className="text-sm font-semibold">
-                  {t('form.reservationFieldNumber', { number: index + 1 })}
-                </h4>
-                <Button
-                  variant="custom"
-                  type="button"
-                  onClick={() =>
-                    setFormData({
-                      ...formData,
-                      reservationFields: formData.reservationFields.filter(
-                        (_, i) => i !== index,
-                      ),
-                    })
-                  }
-                  className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-950 rounded-lg transition-colors"
+          <div className="space-y-3">
+            {RESERVATION_FIELD_PRESETS.map((preset) => {
+              const field = formData.reservationFields.find(
+                (item) => item.key === preset.key,
+              );
+              const isActive = Boolean(field);
+              const supportsMaxLength =
+                preset.type === 'text' || preset.type === 'textarea';
+              const typeLabelMap: Record<string, string> = {
+                text: t('form.reservationTypeText'),
+                textarea: t('form.reservationTypeTextarea'),
+                number: t('form.reservationTypeNumber'),
+                date: t('form.reservationTypeDate'),
+                select: t('form.reservationTypeSelect'),
+                radio: t('form.reservationTypeRadio'),
+                picture: t('form.reservationTypePicture'),
+              };
+
+              return (
+                <div
+                  key={preset.key}
+                  className="border border-stroke rounded-lg p-4 space-y-3"
                 >
-                  <X size={16} />
-                </Button>
-              </div>
-
-              <Dropdown
-                label={t('form.reservationFieldType')}
-                value={field.type}
-                options={[
-                  { label: t('form.reservationTypeText'), value: 'text' },
-                  {
-                    label: t('form.reservationTypeTextarea'),
-                    value: 'textarea',
-                  },
-                  { label: t('form.reservationTypeNumber'), value: 'number' },
-                  { label: t('form.reservationTypeDate'), value: 'date' },
-                  { label: t('form.reservationTypeSelect'), value: 'select' },
-                  { label: t('form.reservationTypeRadio'), value: 'radio' },
-                  { label: t('form.reservationTypePicture'), value: 'picture' },
-                ]}
-                onChange={(value) => {
-                  const updated = [...formData.reservationFields];
-                  updated[index] = {
-                    ...updated[index],
-                    type: value as
-                      | 'text'
-                      | 'textarea'
-                      | 'number'
-                      | 'date'
-                      | 'select'
-                      | 'radio'
-                      | 'picture',
-                    options:
-                      value === 'select' || value === 'radio'
-                        ? (updated[index].options ?? [])
-                        : undefined,
-                    maxLength:
-                      value === 'text' || value === 'textarea'
-                        ? updated[index].maxLength
-                        : undefined,
-                  };
-                  setFormData({ ...formData, reservationFields: updated });
-                }}
-              />
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <Input
-                  label={t('form.reservationLabelAr')}
-                  type="text"
-                  required
-                  value={field.label.ar}
-                  onChange={(e) => {
-                    const updated = [...formData.reservationFields];
-                    updated[index] = {
-                      ...updated[index],
-                      label: { ...updated[index].label, ar: e.target.value },
-                    };
-                    setFormData({ ...formData, reservationFields: updated });
-                  }}
-                />
-                <Input
-                  label={t('form.reservationLabelEn')}
-                  type="text"
-                  required
-                  value={field.label.en}
-                  onChange={(e) => {
-                    const updated = [...formData.reservationFields];
-                    updated[index] = {
-                      ...updated[index],
-                      label: { ...updated[index].label, en: e.target.value },
-                    };
-                    setFormData({ ...formData, reservationFields: updated });
-                  }}
-                />
-              </div>
-
-              {(field.type === 'text' || field.type === 'textarea') && (
-                <Input
-                  label={t('form.reservationMaxLength')}
-                  type="number"
-                  min={1}
-                  value={field.maxLength || ''}
-                  onChange={(e) => {
-                    const updated = [...formData.reservationFields];
-                    const val = parseInt(e.target.value) || undefined;
-                    updated[index] = { ...updated[index], maxLength: val };
-                    setFormData({ ...formData, reservationFields: updated });
-                  }}
-                  helperText={t('form.reservationMaxLengthHelp')}
-                />
-              )}
-
-              {(field.type === 'select' || field.type === 'radio') && (
-                <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <label className="text-xs font-medium text-secondary">
-                      {field.type === 'radio'
-                        ? t('form.reservationRadioOptions')
-                        : t('form.reservationSelectOptions')}
-                    </label>
-                    <Button
-                      type="button"
-                      variant="custom"
-                      onClick={() => {
-                        const updated = [...formData.reservationFields];
-                        updated[index] = {
-                          ...updated[index],
-                          options: [
-                            ...(updated[index].options ?? []),
-                            { ar: '', en: '' },
-                          ],
-                        };
-                        setFormData({
-                          ...formData,
-                          reservationFields: updated,
-                        });
-                      }}
-                      className="flex items-center gap-1 px-2 py-1 text-xs border border-stroke rounded-lg hover:border-success hover:text-success transition-colors"
-                    >
-                      <Plus size={12} />
-                      {t('form.reservationAddOption')}
-                    </Button>
-                  </div>
-                  {(field.options ?? []).length === 0 && (
-                    <p className="text-xs text-secondary italic">
-                      {t('form.reservationNoOptions')}
-                    </p>
-                  )}
-                  {(field.options ?? []).map((opt, optIdx) => (
-                    <div key={optIdx} className="flex items-center gap-2">
-                      <div className="grid grid-cols-2 gap-2 flex-1">
-                        <Input
-                          placeholder={t('form.reservationOptionAr')}
-                          type="text"
-                          value={opt.ar}
-                          onChange={(e) => {
-                            const updated = [...formData.reservationFields];
-                            const opts = [...(updated[index].options ?? [])];
-                            opts[optIdx] = {
-                              ...opts[optIdx],
-                              ar: e.target.value,
-                            };
-                            updated[index] = {
-                              ...updated[index],
-                              options: opts,
-                            };
-                            setFormData({
-                              ...formData,
-                              reservationFields: updated,
-                            });
-                          }}
-                        />
-                        <Input
-                          placeholder={t('form.reservationOptionEn')}
-                          type="text"
-                          value={opt.en}
-                          onChange={(e) => {
-                            const updated = [...formData.reservationFields];
-                            const opts = [...(updated[index].options ?? [])];
-                            opts[optIdx] = {
-                              ...opts[optIdx],
-                              en: e.target.value,
-                            };
-                            updated[index] = {
-                              ...updated[index],
-                              options: opts,
-                            };
-                            setFormData({
-                              ...formData,
-                              reservationFields: updated,
-                            });
-                          }}
-                        />
-                      </div>
-                      <Button
-                        variant="custom"
-                        type="button"
-                        onClick={() => {
-                          const updated = [...formData.reservationFields];
-                          const opts = (updated[index].options ?? []).filter(
-                            (_, i) => i !== optIdx,
-                          );
-                          updated[index] = { ...updated[index], options: opts };
-                          setFormData({
-                            ...formData,
-                            reservationFields: updated,
-                          });
-                        }}
-                        className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-950 rounded-lg transition-colors shrink-0"
-                      >
-                        <X size={14} />
-                      </Button>
+                    <div>
+                      <h4 className="text-sm font-semibold text-foreground">
+                        {preset.label.ar}
+                      </h4>
+                      <p className="text-xs text-secondary">
+                        {preset.label.en}
+                      </p>
                     </div>
-                  ))}
-                </div>
-              )}
+                    <Switch
+                      id={`reservationActive_${preset.key}`}
+                      checked={isActive}
+                      onChange={(checked) =>
+                        toggleReservationField(preset.key, checked)
+                      }
+                      label={t('form.reservationEnabled')}
+                    />
+                  </div>
 
-              <Switch
-                id={`reservationRequired_${index}`}
-                checked={field.required}
-                onChange={(checked) => {
-                  const updated = [...formData.reservationFields];
-                  updated[index] = { ...updated[index], required: checked };
-                  setFormData({ ...formData, reservationFields: updated });
-                }}
-                label={t('form.reservationRequired')}
-              />
-            </div>
-          ))}
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-secondary">
+                    <span className="px-2 py-1 rounded-full bg-background border border-stroke">
+                      {typeLabelMap[preset.type]}
+                    </span>
+                    {(preset.type === 'select' || preset.type === 'radio') &&
+                      (preset.options ?? []).map((option) => (
+                        <span
+                          key={`${preset.key}_${option.en}`}
+                          className="px-2 py-1 rounded-full bg-background border border-stroke"
+                        >
+                          {option.ar} / {option.en}
+                        </span>
+                      ))}
+                  </div>
+
+                  {isActive && supportsMaxLength && field && (
+                    <Input
+                      label={t('form.reservationMaxLength')}
+                      type="number"
+                      min={1}
+                      value={field.maxLength || ''}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value, 10) || undefined;
+                        updateReservationField(preset.key, (currentField) => ({
+                          ...currentField,
+                          maxLength: val,
+                        }));
+                      }}
+                      helperText={t('form.reservationMaxLengthHelp')}
+                    />
+                  )}
+
+                  {isActive && field && (
+                    <Switch
+                      id={`reservationRequired_${preset.key}`}
+                      checked={field.required}
+                      onChange={(checked) => {
+                        updateReservationField(preset.key, (currentField) => ({
+                          ...currentField,
+                          required: checked,
+                        }));
+                      }}
+                      label={t('form.reservationRequired')}
+                    />
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
       </section>
 

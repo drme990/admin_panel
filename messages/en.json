@@ -55,6 +55,7 @@
       "dashboard": "Dashboard",
       "products": "Products",
       "orders": "Orders",
+      "booking": "Booking",
       "coupons": "Coupons",
       "countries": "Countries",
       "users": "Users",
@@ -213,7 +214,8 @@
         "upgradeFeaturesPlaceholder": "One feature per line",
         "upgradeFeaturesHelp": "These bullet points can be set for any product and are shown in the checkout upgrade comparison modal.",
         "reservationSection": "Reservation Fields",
-        "reservationHelp": "Define custom fields that customers must fill during checkout (e.g., name, date, number of guests)",
+        "reservationHelp": "Use the fixed reservation fields below and choose which ones are active for this product.",
+        "reservationEnabled": "Active",
         "addReservationField": "Add Field",
         "reservationFieldNumber": "Field {number}",
         "reservationFieldType": "Field Type",
@@ -393,6 +395,7 @@
       "pageLabels": {
         "products": "Products",
         "orders": "Orders",
+        "booking": "Booking",
         "coupons": "Coupons",
         "countries": "Countries",
         "users": "Users",
@@ -515,6 +518,21 @@
       "saveSuccess": "Appearance settings saved successfully",
       "noImages": "No images yet. Click 'Add Image' to upload.",
       "uploadFailed": "Failed to upload image"
+    },
+    "booking": {
+      "title": "Booking",
+      "description": "Block execution dates so customers cannot select them during checkout.",
+      "blockedDates": "Blocked Execution Dates",
+      "addDate": "Add Date",
+      "noDates": "No blocked dates yet",
+      "saveChanges": "Save Changes",
+      "saving": "Saving...",
+      "loadFailed": "Failed to load booking settings",
+      "saveFailed": "Failed to save booking settings",
+      "saveSuccess": "Booking settings saved successfully",
+      "removeDate": "Remove",
+      "loading": "Loading booking settings...",
+      "invalidDate": "Enter the date as DD/MM/YYYY"
     },
     "exchange": {
       "title": "Exchange Rates",

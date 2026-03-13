@@ -236,7 +236,8 @@
         "reservationLabelEn": "Label (English)",
         "reservationMaxLength": "Max Characters",
         "reservationMaxLengthHelp": "Maximum number of characters allowed (leave empty for no limit)",
-        "reservationRequired": "Required field"
+        "reservationRequired": "Required field",
+        "reservationSupportsMulti": "Allow entering multiple names"
       },
       "buttons": {
         "cancel": "Cancel",
@@ -523,7 +524,20 @@
       "title": "Booking",
       "description": "Block execution dates so customers cannot select them during checkout.",
       "blockedDates": "Blocked Execution Dates",
+      "calendarHint": "Use the custom picker to block one day or a full range of execution dates.",
+      "singleDateTitle": "Block a single date",
+      "singleDateDescription": "Pick one execution date and add it to the blocked list.",
+      "singleDateLabel": "Execution date",
       "addDate": "Add Date",
+      "pickDate": "Pick a date",
+      "markedDateHint": "Highlighted dates are already blocked.",
+      "rangeTitle": "Block a date range",
+      "rangeDescription": "Select a start and end date to block every day in between.",
+      "addRange": "Add Date Range",
+      "rangeStart": "Range Start",
+      "rangeEnd": "Range End",
+      "rangeSummary": "{count} date(s) will be added from this range.",
+      "rangeSummaryEmpty": "Choose both the start and end date to preview the blocked range.",
       "noDates": "No blocked dates yet",
       "saveChanges": "Save Changes",
       "saving": "Saving...",
@@ -532,7 +546,8 @@
       "saveSuccess": "Booking settings saved successfully",
       "removeDate": "Remove",
       "loading": "Loading booking settings...",
-      "invalidDate": "Enter the date as DD/MM/YYYY"
+      "invalidDate": "Select a valid date",
+      "invalidRange": "Select a valid date range (start must be before or equal to end)"
     },
     "exchange": {
       "title": "Exchange Rates",

@@ -236,7 +236,8 @@
         "reservationLabelEn": "التسمية (إنجليزي)",
         "reservationMaxLength": "الحد الأقصى للحروف",
         "reservationMaxLengthHelp": "الحد الأقصى لعدد الأحرف المسموح بها (اتركه فارغاً بدون حد)",
-        "reservationRequired": "حقل إلزامي"
+        "reservationRequired": "حقل إلزامي",
+        "reservationSupportsMulti": "السماح بإدخال أكثر من اسم"
       },
       "buttons": {
         "cancel": "إلغاء",
@@ -523,14 +524,30 @@
       "title": "الحجز",
       "description": "حظر تواريخ التنفيذ حتى لا يتمكن العملاء من اختيارها أثناء الدفع.",
       "blockedDates": "تواريخ التنفيذ المحظورة",
+      "calendarHint": "استخدم منتقي التاريخ المخصص لحظر يوم واحد أو نطاق كامل من تواريخ التنفيذ.",
+      "singleDateTitle": "حظر تاريخ واحد",
+      "singleDateDescription": "اختر تاريخ تنفيذ واحد ثم أضفه إلى القائمة المحظورة.",
+      "singleDateLabel": "تاريخ التنفيذ",
       "addDate": "إضافة تاريخ",
+      "pickDate": "اختر تاريخًا",
+      "markedDateHint": "التواريخ المميزة محظورة بالفعل.",
+      "rangeTitle": "حظر نطاق تواريخ",
+      "rangeDescription": "اختر تاريخ البداية والنهاية لحظر كل الأيام الواقعة بينهما.",
+      "addRange": "إضافة نطاق تواريخ",
+      "rangeStart": "بداية النطاق",
+      "rangeEnd": "نهاية النطاق",
+      "rangeSummary": "سيتم إضافة {count} تاريخ/تواريخ من هذا النطاق.",
+      "rangeSummaryEmpty": "اختر تاريخ البداية والنهاية لمعاينة النطاق الذي سيتم حظره.",
       "noDates": "لا توجد تواريخ محظورة بعد",
       "saveChanges": "حفظ التغييرات",
       "saving": "جاري الحفظ...",
       "loadFailed": "فشل تحميل إعدادات الحجز",
       "saveFailed": "فشل حفظ إعدادات الحجز",
       "saveSuccess": "تم حفظ إعدادات الحجز بنجاح",
-      "removeDate": "حذف"
+      "removeDate": "حذف",
+      "loading": "جاري تحميل إعدادات الحجز...",
+      "invalidDate": "يرجى اختيار تاريخ صحيح",
+      "invalidRange": "يرجى اختيار نطاق تواريخ صحيح (البداية قبل أو تساوي النهاية)"
     },
     "exchange": {
       "title": "أسعار الصرف",

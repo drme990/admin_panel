@@ -28,6 +28,7 @@ export interface ReservationField {
   required: boolean;
   maxLength?: number;
   options?: ReservationFieldOption[];
+  supportsMulti?: boolean;
 }
 
 export interface ReservationFieldPreset {
@@ -35,6 +36,7 @@ export interface ReservationFieldPreset {
   type: ReservationFieldType;
   label: { ar: string; en: string };
   options?: ReservationFieldOption[];
+  supportsMulti?: boolean;
 }
 
 export const RESERVATION_FIELD_PRESETS: ReservationFieldPreset[] = [
@@ -54,7 +56,7 @@ export const RESERVATION_FIELD_PRESETS: ReservationFieldPreset[] = [
     type: 'text',
     label: {
       ar: 'اسم الشخص المؤدى عنه',
-      en: 'Name of the person the sacrifice is for',
+      en: 'The person on whose behalf',
     },
   },
   {
@@ -64,7 +66,7 @@ export const RESERVATION_FIELD_PRESETS: ReservationFieldPreset[] = [
     options: [
       { ar: 'ذكر', en: 'male' },
       { ar: 'انثى', en: 'female' },
-      { ar: 'مذكر ومؤنث (أكثر من اسم واحد)', en: 'Males and females (more than one name)' },
+      { ar: 'ذكور و اناث', en: 'Males and females' },
     ],
   },
   {
@@ -73,7 +75,7 @@ export const RESERVATION_FIELD_PRESETS: ReservationFieldPreset[] = [
     label: { ar: 'حي', en: 'Is Alive' },
     options: [
       { ar: 'حي', en: 'Alive' },
-      { ar: 'ميت', en: 'dead' },
+      { ar: 'متوفي', en: 'dead' },
     ],
   },
   {
@@ -145,6 +147,7 @@ export function normalizeReservationFields(input: unknown): ReservationField[] {
           preset.type === 'text' || preset.type === 'textarea'
             ? matched.maxLength
             : undefined,
+        supportsMulti: Boolean(matched.supportsMulti),
       },
     ];
   });

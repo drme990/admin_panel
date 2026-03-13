@@ -293,6 +293,7 @@ export default function ProductForm({
           label: preset.label,
           options: preset.options,
           required: false,
+          supportsMulti: Boolean(preset.supportsMulti),
         },
       ],
     });
@@ -906,6 +907,20 @@ export default function ProductForm({
                         }));
                       }}
                       label={t('form.reservationRequired')}
+                    />
+                  )}
+
+                  {isActive && field && preset.key === 'sacrificeFor' && (
+                    <Switch
+                      id={`reservationSupportsMulti_${preset.key}`}
+                      checked={Boolean(field.supportsMulti)}
+                      onChange={(checked) => {
+                        updateReservationField(preset.key, (currentField) => ({
+                          ...currentField,
+                          supportsMulti: checked,
+                        }));
+                      }}
+                      label={t('form.reservationSupportsMulti')}
                     />
                   )}
                 </div>

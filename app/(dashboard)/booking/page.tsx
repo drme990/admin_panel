@@ -1,10 +1,12 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useLocale } from 'next-intl';
 import { useTranslations } from 'next-intl';
 import { toast } from 'react-toastify';
+import { CalendarRange } from 'lucide-react';
 import Button from '@/components/ui/button';
-import Input from '@/components/ui/input';
+import CustomDatePicker from '@/components/ui/custom-date-picker';
 
 function formatDateForDisplay(value: string): string {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
@@ -12,28 +14,47 @@ function formatDateForDisplay(value: string): string {
   return `${day}/${month}/${year}`;
 }
 
-function parseDisplayDate(value: string): string | null {
-  const normalized = value.trim().replace(/[-.]/g, '/');
-  const match = normalized.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-  if (!match) return null;
+function enumerateDateRange(start: string, end: string): string[] {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(start) || !/^\d{4}-\d{2}-\d{2}$/.test(end)) {
+    return [];
+  }
 
-  const [, dayRaw, monthRaw, yearRaw] = match;
-  const day = dayRaw.padStart(2, '0');
-  const month = monthRaw.padStart(2, '0');
-  const iso = `${yearRaw}-${month}-${day}`;
-  return /^\d{4}-\d{2}-\d{2}$/.test(iso) ? iso : null;
+  const startDate = new Date(`${start}T00:00:00`);
+  const endDate = new Date(`${end}T00:00:00`);
+  if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
+    return [];
+  }
+  if (startDate > endDate) {
+    return [];
+  }
+
+  const out: string[] = [];
+  const cursor = new Date(startDate);
+  while (cursor <= endDate) {
+    out.push(cursor.toISOString().slice(0, 10));
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return out;
 }
 
 export default function BookingAdminPage() {
   const t = useTranslations('admin.booking');
+  const locale = useLocale();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [blockedDates, setBlockedDates] = useState<string[]>([]);
-  const [newDateInput, setNewDateInput] = useState('');
+  const [singleDate, setSingleDate] = useState('');
+  const [rangeStartDate, setRangeStartDate] = useState('');
+  const [rangeEndDate, setRangeEndDate] = useState('');
 
   const sortedDates = useMemo(
     () => [...blockedDates].sort((a, b) => a.localeCompare(b)),
     [blockedDates],
+  );
+
+  const pendingRangeDates = useMemo(
+    () => enumerateDateRange(rangeStartDate, rangeEndDate),
+    [rangeEndDate, rangeStartDate],
   );
 
   useEffect(() => {
@@ -69,19 +90,34 @@ export default function BookingAdminPage() {
   }, [t]);
 
   const addDate = () => {
-    const parsedDate = parseDisplayDate(newDateInput);
-    if (!parsedDate) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(singleDate)) {
       toast.error(t('invalidDate'));
       return;
     }
 
-    if (blockedDates.includes(parsedDate)) {
-      setNewDateInput('');
+    if (blockedDates.includes(singleDate)) {
+      setSingleDate('');
       return;
     }
 
-    setBlockedDates((prev) => [...prev, parsedDate]);
-    setNewDateInput('');
+    setBlockedDates((prev) =>
+      Array.from(new Set([...prev, singleDate])).sort(),
+    );
+    setSingleDate('');
+  };
+
+  const addDateRange = () => {
+    const rangeDates = enumerateDateRange(rangeStartDate, rangeEndDate);
+    if (rangeDates.length === 0) {
+      toast.error(t('invalidRange'));
+      return;
+    }
+
+    setBlockedDates((prev) =>
+      Array.from(new Set([...prev, ...rangeDates])).sort(),
+    );
+    setRangeStartDate('');
+    setRangeEndDate('');
   };
 
   const removeDate = (date: string) => {
@@ -130,18 +166,80 @@ export default function BookingAdminPage() {
       </div>
 
       <div className="bg-card-bg border border-stroke rounded-site p-6 space-y-4">
-        <h2 className="text-lg font-semibold">{t('blockedDates')}</h2>
+        <div className="flex items-center gap-3">
+          <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 text-primary">
+            <CalendarRange size={20} />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold">{t('blockedDates')}</h2>
+            <p className="text-sm text-secondary">{t('calendarHint')}</p>
+          </div>
+        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-3">
-          <Input
-            type="text"
-            value={newDateInput}
-            onChange={(e) => setNewDateInput(e.target.value)}
-            placeholder="DD/MM/YYYY"
-          />
-          <Button type="button" variant="secondary" onClick={addDate}>
-            {t('addDate')}
-          </Button>
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
+          <div className="rounded-site border border-stroke bg-background p-4 space-y-4">
+            <div>
+              <h3 className="text-base font-semibold text-foreground">
+                {t('singleDateTitle')}
+              </h3>
+              <p className="text-sm text-secondary">
+                {t('singleDateDescription')}
+              </p>
+            </div>
+
+            <CustomDatePicker
+              locale={locale}
+              label={t('singleDateLabel')}
+              placeholder={t('pickDate')}
+              value={singleDate}
+              onChange={setSingleDate}
+              markedDates={sortedDates}
+              helperText={t('markedDateHint')}
+            />
+
+            <Button type="button" variant="primary" onClick={addDate}>
+              {t('addDate')}
+            </Button>
+          </div>
+
+          <div className="rounded-site border border-stroke bg-background p-4 space-y-4">
+            <div>
+              <h3 className="text-base font-semibold text-foreground">
+                {t('rangeTitle')}
+              </h3>
+              <p className="text-sm text-secondary">{t('rangeDescription')}</p>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              <CustomDatePicker
+                locale={locale}
+                label={t('rangeStart')}
+                placeholder={t('pickDate')}
+                value={rangeStartDate}
+                onChange={setRangeStartDate}
+                markedDates={sortedDates}
+              />
+
+              <CustomDatePicker
+                locale={locale}
+                label={t('rangeEnd')}
+                placeholder={t('pickDate')}
+                value={rangeEndDate}
+                onChange={setRangeEndDate}
+                markedDates={sortedDates}
+              />
+            </div>
+
+            <div className="rounded-lg border border-dashed border-stroke bg-card-bg px-4 py-3 text-sm text-secondary">
+              {pendingRangeDates.length > 0
+                ? t('rangeSummary', { count: pendingRangeDates.length })
+                : t('rangeSummaryEmpty')}
+            </div>
+
+            <Button type="button" variant="primary" onClick={addDateRange}>
+              {t('addRange')}
+            </Button>
+          </div>
         </div>
 
         {sortedDates.length === 0 ? (

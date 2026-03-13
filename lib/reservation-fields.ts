@@ -92,7 +92,7 @@ export const RESERVATION_FIELD_PRESETS: ReservationFieldPreset[] = [
     key: 'executionDate',
     type: 'date',
     label: {
-      ar: '(بدون تحديد = يتم التنفيذ في اليوم التالي تلقائيا) تاريخ التنفيذ',
+      ar: 'تاريخ التنفيذ (بدون تحديد = يتم التنفيذ في اليوم التالي تلقائيا)',
       en: 'Execution Date (Leave blank to schedule automatically for the next day).',
     },
   },

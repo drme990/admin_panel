@@ -72,10 +72,10 @@ export const RESERVATION_FIELD_PRESETS: ReservationFieldPreset[] = [
   {
     key: 'isAlive',
     type: 'radio',
-    label: { ar: 'حي', en: 'Is Alive' },
+    label: { ar: 'الحالة', en: 'Status' },
     options: [
       { ar: 'حي', en: 'Alive' },
-      { ar: 'متوفي', en: 'dead' },
+      { ar: 'متوفي', en: 'Dead' },
     ],
   },
   {

@@ -231,6 +231,15 @@ export default function OrderHistoryPage() {
     );
   };
 
+  const getReservationLabel = (label: { ar: string; en: string }) =>
+    locale === 'ar' ? label.ar : label.en;
+
+  const getReservationValues = (value: string) =>
+    value
+      .split('\n')
+      .map((entry) => entry.trim())
+      .filter(Boolean);
+
   const statusOptions = [
     { label: t('filters.all'), value: '' },
     { label: t('status.pending'), value: 'pending' },
@@ -596,6 +605,44 @@ export default function OrderHistoryPage() {
                 </div>
               </div>
             )}
+
+            {selectedOrder.reservationData?.length ? (
+              <div>
+                <h3 className="font-semibold mb-3">
+                  {t('reservationData.title')}
+                </h3>
+                <div className="flex flex-col gap-2">
+                  {selectedOrder.reservationData.map((field, index) => {
+                    const values = getReservationValues(field.value);
+
+                    return (
+                      <div
+                        key={`${field.key}-${index}`}
+                        className="py-2 px-3 rounded-lg bg-background border border-stroke"
+                      >
+                        <p className="text-xs text-secondary mb-1">
+                          {getReservationLabel(field.label)}
+                        </p>
+                        <div className="flex flex-wrap gap-1">
+                          {values.length > 0 ? (
+                            values.map((entry, valueIndex) => (
+                              <span
+                                key={`${field.key}-${index}-${valueIndex}`}
+                                className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-primary/10 text-primary"
+                              >
+                                {entry}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="text-sm text-secondary">-</span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null}
           </div>
         )}
       </Modal>

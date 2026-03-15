@@ -12,6 +12,10 @@
     "country": "Country",
     "paymentMethod": "Payment Method",
     "referral": "Referral",
+    "reservationData": {
+      "title": "Reservation Data",
+      "more": "more"
+    },
     "easykashInfo": "EasyKash Info",
     "filters": {
       "all": "All",
@@ -162,6 +166,7 @@
         "imageHelp": "Upload up to 10 images. First image will be the main image.",
         "inStockLabel": "In Stock",
         "bestSellerLabel": "Best Seller",
+        "bestSellerTooltip": "Highlight this product as a featured bestseller on the storefront cards.",
         "isActiveLabel": "Active (visible on site)",
         "preview": "Preview",
         "addedPrice": "Added Price (%)",
@@ -238,7 +243,8 @@
         "reservationMaxLength": "Max Characters",
         "reservationMaxLengthHelp": "Maximum number of characters allowed (leave empty for no limit)",
         "reservationRequired": "Required field",
-        "reservationSupportsMulti": "Allow entering multiple names"
+        "reservationSupportsMulti": "Allow entering multiple names",
+        "reservationSupportsMultiTooltip": "Enable this when customers may submit more than one beneficiary name for the same field."
       },
       "buttons": {
         "cancel": "Cancel",

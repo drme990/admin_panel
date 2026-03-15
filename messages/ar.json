@@ -12,6 +12,10 @@
     "country": "الدولة",
     "paymentMethod": "طريقة الدفع",
     "referral": "الإحالة",
+    "reservationData": {
+      "title": "بيانات الحجز",
+      "more": "إضافية"
+    },
     "easykashInfo": "معلومات إيزي كاش",
     "filters": {
       "all": "الكل",
@@ -162,6 +166,7 @@
         "imageHelp": "ارفع حتى 10 صور. الصورة الأولى ستكون الصورة الرئيسية.",
         "inStockLabel": "متوفر",
         "bestSellerLabel": "الأكثر مبيعاً",
+        "bestSellerTooltip": "يتم إبراز هذا المنتج كخيار مميز وأكثر مبيعاً داخل بطاقات المنتجات في الواجهة.",
         "isActiveLabel": "نشط (مرئي على الموقع)",
         "preview": "معاينة",
         "addedPrice": "سعر إضافي (%)",
@@ -238,7 +243,8 @@
         "reservationMaxLength": "الحد الأقصى للحروف",
         "reservationMaxLengthHelp": "الحد الأقصى لعدد الأحرف المسموح بها (اتركه فارغاً بدون حد)",
         "reservationRequired": "حقل إلزامي",
-        "reservationSupportsMulti": "السماح بإدخال أكثر من اسم"
+        "reservationSupportsMulti": "السماح بإدخال أكثر من اسم",
+        "reservationSupportsMultiTooltip": "فعّل هذا الخيار عندما يمكن للعميل إدخال أكثر من اسم مستفيد داخل نفس الحقل."
       },
       "buttons": {
         "cancel": "إلغاء",

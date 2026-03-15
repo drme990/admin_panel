@@ -6,6 +6,7 @@ import { Product } from '@/types/Product';
 import Input from '@/components/ui/input';
 import Switch from '@/components/ui/switch';
 import Button from '@/components/ui/button';
+import { Tooltip } from '@/components/ui/tooltip';
 import MultiCurrencyPriceEditor, {
   CurrencyPrice,
 } from '@/components/admin/multi-currency-price-editor';
@@ -16,7 +17,7 @@ import MultiImageUpload from '@/components/admin/multi-image-upload';
 import RichTextEditor from '@/components/ui/rich-text-editor';
 import { useTranslations } from 'next-intl';
 import { toast } from 'react-toastify';
-import { Plus, X, ClipboardList } from 'lucide-react';
+import { Plus, X, ClipboardList, CircleHelp } from 'lucide-react';
 import Loading from '../ui/loading';
 import { roundPrice } from '@/lib/currency-rounding';
 import {
@@ -459,14 +460,21 @@ export default function ProductForm({
             }
             label={t('form.inStockLabel')}
           />
-          <Switch
-            id="isBestSeller"
-            checked={formData.isBestSeller}
-            onChange={(checked) =>
-              setFormData({ ...formData, isBestSeller: checked })
-            }
-            label={t('form.bestSellerLabel')}
-          />
+          <div className="flex items-center gap-2">
+            <Switch
+              id="isBestSeller"
+              checked={formData.isBestSeller}
+              onChange={(checked) =>
+                setFormData({ ...formData, isBestSeller: checked })
+              }
+              label={t('form.bestSellerLabel')}
+            />
+            <Tooltip content={t('form.bestSellerTooltip')} position="top">
+              <span className="inline-flex text-secondary hover:text-foreground transition-colors cursor-help">
+                <CircleHelp size={16} />
+              </span>
+            </Tooltip>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -925,17 +933,30 @@ export default function ProductForm({
                   )}
 
                   {isActive && field && preset.key === 'sacrificeFor' && (
-                    <Switch
-                      id={`reservationSupportsMulti_${preset.key}`}
-                      checked={Boolean(field.supportsMulti)}
-                      onChange={(checked) => {
-                        updateReservationField(preset.key, (currentField) => ({
-                          ...currentField,
-                          supportsMulti: checked,
-                        }));
-                      }}
-                      label={t('form.reservationSupportsMulti')}
-                    />
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        id={`reservationSupportsMulti_${preset.key}`}
+                        checked={Boolean(field.supportsMulti)}
+                        onChange={(checked) => {
+                          updateReservationField(
+                            preset.key,
+                            (currentField) => ({
+                              ...currentField,
+                              supportsMulti: checked,
+                            }),
+                          );
+                        }}
+                        label={t('form.reservationSupportsMulti')}
+                      />
+                      <Tooltip
+                        content={t('form.reservationSupportsMultiTooltip')}
+                        position="top"
+                      >
+                        <span className="inline-flex text-secondary hover:text-foreground transition-colors cursor-help">
+                          <CircleHelp size={16} />
+                        </span>
+                      </Tooltip>
+                    </div>
                   )}
                 </div>
               );

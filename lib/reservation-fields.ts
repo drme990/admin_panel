@@ -76,6 +76,7 @@ export const RESERVATION_FIELD_PRESETS: ReservationFieldPreset[] = [
     options: [
       { ar: 'حي', en: 'Alive' },
       { ar: 'متوفي', en: 'Dead' },
+      { ar: 'احياء و متوفين', en: 'Alive and dead' },
     ],
   },
   {

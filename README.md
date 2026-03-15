@@ -2,13 +2,15 @@
 
 A secure **Next.js 16** admin dashboard for managing both **Ghadaq Association** and **Manasik Foundation** platforms.
 
-## Latest Updates (2026-03-13)
+## Latest Updates (2026-03-16)
 
 - Booking page now uses a custom calendar date picker (single date and range) with clearer blocked-date management UX.
 - Admin login now includes a password visibility toggle (show/hide) for safer and easier credential entry.
 - Storefront reservation fields now include a custom image picker with preview/remove flow.
 - Storefront **The person on whose behalf** now uses a single-input multi-name chip flow.
 - Storefront billing phone input now enforces an undeletable `+` prefix and submits in international format.
+- Orders page now supports deep-link search with URL query format `/orders?q=...` and keeps the search box in sync.
+- Appearance page now supports precise works-image positioning by reordering images inside each row in addition to moving between rows.
 
 ---
 

@@ -525,6 +525,8 @@
       "uploading": "Uploading...",
       "moveToRow1": "Move to Row 1",
       "moveToRow2": "Move to Row 2",
+      "moveEarlier": "Move earlier",
+      "moveLater": "Move later",
       "saveChanges": "Save Changes",
       "saving": "Saving...",
       "loadFailed": "Failed to load appearance settings",

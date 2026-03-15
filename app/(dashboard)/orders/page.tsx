@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Table from '@/components/ui/table';
 import Pagination from '@/components/ui/pagination';
 import Button from '@/components/ui/button';
@@ -54,6 +55,8 @@ interface OrdersResponse {
 export default function OrderHistoryPage() {
   const t = useTranslations('orders');
   const locale = useLocale();
+  const searchParams = useSearchParams();
+  const initialQuery = searchParams.get('q') || '';
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -62,7 +65,7 @@ export default function OrderHistoryPage() {
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [referralFilter, setReferralFilter] = useState<string>('');
   const [referrals, setReferrals] = useState<Referral[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(initialQuery);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalStatus, setModalStatus] = useState<OrderStatus>('pending');

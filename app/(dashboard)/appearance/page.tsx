@@ -4,7 +4,15 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { toast } from 'react-toastify';
 import Image from 'next/image';
-import { Trash2, Upload, MoveDown, MoveUp, Save } from 'lucide-react';
+import {
+  Trash2,
+  Upload,
+  MoveDown,
+  MoveUp,
+  ArrowLeft,
+  ArrowRight,
+  Save,
+} from 'lucide-react';
 import { PageLoading } from '@/components/ui/loading';
 import { BannerText, WorksImages, ProjectName } from '@/types/Appearance';
 
@@ -162,6 +170,32 @@ export default function AppearancePage() {
     }));
   };
 
+  const handleReorderWithinRow = (
+    row: 'row1' | 'row2',
+    index: number,
+    direction: 'up' | 'down',
+  ) => {
+    setImages((prev) => {
+      const currentRow = [...prev[activeProject][row]];
+      const targetIndex = direction === 'up' ? index - 1 : index + 1;
+
+      if (targetIndex < 0 || targetIndex >= currentRow.length) {
+        return prev;
+      }
+
+      const [moved] = currentRow.splice(index, 1);
+      currentRow.splice(targetIndex, 0, moved);
+
+      return {
+        ...prev,
+        [activeProject]: {
+          ...prev[activeProject],
+          [row]: currentRow,
+        },
+      };
+    });
+  };
+
   const handleSave = async () => {
     setSaving(true);
     try {
@@ -254,7 +288,11 @@ export default function AppearancePage() {
           onUpload={(file) => handleUpload(file, 'row1')}
           onDelete={(i) => handleDelete('row1', i)}
           onMove={(i) => handleMove('row1', i)}
+          onReorderUp={(i) => handleReorderWithinRow('row1', i, 'up')}
+          onReorderDown={(i) => handleReorderWithinRow('row1', i, 'down')}
           moveLabel={t('moveToRow2')}
+          moveEarlierLabel={t('moveEarlier')}
+          moveLaterLabel={t('moveLater')}
           emptyText={t('noImages')}
           addLabel={t('addImage')}
           uploadingLabel={t('uploading')}
@@ -268,7 +306,11 @@ export default function AppearancePage() {
           onUpload={(file) => handleUpload(file, 'row2')}
           onDelete={(i) => handleDelete('row2', i)}
           onMove={(i) => handleMove('row2', i)}
+          onReorderUp={(i) => handleReorderWithinRow('row2', i, 'up')}
+          onReorderDown={(i) => handleReorderWithinRow('row2', i, 'down')}
           moveLabel={t('moveToRow1')}
+          moveEarlierLabel={t('moveEarlier')}
+          moveLaterLabel={t('moveLater')}
           emptyText={t('noImages')}
           addLabel={t('addImage')}
           uploadingLabel={t('uploading')}
@@ -363,7 +405,11 @@ interface ImageRowEditorProps {
   onUpload: (file: File) => void;
   onDelete: (index: number) => void;
   onMove: (index: number) => void;
+  onReorderUp: (index: number) => void;
+  onReorderDown: (index: number) => void;
   moveLabel: string;
+  moveEarlierLabel: string;
+  moveLaterLabel: string;
   emptyText: string;
   addLabel: string;
   uploadingLabel: string;
@@ -376,7 +422,11 @@ function ImageRowEditor({
   onUpload,
   onDelete,
   onMove,
+  onReorderUp,
+  onReorderDown,
   moveLabel,
+  moveEarlierLabel,
+  moveLaterLabel,
   emptyText,
   addLabel,
   uploadingLabel,
@@ -413,6 +463,22 @@ function ImageRowEditor({
               />
               {/* Hover overlay with actions */}
               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-all flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
+                <button
+                  onClick={() => onReorderUp(index)}
+                  title={moveEarlierLabel}
+                  disabled={index === 0}
+                  className="w-8 h-8 bg-white/90 text-gray-900 rounded-full flex items-center justify-center hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => onReorderDown(index)}
+                  title={moveLaterLabel}
+                  disabled={index === images.length - 1}
+                  className="w-8 h-8 bg-white/90 text-gray-900 rounded-full flex items-center justify-center hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <ArrowRight className="w-4 h-4" />
+                </button>
                 <button
                   onClick={() => onMove(index)}
                   title={moveLabel}

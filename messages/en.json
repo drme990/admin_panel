@@ -161,6 +161,7 @@
         "chooseImage": "Choose Image",
         "imageHelp": "Upload up to 10 images. First image will be the main image.",
         "inStockLabel": "In Stock",
+        "bestSellerLabel": "Best Seller",
         "isActiveLabel": "Active (visible on site)",
         "preview": "Preview",
         "addedPrice": "Added Price (%)",
@@ -502,6 +503,12 @@
       "description": "Control the look and feel of each website separately",
       "worksImages": "Works Images",
       "worksDescription": "Manage the images displayed in the Our Works slider section. Select a project tab to manage its images.",
+      "bannerTitle": "Top Banner Text",
+      "bannerDescription": "Set separate Arabic and English scrolling banner messages shown above the site header.",
+      "bannerLabelAr": "Banner Text (Arabic)",
+      "bannerPlaceholderAr": "Type the Arabic banner text...",
+      "bannerLabelEn": "Banner Text (English)",
+      "bannerPlaceholderEn": "Type the English banner text...",
       "whatsAppTitle": "WhatsApp",
       "whatsAppDescription": "Set the default WhatsApp message shown in the storefront floating button.",
       "whatsAppDefaultMessageLabel": "Default WhatsApp Message",
@@ -578,6 +585,12 @@
         "manual": "Manual"
       },
       "manualNote": "Manual prices will not be changed"
+    },
+    "notFound": {
+      "title": "Page Not Found",
+      "description": "The page you are looking for does not exist or may have been moved.",
+      "backHome": "Back to Dashboard",
+      "goLogin": "Go to Login"
     }
   }
 }

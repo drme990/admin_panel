@@ -6,12 +6,26 @@ import { toast } from 'react-toastify';
 import Image from 'next/image';
 import { Trash2, Upload, MoveDown, MoveUp, Save } from 'lucide-react';
 import { PageLoading } from '@/components/ui/loading';
-import { WorksImages, ProjectName } from '@/types/Appearance';
+import { BannerText, WorksImages, ProjectName } from '@/types/Appearance';
 
 const PROJECTS: { key: ProjectName; label: string }[] = [
   { key: 'ghadaq', label: 'Ghadaq' },
   { key: 'manasik', label: 'Manasik' },
 ];
+
+const EMPTY_BANNER_TEXT: BannerText = { ar: '', en: '' };
+
+function normalizeBannerText(value: unknown): BannerText {
+  if (typeof value === 'string') {
+    return { ar: value, en: value };
+  }
+
+  const raw = value as { ar?: unknown; en?: unknown } | undefined;
+  return {
+    ar: typeof raw?.ar === 'string' ? raw.ar : '',
+    en: typeof raw?.en === 'string' ? raw.en : '',
+  };
+}
 
 export default function AppearancePage() {
   const t = useTranslations('admin.appearance');
@@ -25,6 +39,12 @@ export default function AppearancePage() {
   >({
     ghadaq: '',
     manasik: '',
+  });
+  const [bannerTexts, setBannerTexts] = useState<
+    Record<ProjectName, BannerText>
+  >({
+    ghadaq: EMPTY_BANNER_TEXT,
+    manasik: EMPTY_BANNER_TEXT,
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -65,6 +85,14 @@ export default function AppearancePage() {
             ? manasikData.data.whatsAppDefaultMessage
             : '',
       });
+      setBannerTexts({
+        ghadaq: ghadaqData.success
+          ? normalizeBannerText(ghadaqData.data?.bannerText)
+          : EMPTY_BANNER_TEXT,
+        manasik: manasikData.success
+          ? normalizeBannerText(manasikData.data?.bannerText)
+          : EMPTY_BANNER_TEXT,
+      });
     } catch {
       toast.error(t('loadFailed'));
     } finally {
@@ -78,6 +106,7 @@ export default function AppearancePage() {
 
   const currentImages = images[activeProject];
   const currentMessage = defaultMessages[activeProject] || '';
+  const currentBannerText = bannerTexts[activeProject] || EMPTY_BANNER_TEXT;
 
   const handleUpload = useCallback(
     async (file: File, row: 'row1' | 'row2') => {
@@ -142,6 +171,10 @@ export default function AppearancePage() {
         body: JSON.stringify({
           worksImages: currentImages,
           whatsAppDefaultMessage: currentMessage,
+          bannerText: {
+            ar: currentBannerText.ar,
+            en: currentBannerText.en,
+          },
         }),
       });
       const data = await res.json();
@@ -239,6 +272,55 @@ export default function AppearancePage() {
           emptyText={t('noImages')}
           addLabel={t('addImage')}
           uploadingLabel={t('uploading')}
+        />
+      </div>
+
+      <div className="space-y-3 border border-stroke rounded-xl p-5 bg-card-bg">
+        <div>
+          <h2 className="text-lg font-semibold text-foreground">
+            {t('bannerTitle')}
+          </h2>
+          <p className="text-sm text-secondary mt-0.5">
+            {t('bannerDescription')}
+          </p>
+        </div>
+
+        <label className="block text-sm font-medium text-foreground">
+          {t('bannerLabelAr')}
+        </label>
+        <textarea
+          value={currentBannerText.ar}
+          onChange={(e) =>
+            setBannerTexts((prev) => ({
+              ...prev,
+              [activeProject]: {
+                ...prev[activeProject],
+                ar: e.target.value,
+              },
+            }))
+          }
+          rows={3}
+          className="w-full px-3 py-2 text-sm border border-stroke rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-success"
+          placeholder={t('bannerPlaceholderAr')}
+        />
+
+        <label className="block text-sm font-medium text-foreground">
+          {t('bannerLabelEn')}
+        </label>
+        <textarea
+          value={currentBannerText.en}
+          onChange={(e) =>
+            setBannerTexts((prev) => ({
+              ...prev,
+              [activeProject]: {
+                ...prev[activeProject],
+                en: e.target.value,
+              },
+            }))
+          }
+          rows={3}
+          className="w-full px-3 py-2 text-sm border border-stroke rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-success"
+          placeholder={t('bannerPlaceholderEn')}
         />
       </div>
 

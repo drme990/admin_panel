@@ -1,21 +1,34 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/providers/auth-provider';
 import { LogIn, Eye, EyeOff } from 'lucide-react';
 import Input from '@/components/ui/input';
+import { PageLoading } from '@/components/ui/loading';
 import { useTranslations } from 'next-intl';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { refreshUser } = useAuth();
+  const { user, loading: authLoading, refreshUser } = useAuth();
   const t = useTranslations('admin.login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!authLoading && user) {
+      router.replace('/');
+    }
+  }, [authLoading, user, router]);
+
+  if (authLoading || user) {
+    return (
+      <PageLoading text={t('buttons.loggingIn')} className="bg-background" />
+    );
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

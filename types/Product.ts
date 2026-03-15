@@ -98,6 +98,7 @@ export interface Product {
   /** Canonical currency for all base prices in all sizes. */
   baseCurrency: string;
   inStock: boolean;
+  isBestSeller?: boolean;
   /** Whether the product is published (visible to customers). Default: true */
   isActive: boolean;
   /** All product images. Use `images[0]` as the primary / thumbnail image. */

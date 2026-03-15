@@ -53,6 +53,7 @@ export default function ProductForm({
     content_en: '',
     baseCurrency: 'SAR',
     inStock: true,
+    isBestSeller: false,
     isActive: true,
     images: [] as string[],
     partialPayment: {
@@ -108,6 +109,7 @@ export default function ProductForm({
         content_en: product.content?.en || '',
         baseCurrency: product.baseCurrency || 'SAR',
         inStock: product.inStock,
+        isBestSeller: Boolean(product.isBestSeller),
         isActive: product.isActive !== false,
         images: product.images || [],
         partialPayment: {
@@ -336,6 +338,7 @@ export default function ProductForm({
       },
       baseCurrency: formData.baseCurrency,
       inStock: formData.inStock,
+      isBestSeller: formData.isBestSeller,
       isActive: formData.isActive,
       images: formData.images,
       partialPayment: {
@@ -456,6 +459,17 @@ export default function ProductForm({
             }
             label={t('form.inStockLabel')}
           />
+          <Switch
+            id="isBestSeller"
+            checked={formData.isBestSeller}
+            onChange={(checked) =>
+              setFormData({ ...formData, isBestSeller: checked })
+            }
+            label={t('form.bestSellerLabel')}
+          />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <Switch
             id="isActive"
             checked={formData.isActive}

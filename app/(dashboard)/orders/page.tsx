@@ -57,13 +57,15 @@ export default function OrderHistoryPage() {
   const locale = useLocale();
   const searchParams = useSearchParams();
   const initialQuery = searchParams.get('q') || '';
+  const initialStatus = searchParams.get('s') || '';
+  const initialReferral = searchParams.get('r') || '';
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalOrders, setTotalOrders] = useState(0);
-  const [statusFilter, setStatusFilter] = useState<string>('');
-  const [referralFilter, setReferralFilter] = useState<string>('');
+  const [statusFilter, setStatusFilter] = useState<string>(initialStatus);
+  const [referralFilter, setReferralFilter] = useState<string>(initialReferral);
   const [referrals, setReferrals] = useState<Referral[]>([]);
   const [searchQuery, setSearchQuery] = useState(initialQuery);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);

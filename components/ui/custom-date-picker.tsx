@@ -73,12 +73,6 @@ export default function CustomDatePicker({
   const rootRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    if (selectedDate) {
-      setMonthDate(selectedDate);
-    }
-  }, [selectedDate]);
-
-  useEffect(() => {
     const handleOutsideClick = (event: MouseEvent) => {
       if (!rootRef.current) return;
       if (!rootRef.current.contains(event.target as Node)) {
@@ -163,7 +157,15 @@ export default function CustomDatePicker({
       <div className="relative">
         <button
           type="button"
-          onClick={() => setIsOpen((prev) => !prev)}
+          onClick={() => {
+            setIsOpen((prev) => {
+              const next = !prev;
+              if (next && selectedDate) {
+                setMonthDate(selectedDate);
+              }
+              return next;
+            });
+          }}
           className="flex w-full items-center justify-between gap-3 rounded-lg border border-stroke bg-background px-4 py-3 text-start text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-primary/20"
           aria-label={label || placeholder || 'Select date'}
         >

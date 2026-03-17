@@ -3,7 +3,12 @@
 import { useState } from 'react';
 import Modal from './modal';
 import Button from './button';
-import { LuTriangleAlert, LuCircleCheck, LuInfo, LuCircleAlert } from 'react-icons/lu';
+import {
+  LuTriangleAlert,
+  LuCircleCheck,
+  LuInfo,
+  LuCircleAlert,
+} from 'react-icons/lu';
 
 export type ConfirmType = 'danger' | 'success' | 'warning' | 'info';
 
@@ -79,7 +84,7 @@ export default function ConfirmModal({
             {cancelText}
           </Button>
           <Button
-            variant="primary"
+            variant="custom"
             onClick={handleConfirm}
             className={`flex-1 ${config.confirmButton}`}
           >

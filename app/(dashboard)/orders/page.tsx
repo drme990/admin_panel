@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, type ReactNode } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Table from '@/components/ui/table';
 import Pagination from '@/components/ui/pagination';
@@ -23,6 +23,9 @@ import {
   Hash,
   CreditCard,
   UserRoundPlus,
+  Link2,
+  Copy,
+  Tag,
 } from 'lucide-react';
 import { Referral } from '@/types/Referral';
 import Checkbox from '@/components/ui/checkbox';
@@ -59,6 +62,7 @@ export default function OrderHistoryPage() {
   const initialQuery = searchParams.get('q') || '';
   const initialStatus = searchParams.get('s') || '';
   const initialReferral = searchParams.get('r') || '';
+  const initialSource = searchParams.get('source') || '';
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -66,6 +70,7 @@ export default function OrderHistoryPage() {
   const [totalOrders, setTotalOrders] = useState(0);
   const [statusFilter, setStatusFilter] = useState<string>(initialStatus);
   const [referralFilter, setReferralFilter] = useState<string>(initialReferral);
+  const [sourceFilter, setSourceFilter] = useState<string>(initialSource);
   const [referrals, setReferrals] = useState<Referral[]>([]);
   const [searchQuery, setSearchQuery] = useState(initialQuery);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -75,6 +80,11 @@ export default function OrderHistoryPage() {
   const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
   const [bulkStatus, setBulkStatus] = useState('');
   const [bulkUpdating, setBulkUpdating] = useState(false);
+  const [creatingPayLink, setCreatingPayLink] = useState(false);
+  const [payLinkData, setPayLinkData] = useState<{
+    url: string;
+    expiresAt: string;
+  } | null>(null);
 
   useEffect(() => {
     const fetchReferrals = async () => {
@@ -100,6 +110,7 @@ export default function OrderHistoryPage() {
       });
       if (statusFilter) params.set('status', statusFilter);
       if (referralFilter) params.set('referralId', referralFilter);
+      if (sourceFilter) params.set('source', sourceFilter);
       if (searchQuery) params.set('search', searchQuery);
 
       const res = await fetch(`/api/orders?${params.toString()}`);
@@ -117,7 +128,7 @@ export default function OrderHistoryPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, statusFilter, referralFilter, searchQuery]);
+  }, [page, statusFilter, referralFilter, sourceFilter, searchQuery]);
 
   useEffect(() => {
     fetchOrders();
@@ -126,7 +137,47 @@ export default function OrderHistoryPage() {
   const viewOrder = (order: Order) => {
     setSelectedOrder(order);
     setModalStatus(order.status);
+    setPayLinkData(null);
     setIsModalOpen(true);
+  };
+
+  const createPayLink = async () => {
+    if (!selectedOrder) return;
+
+    try {
+      setCreatingPayLink(true);
+      const res = await fetch(`/api/orders/${selectedOrder._id}/pay-link`, {
+        method: 'POST',
+      });
+      const data = await res.json();
+
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to create pay link');
+      }
+
+      const url = data.data?.payLinkUrl as string;
+      const expiresAt = data.data?.expiresAt as string;
+      setPayLinkData({ url, expiresAt });
+      await navigator.clipboard.writeText(url);
+      toast.success(t('payLink.createdAndCopied'));
+    } catch (error) {
+      console.error('Error creating pay link:', error);
+      toast.error(
+        error instanceof Error ? error.message : t('payLink.createFailed'),
+      );
+    } finally {
+      setCreatingPayLink(false);
+    }
+  };
+
+  const copyPayLink = async () => {
+    if (!payLinkData?.url) return;
+    try {
+      await navigator.clipboard.writeText(payLinkData.url);
+      toast.success(t('payLink.copied'));
+    } catch {
+      toast.error(t('payLink.copyFailed'));
+    }
   };
 
   const toggleOrderSelection = (orderId: string) => {
@@ -266,6 +317,12 @@ export default function OrderHistoryPage() {
     { label: t('status.completed'), value: 'completed' },
     { label: t('status.cancelled'), value: 'cancelled' },
     { label: t('status.refunded'), value: 'refunded' },
+  ];
+
+  const sourceOptions = [
+    { label: t('filters.allSources'), value: '' },
+    { label: t('filters.manasikSource'), value: 'manasik' },
+    { label: t('filters.ghadaqSource'), value: 'ghadaq' },
   ];
 
   const allVisibleSelected =
@@ -408,6 +465,17 @@ export default function OrderHistoryPage() {
           className="w-full sm:w-48"
         />
 
+        <Dropdown
+          value={sourceFilter}
+          options={sourceOptions}
+          onChange={(val) => {
+            setSourceFilter(val);
+            setPage(1);
+          }}
+          placeholder={t('filters.source')}
+          className="w-full sm:w-40"
+        />
+
         <Button
           variant="icon"
           size="custom"
@@ -512,6 +580,89 @@ export default function OrderHistoryPage() {
             </div>
 
             <div>
+              <h3 className="font-semibold mb-3">{t('amountDetails')}</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <InfoRow
+                  icon={<CreditCard size={14} />}
+                  label={t('totals.totalPaidNow')}
+                  value={`${selectedOrder.totalAmount.toFixed(2)} ${selectedOrder.currency}`}
+                />
+                <InfoRow
+                  icon={<CreditCard size={14} />}
+                  label={t('totals.fullAmount')}
+                  value={`${(selectedOrder.fullAmount ?? selectedOrder.totalAmount).toFixed(2)} ${selectedOrder.currency}`}
+                />
+                <InfoRow
+                  icon={<CreditCard size={14} />}
+                  label={t('totals.paidAmount')}
+                  value={`${(selectedOrder.paidAmount ?? selectedOrder.totalAmount).toFixed(2)} ${selectedOrder.currency}`}
+                />
+                <InfoRow
+                  icon={<CreditCard size={14} />}
+                  label={t('totals.remainingAmount')}
+                  value={`${(selectedOrder.remainingAmount ?? 0).toFixed(2)} ${selectedOrder.currency}`}
+                />
+                <InfoRow
+                  icon={<Tag size={14} />}
+                  label={t('totals.couponCode')}
+                  value={selectedOrder.couponCode || 'N/A'}
+                />
+                <InfoRow
+                  icon={<Tag size={14} />}
+                  label={t('totals.couponDiscount')}
+                  value={`${(selectedOrder.couponDiscount ?? 0).toFixed(2)} ${selectedOrder.currency}`}
+                />
+              </div>
+            </div>
+
+            {(selectedOrder.remainingAmount ?? 0) > 0 && (
+              <div className="rounded-site border border-primary/20 bg-primary/5 p-3 space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-sm font-medium text-foreground">
+                    {t('payLink.description')}
+                  </p>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={createPayLink}
+                    disabled={creatingPayLink}
+                  >
+                    <Link2 size={16} />
+                    {creatingPayLink
+                      ? t('payLink.creating')
+                      : t('payLink.createButton')}
+                  </Button>
+                </div>
+
+                {payLinkData && (
+                  <div className="rounded-lg border border-stroke bg-background p-2 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <input
+                        readOnly
+                        value={payLinkData.url}
+                        className="w-full rounded-md border border-stroke bg-background px-2 py-1 text-xs"
+                      />
+                      <Button
+                        type="button"
+                        variant="icon"
+                        size="sm"
+                        onClick={copyPayLink}
+                        title={t('payLink.copy')}
+                      >
+                        <Copy size={14} />
+                      </Button>
+                    </div>
+                    <p className="text-xs text-secondary">
+                      {t('payLink.expiresAt', {
+                        date: formatDate(payLinkData.expiresAt),
+                      })}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div>
               <h3 className="font-semibold mb-3 flex items-center gap-2">
                 <Package size={16} /> {t('items')}
               </h3>
@@ -519,9 +670,9 @@ export default function OrderHistoryPage() {
                 {selectedOrder.items.map((item, i) => (
                   <div
                     key={i}
-                    className="flex items-center justify-between py-2 px-3 rounded-lg bg-background border border-stroke"
+                    className="flex items-center justify-between gap-3 py-2 px-3 rounded-lg bg-background border border-stroke"
                   >
-                    <div>
+                    <div className="space-y-1">
                       <span className="font-medium text-sm">
                         {locale === 'ar'
                           ? item.productName.ar
@@ -530,6 +681,16 @@ export default function OrderHistoryPage() {
                       <span className="text-xs text-secondary mx-2">
                         x{item.quantity}
                       </span>
+                      <div className="text-[11px] text-secondary font-mono">
+                        <span>
+                          {t('productId')}: {item.productId}
+                        </span>
+                        {item.productSlug ? (
+                          <span className="ms-2">
+                            {t('productSlug')}: {item.productSlug}
+                          </span>
+                        ) : null}
+                      </div>
                     </div>
                     <span className="font-bold text-sm">
                       {item.price.toFixed(2)} {item.currency}
@@ -546,6 +707,11 @@ export default function OrderHistoryPage() {
                   icon={<Hash size={14} />}
                   label={t('table.orderNumber')}
                   value={selectedOrder.orderNumber}
+                />
+                <InfoRow
+                  icon={<Package size={14} />}
+                  label={t('source')}
+                  value={selectedOrder.source || 'manasik'}
                 />
                 <InfoRow
                   icon={<Mail size={14} />}
@@ -572,6 +738,25 @@ export default function OrderHistoryPage() {
                   label={t('paymentMethod')}
                   value={selectedOrder.paymentMethod || 'N/A'}
                 />
+                <InfoRow
+                  icon={<Hash size={14} />}
+                  label={t('locale')}
+                  value={selectedOrder.locale || 'N/A'}
+                />
+                <InfoRow
+                  icon={<Hash size={14} />}
+                  label={t('termsAgreedAt')}
+                  value={
+                    selectedOrder.termsAgreedAt
+                      ? formatDate(selectedOrder.termsAgreedAt)
+                      : 'N/A'
+                  }
+                />
+                <InfoRow
+                  icon={<Hash size={14} />}
+                  label={t('updatedAt')}
+                  value={formatDate(selectedOrder.updatedAt)}
+                />
                 {selectedOrder.referralId && (
                   <InfoRow
                     icon={<UserRoundPlus size={14} />}
@@ -583,7 +768,8 @@ export default function OrderHistoryPage() {
             </div>
 
             {(selectedOrder.easykashRef ||
-              selectedOrder.easykashProductCode) && (
+              selectedOrder.easykashProductCode ||
+              selectedOrder.easykashResponse) && (
               <div>
                 <h3 className="font-semibold mb-3">{t('easykashInfo')}</h3>
                 <div className="grid grid-cols-1 gap-2 text-xs font-mono">
@@ -605,6 +791,20 @@ export default function OrderHistoryPage() {
                       <span className="truncate max-w-50">
                         {selectedOrder.easykashVoucher}
                       </span>
+                    </div>
+                  )}
+                  {selectedOrder.easykashResponse && (
+                    <div className="py-2 px-3 rounded bg-background border border-stroke">
+                      <p className="text-secondary mb-1">
+                        EasyKash Raw Response
+                      </p>
+                      <pre className="whitespace-pre-wrap break-all text-[11px]">
+                        {JSON.stringify(
+                          selectedOrder.easykashResponse,
+                          null,
+                          2,
+                        )}
+                      </pre>
                     </div>
                   )}
                 </div>
@@ -660,9 +860,9 @@ function InfoRow({
   label,
   value,
 }: {
-  icon: React.ReactNode;
+  icon: ReactNode;
   label: string;
-  value: string;
+  value: ReactNode;
 }) {
   return (
     <div className="flex items-center gap-2 py-2 px-3 rounded-lg bg-background border border-stroke">

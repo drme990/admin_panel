@@ -8,7 +8,8 @@ export type AdminPage =
   | 'referrals'
   | 'activityLogs'
   | 'appearance'
-  | 'exchange';
+  | 'exchange'
+  | 'payments';
 
 export const ALL_ADMIN_PAGES: AdminPage[] = [
   'products',
@@ -21,6 +22,7 @@ export const ALL_ADMIN_PAGES: AdminPage[] = [
   'activityLogs',
   'appearance',
   'exchange',
+  'payments',
 ];
 
 export interface User {

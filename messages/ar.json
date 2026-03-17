@@ -10,8 +10,34 @@
     "email": "البريد الإلكتروني",
     "phone": "رقم الهاتف",
     "country": "الدولة",
+    "source": "المصدر",
+    "locale": "اللغة",
+    "termsAgreedAt": "وقت الموافقة على الشروط",
+    "updatedAt": "آخر تحديث",
+    "productId": "معرف المنتج",
+    "productSlug": "رابط المنتج",
     "paymentMethod": "طريقة الدفع",
     "referral": "الإحالة",
+    "amountDetails": "تفاصيل المبالغ",
+    "totals": {
+      "totalPaidNow": "قيمة هذه العملية",
+      "fullAmount": "إجمالي الطلب الكامل",
+      "paidAmount": "المبلغ المدفوع",
+      "remainingAmount": "المبلغ المتبقي",
+      "couponCode": "كود الكوبون",
+      "couponDiscount": "خصم الكوبون"
+    },
+    "payLink": {
+      "description": "أنشئ رابط دفع آمن لتحصيل المبلغ المتبقي لهذا الطلب.",
+      "createButton": "رابط دفع",
+      "creating": "جارٍ الإنشاء...",
+      "copy": "نسخ رابط الدفع",
+      "createdAndCopied": "تم إنشاء رابط الدفع ونسخه",
+      "copied": "تم نسخ رابط الدفع",
+      "createFailed": "فشل إنشاء رابط الدفع",
+      "copyFailed": "فشل نسخ رابط الدفع",
+      "expiresAt": "ينتهي في: {date}"
+    },
     "reservationData": {
       "title": "بيانات الحجز",
       "more": "إضافية"
@@ -21,8 +47,12 @@
       "all": "الكل",
       "search": "بحث بالاسم أو البريد أو رقم الطلب...",
       "status": "الحالة",
+      "source": "المصدر",
       "referral": "الإحالة",
-      "allReferrals": "كل الإحالات"
+      "allReferrals": "كل الإحالات",
+      "allSources": "كل المصادر",
+      "manasikSource": "مناسك",
+      "ghadaqSource": "غدق"
     },
     "status": {
       "pending": "قيد الانتظار",
@@ -66,7 +96,8 @@
       "referrals": "الإحالات",
       "activityLogs": "سجل النشاطات",
       "appearance": "المظهر",
-      "exchange": "أسعار الصرف"
+      "exchange": "أسعار الصرف",
+      "payments": "المدفوعات"
     },
     "loading": "جاري التحميل...",
     "redirecting": "جاري التوجيه للدخول...",
@@ -410,7 +441,8 @@
         "referrals": "الإحالات",
         "activityLogs": "سجل النشاطات",
         "appearance": "المظهر",
-        "exchange": "أسعار الصرف"
+        "exchange": "أسعار الصرف",
+        "payments": "المدفوعات"
       },
       "buttons": {
         "cancel": "إلغاء",
@@ -583,10 +615,109 @@
         "currencies": "العملات",
         "duration": "المدة",
         "error": "الخطأ"
+      }
+    },
+    "payments": {
+      "title": "المدفوعات",
+      "description": "متابعة تحصيلات الشهر وإنشاء روابط دفع آمنة للمبالغ المتبقية.",
+      "emptyMessage": "لا توجد مدفوعات للمرشحات المحددة.",
+      "analytics": {
+        "totalPaid": "إجمالي المدفوع هذا الشهر",
+        "totalCollected": "إجمالي المحصل هذا الشهر",
+        "totalRemaining": "إجمالي المبالغ المتبقية",
+        "paidOrdersCount": "عدد الطلبات المدفوعة",
+        "currencyHint": "عملات متعددة"
+      },
+      "filters": {
+        "search": "ابحث برقم الطلب أو الاسم أو البريد أو الهاتف...",
+        "allStatuses": "كل الحالات",
+        "allSources": "كل المصادر",
+        "manasikSource": "مناسك",
+        "ghadaqSource": "غدق"
       },
       "status": {
-        "success": "ناجح",
-        "failed": "فاشل"
+        "pending": "قيد الانتظار",
+        "processing": "جاري المعالجة",
+        "paid": "مدفوع",
+        "completed": "مكتمل",
+        "failed": "فشل",
+        "refunded": "مسترد",
+        "cancelled": "ملغي",
+        "success": "ناجح"
+      },
+      "table": {
+        "orderNumber": "رقم الطلب",
+        "customer": "العميل",
+        "source": "المصدر",
+        "paid": "المدفوع",
+        "remaining": "المتبقي",
+        "status": "الحالة",
+        "date": "التاريخ",
+        "actions": "إجراءات",
+        "useOrder": "استخدم الطلب"
+      },
+      "payLink": {
+        "title": "إنشاء رابط دفع",
+        "description": "استخدم رقم الطلب لإنشاء رابط للمتبقي، أو اتركه فارغًا لإنشاء رابط دفع مخصص مستقل.",
+        "orderNumber": "رقم الطلب",
+        "orderNumberPlaceholder": "مثال: GHD-202603-00027",
+        "customAmount": "مبلغ مخصص (اختياري)",
+        "customAmountPlaceholder": "اتركه فارغًا لاستخدام كامل المتبقي",
+        "currencyCode": "العملة",
+        "createButton": "إنشاء رابط دفع",
+        "creating": "جارٍ الإنشاء...",
+        "reset": "إعادة تعيين",
+        "meta": "الطلب {orderNumber} | المبلغ {amount} {currency} | ينتهي {expiresAt}",
+        "customMeta": "مستقل ({source}) | المبلغ {amount} {currency} | ينتهي {expiresAt}"
+      },
+      "messages": {
+        "loadFailed": "فشل تحميل بيانات المدفوعات",
+        "linksLoadFailed": "فشل تحميل روابط الدفع",
+        "orderRequired": "رقم الطلب مطلوب",
+        "customAmountRequired": "المبلغ المخصص مطلوب عند عدم إدخال رقم الطلب",
+        "customAmountInvalid": "المبلغ المخصص يجب أن يكون رقمًا موجبًا صالحًا",
+        "currencyRequired": "رمز العملة مطلوب للروابط المخصصة المستقلة",
+        "createSuccess": "تم إنشاء رابط الدفع ونسخه",
+        "createFailed": "فشل إنشاء رابط الدفع",
+        "deleteLinkSuccess": "تم حذف رابط الدفع",
+        "deleteLinkFailed": "فشل حذف رابط الدفع",
+        "copied": "تم نسخ رابط الدفع",
+        "copyFailed": "فشل نسخ رابط الدفع"
+      },
+      "links": {
+        "title": "روابط الدفع",
+        "emptyMessage": "لا توجد روابط دفع للمرشحات المحددة.",
+        "kind": {
+          "order": "طلب",
+          "custom": "مخصص"
+        },
+        "status": {
+          "used": "مستخدم",
+          "unused": "غير مستخدم"
+        },
+        "filters": {
+          "allUsage": "كل حالات الاستخدام",
+          "usedOnly": "المستخدم فقط",
+          "unusedOnly": "غير المستخدم فقط",
+          "allKinds": "كل الأنواع"
+        },
+        "actions": {
+          "delete": "حذف",
+          "deleteTitle": "حذف رابط الدفع",
+          "deleteConfirm": "هل أنت متأكد أنك تريد حذف رابط الدفع هذا؟",
+          "cancel": "إلغاء"
+        },
+        "table": {
+          "type": "النوع",
+          "source": "المصدر",
+          "orderNumber": "رقم الطلب",
+          "amount": "المبلغ",
+          "status": "الحالة",
+          "usedAt": "تاريخ الاستخدام",
+          "expiresAt": "ينتهي في",
+          "createdAt": "تاريخ الإنشاء",
+          "actions": "إجراءات"
+        }
       },
       "source": {
         "cron": "مهمة مجدولة",

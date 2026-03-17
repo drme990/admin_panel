@@ -10,8 +10,34 @@
     "email": "Email",
     "phone": "Phone Number",
     "country": "Country",
+    "source": "Source",
+    "locale": "Locale",
+    "termsAgreedAt": "Terms Agreed At",
+    "updatedAt": "Last Updated",
+    "productId": "Product ID",
+    "productSlug": "Product Slug",
     "paymentMethod": "Payment Method",
     "referral": "Referral",
+    "amountDetails": "Amount Details",
+    "totals": {
+      "totalPaidNow": "Current Transaction",
+      "fullAmount": "Order Full Amount",
+      "paidAmount": "Paid Amount",
+      "remainingAmount": "Remaining Amount",
+      "couponCode": "Coupon Code",
+      "couponDiscount": "Coupon Discount"
+    },
+    "payLink": {
+      "description": "Create a secure payment link to collect the remaining amount for this order.",
+      "createButton": "Pay Link",
+      "creating": "Creating...",
+      "copy": "Copy pay link",
+      "createdAndCopied": "Pay link created and copied",
+      "copied": "Pay link copied",
+      "createFailed": "Failed to create pay link",
+      "copyFailed": "Failed to copy pay link",
+      "expiresAt": "Expires at: {date}"
+    },
     "reservationData": {
       "title": "Reservation Data",
       "more": "more"
@@ -21,8 +47,12 @@
       "all": "All",
       "search": "Search by name, email, or order number...",
       "status": "Status",
+      "source": "Source",
       "referral": "Referral",
-      "allReferrals": "All Referrals"
+      "allReferrals": "All Referrals",
+      "allSources": "All Sources",
+      "manasikSource": "Manasik",
+      "ghadaqSource": "Ghadaq"
     },
     "status": {
       "pending": "Pending",
@@ -66,7 +96,8 @@
       "referrals": "Referrals",
       "activityLogs": "Activity Logs",
       "appearance": "Appearance",
-      "exchange": "Exchange Rates"
+      "exchange": "Exchange Rates",
+      "payments": "Payments"
     },
     "loading": "Loading dashboard...",
     "redirecting": "Redirecting to login...",
@@ -410,7 +441,8 @@
         "referrals": "Referrals",
         "activityLogs": "Activity Logs",
         "appearance": "Appearance",
-        "exchange": "Exchange Rates"
+        "exchange": "Exchange Rates",
+        "payments": "Payments"
       },
       "buttons": {
         "cancel": "Cancel",
@@ -583,10 +615,109 @@
         "currencies": "Currencies",
         "duration": "Duration",
         "error": "Error"
+      }
+    },
+    "payments": {
+      "title": "Payments",
+      "description": "Track monthly collections and generate secure pay links for remaining balances.",
+      "emptyMessage": "No payments found for the selected filters.",
+      "analytics": {
+        "totalPaid": "Total Paid This Month",
+        "totalCollected": "Total Collected This Month",
+        "totalRemaining": "Total Remaining Balance",
+        "paidOrdersCount": "Paid Orders Count",
+        "currencyHint": "mixed"
+      },
+      "filters": {
+        "search": "Search by order number, name, email, or phone...",
+        "allStatuses": "All Statuses",
+        "allSources": "All Sources",
+        "manasikSource": "Manasik",
+        "ghadaqSource": "Ghadaq"
       },
       "status": {
-        "success": "Success",
-        "failed": "Failed"
+        "pending": "Pending",
+        "processing": "Processing",
+        "paid": "Paid",
+        "completed": "Completed",
+        "failed": "Failed",
+        "refunded": "Refunded",
+        "cancelled": "Cancelled",
+        "success": "Success"
+      },
+      "table": {
+        "orderNumber": "Order Number",
+        "customer": "Customer",
+        "source": "Source",
+        "paid": "Paid",
+        "remaining": "Remaining",
+        "status": "Status",
+        "date": "Date",
+        "actions": "Actions",
+        "useOrder": "Use Order"
+      },
+      "payLink": {
+        "title": "Create Pay Link",
+        "description": "Use order number for remaining-balance links, or leave it empty to create a standalone custom pay link.",
+        "orderNumber": "Order Number",
+        "orderNumberPlaceholder": "e.g. GHD-202603-00027",
+        "customAmount": "Custom Amount (Optional)",
+        "customAmountPlaceholder": "Leave empty to use full remaining",
+        "currencyCode": "Currency",
+        "createButton": "Create Pay Link",
+        "creating": "Creating...",
+        "reset": "Reset",
+        "meta": "Order {orderNumber} | Amount {amount} {currency} | Expires {expiresAt}",
+        "customMeta": "Standalone ({source}) | Amount {amount} {currency} | Expires {expiresAt}"
+      },
+      "messages": {
+        "loadFailed": "Failed to load payments data",
+        "linksLoadFailed": "Failed to load payment links",
+        "orderRequired": "Order number is required",
+        "customAmountRequired": "Custom amount is required when no order number is provided",
+        "customAmountInvalid": "Custom amount must be a valid positive number",
+        "currencyRequired": "Currency code is required for standalone custom links",
+        "createSuccess": "Pay link created and copied",
+        "createFailed": "Failed to create pay link",
+        "deleteLinkSuccess": "Payment link deleted",
+        "deleteLinkFailed": "Failed to delete payment link",
+        "copied": "Pay link copied",
+        "copyFailed": "Failed to copy pay link"
+      },
+      "links": {
+        "title": "Payment Links",
+        "emptyMessage": "No payment links found for the selected filters.",
+        "kind": {
+          "order": "Order",
+          "custom": "Custom"
+        },
+        "status": {
+          "used": "Used",
+          "unused": "Unused"
+        },
+        "filters": {
+          "allUsage": "All Usage",
+          "usedOnly": "Used Only",
+          "unusedOnly": "Unused Only",
+          "allKinds": "All Types"
+        },
+        "actions": {
+          "delete": "Delete",
+          "deleteTitle": "Delete Payment Link",
+          "deleteConfirm": "Are you sure you want to delete this payment link?",
+          "cancel": "Cancel"
+        },
+        "table": {
+          "type": "Type",
+          "source": "Source",
+          "orderNumber": "Order Number",
+          "amount": "Amount",
+          "status": "Status",
+          "usedAt": "Used At",
+          "expiresAt": "Expires At",
+          "createdAt": "Created At",
+          "actions": "Actions"
+        }
       },
       "source": {
         "cron": "Cron Job",

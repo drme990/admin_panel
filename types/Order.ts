@@ -18,6 +18,7 @@ export type PaymentMethod =
 
 export interface OrderItem {
   productId: string;
+  productSlug?: string;
   productName: {
     ar: string;
     en: string;
@@ -70,6 +71,7 @@ export interface Order {
   easykashRef?: string;
   easykashProductCode?: string;
   easykashVoucher?: string;
+  easykashResponse?: Record<string, string | number | undefined>;
   // Coupon
   couponCode?: string;
   couponDiscount?: number;
@@ -83,8 +85,10 @@ export interface Order {
   // Terms
   termsAgreedAt?: string;
   reservationData?: ReservationOrderField[];
+  source?: 'manasik' | 'ghadaq';
   countryCode?: string;
   locale?: string;
+  sizeIndex?: number;
   createdAt: string;
   updatedAt: string;
 }

@@ -17,6 +17,7 @@ import {
   Palette,
   RefreshCw,
   CalendarDays,
+  Wallet,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import Logo from '@/components/shared/logo';
@@ -31,6 +32,12 @@ const navItems = [
   { key: 'dashboard', href: '/', icon: LayoutDashboard, superAdminOnly: false },
   { key: 'products', href: '/products', icon: Package, superAdminOnly: false },
   { key: 'orders', href: '/orders', icon: ShoppingCart, superAdminOnly: false },
+  {
+    key: 'payments',
+    href: '/payments',
+    icon: Wallet,
+    superAdminOnly: false,
+  },
   {
     key: 'booking',
     href: '/booking',

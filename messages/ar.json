@@ -615,6 +615,14 @@
         "currencies": "العملات",
         "duration": "المدة",
         "error": "الخطأ"
+      },
+      "status": {
+        "success": "نجاح",
+        "failed": "فشل"
+      },
+      "source": {
+        "cron": "مهمة مجدولة",
+        "manual": "يدوي"
       }
     },
     "payments": {

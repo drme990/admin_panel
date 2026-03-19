@@ -5,6 +5,7 @@ import {
   useEffect,
   useMemo,
   useState,
+  useRef,
   type ReactNode,
 } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
@@ -14,16 +15,19 @@ import Pagination from '@/components/ui/pagination';
 import Dropdown from '@/components/ui/dropdown';
 import Button from '@/components/ui/button';
 import ConfirmModal, { useConfirmModal } from '@/components/ui/confirm-modal';
+
 import {
-  Wallet,
-  Search,
-  Copy,
-  Link2,
-  RefreshCw,
-  Calendar,
-  CircleDollarSign,
-  Trash2,
-} from 'lucide-react';
+  LuCopyPlus,
+  LuWallet,
+  LuSearch,
+  LuCopy,
+  LuLink2,
+  LuRefreshCcw,
+  LuCalendar,
+  LuCircleDollarSign,
+  LuTrash2,
+} from 'react-icons/lu';
+import { Tooltip } from '@/components/ui/tooltip';
 
 type PaymentStatus =
   | 'pending'
@@ -179,6 +183,7 @@ export default function PaymentsPage() {
     currency: string;
     remainingAmount: number | null;
   } | null>(null);
+  const targetRef = useRef<HTMLDivElement>(null);
   const { confirm: confirmDelete, modalProps: deleteConfirmModalProps } =
     useConfirmModal();
 
@@ -471,15 +476,24 @@ export default function PaymentsPage() {
     {
       header: t('table.actions'),
       accessor: (row: PaymentOrderRow) => (
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            setOrderNumber(row.orderNumber);
-          }}
-          className="px-2 py-1 rounded-md border border-stroke text-xs hover:bg-background"
-        >
-          {t('table.useOrder')}
-        </button>
+        <Tooltip content={t('table.useOrder')} position="left">
+          <Button
+            variant="icon"
+            size="custom"
+            onClick={(e) => {
+              e.stopPropagation();
+              setOrderNumber(row.orderNumber);
+              if (targetRef.current) {
+                targetRef.current.scrollIntoView({
+                  behavior: 'smooth',
+                  block: 'start',
+                });
+              }
+            }}
+          >
+            <LuCopyPlus size={14} />
+          </Button>
+        </Tooltip>
       ),
     },
   ];
@@ -572,7 +586,7 @@ export default function PaymentsPage() {
           title={t('links.actions.delete')}
           aria-label={t('links.actions.delete')}
         >
-          <Trash2 size={14} />
+          <LuTrash2 size={14} />
         </Button>
       ),
     },
@@ -591,29 +605,32 @@ export default function PaymentsPage() {
         <AnalyticsCard
           title={t('analytics.totalPaid')}
           value={analytics.totalPaid}
-          icon={<CircleDollarSign size={18} />}
+          icon={<LuCircleDollarSign size={18} />}
           suffix={t('analytics.currencyHint')}
         />
         <AnalyticsCard
           title={t('analytics.totalCollected')}
           value={analytics.totalCollected}
-          icon={<Wallet size={18} />}
+          icon={<LuWallet size={18} />}
           suffix={t('analytics.currencyHint')}
         />
         <AnalyticsCard
           title={t('analytics.totalRemaining')}
           value={analytics.totalRemaining}
-          icon={<CircleDollarSign size={18} />}
+          icon={<LuCircleDollarSign size={18} />}
           suffix={t('analytics.currencyHint')}
         />
         <AnalyticsCard
           title={t('analytics.paidOrdersCount')}
           value={analytics.paidOrdersCount}
-          icon={<Calendar size={18} />}
+          icon={<LuCalendar size={18} />}
         />
       </div>
 
-      <div className="rounded-site border border-stroke bg-card-bg p-4 space-y-3">
+      <div
+        ref={targetRef}
+        className="rounded-site border border-stroke bg-card-bg p-4 space-y-3"
+      >
         <h2 className="text-lg font-semibold">{t('payLink.title')}</h2>
         <p className="text-sm text-secondary">{t('payLink.description')}</p>
 
@@ -668,7 +685,7 @@ export default function PaymentsPage() {
 
         <div className="flex items-center gap-3">
           <Button onClick={createPayLink} disabled={creatingPayLink}>
-            <Link2 size={16} />
+            <LuLink2 size={16} />
             {creatingPayLink
               ? t('payLink.creating')
               : t('payLink.createButton')}
@@ -696,7 +713,7 @@ export default function PaymentsPage() {
                 className="w-full rounded-md border border-stroke bg-background px-2 py-1 text-xs"
               />
               <Button variant="icon" size="sm" onClick={copyPayLink}>
-                <Copy size={14} />
+                <LuCopy size={14} />
               </Button>
             </div>
             <p className="text-xs text-secondary">
@@ -720,7 +737,7 @@ export default function PaymentsPage() {
 
       <div className="flex flex-col lg:flex-row gap-3">
         <div className="relative flex-1">
-          <Search
+          <LuSearch
             size={16}
             className="absolute top-1/2 -translate-y-1/2 inset-s-3 text-secondary"
           />
@@ -767,7 +784,7 @@ export default function PaymentsPage() {
         />
 
         <Button variant="icon" size="custom" onClick={fetchPayments}>
-          <RefreshCw size={18} />
+          <LuRefreshCcw size={18} />
         </Button>
       </div>
 
@@ -813,7 +830,7 @@ export default function PaymentsPage() {
           />
 
           <Button variant="icon" size="custom" onClick={fetchLinks}>
-            <RefreshCw size={18} />
+            <LuRefreshCcw size={18} />
           </Button>
         </div>
 

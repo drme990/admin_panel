@@ -615,6 +615,14 @@
         "currencies": "Currencies",
         "duration": "Duration",
         "error": "Error"
+      },
+      "status": {
+        "success": "Success",
+        "failed": "Failed"
+      },
+      "source": {
+        "cron": "Cron Job",
+        "manual": "Manual"
       }
     },
     "payments": {

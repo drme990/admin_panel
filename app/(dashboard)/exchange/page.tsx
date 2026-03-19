@@ -3,14 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { toast } from 'react-toastify';
-import {
-  RefreshCw,
-  AlertTriangle,
-  CheckCircle,
-  XCircle,
-  Clock,
-  User,
-} from 'lucide-react';
+import { RefreshCw, CheckCircle, XCircle, Clock, User } from 'lucide-react';
 import Button from '@/components/ui/button';
 import Table from '@/components/ui/table';
 
@@ -180,21 +173,7 @@ export default function ExchangePage() {
             <RefreshCw size={16} className="me-1.5" />
             {t('refresh')}
           </Button>
-        </div>
-      </div>
 
-      {/* Update Prices Card */}
-      <div className="bg-card-bg border border-stroke rounded-site p-6">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex-1">
-            <h2 className="text-lg font-semibold text-foreground mb-2">
-              {t('updatePrices')}
-            </h2>
-            <div className="flex items-center gap-2 text-secondary text-sm">
-              <AlertTriangle size={14} className="text-amber-500 shrink-0" />
-              <span>{t('manualNote')}</span>
-            </div>
-          </div>
           <Button onClick={handleUpdatePrices} disabled={updating} size="md">
             <RefreshCw
               size={16}

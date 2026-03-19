@@ -60,7 +60,7 @@ export function Tooltip({
         <div
           className={`absolute z-50 ${getPositionClasses()} pointer-events-none`}
         >
-          <div className="bg-primary text-foreground px-3 py-2 rounded-md shadow-lg text-xs font-medium whitespace-nowrap border border-stroke">
+          <div className="bg-background text-foreground px-3 py-2 rounded-md shadow-lg text-xs font-medium whitespace-nowrap border border-stroke">
             {content}
             <div className={`absolute w-0 h-0 border-4 ${getArrowClasses()}`} />
           </div>

@@ -149,6 +149,7 @@
         "cancel": "إلغاء"
       },
       "editProduct": "تعديل منتج",
+      "deleteProduct": "حذف منتج",
       "deleteConfirm": "هل أنت متأكد من حذف هذا المنتج؟",
       "deleteConfirmTitle": "حذف المنتج",
       "deleteConfirmButton": "حذف",
@@ -385,7 +386,8 @@
       "buttons": {
         "cancelButton": "إلغاء",
         "addCoupon": "إضافة كوبون",
-        "updateCoupon": "تحديث الكوبون"
+        "updateCoupon": "تحديث الكوبون",
+        "deleteCoupon": "حذف الكوبون"
       },
       "messages": {
         "saveFailed": "فشل حفظ الكوبون",
@@ -641,7 +643,8 @@
         "allStatuses": "كل الحالات",
         "allSources": "كل المصادر",
         "manasikSource": "مناسك",
-        "ghadaqSource": "غدق"
+        "ghadaqSource": "غدق",
+        "refresh": "تحديث"
       },
       "status": {
         "pending": "قيد الانتظار",
@@ -707,7 +710,8 @@
           "allUsage": "كل حالات الاستخدام",
           "usedOnly": "المستخدم فقط",
           "unusedOnly": "غير المستخدم فقط",
-          "allKinds": "كل الأنواع"
+          "allKinds": "كل الأنواع",
+          "refresh": "تحديث"
         },
         "actions": {
           "delete": "حذف",

@@ -12,23 +12,24 @@ import { toast } from 'react-toastify';
 import { useTranslations, useLocale } from 'next-intl';
 import { Order, OrderStatus } from '@/types/Order';
 import {
-  Search,
-  Eye,
-  RefreshCw,
-  Package,
-  Mail,
-  Phone,
-  Globe,
-  Calendar,
-  Hash,
-  CreditCard,
-  UserRoundPlus,
-  Link2,
-  Copy,
-  Tag,
-} from 'lucide-react';
+  LuSearch as Search,
+  LuEye as Eye,
+  LuRefreshCw as RefreshCw,
+  LuPackage as Package,
+  LuMail as Mail,
+  LuPhone as Phone,
+  LuGlobe as Globe,
+  LuCalendar as Calendar,
+  LuHash as Hash,
+  LuCreditCard as CreditCard,
+  LuUserRoundPlus as UserRoundPlus,
+  LuLink2 as Link2,
+  LuCopy as Copy,
+  LuTag as Tag,
+} from 'react-icons/lu';
 import { Referral } from '@/types/Referral';
 import Checkbox from '@/components/ui/checkbox';
+import { Tooltip } from '@/components/ui/tooltip';
 
 const STATUS_COLORS: Record<OrderStatus, string> = {
   pending:
@@ -398,16 +399,19 @@ export default function OrderHistoryPage() {
     {
       header: t('table.actions'),
       accessor: (row: Order) => (
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            viewOrder(row);
-          }}
-          className="p-2 hover:bg-background rounded-lg transition-colors text-primary"
-          title={t('viewDetails')}
-        >
-          <Eye size={16} />
-        </button>
+        <Tooltip position="left" content={t('viewDetails')}>
+          <Button
+            variant="icon-primary"
+            size="custom"
+            onClick={(e) => {
+              e.stopPropagation();
+              viewOrder(row);
+            }}
+            aria-label={t('viewDetails')}
+          >
+            <Eye size={16} />
+          </Button>
+        </Tooltip>
       ),
       className: 'w-16',
     },
@@ -477,7 +481,7 @@ export default function OrderHistoryPage() {
         />
 
         <Button
-          variant="icon"
+          variant="icon-primary"
           size="custom"
           onClick={() => fetchOrders()}
           className="shrink-0"

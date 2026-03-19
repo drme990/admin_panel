@@ -2,7 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import { Coupon } from '@/types/Coupon';
-import { Plus, Pencil, Trash2 } from 'lucide-react';
+import {
+  LuPlus as Plus,
+  LuPencil as Pencil,
+  LuTrash2 as Trash2,
+} from 'react-icons/lu';
 import Table from '@/components/ui/table';
 import Modal from '@/components/ui/modal';
 import Input from '@/components/ui/input';
@@ -11,6 +15,7 @@ import { useTranslations } from 'next-intl';
 import { toast } from 'react-toastify';
 import ConfirmModal, { useConfirmModal } from '@/components/ui/confirm-modal';
 import Button from '@/components/ui/button';
+import { Tooltip } from '@/components/ui/tooltip';
 
 export default function CouponsPage() {
   const [coupons, setCoupons] = useState<Coupon[]>([]);
@@ -226,24 +231,32 @@ export default function CouponsPage() {
       header: t('table.actions'),
       accessor: (coupon: Coupon) => (
         <div className="flex items-center gap-2">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              openModal(coupon);
-            }}
-            className="p-2 hover:bg-background rounded-lg transition-colors"
-          >
-            <Pencil size={16} />
-          </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              handleDelete(coupon._id);
-            }}
-            className="p-2 hover:bg-error/10 text-error rounded-lg transition-colors"
-          >
-            <Trash2 size={16} />
-          </button>
+          <Tooltip position="left" content={t('editCoupon')}>
+            <Button
+              variant="icon-primary"
+              size="custom"
+              onClick={(e) => {
+                e.stopPropagation();
+                openModal(coupon);
+              }}
+              aria-label={t('editCoupon')}
+            >
+              <Pencil size={16} />
+            </Button>
+          </Tooltip>
+          <Tooltip position="left" content={t('buttons.deleteCoupon')}>
+            <Button
+              variant="icon-danger"
+              size="custom"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDelete(coupon._id);
+              }}
+              aria-label={t('buttons.deleteCoupon')}
+            >
+              <Trash2 size={16} />
+            </Button>
+          </Tooltip>
         </div>
       ),
     },
@@ -278,22 +291,24 @@ export default function CouponsPage() {
         size="md"
         footer={
           <div className="flex items-center gap-3">
-            <button
+            <Button
               type="button"
+              variant="outline"
               onClick={closeModal}
-              className="flex-1 py-2 bg-background border border-stroke rounded-lg hover:bg-stroke/10 transition-colors font-medium"
+              className="flex-1"
             >
               {t('buttons.cancelButton')}
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
+              variant="primary"
               form="coupon-form"
-              className="flex-1 py-2 bg-primary text-background rounded-lg hover:bg-primary/90 transition-colors font-medium"
+              className="flex-1"
             >
               {editingCoupon
                 ? t('buttons.updateCoupon')
                 : t('buttons.addCoupon')}
-            </button>
+            </Button>
           </div>
         }
       >

@@ -3,7 +3,13 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { toast } from 'react-toastify';
-import { RefreshCw, CheckCircle, XCircle, Clock, User } from 'lucide-react';
+import {
+  LuRefreshCw as RefreshCw,
+  LuCircleCheck as CheckCircle,
+  LuCircleX as XCircle,
+  LuClock as Clock,
+  LuUser as User,
+} from 'react-icons/lu';
 import Button from '@/components/ui/button';
 import Table from '@/components/ui/table';
 

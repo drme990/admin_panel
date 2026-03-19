@@ -4,6 +4,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useReducer,
   useState,
   useRef,
   type ReactNode,
@@ -105,6 +106,94 @@ interface PaymentLinksResponse {
   };
 }
 
+interface CountryLite {
+  _id: string;
+  currencyCode: string;
+  isActive: boolean;
+}
+
+type FiltersState = {
+  month: string;
+  statusFilter: string;
+  sourceFilter: string;
+  searchQuery: string;
+  page: number;
+  linksUsageFilter: '' | 'used' | 'unused';
+  linksKindFilter: '' | 'order' | 'custom';
+};
+
+type FiltersAction =
+  | { type: 'setMonth'; payload: string }
+  | { type: 'setStatusFilter'; payload: string }
+  | { type: 'setSourceFilter'; payload: string }
+  | { type: 'setSearchQuery'; payload: string }
+  | { type: 'setPage'; payload: number }
+  | { type: 'setLinksUsageFilter'; payload: '' | 'used' | 'unused' }
+  | { type: 'setLinksKindFilter'; payload: '' | 'order' | 'custom' };
+
+type PayLinkFormState = {
+  orderNumber: string;
+  customAmount: string;
+  payLinkSource: 'manasik' | 'ghadaq';
+  payLinkCurrencyCode: string;
+};
+
+type PayLinkFormAction =
+  | { type: 'setOrderNumber'; payload: string }
+  | { type: 'setCustomAmount'; payload: string }
+  | { type: 'setPayLinkSource'; payload: 'manasik' | 'ghadaq' }
+  | { type: 'setPayLinkCurrencyCode'; payload: string }
+  | { type: 'reset'; defaultCurrency: string };
+
+function filtersReducer(
+  state: FiltersState,
+  action: FiltersAction,
+): FiltersState {
+  switch (action.type) {
+    case 'setMonth':
+      return { ...state, month: action.payload, page: 1 };
+    case 'setStatusFilter':
+      return { ...state, statusFilter: action.payload, page: 1 };
+    case 'setSourceFilter':
+      return { ...state, sourceFilter: action.payload, page: 1 };
+    case 'setSearchQuery':
+      return { ...state, searchQuery: action.payload, page: 1 };
+    case 'setPage':
+      return { ...state, page: action.payload };
+    case 'setLinksUsageFilter':
+      return { ...state, linksUsageFilter: action.payload };
+    case 'setLinksKindFilter':
+      return { ...state, linksKindFilter: action.payload };
+    default:
+      return state;
+  }
+}
+
+function payLinkFormReducer(
+  state: PayLinkFormState,
+  action: PayLinkFormAction,
+): PayLinkFormState {
+  switch (action.type) {
+    case 'setOrderNumber':
+      return { ...state, orderNumber: action.payload };
+    case 'setCustomAmount':
+      return { ...state, customAmount: action.payload };
+    case 'setPayLinkSource':
+      return { ...state, payLinkSource: action.payload };
+    case 'setPayLinkCurrencyCode':
+      return { ...state, payLinkCurrencyCode: action.payload };
+    case 'reset':
+      return {
+        orderNumber: '',
+        customAmount: '',
+        payLinkSource: 'manasik',
+        payLinkCurrencyCode: action.defaultCurrency,
+      };
+    default:
+      return state;
+  }
+}
+
 const STATUS_COLORS: Record<PaymentStatus, string> = {
   pending:
     'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
@@ -127,11 +216,15 @@ function currentMonthKey() {
 export default function PaymentsPage() {
   const t = useTranslations('admin.payments');
   const locale = useLocale();
-  const [month, setMonth] = useState(currentMonthKey());
-  const [statusFilter, setStatusFilter] = useState('');
-  const [sourceFilter, setSourceFilter] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [page, setPage] = useState(1);
+  const [filters, dispatchFilters] = useReducer(filtersReducer, {
+    month: currentMonthKey(),
+    statusFilter: '',
+    sourceFilter: '',
+    searchQuery: '',
+    page: 1,
+    linksUsageFilter: '',
+    linksKindFilter: '',
+  });
   const [loading, setLoading] = useState(true);
   const [linksLoading, setLinksLoading] = useState(true);
   const [orders, setOrders] = useState<PaymentOrderRow[]>([]);
@@ -151,12 +244,6 @@ export default function PaymentsPage() {
     hasPrevPage: false,
   });
   const [links, setLinks] = useState<PaymentLinkRow[]>([]);
-  const [linksUsageFilter, setLinksUsageFilter] = useState<
-    '' | 'used' | 'unused'
-  >('');
-  const [linksKindFilter, setLinksKindFilter] = useState<
-    '' | 'order' | 'custom'
-  >('');
   const [linksPagination, setLinksPagination] = useState<
     PaymentLinksResponse['pagination']
   >({
@@ -167,13 +254,14 @@ export default function PaymentsPage() {
     hasPrevPage: false,
   });
 
-  const [orderNumber, setOrderNumber] = useState('');
-  const [customAmount, setCustomAmount] = useState('');
-  const [payLinkSource, setPayLinkSource] = useState<'manasik' | 'ghadaq'>(
-    'manasik',
-  );
-  const [payLinkCurrencyCode, setPayLinkCurrencyCode] = useState('SAR');
+  const [payLinkForm, dispatchPayLinkForm] = useReducer(payLinkFormReducer, {
+    orderNumber: '',
+    customAmount: '',
+    payLinkSource: 'manasik',
+    payLinkCurrencyCode: 'SAR',
+  });
   const [creatingPayLink, setCreatingPayLink] = useState(false);
+  const [payLinkCurrencies, setPayLinkCurrencies] = useState<string[]>([]);
   const [payLinkData, setPayLinkData] = useState<{
     payLinkUrl: string;
     expiresAt: string;
@@ -186,6 +274,46 @@ export default function PaymentsPage() {
   const targetRef = useRef<HTMLDivElement>(null);
   const { confirm: confirmDelete, modalProps: deleteConfirmModalProps } =
     useConfirmModal();
+
+  const defaultPayLinkCurrency = useMemo(
+    () => payLinkCurrencies[0] || 'EGP',
+    [payLinkCurrencies],
+  );
+
+  useEffect(() => {
+    const loadCurrencies = async () => {
+      try {
+        const res = await fetch('/api/countries?active=true');
+        const data = await res.json();
+        if (!data.success || !Array.isArray(data.data)) return;
+
+        const uniqueCurrencies = Array.from(
+          new Set(
+            (data.data as CountryLite[])
+              .map((country) => country.currencyCode?.trim().toUpperCase())
+              .filter(
+                (code): code is string => !!code && /^[A-Z]{3}$/.test(code),
+              ),
+          ),
+        );
+
+        if (!uniqueCurrencies.length) return;
+
+        setPayLinkCurrencies(uniqueCurrencies);
+
+        if (!uniqueCurrencies.includes(payLinkForm.payLinkCurrencyCode)) {
+          dispatchPayLinkForm({
+            type: 'setPayLinkCurrencyCode',
+            payload: uniqueCurrencies[0],
+          });
+        }
+      } catch (error) {
+        console.error('Error loading pay link currencies:', error);
+      }
+    };
+
+    void loadCurrencies();
+  }, [payLinkForm.payLinkCurrencyCode]);
 
   const formatDate = useCallback(
     (value: string) =>
@@ -203,13 +331,14 @@ export default function PaymentsPage() {
     setLoading(true);
     try {
       const params = new URLSearchParams({
-        page: String(page),
+        page: String(filters.page),
         limit: '20',
-        month,
+        month: filters.month,
       });
-      if (statusFilter) params.set('status', statusFilter);
-      if (sourceFilter) params.set('source', sourceFilter);
-      if (searchQuery.trim()) params.set('search', searchQuery.trim());
+      if (filters.statusFilter) params.set('status', filters.statusFilter);
+      if (filters.sourceFilter) params.set('source', filters.sourceFilter);
+      if (filters.searchQuery.trim())
+        params.set('search', filters.searchQuery.trim());
 
       const res = await fetch(`/api/payments?${params.toString()}`);
       const data = await res.json();
@@ -228,7 +357,14 @@ export default function PaymentsPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, month, statusFilter, sourceFilter, searchQuery, t]);
+  }, [
+    filters.page,
+    filters.month,
+    filters.statusFilter,
+    filters.sourceFilter,
+    filters.searchQuery,
+    t,
+  ]);
 
   const fetchLinks = useCallback(async () => {
     setLinksLoading(true);
@@ -237,9 +373,10 @@ export default function PaymentsPage() {
         page: String(linksPagination.currentPage),
         limit: '10',
       });
-      if (sourceFilter) params.set('source', sourceFilter);
-      if (linksUsageFilter) params.set('usage', linksUsageFilter);
-      if (linksKindFilter) params.set('kind', linksKindFilter);
+      if (filters.sourceFilter) params.set('source', filters.sourceFilter);
+      if (filters.linksUsageFilter)
+        params.set('usage', filters.linksUsageFilter);
+      if (filters.linksKindFilter) params.set('kind', filters.linksKindFilter);
 
       const res = await fetch(`/api/payments/links?${params.toString()}`);
       const data = await res.json();
@@ -259,9 +396,9 @@ export default function PaymentsPage() {
     }
   }, [
     linksPagination.currentPage,
-    linksUsageFilter,
-    linksKindFilter,
-    sourceFilter,
+    filters.linksUsageFilter,
+    filters.linksKindFilter,
+    filters.sourceFilter,
     t,
   ]);
 
@@ -274,12 +411,14 @@ export default function PaymentsPage() {
   }, [fetchLinks]);
 
   const createPayLink = async () => {
-    const trimmedOrder = orderNumber.trim();
-    const trimmedCurrency = payLinkCurrencyCode.trim().toUpperCase();
+    const trimmedOrder = payLinkForm.orderNumber.trim();
+    const trimmedCurrency = payLinkForm.payLinkCurrencyCode
+      .trim()
+      .toUpperCase();
 
     let parsedCustomAmount: number | undefined;
-    if (customAmount.trim()) {
-      const parsed = Number(customAmount);
+    if (payLinkForm.customAmount.trim()) {
+      const parsed = Number(payLinkForm.customAmount);
       if (!Number.isFinite(parsed) || parsed <= 0) {
         toast.error(t('messages.customAmountInvalid'));
         return;
@@ -309,7 +448,7 @@ export default function PaymentsPage() {
           orderNumber: trimmedOrder || undefined,
           customAmount: parsedCustomAmount,
           currencyCode: trimmedCurrency,
-          source: payLinkSource,
+          source: payLinkForm.payLinkSource,
         }),
       });
       const data = await res.json();
@@ -374,13 +513,12 @@ export default function PaymentsPage() {
   );
 
   const payLinkCurrencyOptions = useMemo(
-    () => [
-      { value: 'EGP', label: 'EGP' },
-      { value: 'SAR', label: 'SAR' },
-      { value: 'USD', label: 'USD' },
-      { value: 'EUR', label: 'EUR' },
-    ],
-    [],
+    () =>
+      payLinkCurrencies.map((currencyCode) => ({
+        value: currencyCode,
+        label: currencyCode,
+      })),
+    [payLinkCurrencies],
   );
 
   const deletePayLink = async (linkId: string) => {
@@ -478,11 +616,14 @@ export default function PaymentsPage() {
       accessor: (row: PaymentOrderRow) => (
         <Tooltip content={t('table.useOrder')} position="left">
           <Button
-            variant="icon"
+            variant="icon-primary"
             size="custom"
             onClick={(e) => {
               e.stopPropagation();
-              setOrderNumber(row.orderNumber);
+              dispatchPayLinkForm({
+                type: 'setOrderNumber',
+                payload: row.orderNumber,
+              });
               if (targetRef.current) {
                 targetRef.current.scrollIntoView({
                   behavior: 'smooth',
@@ -575,19 +716,19 @@ export default function PaymentsPage() {
     {
       header: t('links.table.actions'),
       accessor: (row: PaymentLinkRow) => (
-        <Button
-          variant="icon"
-          size="custom"
-          className="text-error"
-          onClick={(e) => {
-            e.stopPropagation();
-            void deletePayLink(row._id);
-          }}
-          title={t('links.actions.delete')}
-          aria-label={t('links.actions.delete')}
-        >
-          <LuTrash2 size={14} />
-        </Button>
+        <Tooltip content={t('links.actions.delete')} position="left">
+          <Button
+            variant="icon-danger"
+            size="custom"
+            onClick={(e) => {
+              e.stopPropagation();
+              void deletePayLink(row._id);
+            }}
+            aria-label={t('links.actions.delete')}
+          >
+            <LuTrash2 size={14} />
+          </Button>
+        </Tooltip>
       ),
     },
   ];
@@ -640,8 +781,13 @@ export default function PaymentsPage() {
               {t('payLink.orderNumber')}
             </label>
             <input
-              value={orderNumber}
-              onChange={(e) => setOrderNumber(e.target.value)}
+              value={payLinkForm.orderNumber}
+              onChange={(e) =>
+                dispatchPayLinkForm({
+                  type: 'setOrderNumber',
+                  payload: e.target.value,
+                })
+              }
               placeholder={t('payLink.orderNumberPlaceholder')}
               className="mt-1 w-full rounded-lg border border-stroke bg-background px-3 py-2 text-sm"
             />
@@ -651,8 +797,13 @@ export default function PaymentsPage() {
               {t('payLink.customAmount')}
             </label>
             <input
-              value={customAmount}
-              onChange={(e) => setCustomAmount(e.target.value)}
+              value={payLinkForm.customAmount}
+              onChange={(e) =>
+                dispatchPayLinkForm({
+                  type: 'setCustomAmount',
+                  payload: e.target.value,
+                })
+              }
               placeholder={t('payLink.customAmountPlaceholder')}
               className="mt-1 w-full rounded-lg border border-stroke bg-background px-3 py-2 text-sm"
             />
@@ -662,9 +813,14 @@ export default function PaymentsPage() {
               {t('payLink.currencyCode')}
             </label>
             <Dropdown
-              value={payLinkCurrencyCode}
+              value={payLinkForm.payLinkCurrencyCode}
               options={payLinkCurrencyOptions}
-              onChange={setPayLinkCurrencyCode}
+              onChange={(value) =>
+                dispatchPayLinkForm({
+                  type: 'setPayLinkCurrencyCode',
+                  payload: value,
+                })
+              }
               className="mt-1"
             />
           </div>
@@ -673,10 +829,13 @@ export default function PaymentsPage() {
               {t('table.source')}
             </label>
             <Dropdown
-              value={payLinkSource}
+              value={payLinkForm.payLinkSource}
               options={payLinkSourceOptions}
               onChange={(value) =>
-                setPayLinkSource(value as 'manasik' | 'ghadaq')
+                dispatchPayLinkForm({
+                  type: 'setPayLinkSource',
+                  payload: value as 'manasik' | 'ghadaq',
+                })
               }
               className="mt-1"
             />
@@ -693,10 +852,10 @@ export default function PaymentsPage() {
           <Button
             variant="outline"
             onClick={() => {
-              setOrderNumber('');
-              setCustomAmount('');
-              setPayLinkCurrencyCode('SAR');
-              setPayLinkSource('manasik');
+              dispatchPayLinkForm({
+                type: 'reset',
+                defaultCurrency: defaultPayLinkCurrency,
+              });
               setPayLinkData(null);
             }}
           >
@@ -712,7 +871,7 @@ export default function PaymentsPage() {
                 value={payLinkData.payLinkUrl}
                 className="w-full rounded-md border border-stroke bg-background px-2 py-1 text-xs"
               />
-              <Button variant="icon" size="sm" onClick={copyPayLink}>
+              <Button variant="icon-primary" size="sm" onClick={copyPayLink}>
                 <LuCopy size={14} />
               </Button>
             </div>
@@ -743,10 +902,12 @@ export default function PaymentsPage() {
           />
           <input
             type="text"
-            value={searchQuery}
+            value={filters.searchQuery}
             onChange={(e) => {
-              setSearchQuery(e.target.value);
-              setPage(1);
+              dispatchFilters({
+                type: 'setSearchQuery',
+                payload: e.target.value,
+              });
             }}
             placeholder={t('filters.search')}
             className="w-full ps-9 pe-4 py-2 rounded-lg border border-stroke bg-background text-sm"
@@ -755,37 +916,44 @@ export default function PaymentsPage() {
 
         <input
           type="month"
-          value={month}
+          value={filters.month}
           onChange={(e) => {
-            setMonth(e.target.value || currentMonthKey());
-            setPage(1);
+            dispatchFilters({
+              type: 'setMonth',
+              payload: e.target.value || currentMonthKey(),
+            });
           }}
           className="w-full lg:w-40 rounded-lg border border-stroke bg-background px-3 py-2 text-sm"
         />
 
         <Dropdown
-          value={statusFilter}
+          value={filters.statusFilter}
           options={statusOptions}
-          onChange={(value) => {
-            setStatusFilter(value);
-            setPage(1);
-          }}
+          onChange={(value) =>
+            dispatchFilters({ type: 'setStatusFilter', payload: value })
+          }
           className="w-full lg:w-44"
         />
 
         <Dropdown
-          value={sourceFilter}
+          value={filters.sourceFilter}
           options={sourceOptions}
-          onChange={(value) => {
-            setSourceFilter(value);
-            setPage(1);
-          }}
+          onChange={(value) =>
+            dispatchFilters({ type: 'setSourceFilter', payload: value })
+          }
           className="w-full lg:w-40"
         />
 
-        <Button variant="icon" size="custom" onClick={fetchPayments}>
-          <LuRefreshCcw size={18} />
-        </Button>
+        <Tooltip content={t('links.filters.refresh')} position="left">
+          <Button
+            variant="icon-primary"
+            size="custom"
+            onClick={fetchPayments}
+            aria-label={t('links.filters.refresh')}
+          >
+            <LuRefreshCcw size={18} />
+          </Button>
+        </Tooltip>
       </div>
 
       <Table
@@ -798,7 +966,9 @@ export default function PaymentsPage() {
       <Pagination
         currentPage={pagination.currentPage}
         totalPages={pagination.totalPages}
-        onPageChange={setPage}
+        onPageChange={(value) =>
+          dispatchFilters({ type: 'setPage', payload: value })
+        }
         hasNextPage={pagination.hasNextPage}
         hasPrevPage={pagination.hasPrevPage}
       />
@@ -810,28 +980,41 @@ export default function PaymentsPage() {
 
         <div className="flex flex-col lg:flex-row gap-3">
           <Dropdown
-            value={linksUsageFilter}
+            value={filters.linksUsageFilter}
             options={linksUsageOptions}
             onChange={(value) => {
-              setLinksUsageFilter(value as '' | 'used' | 'unused');
+              dispatchFilters({
+                type: 'setLinksUsageFilter',
+                payload: value as '' | 'used' | 'unused',
+              });
               setLinksPagination((prev) => ({ ...prev, currentPage: 1 }));
             }}
             className="w-full lg:w-48"
           />
 
           <Dropdown
-            value={linksKindFilter}
+            value={filters.linksKindFilter}
             options={linksKindOptions}
             onChange={(value) => {
-              setLinksKindFilter(value as '' | 'order' | 'custom');
+              dispatchFilters({
+                type: 'setLinksKindFilter',
+                payload: value as '' | 'order' | 'custom',
+              });
               setLinksPagination((prev) => ({ ...prev, currentPage: 1 }));
             }}
             className="w-full lg:w-44"
           />
 
-          <Button variant="icon" size="custom" onClick={fetchLinks}>
-            <LuRefreshCcw size={18} />
-          </Button>
+          <Tooltip content={t('links.filters.refresh')} position="left">
+            <Button
+              variant="icon-primary"
+              size="custom"
+              onClick={fetchLinks}
+              aria-label={t('links.filters.refresh')}
+            >
+              <LuRefreshCcw size={18} />
+            </Button>
+          </Tooltip>
         </div>
 
         <Table

@@ -2,7 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
-import { RefreshCw, DollarSign, Lock, Unlock } from 'lucide-react';
+import {
+  LuRefreshCw as RefreshCw,
+  LuDollarSign as DollarSign,
+  LuLock as Lock,
+  LuLockOpen as Unlock,
+} from 'react-icons/lu';
 import Input from '@/components/ui/input';
 import Dropdown from '@/components/ui/dropdown';
 import Button from '@/components/ui/button';
@@ -269,7 +274,9 @@ export default function MultiCurrencyPriceEditor({
                     <label className="text-sm font-medium text-foreground">
                       {code}
                     </label>
-                    <button
+                    <Button
+                      variant="custom"
+                      size="custom"
                       type="button"
                       onClick={() => toggleManual(code)}
                       className="text-xs text-secondary hover:text-foreground transition-colors flex items-center gap-1"
@@ -290,7 +297,7 @@ export default function MultiCurrencyPriceEditor({
                           {t('form.auto')}
                         </>
                       )}
-                    </button>
+                    </Button>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-secondary">

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useLocale } from 'next-intl';
 import { useTranslations } from 'next-intl';
 import { toast } from 'react-toastify';
-import { CalendarRange } from 'lucide-react';
+import { LuCalendarRange as CalendarRange } from 'react-icons/lu';
 import Button from '@/components/ui/button';
 import CustomDatePicker from '@/components/ui/custom-date-picker';
 
@@ -254,13 +254,15 @@ export default function BookingAdminPage() {
                 <span className="text-sm font-medium">
                   {formatDateForDisplay(date)}
                 </span>
-                <button
+                <Button
                   type="button"
+                  variant="custom"
+                  size="custom"
                   className="text-error text-sm hover:underline"
                   onClick={() => removeDate(date)}
                 >
                   {t('removeDate')}
-                </button>
+                </Button>
               </div>
             ))}
           </div>

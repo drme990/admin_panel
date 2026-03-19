@@ -1,5 +1,6 @@
 import { cn } from '@/lib/utils';
 import { forwardRef } from 'react';
+import Button from './button';
 
 interface SwitchProps {
   id?: string;
@@ -14,7 +15,9 @@ const Switch = forwardRef<HTMLButtonElement, SwitchProps>(
   ({ className, onChange, checked, disabled, id, label }, ref) => {
     return (
       <div className={cn('flex items-center gap-2', className)}>
-        <button
+        <Button
+          variant="custom"
+          size="custom"
           id={id}
           type="button"
           role="switch"
@@ -35,7 +38,7 @@ const Switch = forwardRef<HTMLButtonElement, SwitchProps>(
               checked ? 'translate-x-5' : 'translate-x-0',
             )}
           />
-        </button>
+        </Button>
 
         {label && (
           <label

@@ -3,7 +3,13 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { User, AdminPage, ALL_ADMIN_PAGES } from '@/types/User';
-import { Plus, Trash2, Shield, UserCog, Pencil } from 'lucide-react';
+import {
+  LuPlus as Plus,
+  LuTrash2 as Trash2,
+  LuShield as Shield,
+  LuUserCog as UserCog,
+  LuPencil as Pencil,
+} from 'react-icons/lu';
 import Table from '@/components/ui/table';
 import Modal from '@/components/ui/modal';
 import Dropdown from '@/components/ui/dropdown';
@@ -12,6 +18,7 @@ import { toast } from 'react-toastify';
 import ConfirmModal, { useConfirmModal } from '@/components/ui/confirm-modal';
 import { useAuth } from '@/components/providers/auth-provider';
 import Button from '@/components/ui/button';
+import { Tooltip } from '@/components/ui/tooltip';
 
 type ModalMode = 'add' | 'edit';
 
@@ -187,21 +194,28 @@ export default function UsersPage() {
         accessor: (user: User) => (
           <div className="flex items-center gap-1">
             {user._id !== currentUser?._id && (
-              <button
-                onClick={() => openEditModal(user)}
-                className="p-2 hover:bg-primary/10 text-primary rounded-lg transition-colors"
-                title={t('editUser')}
-              >
-                <Pencil size={16} />
-              </button>
+              <Tooltip position="left" content={t('editUser')}>
+                <Button
+                  variant="icon-primary"
+                  size="custom"
+                  onClick={() => openEditModal(user)}
+                  aria-label={t('editUser')}
+                >
+                  <Pencil size={16} />
+                </Button>
+              </Tooltip>
             )}
             {canDelete(user) && (
-              <button
-                onClick={() => handleDelete(user)}
-                className="p-2 hover:bg-error/10 text-error rounded-lg transition-colors"
-              >
-                <Trash2 size={16} />
-              </button>
+              <Tooltip position="left" content={t('deleteConfirmButton')}>
+                <Button
+                  variant="icon-danger"
+                  size="custom"
+                  onClick={() => handleDelete(user)}
+                  aria-label={t('deleteConfirmButton')}
+                >
+                  <Trash2 size={16} />
+                </Button>
+              </Tooltip>
             )}
           </div>
         ),
@@ -290,22 +304,24 @@ export default function UsersPage() {
         size="md"
         footer={
           <div className="flex items-center gap-3">
-            <button
+            <Button
               type="button"
+              variant="outline"
               onClick={() => setShowModal(false)}
-              className="flex-1 py-2 bg-background border border-stroke rounded-lg hover:bg-stroke/10 transition-colors font-medium"
+              className="flex-1"
             >
               {t('buttons.cancel')}
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
+              variant="primary"
               form="user-form"
-              className="flex-1 py-2 bg-primary text-background rounded-lg hover:bg-primary/90 transition-colors font-medium"
+              className="flex-1"
             >
               {modalMode === 'add'
                 ? t('buttons.addUser')
                 : t('buttons.updateUser')}
-            </button>
+            </Button>
           </div>
         }
       >

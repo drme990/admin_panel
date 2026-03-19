@@ -2,9 +2,14 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
-import { Plus, Trash2, GripVertical } from 'lucide-react';
+import {
+  LuPlus as Plus,
+  LuTrash2 as Trash2,
+  LuGripVertical as GripVertical,
+} from 'react-icons/lu';
 import { useTranslations } from 'next-intl';
 import { toast } from 'react-toastify';
+import Button from '@/components/ui/button';
 
 interface MultiImageUploadProps {
   images: string[];
@@ -112,22 +117,26 @@ export default function MultiImageUpload({
               {/* Overlay */}
               <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                 {index > 0 && (
-                  <button
+                  <Button
+                    variant="icon-primary"
+                    size="custom"
                     type="button"
                     onClick={() => handleMoveImage(index, 0)}
-                    className="p-1.5 bg-white/90 rounded-lg hover:bg-white transition-colors"
+                    className="p-1.5 bg-white/90 hover:bg-white"
                     title={t('form.setAsMain')}
                   >
                     <GripVertical size={14} className="text-gray-700" />
-                  </button>
+                  </Button>
                 )}
-                <button
+                <Button
+                  variant="icon-danger"
+                  size="custom"
                   type="button"
                   onClick={() => handleRemoveImage(index)}
-                  className="p-1.5 bg-error/90 text-white rounded-lg hover:bg-error transition-colors"
+                  className="p-1.5 bg-error/90 text-white hover:bg-error"
                 >
                   <Trash2 size={14} />
-                </button>
+                </Button>
               </div>
               {/* Main badge */}
               {index === 0 && (

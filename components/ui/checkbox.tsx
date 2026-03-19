@@ -2,6 +2,7 @@
 
 import { cn } from '@/lib/utils';
 import { LuCheck } from 'react-icons/lu';
+import Button from './button';
 
 interface CheckboxProps {
   checked: boolean;
@@ -50,7 +51,9 @@ export default function Checkbox({
 
   return (
     <div className={cn('flex items-start gap-3', className)}>
-      <button
+      <Button
+        variant="custom"
+        size="custom"
         type="button"
         role="checkbox"
         id={id}
@@ -80,7 +83,7 @@ export default function Checkbox({
             checked ? 'scale-100 opacity-100' : 'scale-50 opacity-0',
           )}
         />
-      </button>
+      </Button>
 
       {(label || description) && (
         <div

@@ -1,5 +1,6 @@
 import { useLocale } from 'next-intl';
 import { LuChevronLeft, LuChevronRight } from 'react-icons/lu';
+import Button from './button';
 
 interface PaginationProps {
   currentPage: number;
@@ -60,7 +61,10 @@ export default function Pagination({
       </div>
 
       <div className="flex items-center gap-1">
-        <button
+        <Button
+          variant="custom"
+          size="custom"
+          type="button"
           onClick={() => onPageChange(currentPage - 1)}
           disabled={!canGoPrev}
           className="p-2 rounded-lg hover:bg-background transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -69,7 +73,7 @@ export default function Pagination({
             size={18}
             className={locale === 'en' ? 'rotate-180' : ''}
           />
-        </button>
+        </Button>
 
         {getPageNumbers().map((page, index) =>
           page === '...' ? (
@@ -77,7 +81,10 @@ export default function Pagination({
               ...
             </span>
           ) : (
-            <button
+            <Button
+              variant="custom"
+              size="custom"
+              type="button"
               key={page}
               onClick={() => onPageChange(page as number)}
               className={`px-3 py-1 rounded-lg transition-colors ${
@@ -87,11 +94,14 @@ export default function Pagination({
               }`}
             >
               {page}
-            </button>
+            </Button>
           ),
         )}
 
-        <button
+        <Button
+          variant="custom"
+          size="custom"
+          type="button"
           onClick={() => onPageChange(currentPage + 1)}
           disabled={!canGoNext}
           className="p-2 rounded-lg hover:bg-background transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -100,7 +110,7 @@ export default function Pagination({
             size={18}
             className={locale === 'en' ? 'rotate-180' : ''}
           />
-        </button>
+        </Button>
       </div>
     </div>
   );

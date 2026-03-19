@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { ActivityLog } from '@/types/ActivityLog';
-import { Filter, RefreshCw } from 'lucide-react';
+import { LuFilter as Filter, LuRefreshCw as RefreshCw } from 'react-icons/lu';
 import Table from '@/components/ui/table';
 import Dropdown from '@/components/ui/dropdown';
 import Button from '@/components/ui/button';

@@ -1,5 +1,6 @@
 import { ReactNode, useEffect, useRef } from 'react';
 import { LuX } from 'react-icons/lu';
+import Button from './button';
 
 interface ModalProps {
   isOpen: boolean;
@@ -131,14 +132,16 @@ export default function Modal({
           <h2 id="modal-title" className="text-xl font-bold text-foreground">
             {title}
           </h2>
-          <button
+          <Button
+            variant="custom"
+            size="custom"
             onClick={onClose}
             className="p-2 hover:text-error rounded-lg transition-colors"
             type="button"
             aria-label="Close modal"
           >
             <LuX size={20} />
-          </button>
+          </Button>
         </div>
 
         {/* Content - Scrollable */}

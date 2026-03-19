@@ -4,21 +4,21 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import {
-  LayoutDashboard,
-  Package,
-  Users,
-  Menu,
-  X,
-  FileText,
-  ShoppingCart,
-  Globe,
-  Ticket,
-  UserRoundPlus,
-  Palette,
-  RefreshCw,
-  CalendarDays,
-  Wallet,
-} from 'lucide-react';
+  LuLayoutDashboard as LayoutDashboard,
+  LuPackage as Package,
+  LuUsers as Users,
+  LuMenu as Menu,
+  LuX as X,
+  LuFileText as FileText,
+  LuShoppingCart as ShoppingCart,
+  LuGlobe as Globe,
+  LuTicket as Ticket,
+  LuUserRoundPlus as UserRoundPlus,
+  LuPalette as Palette,
+  LuRefreshCw as RefreshCw,
+  LuCalendarDays as CalendarDays,
+  LuWallet as Wallet,
+} from 'react-icons/lu';
 import { useState, useEffect } from 'react';
 import Logo from '@/components/shared/logo';
 import UserMenu from '@/components/shared/user-menu';
@@ -27,6 +27,7 @@ import { useLocale, useTranslations } from 'next-intl';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { PageLoading } from '@/components/ui/loading';
+import Button from '@/components/ui/button';
 
 const navItems = [
   { key: 'dashboard', href: '/', icon: LayoutDashboard, superAdminOnly: false },
@@ -132,12 +133,14 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
       {/* Mobile Header */}
       {!isDeepRoute && (
         <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-card-bg border-b border-stroke px-4 py-3 flex items-center justify-between">
-          <button
+          <Button
+            variant="custom"
+            size="custom"
             onClick={() => setSidebarOpen(!sidebarOpen)}
             className="p-2 rounded-lg hover:bg-background transition-colors"
           >
             {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
-          </button>
+          </Button>
           <Logo />
         </div>
       )}

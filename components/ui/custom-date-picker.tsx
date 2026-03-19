@@ -1,8 +1,13 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react';
+import {
+  LuCalendarDays as CalendarDays,
+  LuChevronLeft as ChevronLeft,
+  LuChevronRight as ChevronRight,
+} from 'react-icons/lu';
 import { cn } from '@/lib/utils';
+import Button from './button';
 
 interface CustomDatePickerProps {
   value: string;
@@ -155,7 +160,9 @@ export default function CustomDatePicker({
       )}
 
       <div className="relative">
-        <button
+        <Button
+          variant="custom"
+          size="custom"
           type="button"
           onClick={() => {
             setIsOpen((prev) => {
@@ -173,12 +180,14 @@ export default function CustomDatePicker({
             {value ? formatDisplayDate(value, locale) : placeholder}
           </span>
           <CalendarDays size={18} className="shrink-0 text-secondary" />
-        </button>
+        </Button>
 
         {isOpen && (
           <div className="absolute z-30 mt-2 w-full min-w-[18rem] rounded-site border border-stroke bg-card-bg p-4 shadow-xl">
             <div className="mb-4 flex items-center justify-between gap-3">
-              <button
+              <Button
+                variant="custom"
+                size="custom"
                 type="button"
                 onClick={() =>
                   setMonthDate(
@@ -195,13 +204,15 @@ export default function CustomDatePicker({
                   size={16}
                   className={locale === 'ar' ? 'rotate-180' : undefined}
                 />
-              </button>
+              </Button>
 
               <div className="text-sm font-semibold text-foreground">
                 {monthLabel}
               </div>
 
-              <button
+              <Button
+                variant="custom"
+                size="custom"
                 type="button"
                 onClick={() =>
                   setMonthDate(
@@ -218,7 +229,7 @@ export default function CustomDatePicker({
                   size={16}
                   className={locale === 'ar' ? 'rotate-180' : undefined}
                 />
-              </button>
+              </Button>
             </div>
 
             <div className="mb-2 grid grid-cols-7 gap-1">
@@ -240,7 +251,9 @@ export default function CustomDatePicker({
                 const isMarked = markedSet.has(iso);
 
                 return (
-                  <button
+                  <Button
+                    variant="custom"
+                    size="custom"
                     key={iso}
                     type="button"
                     disabled={isDisabled}
@@ -269,7 +282,7 @@ export default function CustomDatePicker({
                     )}
                   >
                     {date.getDate()}
-                  </button>
+                  </Button>
                 );
               })}
             </div>

@@ -50,7 +50,10 @@ export default function ThemeToggle() {
             const Icon = THEME_CONFIG[t].icon;
             const isActive = currentTheme === t;
             return (
-              <button
+              <Button
+                variant="custom"
+                size="custom"
+                type="button"
                 key={t}
                 onClick={() => {
                   setTheme(t);
@@ -64,7 +67,7 @@ export default function ThemeToggle() {
               >
                 <Icon size={16} />
                 <span>{THEME_CONFIG[t].label}</span>
-              </button>
+              </Button>
             );
           })}
         </div>

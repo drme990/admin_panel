@@ -3,8 +3,13 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/providers/auth-provider';
-import { LogIn, Eye, EyeOff } from 'lucide-react';
+import {
+  LuLogIn as LogIn,
+  LuEye as Eye,
+  LuEyeOff as EyeOff,
+} from 'react-icons/lu';
 import Input from '@/components/ui/input';
+import Button from '@/components/ui/button';
 import { PageLoading } from '@/components/ui/loading';
 import { useTranslations } from 'next-intl';
 
@@ -99,22 +104,25 @@ export default function LoginPage() {
               placeholder="••••••••"
               disabled={loading}
               suffix={
-                <button
+                <Button
                   type="button"
+                  variant="custom"
+                  size="custom"
                   onClick={() => setShowPassword((prev) => !prev)}
                   className="text-secondary hover:text-foreground transition-colors"
                   tabIndex={-1}
                   aria-label={showPassword ? 'Hide password' : 'Show password'}
                 >
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
+                </Button>
               }
             />
 
-            <button
+            <Button
               type="submit"
+              variant="primary"
               disabled={loading}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-primary text-background rounded-lg hover:bg-primary/90 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (
                 t('buttons.loggingIn')
@@ -124,7 +132,7 @@ export default function LoginPage() {
                   {t('buttons.login')}
                 </>
               )}
-            </button>
+            </Button>
           </form>
         </div>
       </div>

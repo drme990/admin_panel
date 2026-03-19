@@ -3,17 +3,18 @@
 import { useEffect, useState } from 'react';
 import { Product } from '@/types/Product';
 import {
-  Plus,
-  Pencil,
-  Trash2,
-  ArrowUp,
-  ArrowDown,
-  ListOrdered,
-} from 'lucide-react';
+  LuPlus as Plus,
+  LuPencil as Pencil,
+  LuTrash2 as Trash2,
+  LuArrowUp as ArrowUp,
+  LuArrowDown as ArrowDown,
+  LuListOrdered as ListOrdered,
+} from 'react-icons/lu';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import Table from '@/components/ui/table';
 import Modal from '@/components/ui/modal';
+import { Tooltip } from '@/components/ui/tooltip';
 import { useTranslations } from 'next-intl';
 import { toast } from 'react-toastify';
 import ConfirmModal, { useConfirmModal } from '@/components/ui/confirm-modal';
@@ -168,24 +169,32 @@ export default function ProductsPage() {
       header: t('table.actions'),
       accessor: (product: Product) => (
         <div className="flex items-center gap-2">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              router.push(`/products/edit?id=${product._id}`);
-            }}
-            className="p-2 hover:bg-background rounded-lg transition-colors"
-          >
-            <Pencil size={16} />
-          </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              handleDelete(product._id);
-            }}
-            className="p-2 hover:bg-error/10 text-error rounded-lg transition-colors"
-          >
-            <Trash2 size={16} />
-          </button>
+          <Tooltip position="left" content={t('editProduct')}>
+            <Button
+              variant="icon-primary"
+              size="custom"
+              onClick={(e) => {
+                e.stopPropagation();
+                router.push(`/products/edit?id=${product._id}`);
+              }}
+              aria-label={t('editProduct')}
+            >
+              <Pencil size={16} />
+            </Button>
+          </Tooltip>
+          <Tooltip position="left" content={t('deleteProduct')}>
+            <Button
+              variant="icon-danger"
+              size="custom"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDelete(product._id);
+              }}
+              aria-label={t('deleteProduct')}
+            >
+              <Trash2 size={16} />
+            </Button>
+          </Tooltip>
         </div>
       ),
     },
@@ -228,20 +237,20 @@ export default function ProductsPage() {
         size="md"
         footer={
           <div className="flex items-center justify-end gap-3">
-            <button
+            <Button
+              variant="outline"
               onClick={() => setReorderOpen(false)}
               disabled={reorderSaving}
-              className="px-4 py-2 rounded-lg border border-stroke text-foreground hover:bg-muted transition-colors disabled:opacity-50"
             >
               {t('reorderModal.cancel')}
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="primary"
               onClick={saveReorder}
               disabled={reorderSaving}
-              className="px-4 py-2 rounded-lg bg-primary text-background hover:bg-primary/90 transition-colors disabled:opacity-50"
             >
               {reorderSaving ? '...' : t('reorderModal.save')}
-            </button>
+            </Button>
           </div>
         }
       >
@@ -276,20 +285,22 @@ export default function ProductsPage() {
                   {product.name.ar}
                 </span>
                 <div className="flex flex-col gap-0.5 shrink-0">
-                  <button
+                  <Button
+                    variant="icon-primary"
+                    size="custom"
                     onClick={() => moveInModal(index, 'up')}
                     disabled={index === 0}
-                    className="p-1 hover:bg-muted rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                   >
                     <ArrowUp size={14} />
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    variant="icon-primary"
+                    size="custom"
                     onClick={() => moveInModal(index, 'down')}
                     disabled={index === reorderList.length - 1}
-                    className="p-1 hover:bg-muted rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                   >
                     <ArrowDown size={14} />
-                  </button>
+                  </Button>
                 </div>
               </div>
             );

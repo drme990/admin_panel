@@ -1,5 +1,6 @@
 import { ReactNode, useState, useRef, useEffect } from 'react';
 import { LuChevronDown } from 'react-icons/lu';
+import Button from './button';
 
 interface DropdownOption<T = string> {
   label: string;
@@ -61,7 +62,9 @@ export default function Dropdown<T = string>({
         <label className="block text-sm font-medium mb-2">{label}</label>
       )}
 
-      <button
+      <Button
+        variant="custom"
+        size="custom"
         type="button"
         onClick={() => !disabled && setIsOpen(!isOpen)}
         disabled={disabled}
@@ -77,12 +80,14 @@ export default function Dropdown<T = string>({
             isOpen ? 'rotate-180' : ''
           }`}
         />
-      </button>
+      </Button>
 
       {isOpen && (
         <div className="absolute top-full left-0 right-0 mt-1 bg-card-bg border border-stroke rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
           {options.map((option, index) => (
-            <button
+            <Button
+              variant="custom"
+              size="custom"
               key={index}
               type="button"
               onClick={() => handleSelect(option.value)}
@@ -92,7 +97,7 @@ export default function Dropdown<T = string>({
             >
               {option.icon}
               {option.label}
-            </button>
+            </Button>
           ))}
         </div>
       )}

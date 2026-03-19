@@ -6,6 +6,7 @@ import { useAuth } from '@/components/providers/auth-provider';
 import { useTranslations } from 'next-intl';
 import LangToggle from './lang-toggle';
 import ThemeToggle from './theme-toggle';
+import Button from '../ui/button';
 
 export default function UserMenu() {
   const { user, logout } = useAuth();
@@ -36,7 +37,10 @@ export default function UserMenu() {
 
   return (
     <div className="relative" ref={dropdownRef}>
-      <button
+      <Button
+        variant="custom"
+        size="custom"
+        type="button"
         onClick={() => setIsOpen(!isOpen)}
         className="w-full flex items-center justify-between gap-2 px-4 py-3 rounded-lg bg-background hover:bg-stroke/10 transition-colors group"
       >
@@ -57,7 +61,7 @@ export default function UserMenu() {
           size={16}
           className={`text-secondary shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
         />
-      </button>
+      </Button>
 
       {isOpen && (
         <div className="absolute bottom-full left-0 right-0 mb-2 bg-background border border-stroke rounded-lg shadow-lg z-50">
@@ -67,13 +71,16 @@ export default function UserMenu() {
               <ThemeToggle />
             </div>
           </div>
-          <button
+          <Button
+            variant="custom"
+            size="custom"
+            type="button"
             onClick={logout}
             className="w-full flex items-center gap-2 px-4 py-3 hover:bg-error/10 transition-colors text-error font-medium"
           >
             <LuLogOut size={16} />
             <span>{t('logout')}</span>
-          </button>
+          </Button>
         </div>
       )}
     </div>

@@ -5,15 +5,16 @@ import { useTranslations } from 'next-intl';
 import { toast } from 'react-toastify';
 import Image from 'next/image';
 import {
-  Trash2,
-  Upload,
-  MoveDown,
-  MoveUp,
-  ArrowLeft,
-  ArrowRight,
-  Save,
-} from 'lucide-react';
+  LuTrash2 as Trash2,
+  LuUpload as Upload,
+  LuMoveDown as MoveDown,
+  LuMoveUp as MoveUp,
+  LuArrowLeft as ArrowLeft,
+  LuArrowRight as ArrowRight,
+  LuSave as Save,
+} from 'react-icons/lu';
 import { PageLoading } from '@/components/ui/loading';
+import Button from '@/components/ui/button';
 import { BannerText, WorksImages, ProjectName } from '@/types/Appearance';
 
 const PROJECTS: { key: ProjectName; label: string }[] = [
@@ -233,20 +234,23 @@ export default function AppearancePage() {
           </h1>
           <p className="text-secondary">{t('description')}</p>
         </div>
-        <button
+        <Button
+          variant="primary"
           onClick={handleSave}
           disabled={saving}
-          className="flex items-center gap-2 px-5 py-2.5 gradient-site gradient-text font-medium rounded-lg hover:opacity-90 disabled:opacity-50 transition-all shrink-0"
+          className="flex items-center gap-2 shrink-0"
         >
           <Save className="w-4 h-4" />
           {saving ? t('saving') : t('saveChanges')}
-        </button>
+        </Button>
       </div>
 
       {/* Project Tabs */}
       <div className="flex gap-2 border-b border-stroke">
         {PROJECTS.map((p) => (
-          <button
+          <Button
+            variant="custom"
+            size="custom"
             key={p.key}
             onClick={() => setActiveProject(p.key)}
             className={`px-5 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
@@ -265,7 +269,7 @@ export default function AppearancePage() {
             }
           >
             {p.label}
-          </button>
+          </Button>
         ))}
       </div>
 
@@ -463,23 +467,29 @@ function ImageRowEditor({
               />
               {/* Hover overlay with actions */}
               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-all flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
-                <button
+                <Button
+                  variant="custom"
+                  size="custom"
                   onClick={() => onReorderUp(index)}
                   title={moveEarlierLabel}
                   disabled={index === 0}
                   className="w-8 h-8 bg-white/90 text-gray-900 rounded-full flex items-center justify-center hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <ArrowLeft className="w-4 h-4" />
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="custom"
+                  size="custom"
                   onClick={() => onReorderDown(index)}
                   title={moveLaterLabel}
                   disabled={index === images.length - 1}
                   className="w-8 h-8 bg-white/90 text-gray-900 rounded-full flex items-center justify-center hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <ArrowRight className="w-4 h-4" />
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="custom"
+                  size="custom"
                   onClick={() => onMove(index)}
                   title={moveLabel}
                   className="w-8 h-8 bg-white/90 text-gray-900 rounded-full flex items-center justify-center hover:bg-white transition-colors"
@@ -489,14 +499,16 @@ function ImageRowEditor({
                   ) : (
                     <MoveUp className="w-4 h-4" />
                   )}
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="custom"
+                  size="custom"
                   onClick={() => onDelete(index)}
                   title="Delete"
                   className="w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
                 >
                   <Trash2 className="w-4 h-4" />
-                </button>
+                </Button>
               </div>
               {/* Index badge */}
               <span className="absolute top-1 inset-s-1 text-[10px] bg-black/60 text-white px-1.5 py-0.5 rounded-full font-mono">
@@ -521,14 +533,15 @@ function ImageRowEditor({
             }
           }}
         />
-        <button
+        <Button
+          variant="outline"
           onClick={() => inputRef.current?.click()}
           disabled={uploading}
           className="flex items-center gap-2 px-4 py-2 text-sm font-medium border border-stroke rounded-lg hover:bg-muted disabled:opacity-50 transition-colors text-foreground"
         >
           <Upload className="w-4 h-4" />
           {uploading ? uploadingLabel : addLabel}
-        </button>
+        </Button>
       </div>
     </div>
   );

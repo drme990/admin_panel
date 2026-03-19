@@ -17,7 +17,12 @@ import MultiImageUpload from '@/components/admin/multi-image-upload';
 import RichTextEditor from '@/components/ui/rich-text-editor';
 import { useTranslations } from 'next-intl';
 import { toast } from 'react-toastify';
-import { Plus, X, ClipboardList, CircleHelp } from 'lucide-react';
+import {
+  LuPlus as Plus,
+  LuX as X,
+  LuClipboardList as ClipboardList,
+  LuCircleHelp as CircleHelp,
+} from 'react-icons/lu';
 import Loading from '../ui/loading';
 import { roundPrice } from '@/lib/currency-rounding';
 import {
@@ -316,6 +321,63 @@ export default function ProductForm({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!formData.name_ar.trim() || !formData.name_en.trim()) {
+      toast.error(t('messages.nameRequired') || 'Product name is required');
+      return;
+    }
+
+    if (!formData.images.length) {
+      toast.error(
+        t('messages.imageRequired') || 'At least one product image is required',
+      );
+      return;
+    }
+
+    if (!formData.sizes.length) {
+      toast.error(t('messages.minOneSize'));
+      return;
+    }
+
+    const hasInvalidSize = formData.sizes.some(
+      (size) =>
+        !size.name.ar.trim() ||
+        !size.name.en.trim() ||
+        !Number.isFinite(size.price) ||
+        size.price <= 0,
+    );
+    if (hasInvalidSize) {
+      toast.error(
+        t('messages.invalidSizeData') ||
+          'Each size must have Arabic/English names and a valid price.',
+      );
+      return;
+    }
+
+    if (formData.partialPayment.isAllowed) {
+      const minimumValues = formData.partialPayment.minimumPayments || [];
+      const hasInvalidMinimum = minimumValues.some(
+        (item) => !Number.isFinite(item.value) || item.value <= 0,
+      );
+      if (!minimumValues.length || hasInvalidMinimum) {
+        toast.error(
+          t('messages.invalidMinimumPayment') ||
+            'Valid minimum payment values are required when partial payment is enabled.',
+        );
+        return;
+      }
+    }
+
+    if (formData.upgradeTo) {
+      const discount = Number(formData.upgradeDiscount);
+      if (!Number.isFinite(discount) || discount < 0 || discount > 100) {
+        toast.error(
+          t('messages.invalidUpgradeDiscount') ||
+            'Upgrade discount must be between 0 and 100.',
+        );
+        return;
+      }
+    }
 
     const normalizedSlug = formData.slug
       .trim()

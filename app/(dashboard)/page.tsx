@@ -1,4 +1,9 @@
-import { Package, Users, ShoppingCart, Globe } from 'lucide-react';
+import {
+  LuPackage as Package,
+  LuUsers as Users,
+  LuShoppingCart as ShoppingCart,
+  LuGlobe as Globe,
+} from 'react-icons/lu';
 import Link from 'next/link';
 import { cookies } from 'next/headers';
 import { getTranslations } from 'next-intl/server';

@@ -1,7 +1,12 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Edit, Trash2, Search } from 'lucide-react';
+import {
+  LuPlus as Plus,
+  LuPen as Edit,
+  LuTrash2 as Trash2,
+  LuSearch as Search,
+} from 'react-icons/lu';
 import { useTranslations } from 'next-intl';
 import Modal from '@/components/ui/modal';
 import Input from '@/components/ui/input';
@@ -11,6 +16,7 @@ import { toast } from 'react-toastify';
 import ConfirmModal, { useConfirmModal } from '@/components/ui/confirm-modal';
 import { Referral } from '@/types/Referral';
 import Button from '@/components/ui/button';
+import { Tooltip } from '@/components/ui/tooltip';
 
 export default function ReferralsPage() {
   const [referrals, setReferrals] = useState<Referral[]>([]);
@@ -179,26 +185,32 @@ export default function ReferralsPage() {
       header: t('table.actions'),
       accessor: (row: Referral) => (
         <div className="flex items-center gap-2">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              handleEdit(row);
-            }}
-            className="p-2 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
-            title="Edit"
-          >
-            <Edit size={16} />
-          </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              handleDelete(row._id);
-            }}
-            className="p-2 text-red-600 hover:bg-red-50 rounded-md transition-colors"
-            title="Delete"
-          >
-            <Trash2 size={16} />
-          </button>
+          <Tooltip position="left" content={t('editReferral')}>
+            <Button
+              variant="icon-primary"
+              size="custom"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleEdit(row);
+              }}
+              aria-label={t('editReferral')}
+            >
+              <Edit size={16} />
+            </Button>
+          </Tooltip>
+          <Tooltip position="left" content={t('deleteButton')}>
+            <Button
+              variant="icon-danger"
+              size="custom"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDelete(row._id);
+              }}
+              aria-label={t('deleteButton')}
+            >
+              <Trash2 size={16} />
+            </Button>
+          </Tooltip>
         </div>
       ),
       className: 'w-24',
@@ -259,22 +271,14 @@ export default function ReferralsPage() {
         size="md"
         footer={
           <div className="flex items-center justify-end gap-3">
-            <button
-              type="button"
-              onClick={handleCloseModal}
-              className="px-4 py-2 border border-stroke rounded-md text-foreground hover:bg-muted/50 transition-colors"
-            >
+            <Button type="button" variant="outline" onClick={handleCloseModal}>
               {t('buttons.cancel')}
-            </button>
-            <button
-              type="submit"
-              form="referral-form"
-              className="px-4 py-2 bg-primary text-background rounded-md hover:bg-primary/90 transition-colors"
-            >
+            </Button>
+            <Button type="submit" variant="primary" form="referral-form">
               {editingReferral
                 ? t('buttons.updateReferral')
                 : t('buttons.addReferral')}
-            </button>
+            </Button>
           </div>
         }
       >

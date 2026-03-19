@@ -1,5 +1,8 @@
 import Link from 'next/link';
-import { AlertTriangle, Home } from 'lucide-react';
+import {
+  LuTriangleAlert as AlertTriangle,
+  LuHouse as Home,
+} from 'react-icons/lu';
 import { getTranslations } from 'next-intl/server';
 
 export default async function NotFound() {

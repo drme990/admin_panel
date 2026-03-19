@@ -149,6 +149,7 @@
         "cancel": "Cancel"
       },
       "editProduct": "Edit Product",
+      "deleteProduct": "Delete Product",
       "deleteConfirm": "Are you sure you want to delete this product?",
       "deleteConfirmTitle": "Delete Product",
       "deleteConfirmButton": "Delete",
@@ -385,7 +386,8 @@
       "buttons": {
         "cancelButton": "Cancel",
         "addCoupon": "Add Coupon",
-        "updateCoupon": "Update Coupon"
+        "updateCoupon": "Update Coupon",
+        "deleteCoupon": "Delete Coupon"
       },
       "messages": {
         "saveFailed": "Failed to save coupon",
@@ -641,7 +643,8 @@
         "allStatuses": "All Statuses",
         "allSources": "All Sources",
         "manasikSource": "Manasik",
-        "ghadaqSource": "Ghadaq"
+        "ghadaqSource": "Ghadaq",
+        "refresh": "Refresh"
       },
       "status": {
         "pending": "Pending",
@@ -707,7 +710,8 @@
           "allUsage": "All Usage",
           "usedOnly": "Used Only",
           "unusedOnly": "Unused Only",
-          "allKinds": "All Types"
+          "allKinds": "All Types",
+          "refresh": "Refresh"
         },
         "actions": {
           "delete": "Delete",

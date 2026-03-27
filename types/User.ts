@@ -1,10 +1,12 @@
 export type AdminPage =
   | 'products'
   | 'orders'
+  | 'customers'
+  | 'analytics'
   | 'booking'
   | 'coupons'
   | 'countries'
-  | 'users'
+  | 'admins'
   | 'referrals'
   | 'activityLogs'
   | 'appearance'
@@ -14,10 +16,12 @@ export type AdminPage =
 export const ALL_ADMIN_PAGES: AdminPage[] = [
   'products',
   'orders',
+  'customers',
+  'analytics',
   'booking',
   'coupons',
   'countries',
-  'users',
+  'admins',
   'referrals',
   'activityLogs',
   'appearance',

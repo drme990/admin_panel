@@ -73,7 +73,7 @@ const navItems = [
     href: '/analytics',
     icon: LuChartNoAxesCombined,
     superAdminOnly: false,
-    permissionKey: 'orders',
+    permissionKey: 'analytics',
   },
   {
     key: 'booking',

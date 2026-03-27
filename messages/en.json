@@ -464,10 +464,12 @@
       "pageLabels": {
         "products": "Products",
         "orders": "Orders",
+        "customers": "Customers",
+        "analytics": "Analytics",
         "booking": "Booking",
         "coupons": "Coupons",
         "countries": "Countries",
-        "users": "Admins",
+        "admins": "Admins",
         "referrals": "Referrals",
         "activityLogs": "Activity Logs",
         "appearance": "Appearance",

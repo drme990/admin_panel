@@ -464,10 +464,12 @@
       "pageLabels": {
         "products": "المنتجات",
         "orders": "الطلبات",
+        "customers": "العملاء",
+        "analytics": "التحليلات",
         "booking": "الحجز",
         "coupons": "الكوبونات",
         "countries": "البلدان",
-        "users": "المشرفين",
+        "admins": "المشرفين",
         "referrals": "الإحالات",
         "activityLogs": "سجل النشاطات",
         "appearance": "المظهر",

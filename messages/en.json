@@ -17,6 +17,11 @@
     "productId": "Product ID",
     "productSlug": "Product Slug",
     "paymentMethod": "Payment Method",
+    "customerType": {
+      "label": "Customer Type",
+      "guest": "Public Guest",
+      "registered": "Registered User"
+    },
     "referral": "Referral",
     "amountDetails": "Amount Details",
     "totals": {
@@ -78,6 +83,7 @@
     "table": {
       "orderNumber": "Order Number",
       "customer": "Customer",
+      "customerType": "Customer Type",
       "amount": "Amount",
       "status": "Status",
       "date": "Date",
@@ -92,7 +98,9 @@
       "booking": "Booking",
       "coupons": "Coupons",
       "countries": "Countries",
-      "users": "Users",
+      "admins": "Admins",
+      "customers": "Customers",
+      "analytics": "Analytics",
       "referrals": "Referrals",
       "activityLogs": "Activity Logs",
       "appearance": "Appearance",
@@ -126,7 +134,7 @@
       "welcome": "Welcome to the admin dashboard",
       "stats": {
         "totalProducts": "Total Products",
-        "totalUsers": "Total Users",
+        "totalCustomers": "Total Customers",
         "orders": "Orders",
         "countries": "Countries"
       },
@@ -135,6 +143,26 @@
         "manageProducts": "Manage Products",
         "manageOrders": "Manage Orders",
         "manageCountries": "Manage Countries"
+      },
+      "charts": {
+        "ordersByCountry": "Orders by Country",
+        "ordersByWeekday": "Orders by Weekday",
+        "revenueOverTime": "Revenue Over Time"
+      }
+    },
+    "analytics": {
+      "title": "Analytics",
+      "description": "Business insights across revenue, order health, payment behavior, and products.",
+      "loadError": "Failed to load analytics data.",
+      "revenueOverTime": "Revenue Over Time",
+      "ordersByStatus": "Orders by Status",
+      "paymentSplit": "Full Payment vs Partial Payment",
+      "topProducts": "Top Products",
+      "ordersByCountry": "Orders by Country",
+      "ordersByWeekday": "Orders by Weekday",
+      "period": {
+        "day": "Last 30 Days",
+        "month": "Last 12 Months"
       }
     },
     "products": {
@@ -398,17 +426,17 @@
       }
     },
     "users": {
-      "title": "Users",
-      "description": "Manage admin users",
-      "addUser": "Add User",
-      "editUser": "Edit User",
+      "title": "Admins",
+      "description": "Manage admin accounts",
+      "addUser": "Add Admin",
+      "editUser": "Edit Admin",
       "cannotDeleteSelf": "You cannot delete your own account",
       "cannotDeleteSuperAdmin": "Only super admins can delete super admin accounts",
-      "deleteConfirm": "Are you sure you want to delete this user?",
-      "deleteConfirmTitle": "Delete User",
+      "deleteConfirm": "Are you sure you want to delete this admin?",
+      "deleteConfirmTitle": "Delete Admin",
       "deleteConfirmButton": "Delete",
       "deleteCancelButton": "Cancel",
-      "emptyMessage": "No users found",
+      "emptyMessage": "No admins found",
       "loading": "Loading...",
       "pagesAccess": "pages access",
       "table": {
@@ -439,7 +467,7 @@
         "booking": "Booking",
         "coupons": "Coupons",
         "countries": "Countries",
-        "users": "Users",
+        "users": "Admins",
         "referrals": "Referrals",
         "activityLogs": "Activity Logs",
         "appearance": "Appearance",
@@ -448,18 +476,55 @@
       },
       "buttons": {
         "cancel": "Cancel",
-        "addUser": "Add User",
+        "addUser": "Add Admin",
         "updateUser": "Save Changes"
       },
       "messages": {
-        "saveFailed": "Failed to save user",
+        "saveFailed": "Failed to save admin",
         "cannotEditSelf": "You cannot edit your own account",
-        "deleteFailed": "Failed to delete user",
-        "createFailed": "Failed to create user",
-        "createSuccess": "User created successfully",
-        "deleteSuccess": "User deleted successfully",
-        "updateSuccess": "User updated successfully",
-        "updateFailed": "Failed to update user"
+        "deleteFailed": "Failed to delete admin",
+        "createFailed": "Failed to create admin",
+        "createSuccess": "Admin created successfully",
+        "deleteSuccess": "Admin deleted successfully",
+        "updateSuccess": "Admin updated successfully",
+        "updateFailed": "Failed to update admin"
+      }
+    },
+    "customers": {
+      "title": "Customers",
+      "description": "Manage customers from both apps and control ban status",
+      "searchPlaceholder": "Search by name, email, or phone...",
+      "emptyMessage": "No customers found",
+      "ban": "Ban",
+      "unban": "Unban",
+      "cancel": "Cancel",
+      "banConfirmTitle": "Ban Customer",
+      "banConfirm": "Are you sure you want to ban this customer?",
+      "unbanConfirmTitle": "Unban Customer",
+      "unbanConfirm": "Are you sure you want to unban this customer?",
+      "filters": {
+        "allApps": "All Apps",
+        "manasik": "Manasik",
+        "ghadaq": "Ghadaq",
+        "allStatus": "All Status"
+      },
+      "status": {
+        "active": "Active",
+        "banned": "Banned"
+      },
+      "table": {
+        "name": "Customer",
+        "phone": "Phone",
+        "app": "App",
+        "status": "Status",
+        "createdAt": "Created At",
+        "actions": "Actions"
+      },
+      "messages": {
+        "fetchFailed": "Failed to fetch customers",
+        "updateFailed": "Failed to update customer",
+        "banSuccess": "Customer banned successfully",
+        "unbanSuccess": "Customer unbanned successfully"
       }
     },
     "referrals": {
@@ -524,7 +589,9 @@
         "update": "Update",
         "delete": "Delete",
         "login": "Login",
-        "logout": "Logout"
+        "logout": "Logout",
+        "ban": "Ban",
+        "unban": "Unban"
       },
       "resources": {
         "allResources": "All Resources",
@@ -535,7 +602,8 @@
         "order": "Order",
         "referral": "Referral",
         "coupon": "Coupon",
-        "appearance": "Appearance"
+        "appearance": "Appearance",
+        "customer": "Customer"
       }
     },
     "appearance": {
@@ -630,6 +698,7 @@
     "payments": {
       "title": "Payments",
       "description": "Track monthly collections and generate secure pay links for remaining balances.",
+      "descriptionDirect": "Create direct payment links and monitor link usage lifecycle.",
       "emptyMessage": "No payments found for the selected filters.",
       "analytics": {
         "totalPaid": "Total Paid This Month",
@@ -672,8 +741,8 @@
         "description": "Use order number for remaining-balance links, or leave it empty to create a standalone custom pay link.",
         "orderNumber": "Order Number",
         "orderNumberPlaceholder": "e.g. GHD-202603-00027",
-        "customAmount": "Custom Amount (Optional)",
-        "customAmountPlaceholder": "Leave empty to use full remaining",
+        "customAmount": "Custom Amount",
+        "customAmountPlaceholder": "e.g. 150.00",
         "currencyCode": "Currency",
         "createButton": "Create Pay Link",
         "creating": "Creating...",
@@ -704,7 +773,8 @@
         },
         "status": {
           "used": "Used",
-          "unused": "Unused"
+          "unused": "Unused",
+          "opened": "Opened"
         },
         "filters": {
           "allUsage": "All Usage",
@@ -714,6 +784,7 @@
           "refresh": "Refresh"
         },
         "actions": {
+          "copy": "Copy",
           "delete": "Delete",
           "deleteTitle": "Delete Payment Link",
           "deleteConfirm": "Are you sure you want to delete this payment link?",
@@ -725,6 +796,7 @@
           "orderNumber": "Order Number",
           "amount": "Amount",
           "status": "Status",
+          "openedAt": "Opened At",
           "usedAt": "Used At",
           "expiresAt": "Expires At",
           "createdAt": "Created At",

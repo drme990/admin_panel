@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { User, AdminPage, ALL_ADMIN_PAGES } from '@/types/User';
 import {
   LuPlus as Plus,
@@ -38,6 +38,7 @@ export default function UsersPage() {
   const t = useTranslations('admin.users');
   const { confirm, modalProps } = useConfirmModal();
   const { user: currentUser } = useAuth();
+  const ToolTipPositions = useLocale() === 'ar' ? 'right' : 'left';
 
   const roleOptions = [
     { value: 'admin', label: t('roles.admin') },
@@ -194,7 +195,7 @@ export default function UsersPage() {
         accessor: (user: User) => (
           <div className="flex items-center gap-1">
             {user._id !== currentUser?._id && (
-              <Tooltip position="left" content={t('editUser')}>
+              <Tooltip position={ToolTipPositions} content={t('editUser')}>
                 <Button
                   variant="icon-primary"
                   size="custom"
@@ -206,7 +207,7 @@ export default function UsersPage() {
               </Tooltip>
             )}
             {canDelete(user) && (
-              <Tooltip position="left" content={t('deleteConfirmButton')}>
+              <Tooltip position={ToolTipPositions} content={t('deleteConfirmButton')}>
                 <Button
                   variant="icon-danger"
                   size="custom"
@@ -221,7 +222,7 @@ export default function UsersPage() {
         ),
       },
     ],
-    [t, canDelete, handleDelete, currentUser],
+    [t, canDelete, handleDelete, currentUser, ToolTipPositions],
   );
 
   const handleSubmit = async (e: React.FormEvent) => {

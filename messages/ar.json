@@ -17,6 +17,11 @@
     "productId": "معرف المنتج",
     "productSlug": "رابط المنتج",
     "paymentMethod": "طريقة الدفع",
+    "customerType": {
+      "label": "نوع العميل",
+      "guest": "زائر عام",
+      "registered": "مستخدم مسجل"
+    },
     "referral": "الإحالة",
     "amountDetails": "تفاصيل المبالغ",
     "totals": {
@@ -78,6 +83,7 @@
     "table": {
       "orderNumber": "رقم الطلب",
       "customer": "العميل",
+      "customerType": "نوع العميل",
       "amount": "المبلغ",
       "status": "الحالة",
       "date": "التاريخ",
@@ -92,7 +98,9 @@
       "booking": "الحجز",
       "coupons": "الكوبونات",
       "countries": "البلدان",
-      "users": "المستخدمين",
+      "admins": "المشرفين",
+      "customers": "العملاء",
+      "analytics": "التحليلات",
       "referrals": "الإحالات",
       "activityLogs": "سجل النشاطات",
       "appearance": "المظهر",
@@ -126,7 +134,7 @@
       "welcome": "مرحبًا بك في لوحة التحكم الإدارية",
       "stats": {
         "totalProducts": "إجمالي المنتجات",
-        "totalUsers": "إجمالي المستخدمين",
+        "totalCustomers": "إجمالي العملاء",
         "orders": "الطلبات",
         "countries": "البلدان"
       },
@@ -135,6 +143,26 @@
         "manageProducts": "إدارة المنتجات",
         "manageOrders": "إدارة الطلبات",
         "manageCountries": "إدارة البلدان"
+      },
+      "charts": {
+        "ordersByCountry": "الطلبات حسب البلد",
+        "ordersByWeekday": "الطلبات حسب يوم الأسبوع",
+        "revenueOverTime": "الإيرادات عبر الوقت"
+      }
+    },
+    "analytics": {
+      "title": "التحليلات",
+      "description": "رؤية شاملة للإيرادات وحالة الطلبات وسلوك الدفع وأداء المنتجات.",
+      "loadError": "فشل تحميل بيانات التحليلات.",
+      "revenueOverTime": "الإيرادات عبر الوقت",
+      "ordersByStatus": "الطلبات حسب الحالة",
+      "paymentSplit": "الدفع الكامل مقابل الدفع الجزئي",
+      "topProducts": "أكثر المنتجات مبيعاً",
+      "ordersByCountry": "الطلبات حسب البلد",
+      "ordersByWeekday": "الطلبات حسب يوم الأسبوع",
+      "period": {
+        "day": "آخر 30 يوم",
+        "month": "آخر 12 شهر"
       }
     },
     "products": {
@@ -398,17 +426,17 @@
       }
     },
     "users": {
-      "title": "المستخدمين",
-      "description": "إدارة المستخدمين الإداريين",
-      "addUser": "إضافة مستخدم",
-      "editUser": "تعديل المستخدم",
+      "title": "المشرفين",
+      "description": "إدارة حسابات المشرفين",
+      "addUser": "إضافة مشرف",
+      "editUser": "تعديل المشرف",
       "cannotDeleteSelf": "لا يمكنك حذف حسابك الخاص",
       "cannotDeleteSuperAdmin": "فقط المسؤول الرئيسي يمكنه حذف حسابات المسؤولين الرئيسيين",
-      "deleteConfirm": "هل أنت متأكد من حذف هذا المستخدم؟",
-      "deleteConfirmTitle": "حذف المستخدم",
+      "deleteConfirm": "هل أنت متأكد من حذف هذا المشرف؟",
+      "deleteConfirmTitle": "حذف المشرف",
       "deleteConfirmButton": "حذف",
       "deleteCancelButton": "إلغاء",
-      "emptyMessage": "لا يوجد مستخدمين",
+      "emptyMessage": "لا يوجد مشرفين",
       "loading": "جاري التحميل...",
       "pagesAccess": "صفحات متاحة",
       "table": {
@@ -439,7 +467,7 @@
         "booking": "الحجز",
         "coupons": "الكوبونات",
         "countries": "البلدان",
-        "users": "المستخدمين",
+        "users": "المشرفين",
         "referrals": "الإحالات",
         "activityLogs": "سجل النشاطات",
         "appearance": "المظهر",
@@ -448,18 +476,55 @@
       },
       "buttons": {
         "cancel": "إلغاء",
-        "addUser": "إضافة مستخدم",
+        "addUser": "إضافة مشرف",
         "updateUser": "حفظ التغييرات"
       },
       "messages": {
-        "saveFailed": "فشل حفظ المستخدم",
+        "saveFailed": "فشل حفظ المشرف",
         "cannotEditSelf": "لا يمكنك تعديل حسابك الخاص",
-        "deleteFailed": "فشل حذف المستخدم",
-        "createFailed": "فشل إنشاء المستخدم",
-        "createSuccess": "تم إنشاء المستخدم بنجاح",
-        "deleteSuccess": "تم حذف المستخدم بنجاح",
-        "updateSuccess": "تم تحديث المستخدم بنجاح",
-        "updateFailed": "فشل تحديث المستخدم"
+        "deleteFailed": "فشل حذف المشرف",
+        "createFailed": "فشل إنشاء المشرف",
+        "createSuccess": "تم إنشاء المشرف بنجاح",
+        "deleteSuccess": "تم حذف المشرف بنجاح",
+        "updateSuccess": "تم تحديث المشرف بنجاح",
+        "updateFailed": "فشل تحديث المشرف"
+      }
+    },
+    "customers": {
+      "title": "العملاء",
+      "description": "إدارة عملاء التطبيقين والتحكم في حالة الحظر",
+      "searchPlaceholder": "ابحث بالاسم أو البريد الإلكتروني أو الهاتف...",
+      "emptyMessage": "لا يوجد عملاء",
+      "ban": "حظر",
+      "unban": "إلغاء الحظر",
+      "cancel": "إلغاء",
+      "banConfirmTitle": "حظر عميل",
+      "banConfirm": "هل أنت متأكد من حظر هذا العميل؟",
+      "unbanConfirmTitle": "إلغاء حظر عميل",
+      "unbanConfirm": "هل أنت متأكد من إلغاء حظر هذا العميل؟",
+      "filters": {
+        "allApps": "كل التطبيقات",
+        "manasik": "مناسك",
+        "ghadaq": "غدق",
+        "allStatus": "كل الحالات"
+      },
+      "status": {
+        "active": "نشط",
+        "banned": "محظور"
+      },
+      "table": {
+        "name": "العميل",
+        "phone": "الهاتف",
+        "app": "التطبيق",
+        "status": "الحالة",
+        "createdAt": "تاريخ الإنشاء",
+        "actions": "الإجراءات"
+      },
+      "messages": {
+        "fetchFailed": "فشل جلب العملاء",
+        "updateFailed": "فشل تحديث العميل",
+        "banSuccess": "تم حظر العميل بنجاح",
+        "unbanSuccess": "تم إلغاء حظر العميل بنجاح"
       }
     },
     "referrals": {
@@ -524,7 +589,9 @@
         "update": "تحديث",
         "delete": "حذف",
         "login": "تسجيل دخول",
-        "logout": "تسجيل خروج"
+        "logout": "تسجيل خروج",
+        "ban": "حظر",
+        "unban": "إلغاء الحظر"
       },
       "resources": {
         "allResources": "كل الموارد",
@@ -535,7 +602,8 @@
         "order": "طلب",
         "referral": "إحالة",
         "coupon": "كوبون",
-        "appearance": "مظهر"
+        "appearance": "مظهر",
+        "customer": "عميل"
       }
     },
     "appearance": {
@@ -630,6 +698,7 @@
     "payments": {
       "title": "المدفوعات",
       "description": "متابعة تحصيلات الشهر وإنشاء روابط دفع آمنة للمبالغ المتبقية.",
+      "descriptionDirect": "إنشاء روابط دفع مباشرة ومتابعة دورة استخدام الروابط.",
       "emptyMessage": "لا توجد مدفوعات للمرشحات المحددة.",
       "analytics": {
         "totalPaid": "إجمالي المدفوع هذا الشهر",
@@ -672,8 +741,8 @@
         "description": "استخدم رقم الطلب لإنشاء رابط للمتبقي، أو اتركه فارغًا لإنشاء رابط دفع مخصص مستقل.",
         "orderNumber": "رقم الطلب",
         "orderNumberPlaceholder": "مثال: GHD-202603-00027",
-        "customAmount": "مبلغ مخصص (اختياري)",
-        "customAmountPlaceholder": "اتركه فارغًا لاستخدام كامل المتبقي",
+        "customAmount": "مبلغ مخصص",
+        "customAmountPlaceholder": "مثال: 150.00",
         "currencyCode": "العملة",
         "createButton": "إنشاء رابط دفع",
         "creating": "جارٍ الإنشاء...",
@@ -704,7 +773,8 @@
         },
         "status": {
           "used": "مستخدم",
-          "unused": "غير مستخدم"
+          "unused": "غير مستخدم",
+          "opened": "تم فتحه"
         },
         "filters": {
           "allUsage": "كل حالات الاستخدام",
@@ -714,6 +784,7 @@
           "refresh": "تحديث"
         },
         "actions": {
+          "copy": "نسخ",
           "delete": "حذف",
           "deleteTitle": "حذف رابط الدفع",
           "deleteConfirm": "هل أنت متأكد أنك تريد حذف رابط الدفع هذا؟",
@@ -725,6 +796,7 @@
           "orderNumber": "رقم الطلب",
           "amount": "المبلغ",
           "status": "الحالة",
+          "openedAt": "تاريخ الفتح",
           "usedAt": "تاريخ الاستخدام",
           "expiresAt": "ينتهي في",
           "createdAt": "تاريخ الإنشاء",

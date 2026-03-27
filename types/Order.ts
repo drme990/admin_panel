@@ -62,6 +62,8 @@ export interface ReservationOrderField {
 export interface Order {
   _id: string;
   orderNumber: string;
+  userId?: string;
+  isGuest?: boolean;
   items: OrderItem[];
   totalAmount: number;
   currency: string;

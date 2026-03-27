@@ -5,19 +5,21 @@ import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import {
   LuLayoutDashboard as LayoutDashboard,
-  LuPackage as Package,
-  LuUsers as Users,
-  LuMenu as Menu,
-  LuX as X,
-  LuFileText as FileText,
-  LuShoppingCart as ShoppingCart,
-  LuGlobe as Globe,
-  LuTicket as Ticket,
-  LuUserRoundPlus as UserRoundPlus,
-  LuPalette as Palette,
-  LuRefreshCw as RefreshCw,
-  LuCalendarDays as CalendarDays,
-  LuWallet as Wallet,
+  LuPackage,
+  LuUsers,
+  LuMenu,
+  LuX,
+  LuFileText,
+  LuShoppingCart,
+  LuGlobe,
+  LuTicket,
+  LuUserRoundPlus,
+  LuPalette,
+  LuRefreshCw,
+  LuCalendarDays,
+  LuWallet,
+  LuUserCog,
+  LuChartNoAxesCombined,
 } from 'react-icons/lu';
 import { useState, useEffect } from 'react';
 import Logo from '@/components/shared/logo';
@@ -28,45 +30,107 @@ import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { PageLoading } from '@/components/ui/loading';
 import Button from '@/components/ui/button';
+import type { AdminPage } from '@/types/User';
 
 const navItems = [
-  { key: 'dashboard', href: '/', icon: LayoutDashboard, superAdminOnly: false },
-  { key: 'products', href: '/products', icon: Package, superAdminOnly: false },
-  { key: 'orders', href: '/orders', icon: ShoppingCart, superAdminOnly: false },
+  {
+    key: 'dashboard',
+    href: '/',
+    icon: LayoutDashboard,
+    superAdminOnly: false,
+    permissionKey: null,
+  },
+  {
+    key: 'products',
+    href: '/products',
+    icon: LuPackage,
+    superAdminOnly: false,
+    permissionKey: 'products',
+  },
+  {
+    key: 'orders',
+    href: '/orders',
+    icon: LuShoppingCart,
+    superAdminOnly: false,
+    permissionKey: 'orders',
+  },
+  {
+    key: 'customers',
+    href: '/customers',
+    icon: LuUsers,
+    superAdminOnly: false,
+    permissionKey: 'customers',
+  },
   {
     key: 'payments',
     href: '/payments',
-    icon: Wallet,
+    icon: LuWallet,
     superAdminOnly: false,
+    permissionKey: 'payments',
+  },
+  {
+    key: 'analytics',
+    href: '/analytics',
+    icon: LuChartNoAxesCombined,
+    superAdminOnly: false,
+    permissionKey: 'orders',
   },
   {
     key: 'booking',
     href: '/booking',
-    icon: CalendarDays,
+    icon: LuCalendarDays,
     superAdminOnly: false,
+    permissionKey: 'booking',
   },
-  { key: 'coupons', href: '/coupons', icon: Ticket, superAdminOnly: false },
-  { key: 'countries', href: '/countries', icon: Globe, superAdminOnly: false },
-  { key: 'users', href: '/users', icon: Users, superAdminOnly: false },
+  {
+    key: 'coupons',
+    href: '/coupons',
+    icon: LuTicket,
+    superAdminOnly: false,
+    permissionKey: 'coupons',
+  },
+  {
+    key: 'countries',
+    href: '/countries',
+    icon: LuGlobe,
+    superAdminOnly: false,
+    permissionKey: 'countries',
+  },
+  {
+    key: 'admins',
+    href: '/admins',
+    icon: LuUserCog,
+    superAdminOnly: false,
+    permissionKey: 'admins',
+  },
   {
     key: 'referrals',
     href: '/referrals',
-    icon: UserRoundPlus,
+    icon: LuUserRoundPlus,
     superAdminOnly: false,
+    permissionKey: 'referrals',
   },
   {
     key: 'appearance',
     href: '/appearance',
-    icon: Palette,
+    icon: LuPalette,
     superAdminOnly: false,
+    permissionKey: 'appearance',
   },
   {
     key: 'exchange',
     href: '/exchange',
-    icon: RefreshCw,
+    icon: LuRefreshCw,
     superAdminOnly: false,
+    permissionKey: 'exchange',
   },
-  { key: 'activityLogs', href: '/logs', icon: FileText, superAdminOnly: false },
+  {
+    key: 'activityLogs',
+    href: '/logs',
+    icon: LuFileText,
+    superAdminOnly: false,
+    permissionKey: 'activityLogs',
+  },
 ];
 
 function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
@@ -82,10 +146,9 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   const filteredNavItems = navItems.filter((item) => {
     if (item.key === 'dashboard') return true;
     if (user?.role === 'super_admin') return true;
+    if (!item.permissionKey) return false;
     return (
-      user?.allowedPages?.includes(
-        item.key as import('@/types/User').AdminPage,
-      ) ?? false
+      user?.allowedPages?.includes(item.permissionKey as AdminPage) ?? false
     );
   });
 
@@ -139,7 +202,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
             onClick={() => setSidebarOpen(!sidebarOpen)}
             className="p-2 rounded-lg hover:bg-background transition-colors"
           >
-            {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
+            {sidebarOpen ? <LuX size={24} /> : <LuMenu size={24} />}
           </Button>
           <Logo />
         </div>

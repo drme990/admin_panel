@@ -23,8 +23,6 @@ import {
   LuHash as Hash,
   LuCreditCard as CreditCard,
   LuUserRoundPlus as UserRoundPlus,
-  LuLink2 as Link2,
-  LuCopy as Copy,
   LuTag as Tag,
 } from 'react-icons/lu';
 import { Referral } from '@/types/Referral';
@@ -56,9 +54,20 @@ interface OrdersResponse {
   };
 }
 
+function isOrderGuest(order: Pick<Order, 'userId' | 'isGuest'>): boolean {
+  if (typeof order.isGuest === 'boolean') {
+    return order.isGuest;
+  }
+
+  const hasUserId =
+    typeof order.userId === 'string' && order.userId.trim().length > 0;
+  return !hasUserId;
+}
+
 export default function OrderHistoryPage() {
   const t = useTranslations('orders');
   const locale = useLocale();
+  const ToolTipPositions = locale === 'ar' ? 'right' : 'left';
   const searchParams = useSearchParams();
   const initialQuery = searchParams.get('q') || '';
   const initialStatus = searchParams.get('s') || '';
@@ -81,11 +90,6 @@ export default function OrderHistoryPage() {
   const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
   const [bulkStatus, setBulkStatus] = useState('');
   const [bulkUpdating, setBulkUpdating] = useState(false);
-  const [creatingPayLink, setCreatingPayLink] = useState(false);
-  const [payLinkData, setPayLinkData] = useState<{
-    url: string;
-    expiresAt: string;
-  } | null>(null);
 
   useEffect(() => {
     const fetchReferrals = async () => {
@@ -138,47 +142,7 @@ export default function OrderHistoryPage() {
   const viewOrder = (order: Order) => {
     setSelectedOrder(order);
     setModalStatus(order.status);
-    setPayLinkData(null);
     setIsModalOpen(true);
-  };
-
-  const createPayLink = async () => {
-    if (!selectedOrder) return;
-
-    try {
-      setCreatingPayLink(true);
-      const res = await fetch(`/api/orders/${selectedOrder._id}/pay-link`, {
-        method: 'POST',
-      });
-      const data = await res.json();
-
-      if (!data.success) {
-        throw new Error(data.error || 'Failed to create pay link');
-      }
-
-      const url = data.data?.payLinkUrl as string;
-      const expiresAt = data.data?.expiresAt as string;
-      setPayLinkData({ url, expiresAt });
-      await navigator.clipboard.writeText(url);
-      toast.success(t('payLink.createdAndCopied'));
-    } catch (error) {
-      console.error('Error creating pay link:', error);
-      toast.error(
-        error instanceof Error ? error.message : t('payLink.createFailed'),
-      );
-    } finally {
-      setCreatingPayLink(false);
-    }
-  };
-
-  const copyPayLink = async () => {
-    if (!payLinkData?.url) return;
-    try {
-      await navigator.clipboard.writeText(payLinkData.url);
-      toast.success(t('payLink.copied'));
-    } catch {
-      toast.error(t('payLink.copyFailed'));
-    }
   };
 
   const toggleOrderSelection = (orderId: string) => {
@@ -371,6 +335,16 @@ export default function OrderHistoryPage() {
       ),
     },
     {
+      header: t('table.customerType'),
+      accessor: (row: Order) => (
+        <span className="text-sm font-medium">
+          {isOrderGuest(row)
+            ? t('customerType.guest')
+            : t('customerType.registered')}
+        </span>
+      ),
+    },
+    {
       header: t('table.amount'),
       accessor: (row: Order) => (
         <span className="font-bold text-success">
@@ -399,7 +373,7 @@ export default function OrderHistoryPage() {
     {
       header: t('table.actions'),
       accessor: (row: Order) => (
-        <Tooltip position="left" content={t('viewDetails')}>
+        <Tooltip position={ToolTipPositions} content={t('viewDetails')}>
           <Button
             variant="icon-primary"
             size="custom"
@@ -619,53 +593,6 @@ export default function OrderHistoryPage() {
               </div>
             </div>
 
-            {(selectedOrder.remainingAmount ?? 0) > 0 && (
-              <div className="rounded-site border border-primary/20 bg-primary/5 p-3 space-y-3">
-                <div className="flex items-center justify-between gap-3">
-                  <p className="text-sm font-medium text-foreground">
-                    {t('payLink.description')}
-                  </p>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={createPayLink}
-                    disabled={creatingPayLink}
-                  >
-                    <Link2 size={16} />
-                    {creatingPayLink
-                      ? t('payLink.creating')
-                      : t('payLink.createButton')}
-                  </Button>
-                </div>
-
-                {payLinkData && (
-                  <div className="rounded-lg border border-stroke bg-background p-2 space-y-2">
-                    <div className="flex items-center gap-2">
-                      <input
-                        readOnly
-                        value={payLinkData.url}
-                        className="w-full rounded-md border border-stroke bg-background px-2 py-1 text-xs"
-                      />
-                      <Button
-                        type="button"
-                        variant="icon"
-                        size="sm"
-                        onClick={copyPayLink}
-                        title={t('payLink.copy')}
-                      >
-                        <Copy size={14} />
-                      </Button>
-                    </div>
-                    <p className="text-xs text-secondary">
-                      {t('payLink.expiresAt', {
-                        date: formatDate(payLinkData.expiresAt),
-                      })}
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
-
             <div>
               <h3 className="font-semibold mb-3 flex items-center gap-2">
                 <Package size={16} /> {t('items')}
@@ -716,6 +643,15 @@ export default function OrderHistoryPage() {
                   icon={<Package size={14} />}
                   label={t('source')}
                   value={selectedOrder.source || 'manasik'}
+                />
+                <InfoRow
+                  icon={<Hash size={14} />}
+                  label={t('customerType.label')}
+                  value={
+                    isOrderGuest(selectedOrder)
+                      ? t('customerType.guest')
+                      : t('customerType.registered')
+                  }
                 />
                 <InfoRow
                   icon={<Mail size={14} />}

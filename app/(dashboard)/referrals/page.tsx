@@ -7,7 +7,7 @@ import {
   LuTrash2 as Trash2,
   LuSearch as Search,
 } from 'react-icons/lu';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import Modal from '@/components/ui/modal';
 import Input from '@/components/ui/input';
 import Table from '@/components/ui/table';
@@ -33,6 +33,7 @@ export default function ReferralsPage() {
   });
   const t = useTranslations('admin.referrals');
   const { confirm, modalProps } = useConfirmModal();
+  const ToolTipPositions = useLocale() === 'ar' ? 'right' : 'left';
 
   const fetchReferrals = useCallback(async () => {
     setLoading(true);
@@ -185,7 +186,7 @@ export default function ReferralsPage() {
       header: t('table.actions'),
       accessor: (row: Referral) => (
         <div className="flex items-center gap-2">
-          <Tooltip position="left" content={t('editReferral')}>
+          <Tooltip position={ToolTipPositions} content={t('editReferral')}>
             <Button
               variant="icon-primary"
               size="custom"
@@ -198,7 +199,7 @@ export default function ReferralsPage() {
               <Edit size={16} />
             </Button>
           </Tooltip>
-          <Tooltip position="left" content={t('deleteButton')}>
+          <Tooltip position={ToolTipPositions} content={t('deleteButton')}>
             <Button
               variant="icon-danger"
               size="custom"

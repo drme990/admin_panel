@@ -15,7 +15,7 @@ import { useRouter } from 'next/navigation';
 import Table from '@/components/ui/table';
 import Modal from '@/components/ui/modal';
 import { Tooltip } from '@/components/ui/tooltip';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { toast } from 'react-toastify';
 import ConfirmModal, { useConfirmModal } from '@/components/ui/confirm-modal';
 import Button from '@/components/ui/button';
@@ -29,6 +29,7 @@ export default function ProductsPage() {
   const router = useRouter();
   const t = useTranslations('admin.products');
   const { confirm, modalProps } = useConfirmModal();
+  const ToolTipPositions = useLocale() === 'ar' ? 'right' : 'left';
 
   useEffect(() => {
     fetchProducts();
@@ -169,7 +170,7 @@ export default function ProductsPage() {
       header: t('table.actions'),
       accessor: (product: Product) => (
         <div className="flex items-center gap-2">
-          <Tooltip position="left" content={t('editProduct')}>
+          <Tooltip position={ToolTipPositions} content={t('editProduct')}>
             <Button
               variant="icon-primary"
               size="custom"
@@ -182,7 +183,7 @@ export default function ProductsPage() {
               <Pencil size={16} />
             </Button>
           </Tooltip>
-          <Tooltip position="left" content={t('deleteProduct')}>
+          <Tooltip position={ToolTipPositions} content={t('deleteProduct')}>
             <Button
               variant="icon-danger"
               size="custom"

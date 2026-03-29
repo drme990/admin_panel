@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Coupon } from '@/types/Coupon';
 import {
   LuPlus as Plus,
@@ -16,10 +16,19 @@ import { toast } from 'react-toastify';
 import ConfirmModal, { useConfirmModal } from '@/components/ui/confirm-modal';
 import Button from '@/components/ui/button';
 import { Tooltip } from '@/components/ui/tooltip';
+import Pagination from '@/components/ui/pagination';
 
 export default function CouponsPage() {
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    totalItems: 0,
+    hasNextPage: false,
+    hasPrevPage: false,
+  });
   const [showModal, setShowModal] = useState(false);
   const [editingCoupon, setEditingCoupon] = useState<Coupon | null>(null);
   const [formData, setFormData] = useState({
@@ -38,23 +47,25 @@ export default function CouponsPage() {
   const t = useTranslations('admin.coupons');
   const { confirm, modalProps } = useConfirmModal();
 
-  useEffect(() => {
-    fetchCoupons();
-  }, []);
-
-  const fetchCoupons = async () => {
+  const fetchCoupons = useCallback(async (currentPage: number) => {
     try {
-      const res = await fetch('/api/coupons');
+      setLoading(true);
+      const res = await fetch(`/api/coupons?limit=20&page=${currentPage}`);
       const data = await res.json();
       if (data.success) {
         setCoupons(data.data.coupons);
+        if (data.data.pagination) setPagination(data.data.pagination);
       }
     } catch (error) {
       console.error('Error fetching coupons:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchCoupons(page);
+  }, [page, fetchCoupons]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -97,7 +108,7 @@ export default function CouponsPage() {
             ? t('messages.updateSuccess')
             : t('messages.createSuccess'),
         );
-        fetchCoupons();
+        fetchCoupons(page);
         closeModal();
       } else {
         const data = await res.json();
@@ -124,7 +135,7 @@ export default function CouponsPage() {
       const res = await fetch(`/api/coupons/${id}`, { method: 'DELETE' });
       if (res.ok) {
         toast.success(t('messages.deleteSuccess'));
-        fetchCoupons();
+        fetchCoupons(page);
       } else {
         const data = await res.json();
         toast.error(data.error || t('messages.deleteFailed'));
@@ -282,6 +293,14 @@ export default function CouponsPage() {
         data={coupons}
         loading={loading}
         emptyMessage={t('emptyMessage')}
+      />
+
+      <Pagination
+        currentPage={pagination.currentPage}
+        totalPages={pagination.totalPages}
+        onPageChange={(p) => setPage(p)}
+        hasNextPage={pagination.hasNextPage}
+        hasPrevPage={pagination.hasPrevPage}
       />
 
       <Modal

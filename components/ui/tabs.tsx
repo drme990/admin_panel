@@ -47,8 +47,8 @@ export default function Tabs<T extends TabValue>({
               'rounded-md font-medium transition-colors',
               size === 'sm' ? 'px-2.5 py-1 text-xs' : 'px-3 py-1.5 text-sm',
               active
-                ? 'bg-secondary text-foreground'
-                : 'text-secondary hover:bg-card-bg hover:text-foreground',
+                ? 'gradient-site gradient-text shadow-lg'
+                : 'border border-stroke text-foreground hover:bg-foreground hover:text-background',
             )}
           >
             {option.label}

@@ -62,6 +62,7 @@
     "status": {
       "pending": "قيد الانتظار",
       "processing": "جاري المعالجة",
+      "partially-paid": "مدفوع جزئيا",
       "paid": "مدفوع",
       "completed": "مكتمل",
       "failed": "فشل",
@@ -720,6 +721,7 @@
       "status": {
         "pending": "قيد الانتظار",
         "processing": "جاري المعالجة",
+        "partially-paid": "مدفوع جزئيا",
         "paid": "مدفوع",
         "completed": "مكتمل",
         "failed": "فشل",

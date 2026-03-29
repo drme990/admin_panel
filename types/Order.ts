@@ -1,6 +1,7 @@
 export type OrderStatus =
   | 'pending'
   | 'processing'
+  | 'partially-paid'
   | 'paid'
   | 'completed'
   | 'failed'
@@ -76,6 +77,7 @@ export interface Order {
   easykashResponse?: Record<string, string | number | undefined>;
   // Coupon
   couponCode?: string;
+  couponId?: string;
   couponDiscount?: number;
   // Partial payment
   fullAmount?: number;

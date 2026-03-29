@@ -15,12 +15,19 @@ import {
 } from 'react-icons/lu';
 import { PageLoading } from '@/components/ui/loading';
 import Button from '@/components/ui/button';
+import Tabs from '@/components/ui/tabs';
 import { BannerText, WorksImages, ProjectName } from '@/types/Appearance';
 
 const PROJECTS: { key: ProjectName; label: string }[] = [
   { key: 'ghadaq', label: 'Ghadaq' },
   { key: 'manasik', label: 'Manasik' },
 ];
+
+const PROJECT_TAB_OPTIONS: Array<{ value: ProjectName; label: string }> =
+  PROJECTS.map((project) => ({
+    value: project.key,
+    label: project.label,
+  }));
 
 const EMPTY_BANNER_TEXT: BannerText = { ar: '', en: '' };
 
@@ -246,31 +253,12 @@ export default function AppearancePage() {
       </div>
 
       {/* Project Tabs */}
-      <div className="flex gap-2 border-b border-stroke">
-        {PROJECTS.map((p) => (
-          <Button
-            variant="custom"
-            size="custom"
-            key={p.key}
-            onClick={() => setActiveProject(p.key)}
-            className={`px-5 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
-              activeProject === p.key
-                ? 'border-current font-bold'
-                : 'border-transparent text-secondary hover:text-foreground'
-            }`}
-            style={
-              activeProject === p.key
-                ? {
-                    background: 'var(--gradient-site)',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                  }
-                : undefined
-            }
-          >
-            {p.label}
-          </Button>
-        ))}
+      <div className="border-b border-stroke pb-3">
+        <Tabs
+          value={activeProject}
+          options={PROJECT_TAB_OPTIONS}
+          onChange={setActiveProject}
+        />
       </div>
 
       {/* Works Images Section */}

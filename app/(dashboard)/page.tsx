@@ -61,7 +61,7 @@ async function getAnalytics() {
       cookieStore.get('admin_panel-token')?.value ||
       cookieStore.get('admin-token')?.value;
 
-    const res = await fetch(`${BACKEND_URL}/api/admin/stats/analytics`, {
+    const res = await fetch(`${BACKEND_URL}/api/admin/stats/analytics?days=7`, {
       cache: 'no-store',
       headers: token
         ? { Cookie: `admin_panel-token=${token}; admin-token=${token}` }
@@ -123,7 +123,6 @@ export default async function DashboardPage() {
   const stats = await getStats();
   const analytics = await getAnalytics();
   const t = await getTranslations('admin.dashboard');
-  const tAnalytics = await getTranslations('admin.analytics');
 
   return (
     <div className="space-y-8">
@@ -165,17 +164,11 @@ export default async function DashboardPage() {
         />
       </div>
 
-      <div className="mt-8 bg-card-bg border border-stroke rounded-site p-6">
-        <h2 className="text-xl font-bold text-foreground mb-6">
-          {t('charts.revenueOverTime')}
-        </h2>
-        <RevenueOverTimeChart
-          dayData={analytics.revenueByDay}
-          monthData={analytics.revenueByMonth}
-          dayLabel={tAnalytics('period.day')}
-          monthLabel={tAnalytics('period.month')}
-        />
-      </div>
+      <RevenueOverTimeChart
+        className="mt-8"
+        data={analytics.revenueByDay}
+        title={t('charts.revenueOverTime')}
+      />
     </div>
   );
 }

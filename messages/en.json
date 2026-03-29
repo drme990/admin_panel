@@ -62,6 +62,7 @@
     "status": {
       "pending": "Pending",
       "processing": "Processing",
+      "partially-paid": "Partially Paid",
       "paid": "Paid",
       "completed": "Completed",
       "failed": "Failed",
@@ -720,6 +721,7 @@
       "status": {
         "pending": "Pending",
         "processing": "Processing",
+        "partially-paid": "Partially Paid",
         "paid": "Paid",
         "completed": "Completed",
         "failed": "Failed",

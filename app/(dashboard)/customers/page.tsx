@@ -10,6 +10,7 @@ import {
 import Table from '@/components/ui/table';
 import Button from '@/components/ui/button';
 import Input from '@/components/ui/input';
+import Tabs from '@/components/ui/tabs';
 import { toast } from 'react-toastify';
 import ConfirmModal, { useConfirmModal } from '@/components/ui/confirm-modal';
 import { Tooltip } from '@/components/ui/tooltip';
@@ -39,6 +40,24 @@ export default function CustomersPage() {
   const [banFilter, setBanFilter] = useState<BanFilter>('all');
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const ToolTipPositions = useLocale() === 'ar' ? 'right' : 'left';
+
+  const appFilterOptions = useMemo(
+    () => [
+      { value: 'all' as const, label: t('filters.allApps') },
+      { value: 'manasik' as const, label: t('filters.manasik') },
+      { value: 'ghadaq' as const, label: t('filters.ghadaq') },
+    ],
+    [t],
+  );
+
+  const banFilterOptions = useMemo(
+    () => [
+      { value: 'all' as const, label: t('filters.allStatus') },
+      { value: 'active' as const, label: t('status.active') },
+      { value: 'banned' as const, label: t('status.banned') },
+    ],
+    [t],
+  );
 
   const fetchCustomers = useCallback(async () => {
     try {
@@ -222,51 +241,21 @@ export default function CustomersPage() {
           />
 
           <div className="flex items-center gap-2 flex-wrap">
-            <Button
-              variant={appFilter === 'all' ? 'primary' : 'outline'}
+            <Tabs
+              value={appFilter}
+              options={appFilterOptions}
+              onChange={setAppFilter}
               size="sm"
-              onClick={() => setAppFilter('all')}
-            >
-              {t('filters.allApps')}
-            </Button>
-            <Button
-              variant={appFilter === 'manasik' ? 'primary' : 'outline'}
-              size="sm"
-              onClick={() => setAppFilter('manasik')}
-            >
-              {t('filters.manasik')}
-            </Button>
-            <Button
-              variant={appFilter === 'ghadaq' ? 'primary' : 'outline'}
-              size="sm"
-              onClick={() => setAppFilter('ghadaq')}
-            >
-              {t('filters.ghadaq')}
-            </Button>
+            />
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
-            <Button
-              variant={banFilter === 'all' ? 'primary' : 'outline'}
+            <Tabs
+              value={banFilter}
+              options={banFilterOptions}
+              onChange={setBanFilter}
               size="sm"
-              onClick={() => setBanFilter('all')}
-            >
-              {t('filters.allStatus')}
-            </Button>
-            <Button
-              variant={banFilter === 'active' ? 'primary' : 'outline'}
-              size="sm"
-              onClick={() => setBanFilter('active')}
-            >
-              {t('status.active')}
-            </Button>
-            <Button
-              variant={banFilter === 'banned' ? 'primary' : 'outline'}
-              size="sm"
-              onClick={() => setBanFilter('banned')}
-            >
-              {t('status.banned')}
-            </Button>
+            />
           </div>
         </div>
       </div>

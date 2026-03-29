@@ -9,37 +9,50 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
+import { useTranslations } from 'next-intl';
+import { cn } from '@/lib/utils';
 
 interface DataPoint {
   name: string;
   value: number;
 }
 
-export function TopProductsChart({ data }: { data: DataPoint[] }) {
+export function TopProductsChart({ data, className, title }: { data: DataPoint[], className?: string, title?: string }) {
+  const t = useTranslations('admin.analytics');
+
   return (
-    <div className="h-80 w-full">
-      <ResponsiveContainer width="100%" height="100%">
-        <BarChart
-          data={data}
-          margin={{ top: 20, right: 24, left: 0, bottom: 0 }}
-        >
-          <CartesianGrid strokeDasharray="3 3" stroke="var(--border-stroke)" />
-          <XAxis
-            dataKey="name"
-            stroke="var(--foreground)"
-            tickFormatter={(v) => String(v).slice(0, 14)}
-          />
-          <YAxis stroke="var(--foreground)" />
-          <Tooltip
-            contentStyle={{
-              backgroundColor: 'var(--background)',
-              border: '1px solid var(--border-stroke)',
-              borderRadius: '8px',
-            }}
-          />
-          <Bar dataKey="value" fill="#06b6d4" radius={[6, 6, 0, 0]} />
-        </BarChart>
-      </ResponsiveContainer>
+    <div className={cn("rounded-site border border-stroke bg-card-bg p-6", className)}>
+      <h2 className="text-xl font-semibold text-foreground mb-6">
+        {title || t('topProducts')}
+      </h2>
+      <div className="h-80 w-full">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={data} layout="vertical" margin={{ top: 0, right: 0, left: 40, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--border-stroke)" horizontal={false} />
+            <XAxis type="number" stroke="var(--secondary)" fontSize={12} tickLine={false} axisLine={false} />
+            <YAxis
+              type="category"
+              dataKey="name"
+              stroke="var(--secondary)"
+              fontSize={12}
+              tickLine={false}
+              axisLine={false}
+              width={150}
+            />
+            <Tooltip
+              contentStyle={{
+                backgroundColor: 'var(--card-bg)',
+                border: '1px solid var(--border-stroke)',
+                borderRadius: '8px',
+                color: 'var(--foreground)'
+              }}
+              cursor={{ fill: 'var(--border-stroke)', opacity: 0.4 }}
+              itemStyle={{ color: 'var(--foreground)' }}
+            />
+            <Bar dataKey="value" fill="#3b82f6" radius={[0, 4, 4, 0]} barSize={24} />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
     </div>
   );
 }

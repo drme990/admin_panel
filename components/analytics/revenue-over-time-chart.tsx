@@ -1,7 +1,5 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import Tabs from '@/components/ui/tabs';
 import {
   LineChart,
   Line,
@@ -11,8 +9,8 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
-
-type RevenuePeriod = 'day' | 'month';
+import { useTranslations } from 'next-intl';
+import { cn } from '@/lib/utils';
 
 type RevenuePoint = {
   label: string;
@@ -20,66 +18,74 @@ type RevenuePoint = {
 };
 
 interface RevenueOverTimeChartProps {
-  dayData: RevenuePoint[];
-  monthData: RevenuePoint[];
-  dayLabel: string;
-  monthLabel: string;
-  initialPeriod?: RevenuePeriod;
+  data: RevenuePoint[];
   lineColor?: string;
+  className?: string;
+  title?: string;
 }
 
 export function RevenueOverTimeChart({
-  dayData,
-  monthData,
-  dayLabel,
-  monthLabel,
-  initialPeriod = 'day',
+  data,
   lineColor = '#0ea5e9',
+  className,
+  title,
 }: RevenueOverTimeChartProps) {
-  const [period, setPeriod] = useState<RevenuePeriod>(initialPeriod);
-
-  const options = useMemo(
-    () => [
-      { value: 'day' as const, label: dayLabel },
-      { value: 'month' as const, label: monthLabel },
-    ],
-    [dayLabel, monthLabel],
-  );
-
-  const data = period === 'day' ? dayData : monthData;
+  const t = useTranslations('admin.analytics');
 
   return (
-    <div className="space-y-4">
-      {/* Tabs */}
-      <Tabs value={period} onChange={setPeriod} options={options} />
+    <div
+      className={cn(
+        'rounded-site border border-stroke bg-card-bg p-6',
+        className,
+      )}
+    >
+      <h2 className="text-xl font-semibold text-foreground mb-6">
+        {title || t('revenueOverTime')}
+      </h2>
 
       {/* Chart */}
       <div className="h-80 w-full">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart
             data={data}
-            margin={{ top: 20, right: 24, left: 0, bottom: 0 }}
+            margin={{ top: 10, right: 24, left: 0, bottom: 0 }}
           >
             <CartesianGrid
               strokeDasharray="3 3"
               stroke="var(--border-stroke)"
+              vertical={false}
             />
-            <XAxis dataKey="label" stroke="var(--foreground)" />
-            <YAxis stroke="var(--foreground)" />
+            <XAxis
+              dataKey="label"
+              stroke="var(--secondary)"
+              fontSize={12}
+              tickLine={false}
+              axisLine={false}
+              dy={10}
+            />
+            <YAxis
+              stroke="var(--secondary)"
+              fontSize={12}
+              tickLine={false}
+              axisLine={false}
+              dx={-10}
+            />
             <Tooltip
               contentStyle={{
-                backgroundColor: 'var(--background)',
+                backgroundColor: 'var(--card-bg)',
                 border: '1px solid var(--border-stroke)',
                 borderRadius: '8px',
+                color: 'var(--foreground)',
               }}
+              itemStyle={{ color: 'var(--foreground)' }}
             />
             <Line
               type="monotone"
               dataKey="revenue"
               stroke={lineColor}
               strokeWidth={3}
-              dot={{ r: 2 }}
-              activeDot={{ r: 5 }}
+              dot={{ r: 4, fill: lineColor, strokeWidth: 0 }}
+              activeDot={{ r: 6, strokeWidth: 0 }}
             />
           </LineChart>
         </ResponsiveContainer>

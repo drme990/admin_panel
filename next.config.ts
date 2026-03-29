@@ -17,6 +17,9 @@ const nextConfig: NextConfig = {
   },
   compress: true,
   poweredByHeader: false,
+  experimental: {
+    proxyClientMaxBodySize: '60mb',
+  },
   async rewrites() {
     const backendUrl = process.env.BACKEND_URL || 'http://localhost:3000';
     return [

@@ -13,7 +13,7 @@ import MultiCurrencyPriceEditor, {
 import MultiCurrencyMinimumPaymentEditor, {
   CurrencyMinimumPayment,
 } from '@/components/admin/multi-currency-minimum-payment-editor';
-import MultiImageUpload from '@/components/admin/multi-image-upload';
+import MultiMediaUpload from '@/components/admin/multi-media-upload';
 import RichTextEditor from '@/components/ui/rich-text-editor';
 import { useTranslations } from 'next-intl';
 import { toast } from 'react-toastify';
@@ -508,9 +508,9 @@ export default function ProductForm({
           dir="ltr"
         />
 
-        <MultiImageUpload
-          images={formData.images}
-          onChange={(images) => setFormData({ ...formData, images })}
+        <MultiMediaUpload
+          media={formData.images}
+          onChange={(media) => setFormData({ ...formData, images: media })}
         />
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">

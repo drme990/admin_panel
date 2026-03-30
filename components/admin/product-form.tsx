@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Product } from '@/types/Product';
 import Input from '@/components/ui/input';
@@ -13,7 +13,9 @@ import MultiCurrencyPriceEditor, {
 import MultiCurrencyMinimumPaymentEditor, {
   CurrencyMinimumPayment,
 } from '@/components/admin/multi-currency-minimum-payment-editor';
-import MultiMediaUpload from '@/components/admin/multi-media-upload';
+import MultiMediaUpload, {
+  type UploadProgressState,
+} from '@/components/admin/multi-media-upload';
 import RichTextEditor from '@/components/ui/rich-text-editor';
 import { useTranslations } from 'next-intl';
 import { toast } from 'react-toastify';
@@ -44,6 +46,15 @@ export default function ProductForm({
   onSubmit,
   loading = false,
 }: ProductFormProps) {
+  const initialUploadState: UploadProgressState = {
+    isUploading: false,
+    overallProgress: 0,
+    currentFileName: null,
+    currentFileProgress: 0,
+    completedFiles: 0,
+    totalFiles: 0,
+  };
+
   const defaultSize = {
     name: { ar: '', en: '' },
     price: 0,
@@ -87,9 +98,19 @@ export default function ProductForm({
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [hasChanges, setHasChanges] = useState(false);
   const [isFormDataReady, setIsFormDataReady] = useState(false);
+  const [uploadProgress, setUploadProgress] =
+    useState<UploadProgressState>(initialUploadState);
+  const [cancelUpload, setCancelUpload] = useState<(() => void) | null>(null);
   const isInitialMount = useRef(true);
   const t = useTranslations('admin.products');
   const router = useRouter();
+
+  // Handle cancel upload with proper callback
+  const handleCancelUpload = useCallback(() => {
+    if (cancelUpload) {
+      cancelUpload();
+    }
+  }, [cancelUpload]);
 
   // Fetch all products for upgrade dropdown
   useEffect(() => {
@@ -322,6 +343,13 @@ export default function ProductForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (uploadProgress.isUploading) {
+      toast.error(
+        'Please wait for media upload to finish before creating or updating the product.',
+      );
+      return;
+    }
+
     if (!formData.name_ar.trim() || !formData.name_en.trim()) {
       toast.error(t('messages.nameRequired') || 'Product name is required');
       return;
@@ -451,6 +479,39 @@ export default function ProductForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      {uploadProgress.isUploading && (
+        <div className="fixed inset-x-0 top-15 md:top-17.5 z-120 px-3 pt-2 pointer-events-none">
+          <div className="mx-auto max-w-4xl rounded-lg border border-success/40 bg-card-bg shadow-lg pointer-events-auto">
+            <div className="flex items-center justify-between gap-2 px-3 py-2 text-xs text-secondary">
+              <span className="truncate">
+                Uploading media: {uploadProgress.currentFileName || 'file'}
+              </span>
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-foreground">
+                  {uploadProgress.overallProgress}%
+                </span>
+                <Button
+                  type="button"
+                  variant="custom"
+                  size="custom"
+                  onClick={handleCancelUpload}
+                  disabled={!cancelUpload}
+                  className="px-3 py-1.5 text-xs font-medium text-background bg-primary hover:opacity-90 transition-opacity rounded-md disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                >
+                  Cancel Upload
+                </Button>
+              </div>
+            </div>
+            <div className="h-1.5 w-full bg-stroke/70 overflow-hidden rounded-b-lg">
+              <div
+                className="h-full bg-success transition-[width] duration-200"
+                style={{ width: `${uploadProgress.overallProgress}%` }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Basic product information */}
       <section className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -511,6 +572,8 @@ export default function ProductForm({
         <MultiMediaUpload
           media={formData.images}
           onChange={(media) => setFormData({ ...formData, images: media })}
+          onUploadProgressChange={setUploadProgress}
+          onCancelUploadReady={(fn) => setCancelUpload(() => fn)}
         />
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -1040,14 +1103,16 @@ export default function ProductForm({
         <Button
           type="submit"
           variant="primary"
-          disabled={loading}
+          disabled={loading || uploadProgress.isUploading}
           className="flex-1"
         >
           {loading
             ? t('buttons.uploading')
-            : product
-              ? t('buttons.updateProduct')
-              : t('buttons.addProduct')}
+            : uploadProgress.isUploading
+              ? `Uploading media ${uploadProgress.overallProgress}%`
+              : product
+                ? t('buttons.updateProduct')
+                : t('buttons.addProduct')}
         </Button>
       </div>
     </form>

@@ -44,7 +44,7 @@ export function RevenueOverTimeChart({
       </h2>
 
       {/* Chart */}
-      <div className="h-80 w-full">
+      <div dir="ltr" className="h-80 w-full">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart
             data={data}

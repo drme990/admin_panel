@@ -40,7 +40,7 @@ export function OrdersByStatusChart({
       <h2 className="text-xl font-semibold text-foreground mb-4">
         {title || t('ordersByStatus')}
       </h2>
-      <div className="h-80 w-full">
+      <div dir='ltr' className="h-80 w-full">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie

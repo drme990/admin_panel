@@ -20,6 +20,8 @@ interface MultiMediaUploadProps {
   maxMedia?: number;
 }
 
+const MAX_VIDEO_SIZE = 50 * 1024 * 1024; // 50MB
+
 const backendBaseUrl = (
   process.env.BACKEND_URL ||
   (process.env.NODE_ENV === 'development' ? 'http://localhost:3000' : '')
@@ -95,6 +97,16 @@ export default function MultiMediaUpload({
 
       for (const file of filesToUpload) {
         const isVideo = file.type.startsWith('video/');
+
+        if (isVideo && file.size > MAX_VIDEO_SIZE) {
+          toast.error(
+            t('messages.videoTooLarge', {
+              size: '50MB',
+            }),
+          );
+          continue;
+        }
+
         const formData = new FormData();
         formData.append('file', file);
         if (!isVideo) {

@@ -334,6 +334,7 @@
         "mediaUploaded": "Uploaded {count} media item(s) successfully",
         "maxImagesReached": "Maximum number of images reached",
         "maxMediaReached": "Maximum number of media items reached",
+        "videoTooLarge": "Video is too large. Maximum allowed size is {size}.",
         "firstMediaMustBeImage": "The first media must be an image (used as product thumbnail).",
         "primaryMediaMustStayImage": "Primary media must stay an image.",
         "refreshDisabled": "Page refresh is disabled while editing to prevent data loss",

@@ -185,7 +185,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
         autoClose={3000}
         hideProgressBar={false}
         newestOnTop
-        closeOnClick
+        closeOnClick={false}
         rtl={isRTL}
         pauseOnFocusLoss
         draggable

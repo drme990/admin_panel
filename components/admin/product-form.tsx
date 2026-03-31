@@ -16,6 +16,7 @@ import MultiCurrencyMinimumPaymentEditor, {
 import MultiMediaUpload, {
   type UploadProgressState,
 } from '@/components/admin/multi-media-upload';
+import UploadProgressDisplay from '@/components/admin/upload-progress-display';
 import RichTextEditor from '@/components/ui/rich-text-editor';
 import { useTranslations } from 'next-intl';
 import { toast } from 'react-toastify';
@@ -53,6 +54,8 @@ export default function ProductForm({
     currentFileProgress: 0,
     completedFiles: 0,
     totalFiles: 0,
+    uploadSpeed: '',
+    timeRemaining: '',
   };
 
   const defaultSize = {
@@ -107,10 +110,23 @@ export default function ProductForm({
 
   // Handle cancel upload with proper callback
   const handleCancelUpload = useCallback(() => {
-    if (cancelUpload) {
-      cancelUpload();
+    if (cancelUpload && typeof cancelUpload === 'function') {
+      try {
+        cancelUpload();
+      } catch (error) {
+        console.error('Error cancelling upload:', error);
+        toast.error('Failed to cancel upload');
+      }
     }
   }, [cancelUpload]);
+
+  const handleCancelUploadReady = useCallback(
+    (cancelFn: (() => void) | null) => {
+      // Store function values safely in React state without invoking them as updaters.
+      setCancelUpload(() => cancelFn);
+    },
+    [],
+  );
 
   // Fetch all products for upgrade dropdown
   useEffect(() => {
@@ -479,38 +495,11 @@ export default function ProductForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {uploadProgress.isUploading && (
-        <div className="fixed inset-x-0 top-15 md:top-17.5 z-120 px-3 pt-2 pointer-events-none">
-          <div className="mx-auto max-w-4xl rounded-lg border border-success/40 bg-card-bg shadow-lg pointer-events-auto">
-            <div className="flex items-center justify-between gap-2 px-3 py-2 text-xs text-secondary">
-              <span className="truncate">
-                Uploading media: {uploadProgress.currentFileName || 'file'}
-              </span>
-              <div className="flex items-center gap-2">
-                <span className="font-semibold text-foreground">
-                  {uploadProgress.overallProgress}%
-                </span>
-                <Button
-                  type="button"
-                  variant="custom"
-                  size="custom"
-                  onClick={handleCancelUpload}
-                  disabled={!cancelUpload}
-                  className="px-3 py-1.5 text-xs font-medium text-background bg-primary hover:opacity-90 transition-opacity rounded-md disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
-                >
-                  Cancel Upload
-                </Button>
-              </div>
-            </div>
-            <div className="h-1.5 w-full bg-stroke/70 overflow-hidden rounded-b-lg">
-              <div
-                className="h-full bg-success transition-[width] duration-200"
-                style={{ width: `${uploadProgress.overallProgress}%` }}
-              />
-            </div>
-          </div>
-        </div>
-      )}
+      <UploadProgressDisplay
+        uploadProgress={uploadProgress}
+        onCancel={handleCancelUpload}
+        cancelDisabled={!cancelUpload || !uploadProgress.isUploading}
+      />
 
       {/* Basic product information */}
       <section className="space-y-4">
@@ -573,7 +562,7 @@ export default function ProductForm({
           media={formData.images}
           onChange={(media) => setFormData({ ...formData, images: media })}
           onUploadProgressChange={setUploadProgress}
-          onCancelUploadReady={(fn) => setCancelUpload(() => fn)}
+          onCancelUploadReady={handleCancelUploadReady}
         />
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">

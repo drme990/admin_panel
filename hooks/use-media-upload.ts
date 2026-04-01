@@ -72,6 +72,13 @@ const getUploadEndpoint = (isVideo: boolean) => {
   return isVideo ? '/api/upload/video' : '/api/upload/image';
 };
 
+const getVideoPresignedEndpoint = () => {
+  if (backendBaseUrl) {
+    return '/api/admin/upload/video/presigned';
+  }
+  return '/api/upload/video/presigned';
+};
+
 function isAbortError(error: unknown): boolean {
   return (
     (error instanceof DOMException && error.name === 'AbortError') ||
@@ -96,7 +103,7 @@ async function getPresignedUploadUrl(
   fileSize: number,
   signal?: AbortSignal,
 ): Promise<{ uploadUrl: string; key: string; publicUrl: string }> {
-  const endpoint = buildApiUrl('/api/admin/upload/video/presigned');
+  const endpoint = buildApiUrl(getVideoPresignedEndpoint());
   const params = new URLSearchParams({
     fileName,
     contentType,

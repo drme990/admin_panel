@@ -34,6 +34,8 @@ const STATUS_COLORS: Record<OrderStatus, string> = {
     'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
   processing:
     'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
+  'partial-paid':
+    'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400',
   paid: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
   completed:
     'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400',
@@ -265,7 +267,7 @@ export default function OrderHistoryPage() {
     { label: t('filters.all'), value: '' },
     { label: t('status.pending'), value: 'pending' },
     { label: t('status.processing'), value: 'processing' },
-    { label: t('status.partially-paid'), value: 'partially-paid' },
+    { label: t('status.partial-paid'), value: 'partial-paid' },
     { label: t('status.paid'), value: 'paid' },
     { label: t('status.completed'), value: 'completed' },
     { label: t('status.failed'), value: 'failed' },
@@ -357,7 +359,7 @@ export default function OrderHistoryPage() {
       header: t('table.status'),
       accessor: (row: Order) => (
         <span
-          className={`inline-block px-2 py-0.5 text-xs font-medium rounded-full ${STATUS_COLORS[row.status as OrderStatus] || ''}`}
+          className={`inline-block px-2 py-0.5 text-xs font-medium rounded-full ${STATUS_COLORS[row.status] || ''}`}
         >
           {t(`status.${row.status}`)}
         </span>
@@ -520,7 +522,7 @@ export default function OrderHistoryPage() {
           <div className="flex flex-col gap-6">
             <div className="flex items-center justify-between">
               <span
-                className={`px-3 py-1 text-sm font-medium rounded-full ${STATUS_COLORS[selectedOrder.status as OrderStatus] || ''}`}
+                className={`px-3 py-1 text-sm font-medium rounded-full ${STATUS_COLORS[selectedOrder.status] || ''}`}
               >
                 {t(`status.${selectedOrder.status}`)}
               </span>

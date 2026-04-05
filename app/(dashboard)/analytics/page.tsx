@@ -18,6 +18,7 @@ type StatusFilter =
   | 'all'
   | 'pending'
   | 'processing'
+  | 'partial-paid'
   | 'paid'
   | 'completed'
   | 'cancelled'
@@ -57,6 +58,7 @@ export default function AnalyticsPage() {
       { value: 'all' as const, label: 'All Statuses' },
       { value: 'pending' as const, label: 'Pending' },
       { value: 'processing' as const, label: 'Processing' },
+      { value: 'partial-paid' as const, label: 'Partial Paid' },
       { value: 'paid' as const, label: 'Paid' },
       { value: 'completed' as const, label: 'Completed' },
       { value: 'cancelled' as const, label: 'Cancelled' },

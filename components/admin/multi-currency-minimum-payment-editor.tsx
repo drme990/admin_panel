@@ -74,6 +74,40 @@ export default function MultiCurrencyMinimumPaymentEditor({
     }
   };
 
+  const formatDate = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const fetchRatesForDate = async (
+    currencyCode: string,
+    releaseDate: string,
+  ): Promise<Record<string, number>> => {
+    const normalizedCode = currencyCode.toLowerCase();
+    const res = await fetch(
+      `https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@${releaseDate}/v1/currencies/${normalizedCode}.json`,
+    );
+
+    if (!res.ok) {
+      throw new Error(
+        `Exchange rate API returned ${res.status} for ${releaseDate}`,
+      );
+    }
+
+    const data = await res.json();
+    const rates = data[normalizedCode] as Record<string, number> | undefined;
+
+    if (!rates || typeof rates !== 'object') {
+      throw new Error(
+        `Invalid exchange rate data format for ${currencyCode} on ${releaseDate}`,
+      );
+    }
+
+    return rates;
+  };
+
   const handleAutoCalculate = async () => {
     if (!baseMinimumValue || baseMinimumValue <= 0) {
       toast.error(t('form.enterBaseMinimumAlert'));
@@ -84,7 +118,10 @@ export default function MultiCurrencyMinimumPaymentEditor({
       setAutoCalculating(true);
 
       const now = new Date();
-      const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      const today = formatDate(now);
+      const yesterdayDate = new Date(now);
+      yesterdayDate.setDate(now.getDate() - 1);
+      const yesterday = formatDate(yesterdayDate);
 
       // Get all unique currency codes
       const targetCurrencies = [
@@ -113,19 +150,16 @@ export default function MultiCurrencyMinimumPaymentEditor({
         onChange(newMinimumPayments);
       } else {
         // For fixed amounts, convert based on exchange rates
-        const res = await fetch(
-          `https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@${today}/v1/currencies/${mainCurrency.toLowerCase()}.json`,
-        );
-
-        if (!res.ok) {
-          throw new Error('Failed to fetch exchange rates');
+        let rates: Record<string, number>;
+        try {
+          rates = await fetchRatesForDate(mainCurrency, today);
+        } catch (todayError) {
+          console.warn(
+            `Exchange rate release ${today} unavailable for ${mainCurrency}; retrying ${yesterday}`,
+            todayError,
+          );
+          rates = await fetchRatesForDate(mainCurrency, yesterday);
         }
-
-        const data = await res.json();
-        const rates = data[mainCurrency.toLowerCase()] as Record<
-          string,
-          number
-        >;
 
         // Calculate minimum payments for all currencies
         const newMinimumPayments: CurrencyMinimumPayment[] =
@@ -139,7 +173,7 @@ export default function MultiCurrencyMinimumPaymentEditor({
             }
 
             // Calculate auto value
-            if (code === mainCurrency) {
+            if (code.toUpperCase() === mainCurrency.toUpperCase()) {
               return {
                 currencyCode: code,
                 value: baseMinimumValue,

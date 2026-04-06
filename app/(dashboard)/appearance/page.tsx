@@ -444,7 +444,7 @@ function ImageRowEditor({
           {images.map((src, index) => (
             <div
               key={`${row}-${index}-${src}`}
-              className="group relative aspect-3/4 rounded-lg overflow-hidden border border-stroke bg-card-bg"
+              className="relative aspect-3/4 rounded-lg overflow-hidden border border-stroke bg-card-bg"
             >
               <Image
                 src={src}
@@ -453,53 +453,64 @@ function ImageRowEditor({
                 className="object-cover"
                 sizes="(max-width: 640px) 50vw, 14vw"
               />
-              {/* Hover overlay with actions */}
-              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-all flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
-                <Button
-                  variant="custom"
-                  size="custom"
-                  onClick={() => onReorderUp(index)}
-                  title={moveEarlierLabel}
-                  disabled={index === 0}
-                  className="w-8 h-8 bg-white/90 text-gray-900 rounded-full flex items-center justify-center hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <ArrowLeft className="w-4 h-4" />
-                </Button>
-                <Button
-                  variant="custom"
-                  size="custom"
-                  onClick={() => onReorderDown(index)}
-                  title={moveLaterLabel}
-                  disabled={index === images.length - 1}
-                  className="w-8 h-8 bg-white/90 text-gray-900 rounded-full flex items-center justify-center hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <ArrowRight className="w-4 h-4" />
-                </Button>
-                <Button
-                  variant="custom"
-                  size="custom"
-                  onClick={() => onMove(index)}
-                  title={moveLabel}
-                  className="w-8 h-8 bg-white/90 text-gray-900 rounded-full flex items-center justify-center hover:bg-white transition-colors"
-                >
-                  {row === 'row1' ? (
-                    <MoveDown className="w-4 h-4" />
-                  ) : (
-                    <MoveUp className="w-4 h-4" />
-                  )}
-                </Button>
-                <Button
-                  variant="custom"
-                  size="custom"
-                  onClick={() => onDelete(index)}
-                  title="Delete"
-                  className="w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </Button>
+
+              {/* Top Controls Bar */}
+              <div className="absolute top-0 inset-x-0 flex items-center justify-between p-1.5 bg-linear-to-b from-black/60 to-transparent">
+                {/* Left: Reorder */}
+                <div className="flex gap-1">
+                  <Button
+                    variant="custom"
+                    size="custom"
+                    onClick={() => onReorderUp(index)}
+                    title={moveEarlierLabel}
+                    disabled={index === 0}
+                    className="w-7 h-7 bg-white/90 text-gray-900 rounded-md flex items-center justify-center hover:bg-white disabled:opacity-40"
+                  >
+                    <ArrowLeft className="w-3.5 h-3.5" />
+                  </Button>
+
+                  <Button
+                    variant="custom"
+                    size="custom"
+                    onClick={() => onReorderDown(index)}
+                    title={moveLaterLabel}
+                    disabled={index === images.length - 1}
+                    className="w-7 h-7 bg-white/90 text-gray-900 rounded-md flex items-center justify-center hover:bg-white disabled:opacity-40"
+                  >
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </Button>
+                </div>
+
+                {/* Right: Move + Delete */}
+                <div className="flex gap-1">
+                  <Button
+                    variant="custom"
+                    size="custom"
+                    onClick={() => onMove(index)}
+                    title={moveLabel}
+                    className="w-7 h-7 bg-white/90 text-gray-900 rounded-md flex items-center justify-center hover:bg-white"
+                  >
+                    {row === 'row1' ? (
+                      <MoveDown className="w-3.5 h-3.5" />
+                    ) : (
+                      <MoveUp className="w-3.5 h-3.5" />
+                    )}
+                  </Button>
+
+                  <Button
+                    variant="custom"
+                    size="custom"
+                    onClick={() => onDelete(index)}
+                    title="Delete"
+                    className="w-7 h-7 bg-red-500 text-white rounded-md flex items-center justify-center hover:bg-red-600"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </Button>
+                </div>
               </div>
-              {/* Index badge */}
-              <span className="absolute top-1 inset-s-1 text-[10px] bg-black/60 text-white px-1.5 py-0.5 rounded-full font-mono">
+
+              {/* Index Badge */}
+              <span className="absolute bottom-1 left-1 text-[10px] bg-black/70 text-white px-1.5 py-0.5 rounded font-mono">
                 {index + 1}
               </span>
             </div>

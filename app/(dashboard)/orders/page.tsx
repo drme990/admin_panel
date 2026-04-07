@@ -8,6 +8,8 @@ import Button from '@/components/ui/button';
 import BulkAction from '@/components/ui/bulk-action';
 import Modal from '@/components/ui/modal';
 import Dropdown from '@/components/ui/dropdown';
+import Tabs from '@/components/ui/tabs';
+import CustomDatePicker from '@/components/ui/custom-date-picker';
 import { toast } from 'react-toastify';
 import { useTranslations, useLocale } from 'next-intl';
 import { Order, OrderPayment, OrderStatus } from '@/types/Order';
@@ -37,7 +39,7 @@ const STATUS_COLORS: Record<OrderStatus, string> = {
   processing:
     'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
   'partial-paid':
-    'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400',
+    'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400',
   paid: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
   completed:
     'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400',
@@ -66,6 +68,21 @@ interface OrdersResponse {
   };
 }
 
+type StatusTabValue = 'all' | OrderStatus;
+type DateQuickPreset = 'today' | 'yesterday' | 'last7Days' | 'all';
+
+const STATUS_TAB_VALUES: StatusTabValue[] = [
+  'all',
+  'pending',
+  'processing',
+  'partial-paid',
+  'paid',
+  'completed',
+  'failed',
+  'refunded',
+  'cancelled',
+];
+
 function isOrderGuest(order: Pick<Order, 'userId' | 'isGuest'>): boolean {
   if (typeof order.isGuest === 'boolean') {
     return order.isGuest;
@@ -76,21 +93,66 @@ function isOrderGuest(order: Pick<Order, 'userId' | 'isGuest'>): boolean {
   return !hasUserId;
 }
 
+function toIsoDateInput(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function getRelativeIsoDate(daysOffset: number): string {
+  const date = new Date();
+  date.setHours(0, 0, 0, 0);
+  date.setDate(date.getDate() + daysOffset);
+  return toIsoDateInput(date);
+}
+
+function normalizeDateRange(fromDate: string, toDate: string) {
+  if (fromDate && toDate && fromDate > toDate) {
+    return {
+      fromDate: toDate,
+      toDate: fromDate,
+    };
+  }
+
+  return { fromDate, toDate };
+}
+
 export default function OrderHistoryPage() {
   const t = useTranslations('orders');
   const locale = useLocale();
   const ToolTipPositions = locale === 'ar' ? 'right' : 'left';
   const searchParams = useSearchParams();
   const initialQuery = searchParams.get('q') || '';
-  const initialStatus = searchParams.get('s') || '';
+  const initialStatusParam = searchParams.get('s');
+  const initialStatus: StatusTabValue = STATUS_TAB_VALUES.includes(
+    initialStatusParam as StatusTabValue,
+  )
+    ? (initialStatusParam as StatusTabValue)
+    : 'all';
   const initialReferral = searchParams.get('r') || '';
   const initialSource = searchParams.get('source') || '';
+  const initialSpecificDate = searchParams.get('date') || '';
+  const initialFromDate =
+    searchParams.get('fromDate') || initialSpecificDate || '';
+  const initialToDate = searchParams.get('toDate') || initialSpecificDate || '';
+  const normalizedInitialRange = normalizeDateRange(
+    initialFromDate,
+    initialToDate,
+  );
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalOrders, setTotalOrders] = useState(0);
-  const [statusFilter, setStatusFilter] = useState<string>(initialStatus);
+  const [statusFilter, setStatusFilter] =
+    useState<StatusTabValue>(initialStatus);
+  const [fromDateFilter, setFromDateFilter] = useState(
+    normalizedInitialRange.fromDate,
+  );
+  const [toDateFilter, setToDateFilter] = useState(
+    normalizedInitialRange.toDate,
+  );
   const [referralFilter, setReferralFilter] = useState<string>(initialReferral);
   const [sourceFilter, setSourceFilter] = useState<string>(initialSource);
   const [referrals, setReferrals] = useState<Referral[]>([]);
@@ -127,10 +189,15 @@ export default function OrderHistoryPage() {
         page: String(page),
         limit: '20',
       });
-      if (statusFilter) params.set('status', statusFilter);
+      if (statusFilter !== 'all') params.set('status', statusFilter);
       if (referralFilter) params.set('referralId', referralFilter);
       if (sourceFilter) params.set('source', sourceFilter);
       if (searchQuery) params.set('search', searchQuery);
+
+      const normalizedRange = normalizeDateRange(fromDateFilter, toDateFilter);
+      if (normalizedRange.fromDate)
+        params.set('fromDate', normalizedRange.fromDate);
+      if (normalizedRange.toDate) params.set('toDate', normalizedRange.toDate);
 
       const res = await fetch(`/api/orders?${params.toString()}`);
       const data = await res.json();
@@ -147,7 +214,15 @@ export default function OrderHistoryPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, statusFilter, referralFilter, sourceFilter, searchQuery]);
+  }, [
+    page,
+    statusFilter,
+    referralFilter,
+    sourceFilter,
+    searchQuery,
+    fromDateFilter,
+    toDateFilter,
+  ]);
 
   useEffect(() => {
     fetchOrders();
@@ -361,17 +436,141 @@ export default function OrderHistoryPage() {
     );
   };
 
-  const statusOptions = [
-    { label: t('filters.all'), value: '' },
-    { label: t('status.pending'), value: 'pending' },
-    { label: t('status.processing'), value: 'processing' },
-    { label: t('status.partial-paid'), value: 'partial-paid' },
-    { label: t('status.paid'), value: 'paid' },
-    { label: t('status.completed'), value: 'completed' },
-    { label: t('status.failed'), value: 'failed' },
-    { label: t('status.refunded'), value: 'refunded' },
-    { label: t('status.cancelled'), value: 'cancelled' },
+  const statusTabOptions = [
+    {
+      label: t('filters.all'),
+      value: 'all' as const,
+      className:
+        'border border-stroke text-foreground/80 hover:bg-background hover:text-foreground',
+      activeClassName: 'bg-foreground text-background shadow-sm',
+    },
+    {
+      label: t('status.paid'),
+      value: 'paid' as const,
+      className:
+        'border border-green-200 bg-green-50 text-green-800 dark:border-green-800/60 dark:bg-green-900/20 dark:text-green-300',
+      activeClassName: STATUS_COLORS.paid,
+    },
+    {
+      label: t('status.partial-paid'),
+      value: 'partial-paid' as const,
+      className:
+        'border border-orange-200 bg-orange-50 text-orange-800 dark:border-orange-800/60 dark:bg-orange-900/20 dark:text-orange-300',
+      activeClassName: STATUS_COLORS['partial-paid'],
+    },
+    {
+      label: t('status.pending'),
+      value: 'pending' as const,
+      className:
+        'border border-yellow-200 bg-yellow-50 text-yellow-800 dark:border-yellow-800/60 dark:bg-yellow-900/20 dark:text-yellow-300',
+      activeClassName: STATUS_COLORS.pending,
+    },
+    {
+      label: t('status.processing'),
+      value: 'processing' as const,
+      className:
+        'border border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-800/60 dark:bg-blue-900/20 dark:text-blue-300',
+      activeClassName: STATUS_COLORS.processing,
+    },
+    {
+      label: t('status.completed'),
+      value: 'completed' as const,
+      className:
+        'border border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-800/60 dark:bg-emerald-900/20 dark:text-emerald-300',
+      activeClassName: STATUS_COLORS.completed,
+    },
+    {
+      label: t('status.failed'),
+      value: 'failed' as const,
+      className:
+        'border border-red-200 bg-red-50 text-red-800 dark:border-red-800/60 dark:bg-red-900/20 dark:text-red-300',
+      activeClassName: STATUS_COLORS.failed,
+    },
+    {
+      label: t('status.refunded'),
+      value: 'refunded' as const,
+      className:
+        'border border-purple-200 bg-purple-50 text-purple-800 dark:border-purple-800/60 dark:bg-purple-900/20 dark:text-purple-300',
+      activeClassName: STATUS_COLORS.refunded,
+    },
+    {
+      label: t('status.cancelled'),
+      value: 'cancelled' as const,
+      className:
+        'border border-gray-200 bg-gray-50 text-gray-800 dark:border-gray-800/60 dark:bg-gray-900/20 dark:text-gray-300',
+      activeClassName: STATUS_COLORS.cancelled,
+    },
   ];
+
+  const today = getRelativeIsoDate(0);
+  const yesterday = getRelativeIsoDate(-1);
+  const lastSevenDaysStart = getRelativeIsoDate(-6);
+  const normalizedSelectedRange = normalizeDateRange(
+    fromDateFilter,
+    toDateFilter,
+  );
+
+  const activeDatePreset: DateQuickPreset | 'custom' =
+    !normalizedSelectedRange.fromDate && !normalizedSelectedRange.toDate
+      ? 'all'
+      : normalizedSelectedRange.fromDate === today &&
+          normalizedSelectedRange.toDate === today
+        ? 'today'
+        : normalizedSelectedRange.fromDate === yesterday &&
+            normalizedSelectedRange.toDate === yesterday
+          ? 'yesterday'
+          : normalizedSelectedRange.fromDate === lastSevenDaysStart &&
+              normalizedSelectedRange.toDate === today
+            ? 'last7Days'
+            : 'custom';
+
+  const datePresetOptions: Array<{ label: string; value: DateQuickPreset }> = [
+    { label: t('filters.today'), value: 'today' },
+    { label: t('filters.yesterday'), value: 'yesterday' },
+    { label: t('filters.last7Days'), value: 'last7Days' },
+    { label: t('filters.dateModeAll'), value: 'all' },
+  ];
+
+  const applyDatePreset = (preset: DateQuickPreset) => {
+    if (preset === 'all') {
+      setFromDateFilter('');
+      setToDateFilter('');
+      setPage(1);
+      return;
+    }
+
+    if (preset === 'today') {
+      setFromDateFilter(today);
+      setToDateFilter(today);
+      setPage(1);
+      return;
+    }
+
+    if (preset === 'yesterday') {
+      setFromDateFilter(yesterday);
+      setToDateFilter(yesterday);
+      setPage(1);
+      return;
+    }
+
+    setFromDateFilter(lastSevenDaysStart);
+    setToDateFilter(today);
+    setPage(1);
+  };
+
+  const handleFromDateChange = (value: string) => {
+    const normalizedRange = normalizeDateRange(value, toDateFilter);
+    setFromDateFilter(normalizedRange.fromDate);
+    setToDateFilter(normalizedRange.toDate);
+    setPage(1);
+  };
+
+  const handleToDateChange = (value: string) => {
+    const normalizedRange = normalizeDateRange(fromDateFilter, value);
+    setFromDateFilter(normalizedRange.fromDate);
+    setToDateFilter(normalizedRange.toDate);
+    setPage(1);
+  };
 
   const modalStatusOptions = [
     { label: t('status.completed'), value: 'completed' },
@@ -541,17 +740,6 @@ export default function OrderHistoryPage() {
         </div>
 
         <Dropdown
-          value={statusFilter}
-          options={statusOptions}
-          onChange={(val) => {
-            setStatusFilter(val);
-            setPage(1);
-          }}
-          placeholder={t('filters.status')}
-          className="w-full sm:w-48"
-        />
-
-        <Dropdown
           value={referralFilter}
           options={[
             { label: t('filters.allReferrals'), value: '' },
@@ -587,6 +775,61 @@ export default function OrderHistoryPage() {
         >
           <RefreshCw size={18} />
         </Button>
+      </div>
+
+      <div className="rounded-site border border-stroke bg-card-bg p-4 space-y-4">
+        <div className="flex flex-wrap items-center gap-2">
+          {datePresetOptions.map((preset) => {
+            const isActive = activeDatePreset === preset.value;
+
+            return (
+              <Button
+                key={preset.value}
+                variant="custom"
+                type="button"
+                size="custom"
+                onClick={() => applyDatePreset(preset.value)}
+                className={`rounded-md border px-3 py-2 text-sm font-medium transition-colors ${
+                  isActive
+                    ? 'bg-foreground border-foreground text-background shadow-sm'
+                    : 'bg-background border-stroke text-foreground hover:bg-foreground/5'
+                }`}
+              >
+                {preset.label}
+              </Button>
+            );
+          })}
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <CustomDatePicker
+            value={fromDateFilter}
+            onChange={handleFromDateChange}
+            locale={locale}
+            label={t('filters.fromDate')}
+            placeholder={t('filters.fromDate')}
+          />
+
+          <CustomDatePicker
+            value={toDateFilter}
+            onChange={handleToDateChange}
+            locale={locale}
+            label={t('filters.toDate')}
+            placeholder={t('filters.toDate')}
+          />
+        </div>
+      </div>
+
+      <div className="overflow-x-auto pb-1">
+        <Tabs<StatusTabValue>
+          value={statusFilter}
+          options={statusTabOptions}
+          onChange={(value) => {
+            setStatusFilter(value);
+            setPage(1);
+          }}
+          className="min-w-max"
+        />
       </div>
 
       <div className="flex items-center gap-2 text-sm text-secondary">

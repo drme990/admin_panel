@@ -7,6 +7,8 @@ type TabValue = string;
 interface TabsOption<T extends TabValue> {
   value: T;
   label: string;
+  className?: string;
+  activeClassName?: string;
 }
 
 interface TabsProps<T extends TabValue> {
@@ -47,8 +49,10 @@ export default function Tabs<T extends TabValue>({
               'rounded-md font-medium transition-colors',
               size === 'sm' ? 'px-2.5 py-1 text-xs' : 'px-3 py-1.5 text-sm',
               active
-                ? 'gradient-site gradient-text shadow-lg'
-                : 'border border-stroke text-foreground hover:bg-foreground hover:text-background',
+                ? option.activeClassName ||
+                    'gradient-site gradient-text shadow-lg'
+                : option.className ||
+                    'border border-stroke text-foreground hover:bg-foreground hover:text-background',
             )}
           >
             {option.label}

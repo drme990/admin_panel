@@ -1,5 +1,6 @@
 'use client';
 
+import { useCallback } from 'react';
 import Image from 'next/image';
 import {
   LuPlus as Plus,
@@ -16,12 +17,13 @@ import {
   useMediaUpload,
   type UploadProgressState,
 } from '@/hooks/use-media-upload';
+import type { ProductMedia, ProductMediaPlatform } from '@/types/Product';
 
 export type { UploadProgressState } from '@/hooks/use-media-upload';
 
 interface MultiMediaUploadProps {
-  media: string[];
-  onChange: (media: string[]) => void;
+  media: ProductMedia[];
+  onChange: (media: ProductMedia[]) => void;
   maxMedia?: number;
   onUploadProgressChange?: (state: UploadProgressState) => void;
   onCancelUploadReady?: (cancelUpload: (() => void) | null) => void;
@@ -56,26 +58,78 @@ export default function MultiMediaUpload({
 }: MultiMediaUploadProps) {
   const t = useTranslations('admin.products');
 
+  const mediaUrls = media.map((item) => item.url);
+
+  const syncMediaFromUrls = useCallback(
+    (nextUrls: string[]) => {
+      const queueByUrl = new Map<string, ProductMedia[]>();
+
+      for (const item of media) {
+        const queue = queueByUrl.get(item.url);
+        if (queue) {
+          queue.push(item);
+        } else {
+          queueByUrl.set(item.url, [item]);
+        }
+      }
+
+      const nextMedia: ProductMedia[] = nextUrls
+        .map((url) => {
+          const queue = queueByUrl.get(url);
+          if (queue && queue.length > 0) {
+            return queue.shift() as ProductMedia;
+          }
+
+          return {
+            url,
+            platform: 'shared',
+          } as ProductMedia;
+        })
+        .filter(Boolean);
+
+      onChange(nextMedia);
+    },
+    [media, onChange],
+  );
+
   const { uploading, handleFileSelect } = useMediaUpload({
-    media,
-    onChange,
+    media: mediaUrls,
+    onChange: syncMediaFromUrls,
     maxMedia,
     t,
     onUploadProgressChange,
     onCancelUploadReady,
   });
 
+  const platformOptions: Array<{ value: ProductMediaPlatform; label: string }> =
+    [
+      { value: 'shared', label: t('form.platformShared') },
+      { value: 'manasik', label: t('form.platformManasik') },
+      { value: 'ghadaq', label: t('form.platformGhadaq') },
+    ];
+
+  const updateMediaPlatform = (
+    index: number,
+    platform: ProductMediaPlatform,
+  ) => {
+    const updated = [...media];
+    if (!updated[index]) return;
+    updated[index] = { ...updated[index], platform };
+    onChange(updated);
+  };
+
   const handleRemoveMedia = async (index: number) => {
     if (uploading) return;
 
     const updated = media.filter((_, i) => i !== index);
 
-    if (updated.length > 0 && isVideoUrl(updated[0])) {
+    if (updated.length > 0 && isVideoUrl(updated[0].url)) {
       toast.error(t('messages.primaryMediaMustStayImage'));
       return;
     }
 
-    const removedUrl = media[index];
+    const removedUrl = media[index]?.url;
+    if (!removedUrl) return;
     onChange(updated);
 
     try {
@@ -100,7 +154,7 @@ export default function MultiMediaUpload({
     const [moved] = updated.splice(fromIndex, 1);
     updated.splice(toIndex, 0, moved);
 
-    if (updated.length > 0 && isVideoUrl(updated[0])) {
+    if (updated.length > 0 && isVideoUrl(updated[0].url)) {
       toast.error(t('messages.firstMediaMustBeImage'));
       return;
     }
@@ -123,7 +177,8 @@ export default function MultiMediaUpload({
       {/* Media Grid */}
       {media.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-          {media.map((mediaUrl, index) => {
+          {media.map((mediaItem, index) => {
+            const mediaUrl = mediaItem.url;
             const isVideo = isVideoUrl(mediaUrl);
 
             return (
@@ -211,7 +266,7 @@ export default function MultiMediaUpload({
                 </div>
 
                 {/* Bottom Labels */}
-                <div className="absolute bottom-2 left-2 right-2 flex justify-between items-center">
+                <div className="absolute bottom-10 left-2 right-2 flex justify-between items-center gap-2">
                   {index === 0 && (
                     <span className="text-[10px] bg-success text-white px-2 py-0.5 rounded-full shadow">
                       {t('form.mainImage') || 'Main'}
@@ -224,6 +279,25 @@ export default function MultiMediaUpload({
                       Video
                     </span>
                   )}
+                </div>
+
+                <div className="absolute bottom-2 left-2 right-2">
+                  <select
+                    value={mediaItem.platform}
+                    onChange={(event) =>
+                      updateMediaPlatform(
+                        index,
+                        event.target.value as ProductMediaPlatform,
+                      )
+                    }
+                    className="w-full rounded-md border border-white/30 bg-black/70 px-2 py-1 text-[10px] text-white focus:outline-none"
+                  >
+                    {platformOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
             );

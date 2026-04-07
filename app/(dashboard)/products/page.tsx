@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Product } from '@/types/Product';
+import { Product, getPrimaryProductImageUrl } from '@/types/Product';
 import {
   LuPlus as Plus,
   LuPencil as Pencil,
@@ -122,7 +122,7 @@ export default function ProductsPage() {
     {
       header: t('table.image'),
       accessor: (product: Product) => {
-        const img = product.images?.[0];
+        const img = getPrimaryProductImageUrl(product);
         return img ? (
           <div className="relative w-12 h-12 rounded-lg overflow-hidden">
             <Image
@@ -260,7 +260,7 @@ export default function ProductsPage() {
         </p>
         <div className="space-y-2 max-h-105 overflow-y-auto pe-1">
           {reorderList.map((product, index) => {
-            const img = product.images?.[0];
+            const img = getPrimaryProductImageUrl(product);
             return (
               <div
                 key={product._id}

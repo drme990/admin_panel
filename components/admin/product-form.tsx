@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Product } from '@/types/Product';
+import { Product, normalizeProductMedia } from '@/types/Product';
 import Input from '@/components/ui/input';
 import Switch from '@/components/ui/switch';
 import Button from '@/components/ui/button';
@@ -75,7 +75,7 @@ export default function ProductForm({
     inStock: true,
     isBestSeller: false,
     isActive: true,
-    images: [] as string[],
+    media: normalizeProductMedia([]),
     partialPayment: {
       isAllowed: false,
       minimumType: 'percentage' as 'percentage' | 'fixed',
@@ -154,7 +154,7 @@ export default function ProductForm({
         inStock: product.inStock,
         isBestSeller: Boolean(product.isBestSeller),
         isActive: product.isActive !== false,
-        images: product.images || [],
+        media: normalizeProductMedia(product.media),
         partialPayment: {
           isAllowed: product.partialPayment?.isAllowed || false,
           minimumType: product.partialPayment?.minimumType || 'percentage',
@@ -371,9 +371,10 @@ export default function ProductForm({
       return;
     }
 
-    if (!formData.images.length) {
+    if (!formData.media.length) {
       toast.error(
-        t('messages.imageRequired') || 'At least one product image is required',
+        t('messages.imageRequired') ||
+          'At least one product media item is required',
       );
       return;
     }
@@ -447,7 +448,7 @@ export default function ProductForm({
       inStock: formData.inStock,
       isBestSeller: formData.isBestSeller,
       isActive: formData.isActive,
-      images: formData.images,
+      media: normalizeProductMedia(formData.media),
       partialPayment: {
         isAllowed: formData.partialPayment.isAllowed,
         minimumType: formData.partialPayment.minimumType,
@@ -559,8 +560,8 @@ export default function ProductForm({
         />
 
         <MultiMediaUpload
-          media={formData.images}
-          onChange={(media) => setFormData({ ...formData, images: media })}
+          media={formData.media}
+          onChange={(media) => setFormData({ ...formData, media })}
           onUploadProgressChange={setUploadProgress}
           onCancelUploadReady={handleCancelUploadReady}
         />

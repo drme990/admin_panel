@@ -38,6 +38,14 @@ export interface PartialPayment {
   minimumPayments: CurrencyMinimumPayment[];
 }
 
+export type ProductPlatform = 'ghadaq' | 'manasik';
+export type ProductMediaPlatform = 'shared' | ProductPlatform;
+
+export interface ProductMedia {
+  url: string;
+  platform: ProductMediaPlatform;
+}
+
 export interface ReservationFieldOption {
   ar: string;
   en: string;
@@ -81,7 +89,7 @@ export interface ProductUpgradeFeatures {
  *  - `sizes.length > 1`    → multi-option product;   show size selector.
  *  - All pricing (price, prices, feedsUp) lives inside each ProductSize.
  *  - `baseCurrency` is the single canonical currency for all base prices.
- *  - `images[0]` is the primary / thumbnail image.
+ *  - `media` can contain images and videos.
  */
 export interface Product {
   _id: string;
@@ -101,8 +109,8 @@ export interface Product {
   isBestSeller?: boolean;
   /** Whether the product is published (visible to customers). Default: true */
   isActive: boolean;
-  /** All product images. Use `images[0]` as the primary / thumbnail image. */
-  images: string[];
+  /** All product media with per-platform visibility rules. */
+  media: ProductMedia[];
   /**
    * All products use sizes as the single source of pricing truth.
    * Always at least 1 item.
@@ -122,4 +130,84 @@ export interface Product {
   displayOrder?: number;
   createdAt?: string;
   updatedAt?: string;
+}
+
+const VALID_MEDIA_PLATFORMS: readonly ProductMediaPlatform[] = [
+  'shared',
+  'ghadaq',
+  'manasik',
+] as const;
+
+function isObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function toNonEmptyString(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function normalizeMediaPlatform(value: unknown): ProductMediaPlatform {
+  if (
+    typeof value === 'string' &&
+    VALID_MEDIA_PLATFORMS.includes(value as ProductMediaPlatform)
+  ) {
+    return value as ProductMediaPlatform;
+  }
+
+  return 'shared';
+}
+
+function normalizeMediaEntry(entry: unknown): ProductMedia | null {
+  if (typeof entry === 'string') {
+    const url = toNonEmptyString(entry);
+    return url ? { url, platform: 'shared' } : null;
+  }
+
+  if (!isObject(entry)) return null;
+
+  const url = toNonEmptyString(entry.url);
+  if (!url) return null;
+
+  return {
+    url,
+    platform: normalizeMediaPlatform(entry.platform),
+  };
+}
+
+export function normalizeProductMedia(media: unknown): ProductMedia[] {
+  const source = Array.isArray(media) ? media : [];
+
+  const seen = new Set<string>();
+  const normalized: ProductMedia[] = [];
+
+  for (const item of source) {
+    const parsed = normalizeMediaEntry(item);
+    if (!parsed) continue;
+
+    const dedupeKey = `${parsed.platform}|${parsed.url}`;
+    if (seen.has(dedupeKey)) continue;
+
+    seen.add(dedupeKey);
+    normalized.push(parsed);
+  }
+
+  return normalized;
+}
+
+function isVideoUrl(url: string): boolean {
+  return /\.(mp4|webm|mov|qt)(\?.*)?$/i.test(url) || url.includes('/videos/');
+}
+
+export function getProductMediaUrls(product: Pick<Product, 'media'>): string[] {
+  return normalizeProductMedia(product.media).map((item) => item.url);
+}
+
+export function getPrimaryProductImageUrl(
+  product: Pick<Product, 'media'>,
+): string | undefined {
+  const media = normalizeProductMedia(product.media);
+  const firstImage = media.find((item) => !isVideoUrl(item.url));
+  return firstImage?.url || media[0]?.url;
 }

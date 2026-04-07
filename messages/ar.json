@@ -47,6 +47,40 @@
       "title": "بيانات الحجز",
       "more": "إضافية"
     },
+    "loadingOrderDetails": "جارٍ تحميل تفاصيل الطلب...",
+    "detailsLoadFailed": "فشل تحميل تفاصيل الطلب",
+    "paymentTimeline": {
+      "title": "سجل الدفعات",
+      "empty": "لا توجد دفعات مسجلة حتى الآن",
+      "paymentLabel": "الدفعة #{index}",
+      "orderAmount": "مبلغ الطلب",
+      "gatewayAmount": "مبلغ بوابة الدفع",
+      "method": "طريقة الدفع",
+      "createdAt": "وقت الإنشاء",
+      "paidAt": "وقت الدفع",
+      "reference": "مرجع إيزي كاش",
+      "productCode": "كود المنتج",
+      "customerReference": "مرجع العميل",
+      "statuses": {
+        "pending": "قيد الانتظار",
+        "paid": "مدفوع",
+        "failed": "فشل",
+        "expired": "منتهي"
+      }
+    },
+    "paymentAttempts": {
+      "title": "محاولات الدفع",
+      "empty": "لا توجد محاولات دفع مسجلة",
+      "attemptLabel": "المحاولة #{index}",
+      "createdAt": "تاريخ المحاولة",
+      "ip": "عنوان IP",
+      "userId": "معرف المستخدم"
+    },
+    "copyWhatsapp": {
+      "button": "نسخ رسالة واتساب",
+      "success": "تم نسخ رسالة الطلب",
+      "failed": "فشل نسخ رسالة الطلب"
+    },
     "easykashInfo": "معلومات إيزي كاش",
     "filters": {
       "all": "الكل",
@@ -86,6 +120,8 @@
       "customer": "العميل",
       "customerType": "نوع العميل",
       "amount": "المبلغ",
+      "paidOfFull": "المدفوع {paid} / {full} {currency}",
+      "remaining": "المتبقي {remaining} {currency}",
       "status": "الحالة",
       "date": "التاريخ",
       "actions": "إجراءات"

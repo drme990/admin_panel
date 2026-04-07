@@ -47,6 +47,40 @@
       "title": "Reservation Data",
       "more": "more"
     },
+    "loadingOrderDetails": "Loading order details...",
+    "detailsLoadFailed": "Failed to load order details",
+    "paymentTimeline": {
+      "title": "Payment Timeline",
+      "empty": "No payment records yet",
+      "paymentLabel": "Payment #{index}",
+      "orderAmount": "Order Amount",
+      "gatewayAmount": "Gateway Amount",
+      "method": "Payment Method",
+      "createdAt": "Created At",
+      "paidAt": "Paid At",
+      "reference": "EasyKash Reference",
+      "productCode": "Product Code",
+      "customerReference": "Customer Reference",
+      "statuses": {
+        "pending": "Pending",
+        "paid": "Paid",
+        "failed": "Failed",
+        "expired": "Expired"
+      }
+    },
+    "paymentAttempts": {
+      "title": "Payment Attempts",
+      "empty": "No payment attempts logged",
+      "attemptLabel": "Attempt #{index}",
+      "createdAt": "Attempt Date",
+      "ip": "IP Address",
+      "userId": "User ID"
+    },
+    "copyWhatsapp": {
+      "button": "Copy WhatsApp message",
+      "success": "Order message copied",
+      "failed": "Failed to copy order message"
+    },
     "easykashInfo": "EasyKash Info",
     "filters": {
       "all": "All",
@@ -86,6 +120,8 @@
       "customer": "Customer",
       "customerType": "Customer Type",
       "amount": "Amount",
+      "paidOfFull": "Paid {paid} / {full} {currency}",
+      "remaining": "Remaining {remaining} {currency}",
       "status": "Status",
       "date": "Date",
       "actions": "Actions"

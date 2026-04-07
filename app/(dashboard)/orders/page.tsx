@@ -10,10 +10,11 @@ import Modal from '@/components/ui/modal';
 import Dropdown from '@/components/ui/dropdown';
 import { toast } from 'react-toastify';
 import { useTranslations, useLocale } from 'next-intl';
-import { Order, OrderStatus } from '@/types/Order';
+import { Order, OrderPayment, OrderStatus } from '@/types/Order';
 import {
   LuSearch as Search,
   LuEye as Eye,
+  LuCopy as Copy,
   LuRefreshCw as RefreshCw,
   LuPackage as Package,
   LuMail as Mail,
@@ -28,6 +29,7 @@ import {
 import { Referral } from '@/types/Referral';
 import Checkbox from '@/components/ui/checkbox';
 import { Tooltip } from '@/components/ui/tooltip';
+import { buildOrderWhatsappMessageFromOrder } from '@/lib/order-whatsapp';
 
 const STATUS_COLORS: Record<OrderStatus, string> = {
   pending:
@@ -43,6 +45,14 @@ const STATUS_COLORS: Record<OrderStatus, string> = {
   refunded:
     'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400',
   cancelled: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400',
+};
+
+const PAYMENT_STATUS_COLORS: Record<OrderPayment['status'], string> = {
+  pending:
+    'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
+  paid: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
+  failed: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
+  expired: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400',
 };
 
 interface OrdersResponse {
@@ -87,11 +97,13 @@ export default function OrderHistoryPage() {
   const [searchQuery, setSearchQuery] = useState(initialQuery);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [loadingOrderDetails, setLoadingOrderDetails] = useState(false);
   const [modalStatus, setModalStatus] = useState<OrderStatus>('pending');
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
   const [bulkStatus, setBulkStatus] = useState('');
   const [bulkUpdating, setBulkUpdating] = useState(false);
+  const [copyingOrderId, setCopyingOrderId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchReferrals = async () => {
@@ -141,10 +153,82 @@ export default function OrderHistoryPage() {
     fetchOrders();
   }, [fetchOrders]);
 
-  const viewOrder = (order: Order) => {
+  const fetchOrderDetails = useCallback(
+    async (orderId: string, showError = true): Promise<Order | null> => {
+      try {
+        const res = await fetch(`/api/orders/${orderId}`);
+        const data = await res.json();
+
+        if (!data.success) {
+          throw new Error(data.error || 'Failed to fetch order details');
+        }
+
+        return data.data as Order;
+      } catch (error) {
+        console.error('Error fetching order details:', error);
+        if (showError) {
+          toast.error(t('detailsLoadFailed'));
+        }
+        return null;
+      }
+    },
+    [t],
+  );
+
+  const copyTextToClipboard = async (text: string) => {
+    if (navigator?.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return;
+    }
+
+    const textArea = document.createElement('textarea');
+    textArea.value = text;
+    textArea.style.position = 'fixed';
+    textArea.style.opacity = '0';
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    const copied = document.execCommand('copy');
+    document.body.removeChild(textArea);
+
+    if (!copied) {
+      throw new Error('Failed to copy text');
+    }
+  };
+
+  const viewOrder = async (order: Order) => {
     setSelectedOrder(order);
     setModalStatus(order.status);
     setIsModalOpen(true);
+
+    setLoadingOrderDetails(true);
+    const fullOrder = await fetchOrderDetails(order._id);
+    if (fullOrder) {
+      setSelectedOrder(fullOrder);
+      setModalStatus(fullOrder.status);
+    }
+    setLoadingOrderDetails(false);
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setSelectedOrder(null);
+    setLoadingOrderDetails(false);
+  };
+
+  const copyOrderWhatsappMessage = async (order: Order) => {
+    try {
+      setCopyingOrderId(order._id);
+      const fullOrder = await fetchOrderDetails(order._id, false);
+      const message = buildOrderWhatsappMessageFromOrder(fullOrder || order);
+      await copyTextToClipboard(message);
+      toast.success(t('copyWhatsapp.success'));
+    } catch (error) {
+      console.error('Error copying WhatsApp order message:', error);
+      toast.error(t('copyWhatsapp.failed'));
+    } finally {
+      setCopyingOrderId(null);
+    }
   };
 
   const toggleOrderSelection = (orderId: string) => {
@@ -263,6 +347,20 @@ export default function OrderHistoryPage() {
       .map((entry) => entry.trim())
       .filter(Boolean);
 
+  const formatMoney = (amount: number | undefined, currency: string) =>
+    `${Number(amount ?? 0).toFixed(2)} ${currency}`;
+
+  const getPaymentTimeline = (order: Order): OrderPayment[] => {
+    const payments = Array.isArray(order.payments)
+      ? [...order.payments]
+      : ([] as OrderPayment[]);
+
+    return payments.sort(
+      (a, b) =>
+        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+    );
+  };
+
   const statusOptions = [
     { label: t('filters.all'), value: '' },
     { label: t('status.pending'), value: 'pending' },
@@ -376,21 +474,45 @@ export default function OrderHistoryPage() {
     {
       header: t('table.actions'),
       accessor: (row: Order) => (
-        <Tooltip position={ToolTipPositions} content={t('viewDetails')}>
-          <Button
-            variant="icon-primary"
-            size="custom"
-            onClick={(e) => {
-              e.stopPropagation();
-              viewOrder(row);
-            }}
-            aria-label={t('viewDetails')}
+        <div className="flex items-center gap-2">
+          <Tooltip position={ToolTipPositions} content={t('viewDetails')}>
+            <Button
+              variant="icon-primary"
+              size="custom"
+              onClick={(e) => {
+                e.stopPropagation();
+                viewOrder(row);
+              }}
+              aria-label={t('viewDetails')}
+            >
+              <Eye size={16} />
+            </Button>
+          </Tooltip>
+
+          <Tooltip
+            position={ToolTipPositions}
+            content={t('copyWhatsapp.button')}
           >
-            <Eye size={16} />
-          </Button>
-        </Tooltip>
+            <Button
+              variant="icon-primary"
+              size="custom"
+              onClick={(e) => {
+                e.stopPropagation();
+                copyOrderWhatsappMessage(row);
+              }}
+              disabled={copyingOrderId === row._id}
+              aria-label={t('copyWhatsapp.button')}
+            >
+              {copyingOrderId === row._id ? (
+                <RefreshCw size={16} className="animate-spin" />
+              ) : (
+                <Copy size={16} />
+              )}
+            </Button>
+          </Tooltip>
+        </div>
       ),
-      className: 'w-16',
+      className: 'w-24',
     },
   ];
 
@@ -510,7 +632,7 @@ export default function OrderHistoryPage() {
 
       <Modal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={closeModal}
         title={
           selectedOrder
             ? `${t('orderDetails')} - ${selectedOrder.orderNumber}`
@@ -518,281 +640,377 @@ export default function OrderHistoryPage() {
         }
         size="lg"
       >
-        {selectedOrder && (
+        {selectedOrder && loadingOrderDetails ? (
+          <div className="py-8 text-center text-sm text-secondary">
+            {t('loadingOrderDetails')}
+          </div>
+        ) : selectedOrder ? (
           <div className="flex flex-col gap-6">
-            <div className="flex items-center justify-between">
-              <span
-                className={`px-3 py-1 text-sm font-medium rounded-full ${STATUS_COLORS[selectedOrder.status] || ''}`}
-              >
-                {t(`status.${selectedOrder.status}`)}
-              </span>
-              <span className="text-sm text-secondary">
-                {formatDate(selectedOrder.createdAt)}
-              </span>
-            </div>
+            {(() => {
+              const paymentTimeline = getPaymentTimeline(selectedOrder);
+              const latestPaidPayment = [...paymentTimeline]
+                .reverse()
+                .find((payment) => payment.status === 'paid');
+              const currentTransactionAmount =
+                latestPaidPayment?.orderAmount ??
+                latestPaidPayment?.amount ??
+                selectedOrder.totalAmount;
 
-            <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3 items-end">
-              <Dropdown
-                label={t('statusEditor.label')}
-                value={modalStatus}
-                options={modalStatusOptions}
-                onChange={(value) => setModalStatus(value as OrderStatus)}
-              />
-              <Button
-                type="button"
-                variant="primary"
-                onClick={updateOrderStatus}
-                disabled={
-                  updatingStatus ||
-                  !selectedOrder ||
-                  modalStatus === selectedOrder.status
-                }
-              >
-                {updatingStatus
-                  ? t('statusEditor.saving')
-                  : t('statusEditor.save')}
-              </Button>
-            </div>
-
-            <div className="bg-background rounded-site p-4 border border-stroke text-center">
-              <p className="text-3xl font-bold text-success">
-                {selectedOrder.totalAmount.toFixed(2)} {selectedOrder.currency}
-              </p>
-            </div>
-
-            <div>
-              <h3 className="font-semibold mb-3">{t('amountDetails')}</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <InfoRow
-                  icon={<CreditCard size={14} />}
-                  label={t('totals.totalPaidNow')}
-                  value={`${selectedOrder.totalAmount.toFixed(2)} ${selectedOrder.currency}`}
-                />
-                <InfoRow
-                  icon={<CreditCard size={14} />}
-                  label={t('totals.fullAmount')}
-                  value={`${(selectedOrder.fullAmount ?? selectedOrder.totalAmount).toFixed(2)} ${selectedOrder.currency}`}
-                />
-                <InfoRow
-                  icon={<CreditCard size={14} />}
-                  label={t('totals.paidAmount')}
-                  value={`${(selectedOrder.paidAmount ?? selectedOrder.totalAmount).toFixed(2)} ${selectedOrder.currency}`}
-                />
-                <InfoRow
-                  icon={<CreditCard size={14} />}
-                  label={t('totals.remainingAmount')}
-                  value={`${(selectedOrder.remainingAmount ?? 0).toFixed(2)} ${selectedOrder.currency}`}
-                />
-                <InfoRow
-                  icon={<Tag size={14} />}
-                  label={t('totals.couponCode')}
-                  value={selectedOrder.couponCode || 'N/A'}
-                />
-                <InfoRow
-                  icon={<Tag size={14} />}
-                  label={t('totals.couponDiscount')}
-                  value={`${(selectedOrder.couponDiscount ?? 0).toFixed(2)} ${selectedOrder.currency}`}
-                />
-              </div>
-            </div>
-
-            <div>
-              <h3 className="font-semibold mb-3 flex items-center gap-2">
-                <Package size={16} /> {t('items')}
-              </h3>
-              <div className="flex flex-col gap-2">
-                {selectedOrder.items.map((item, i) => (
-                  <div
-                    key={i}
-                    className="flex items-center justify-between gap-3 py-2 px-3 rounded-lg bg-background border border-stroke"
-                  >
-                    <div className="space-y-1">
-                      <span className="font-medium text-sm">
-                        {locale === 'ar'
-                          ? item.productName.ar
-                          : item.productName.en}
-                      </span>
-                      <span className="text-xs text-secondary mx-2">
-                        x{item.quantity}
-                      </span>
-                      <div className="text-[11px] text-secondary font-mono">
-                        <span>
-                          {t('productId')}: {item.productId}
-                        </span>
-                        {item.productSlug ? (
-                          <span className="ms-2">
-                            {t('productSlug')}: {item.productSlug}
-                          </span>
-                        ) : null}
-                      </div>
-                    </div>
-                    <span className="font-bold text-sm">
-                      {item.price.toFixed(2)} {item.currency}
+              return (
+                <>
+                  <div className="flex items-center justify-between">
+                    <span
+                      className={`px-3 py-1 text-sm font-medium rounded-full ${STATUS_COLORS[selectedOrder.status] || ''}`}
+                    >
+                      {t(`status.${selectedOrder.status}`)}
+                    </span>
+                    <span className="text-sm text-secondary">
+                      {formatDate(selectedOrder.createdAt)}
                     </span>
                   </div>
-                ))}
-              </div>
-            </div>
 
-            <div>
-              <h3 className="font-semibold mb-3">{t('customerInfo')}</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <InfoRow
-                  icon={<Hash size={14} />}
-                  label={t('table.orderNumber')}
-                  value={selectedOrder.orderNumber}
-                />
-                <InfoRow
-                  icon={<Package size={14} />}
-                  label={t('source')}
-                  value={selectedOrder.source || 'manasik'}
-                />
-                <InfoRow
-                  icon={<Hash size={14} />}
-                  label={t('customerType.label')}
-                  value={
-                    isOrderGuest(selectedOrder)
-                      ? t('customerType.guest')
-                      : t('customerType.registered')
-                  }
-                />
-                <InfoRow
-                  icon={<Mail size={14} />}
-                  label={t('email')}
-                  value={selectedOrder.billingData.email}
-                />
-                <InfoRow
-                  icon={<Phone size={14} />}
-                  label={t('phone')}
-                  value={selectedOrder.billingData.phone}
-                />
-                <InfoRow
-                  icon={<Globe size={14} />}
-                  label={t('country')}
-                  value={selectedOrder.billingData.country}
-                />
-                <InfoRow
-                  icon={<Calendar size={14} />}
-                  label={t('table.date')}
-                  value={formatDate(selectedOrder.createdAt)}
-                />
-                <InfoRow
-                  icon={<CreditCard size={14} />}
-                  label={t('paymentMethod')}
-                  value={selectedOrder.paymentMethod || 'N/A'}
-                />
-                <InfoRow
-                  icon={<Hash size={14} />}
-                  label={t('locale')}
-                  value={selectedOrder.locale || 'N/A'}
-                />
-                <InfoRow
-                  icon={<Hash size={14} />}
-                  label={t('termsAgreedAt')}
-                  value={
-                    selectedOrder.termsAgreedAt
-                      ? formatDate(selectedOrder.termsAgreedAt)
-                      : 'N/A'
-                  }
-                />
-                <InfoRow
-                  icon={<Hash size={14} />}
-                  label={t('updatedAt')}
-                  value={formatDate(selectedOrder.updatedAt)}
-                />
-                {selectedOrder.referralId && (
-                  <InfoRow
-                    icon={<UserRoundPlus size={14} />}
-                    label={t('referral')}
-                    value={selectedOrder.referralId}
-                  />
-                )}
-              </div>
-            </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3 items-end">
+                    <Dropdown
+                      label={t('statusEditor.label')}
+                      value={modalStatus}
+                      options={modalStatusOptions}
+                      onChange={(value) => setModalStatus(value as OrderStatus)}
+                    />
+                    <Button
+                      type="button"
+                      variant="primary"
+                      onClick={updateOrderStatus}
+                      disabled={
+                        updatingStatus ||
+                        !selectedOrder ||
+                        modalStatus === selectedOrder.status
+                      }
+                    >
+                      {updatingStatus
+                        ? t('statusEditor.saving')
+                        : t('statusEditor.save')}
+                    </Button>
+                  </div>
 
-            {(selectedOrder.easykashRef ||
-              selectedOrder.easykashProductCode ||
-              selectedOrder.easykashResponse) && (
-              <div>
-                <h3 className="font-semibold mb-3">{t('easykashInfo')}</h3>
-                <div className="grid grid-cols-1 gap-2 text-xs font-mono">
-                  {selectedOrder.easykashRef && (
-                    <div className="flex justify-between py-1 px-3 rounded bg-background border border-stroke">
-                      <span className="text-secondary">EasyKash Ref</span>
-                      <span>{selectedOrder.easykashRef}</span>
-                    </div>
-                  )}
-                  {selectedOrder.easykashProductCode && (
-                    <div className="flex justify-between py-1 px-3 rounded bg-background border border-stroke">
-                      <span className="text-secondary">Product Code</span>
-                      <span>{selectedOrder.easykashProductCode}</span>
-                    </div>
-                  )}
-                  {selectedOrder.easykashVoucher && (
-                    <div className="flex justify-between py-1 px-3 rounded bg-background border border-stroke">
-                      <span className="text-secondary">Voucher</span>
-                      <span className="truncate max-w-50">
-                        {selectedOrder.easykashVoucher}
-                      </span>
-                    </div>
-                  )}
-                  {selectedOrder.easykashResponse && (
-                    <div className="py-2 px-3 rounded bg-background border border-stroke">
-                      <p className="text-secondary mb-1">
-                        EasyKash Raw Response
-                      </p>
-                      <pre className="whitespace-pre-wrap break-all text-[11px]">
-                        {JSON.stringify(
-                          selectedOrder.easykashResponse,
-                          null,
-                          2,
+                  <div className="bg-background rounded-site p-4 border border-stroke text-center">
+                    <p className="text-3xl font-bold text-success">
+                      {selectedOrder.totalAmount.toFixed(2)}{' '}
+                      {selectedOrder.currency}
+                    </p>
+                  </div>
+
+                  <div>
+                    <h3 className="font-semibold mb-3">{t('amountDetails')}</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <InfoRow
+                        icon={<CreditCard size={14} />}
+                        label={t('totals.totalPaidNow')}
+                        value={formatMoney(
+                          currentTransactionAmount,
+                          selectedOrder.currency,
                         )}
-                      </pre>
+                      />
+                      <InfoRow
+                        icon={<CreditCard size={14} />}
+                        label={t('totals.fullAmount')}
+                        value={formatMoney(
+                          selectedOrder.fullAmount ?? selectedOrder.totalAmount,
+                          selectedOrder.currency,
+                        )}
+                      />
+                      <InfoRow
+                        icon={<CreditCard size={14} />}
+                        label={t('totals.paidAmount')}
+                        value={formatMoney(
+                          selectedOrder.paidAmount ?? selectedOrder.totalAmount,
+                          selectedOrder.currency,
+                        )}
+                      />
+                      <InfoRow
+                        icon={<CreditCard size={14} />}
+                        label={t('totals.remainingAmount')}
+                        value={formatMoney(
+                          selectedOrder.remainingAmount ?? 0,
+                          selectedOrder.currency,
+                        )}
+                      />
+                      <InfoRow
+                        icon={<Tag size={14} />}
+                        label={t('totals.couponCode')}
+                        value={selectedOrder.couponCode || 'N/A'}
+                      />
+                      <InfoRow
+                        icon={<Tag size={14} />}
+                        label={t('totals.couponDiscount')}
+                        value={`${(selectedOrder.couponDiscount ?? 0).toFixed(2)} ${selectedOrder.currency}`}
+                      />
                     </div>
-                  )}
-                </div>
-              </div>
-            )}
+                  </div>
 
-            {selectedOrder.reservationData?.length ? (
-              <div>
-                <h3 className="font-semibold mb-3">
-                  {t('reservationData.title')}
-                </h3>
-                <div className="flex flex-col gap-2">
-                  {selectedOrder.reservationData.map((field, index) => {
-                    const values = getReservationValues(field.value);
+                  <div>
+                    <h3 className="font-semibold mb-3">
+                      {t('paymentTimeline.title')}
+                    </h3>
+                    {paymentTimeline.length > 0 ? (
+                      <div className="flex flex-col gap-2">
+                        {paymentTimeline.map((payment, index) => {
+                          const paymentStatus = payment.status || 'pending';
+                          const customerReference =
+                            typeof payment.easykashResponse
+                              ?.customerReference === 'string'
+                              ? payment.easykashResponse.customerReference
+                              : undefined;
 
-                    return (
-                      <div
-                        key={`${field.key}-${index}`}
-                        className="py-2 px-3 rounded-lg bg-background border border-stroke"
-                      >
-                        <p className="text-xs text-secondary mb-1">
-                          {getReservationLabel(field.label)}
-                        </p>
-                        <div className="flex flex-wrap gap-1">
-                          {values.length > 0 ? (
-                            values.map((entry, valueIndex) => (
-                              <span
-                                key={`${field.key}-${index}-${valueIndex}`}
-                                className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-primary/10 text-primary"
-                              >
-                                {entry}
-                              </span>
-                            ))
-                          ) : (
-                            <span className="text-sm text-secondary">-</span>
-                          )}
-                        </div>
+                          return (
+                            <div
+                              key={`${payment.paymentId || 'payment'}-${index}`}
+                              className="rounded-lg bg-background border border-stroke p-3"
+                            >
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="text-sm font-semibold text-foreground">
+                                  {t('paymentTimeline.paymentLabel', {
+                                    index: index + 1,
+                                  })}
+                                </span>
+                                <span
+                                  className={`inline-block px-2 py-0.5 text-xs font-medium rounded-full ${PAYMENT_STATUS_COLORS[paymentStatus] || ''}`}
+                                >
+                                  {t(
+                                    `paymentTimeline.statuses.${paymentStatus}`,
+                                  )}
+                                </span>
+                              </div>
+
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                <InfoRow
+                                  icon={<CreditCard size={14} />}
+                                  label={t('paymentTimeline.orderAmount')}
+                                  value={formatMoney(
+                                    payment.orderAmount ?? payment.amount,
+                                    payment.currency || selectedOrder.currency,
+                                  )}
+                                />
+                                {typeof payment.gatewayAmount === 'number' ? (
+                                  <InfoRow
+                                    icon={<CreditCard size={14} />}
+                                    label={t('paymentTimeline.gatewayAmount')}
+                                    value={formatMoney(
+                                      payment.gatewayAmount,
+                                      payment.gatewayCurrency ||
+                                        payment.currency,
+                                    )}
+                                  />
+                                ) : null}
+                                <InfoRow
+                                  icon={<CreditCard size={14} />}
+                                  label={t('paymentTimeline.method')}
+                                  value={payment.paymentMethod || 'N/A'}
+                                />
+                                <InfoRow
+                                  icon={<Calendar size={14} />}
+                                  label={t('paymentTimeline.createdAt')}
+                                  value={formatDate(payment.createdAt)}
+                                />
+                                {payment.paidAt ? (
+                                  <InfoRow
+                                    icon={<Calendar size={14} />}
+                                    label={t('paymentTimeline.paidAt')}
+                                    value={formatDate(payment.paidAt)}
+                                  />
+                                ) : null}
+                                {payment.easykashRef ? (
+                                  <InfoRow
+                                    icon={<Hash size={14} />}
+                                    label={t('paymentTimeline.reference')}
+                                    value={payment.easykashRef}
+                                  />
+                                ) : null}
+                                {payment.easykashProductCode ? (
+                                  <InfoRow
+                                    icon={<Hash size={14} />}
+                                    label={t('paymentTimeline.productCode')}
+                                    value={payment.easykashProductCode}
+                                  />
+                                ) : null}
+                                {customerReference ? (
+                                  <InfoRow
+                                    icon={<Hash size={14} />}
+                                    label={t(
+                                      'paymentTimeline.customerReference',
+                                    )}
+                                    value={customerReference}
+                                  />
+                                ) : null}
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
-                    );
-                  })}
-                </div>
-              </div>
-            ) : null}
+                    ) : (
+                      <div className="rounded-lg bg-background border border-stroke p-3 text-sm text-secondary">
+                        {t('paymentTimeline.empty')}
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <h3 className="font-semibold mb-3 flex items-center gap-2">
+                      <Package size={16} /> {t('items')}
+                    </h3>
+                    <div className="flex flex-col gap-2">
+                      {selectedOrder.items.map((item, i) => (
+                        <div
+                          key={i}
+                          className="flex items-center justify-between gap-3 py-2 px-3 rounded-lg bg-background border border-stroke"
+                        >
+                          <div className="space-y-1">
+                            <span className="font-medium text-sm">
+                              {locale === 'ar'
+                                ? item.productName.ar
+                                : item.productName.en}
+                            </span>
+                            <span className="text-xs text-secondary mx-2">
+                              x{item.quantity}
+                            </span>
+                            <div className="text-[11px] text-secondary font-mono">
+                              <span>
+                                {t('productId')}: {item.productId}
+                              </span>
+                              {item.productSlug ? (
+                                <span className="ms-2">
+                                  {t('productSlug')}: {item.productSlug}
+                                </span>
+                              ) : null}
+                            </div>
+                          </div>
+                          <span className="font-bold text-sm">
+                            {item.price.toFixed(2)} {item.currency}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="font-semibold mb-3">{t('customerInfo')}</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <InfoRow
+                        icon={<Hash size={14} />}
+                        label={t('table.orderNumber')}
+                        value={selectedOrder.orderNumber}
+                      />
+                      <InfoRow
+                        icon={<Package size={14} />}
+                        label={t('source')}
+                        value={selectedOrder.source || 'manasik'}
+                      />
+                      <InfoRow
+                        icon={<Hash size={14} />}
+                        label={t('customerType.label')}
+                        value={
+                          isOrderGuest(selectedOrder)
+                            ? t('customerType.guest')
+                            : t('customerType.registered')
+                        }
+                      />
+                      <InfoRow
+                        icon={<Mail size={14} />}
+                        label={t('email')}
+                        value={selectedOrder.billingData.email}
+                      />
+                      <InfoRow
+                        icon={<Phone size={14} />}
+                        label={t('phone')}
+                        value={selectedOrder.billingData.phone}
+                      />
+                      <InfoRow
+                        icon={<Globe size={14} />}
+                        label={t('country')}
+                        value={selectedOrder.billingData.country}
+                      />
+                      <InfoRow
+                        icon={<Calendar size={14} />}
+                        label={t('table.date')}
+                        value={formatDate(selectedOrder.createdAt)}
+                      />
+                      <InfoRow
+                        icon={<CreditCard size={14} />}
+                        label={t('paymentMethod')}
+                        value={selectedOrder.paymentMethod || 'N/A'}
+                      />
+                      <InfoRow
+                        icon={<Hash size={14} />}
+                        label={t('locale')}
+                        value={selectedOrder.locale || 'N/A'}
+                      />
+                      <InfoRow
+                        icon={<Hash size={14} />}
+                        label={t('termsAgreedAt')}
+                        value={
+                          selectedOrder.termsAgreedAt
+                            ? formatDate(selectedOrder.termsAgreedAt)
+                            : 'N/A'
+                        }
+                      />
+                      <InfoRow
+                        icon={<Hash size={14} />}
+                        label={t('updatedAt')}
+                        value={formatDate(selectedOrder.updatedAt)}
+                      />
+                      {selectedOrder.referralId && (
+                        <InfoRow
+                          icon={<UserRoundPlus size={14} />}
+                          label={t('referral')}
+                          value={selectedOrder.referralId}
+                        />
+                      )}
+                    </div>
+                  </div>
+
+                  {selectedOrder.reservationData?.length ? (
+                    <div>
+                      <h3 className="font-semibold mb-3">
+                        {t('reservationData.title')}
+                      </h3>
+                      <div className="flex flex-col gap-2">
+                        {selectedOrder.reservationData.map((field, index) => {
+                          const values = getReservationValues(field.value);
+
+                          return (
+                            <div
+                              key={`${field.key}-${index}`}
+                              className="py-2 px-3 rounded-lg bg-background border border-stroke"
+                            >
+                              <p className="text-xs text-secondary mb-1">
+                                {getReservationLabel(field.label)}
+                              </p>
+                              <div className="flex flex-wrap gap-1">
+                                {values.length > 0 ? (
+                                  values.map((entry, valueIndex) => (
+                                    <span
+                                      key={`${field.key}-${index}-${valueIndex}`}
+                                      className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-primary/10 text-primary"
+                                    >
+                                      {entry}
+                                    </span>
+                                  ))
+                                ) : (
+                                  <span className="text-sm text-secondary">
+                                    -
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ) : null}
+                </>
+              );
+            })()}
           </div>
-        )}
+        ) : null}
       </Modal>
     </div>
   );

@@ -36,6 +36,34 @@ export interface BillingData {
   country: string;
 }
 
+export type PaymentRecordStatus = 'pending' | 'paid' | 'failed' | 'expired';
+
+export interface OrderPayment {
+  paymentId: string;
+  easykashOrderId?: string;
+  orderAmount?: number;
+  gatewayAmount?: number;
+  gatewayCurrency?: string;
+  amount: number;
+  currency: string;
+  status: PaymentRecordStatus;
+  paymentMethod?: PaymentMethod;
+  easykashRef?: string;
+  easykashProductCode?: string;
+  easykashVoucher?: string;
+  easykashResponse?: Record<string, unknown>;
+  redirectUrl?: string;
+  expiresAt?: string;
+  createdAt: string;
+  paidAt?: string;
+}
+
+export interface PaymentAttempt {
+  createdAt: string;
+  ip?: string;
+  userId?: string;
+}
+
 export interface ReservationOrderField {
   key:
     | 'intention'
@@ -71,10 +99,6 @@ export interface Order {
   status: OrderStatus;
   paymentMethod?: PaymentMethod;
   billingData: BillingData;
-  easykashRef?: string;
-  easykashProductCode?: string;
-  easykashVoucher?: string;
-  easykashResponse?: Record<string, string | number | undefined>;
   // Coupon
   couponCode?: string;
   couponId?: string;
@@ -84,11 +108,14 @@ export interface Order {
   paidAmount?: number;
   remainingAmount?: number;
   isPartialPayment?: boolean;
+  paymentType?: 'full' | 'half' | 'partial';
   // Referral
   referralId?: string;
   // Terms
   termsAgreedAt?: string;
   reservationData?: ReservationOrderField[];
+  payments?: OrderPayment[];
+  paymentAttempts?: PaymentAttempt[];
   source?: 'manasik' | 'ghadaq';
   countryCode?: string;
   locale?: string;

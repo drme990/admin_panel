@@ -193,3 +193,53 @@ export function buildOrderWhatsappMessageFromOrder(order: Order): string {
     referralId: order.referralId || null,
   });
 }
+
+function getProcessingFollowUpFoundationName(source?: Order['source']): string {
+  if (source === 'manasik') return 'مناسك';
+  if (source === 'ghadaq') return 'غدق';
+  return 'غدق';
+}
+
+function getProcessingFollowUpProductName(order: Order): string {
+  const firstItem = order.items?.[0];
+  if (!firstItem) return 'المنتج';
+
+  return (
+    firstItem.productName?.ar?.trim() || firstItem.productName?.en || 'المنتج'
+  );
+}
+
+function getProcessingFollowUpReservationName(order: Order): string {
+  const sacrificeField = order.reservationData?.find(
+    (field) => field.key === 'sacrificeFor' && field.value.trim().length > 0,
+  );
+
+  if (sacrificeField) {
+    const firstReservationName = sacrificeField.value
+      .split('\n')
+      .map((entry) => entry.trim())
+      .filter(Boolean)[0];
+
+    if (firstReservationName) {
+      return firstReservationName;
+    }
+  }
+
+  return order.billingData?.fullName?.trim() || 'غير محدد';
+}
+
+export function buildProcessingOrderWhatsappFollowUpMessage(
+  order: Order,
+): string {
+  const foundationName = getProcessingFollowUpFoundationName(order.source);
+  const productName = getProcessingFollowUpProductName(order);
+  const reservationName = getProcessingFollowUpReservationName(order);
+
+  return [
+    `السلام عليكم ورحمه الله وبركاته معك خدمه عملاء مؤسسة ${foundationName}`,
+    '',
+    `لاحظنا أنه تم التقديم على طلب "${productName}" باسم: "${reservationName}"، ولم يكتمل الدفع او التسجيل.`,
+    '',
+    'هل واجهتك أي مشكلة أثناء الخطوات أو في التطبيق؟',
+  ].join('\n');
+}

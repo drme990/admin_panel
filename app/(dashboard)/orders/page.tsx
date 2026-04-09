@@ -31,7 +31,10 @@ import {
 import { Referral } from '@/types/Referral';
 import Checkbox from '@/components/ui/checkbox';
 import { Tooltip } from '@/components/ui/tooltip';
-import { buildOrderWhatsappMessageFromOrder } from '@/lib/order-whatsapp';
+import {
+  buildOrderWhatsappMessageFromOrder,
+  buildProcessingOrderWhatsappFollowUpMessage,
+} from '@/lib/order-whatsapp';
 
 const STATUS_COLORS: Record<OrderStatus, string> = {
   pending:
@@ -295,7 +298,11 @@ export default function OrderHistoryPage() {
     try {
       setCopyingOrderId(order._id);
       const fullOrder = await fetchOrderDetails(order._id, false);
-      const message = buildOrderWhatsappMessageFromOrder(fullOrder || order);
+      const resolvedOrder = fullOrder || order;
+      const message =
+        resolvedOrder.status === 'processing'
+          ? buildProcessingOrderWhatsappFollowUpMessage(resolvedOrder)
+          : buildOrderWhatsappMessageFromOrder(resolvedOrder);
       await copyTextToClipboard(message);
       toast.success(t('copyWhatsapp.success'));
     } catch (error) {
@@ -459,20 +466,6 @@ export default function OrderHistoryPage() {
       activeClassName: STATUS_COLORS['partial-paid'],
     },
     {
-      label: t('status.pending'),
-      value: 'pending' as const,
-      className:
-        'border border-yellow-200 bg-yellow-50 text-yellow-800 dark:border-yellow-800/60 dark:bg-yellow-900/20 dark:text-yellow-300',
-      activeClassName: STATUS_COLORS.pending,
-    },
-    {
-      label: t('status.processing'),
-      value: 'processing' as const,
-      className:
-        'border border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-800/60 dark:bg-blue-900/20 dark:text-blue-300',
-      activeClassName: STATUS_COLORS.processing,
-    },
-    {
       label: t('status.completed'),
       value: 'completed' as const,
       className:
@@ -485,6 +478,20 @@ export default function OrderHistoryPage() {
       className:
         'border border-red-200 bg-red-50 text-red-800 dark:border-red-800/60 dark:bg-red-900/20 dark:text-red-300',
       activeClassName: STATUS_COLORS.failed,
+    },
+    {
+      label: t('status.processing'),
+      value: 'processing' as const,
+      className:
+        'border border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-800/60 dark:bg-blue-900/20 dark:text-blue-300',
+      activeClassName: STATUS_COLORS.processing,
+    },
+    {
+      label: t('status.pending'),
+      value: 'pending' as const,
+      className:
+        'border border-yellow-200 bg-yellow-50 text-yellow-800 dark:border-yellow-800/60 dark:bg-yellow-900/20 dark:text-yellow-300',
+      activeClassName: STATUS_COLORS.pending,
     },
     {
       label: t('status.refunded'),
@@ -525,10 +532,10 @@ export default function OrderHistoryPage() {
             : 'custom';
 
   const datePresetOptions: Array<{ label: string; value: DateQuickPreset }> = [
+    { label: t('filters.dateModeAll'), value: 'all' },
     { label: t('filters.today'), value: 'today' },
     { label: t('filters.yesterday'), value: 'yesterday' },
     { label: t('filters.last7Days'), value: 'last7Days' },
-    { label: t('filters.dateModeAll'), value: 'all' },
   ];
 
   const applyDatePreset = (preset: DateQuickPreset) => {
@@ -588,6 +595,23 @@ export default function OrderHistoryPage() {
     { label: t('filters.allSources'), value: '' },
     { label: t('filters.manasikSource'), value: 'manasik' },
     { label: t('filters.ghadaqSource'), value: 'ghadaq' },
+  ];
+
+  const referralTabOptions = [
+    {
+      label: t('filters.allReferrals'),
+      value: '',
+      className:
+        'border border-stroke text-foreground/80 hover:bg-background hover:text-foreground',
+      activeClassName: 'bg-foreground text-background shadow-sm',
+    },
+    ...referrals.map((referral) => ({
+      label: `${referral.name} (${referral.referralId})`,
+      value: referral.referralId,
+      className:
+        'border border-stroke text-foreground/80 hover:bg-background hover:text-foreground',
+      activeClassName: 'bg-foreground text-background shadow-sm',
+    })),
   ];
 
   const allVisibleSelected =
@@ -740,23 +764,6 @@ export default function OrderHistoryPage() {
         </div>
 
         <Dropdown
-          value={referralFilter}
-          options={[
-            { label: t('filters.allReferrals'), value: '' },
-            ...referrals.map((r) => ({
-              label: `${r.name} (${r.referralId})`,
-              value: r.referralId,
-            })),
-          ]}
-          onChange={(val) => {
-            setReferralFilter(val);
-            setPage(1);
-          }}
-          placeholder={t('filters.referral')}
-          className="w-full sm:w-48"
-        />
-
-        <Dropdown
           value={sourceFilter}
           options={sourceOptions}
           onChange={(val) => {
@@ -818,6 +825,18 @@ export default function OrderHistoryPage() {
             placeholder={t('filters.toDate')}
           />
         </div>
+      </div>
+
+      <div className="overflow-x-auto pb-1">
+        <Tabs<string>
+          value={referralFilter}
+          options={referralTabOptions}
+          onChange={(value) => {
+            setReferralFilter(value);
+            setPage(1);
+          }}
+          className="min-w-max"
+        />
       </div>
 
       <div className="overflow-x-auto pb-1">

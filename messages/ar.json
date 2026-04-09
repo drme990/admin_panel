@@ -105,7 +105,7 @@
     },
     "status": {
       "pending": "قيد الانتظار",
-      "processing": "جاري المعالجة",
+      "processing": "نية حجز",
       "partial-paid": "باقي حساب",
       "paid": "مدفوع",
       "completed": "مكتمل",
@@ -779,7 +779,7 @@
       },
       "status": {
         "pending": "قيد الانتظار",
-        "processing": "جاري المعالجة",
+        "processing": "نية حجز",
         "partial-paid": "باقي حساب",
         "paid": "مدفوع",
         "completed": "مكتمل",

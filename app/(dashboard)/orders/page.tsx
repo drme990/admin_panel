@@ -734,8 +734,8 @@ export default function OrderHistoryPage() {
           >
             {t(`status.${row.status}`)}
           </span>
-          <span className="text-[11px] text-secondary font-mono">
-            {t('table.refCode')}: {row.referralId || 'Default'}
+          <span className="text-[11px] text-foreground font-mono rounded-full px-2 py-0.5 bg-background/80 border border-stroke w-fit">
+            {row.referralId || 'Default'}
           </span>
         </div>
       ),

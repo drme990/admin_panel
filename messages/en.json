@@ -132,7 +132,6 @@
       "customerType": "Customer Type",
       "itemCount": "{count} item(s)",
       "quantityTotal": "Qty {count}",
-      "refCode": "Ref",
       "amount": "Amount",
       "paidOfFull": "Paid {paid} / {full} {currency}",
       "remaining": "Remaining {remaining} {currency}",

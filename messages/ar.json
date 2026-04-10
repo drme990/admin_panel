@@ -132,7 +132,6 @@
       "customerType": "نوع العميل",
       "itemCount": "{count} منتج",
       "quantityTotal": "الكمية {count}",
-      "refCode": "كود الإحالة",
       "amount": "المبلغ",
       "paidOfFull": "المدفوع {paid} / {full} {currency}",
       "remaining": "المتبقي {remaining} {currency}",

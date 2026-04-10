@@ -63,7 +63,7 @@
       "customerReference": "مرجع العميل",
       "statuses": {
         "pending": "قيد الانتظار",
-        "paid": "مدفوع",
+        "paid": "خالص",
         "failed": "فشل",
         "expired": "منتهي"
       }
@@ -107,7 +107,7 @@
       "pending": "قيد الانتظار",
       "processing": "نية حجز",
       "partial-paid": "باقي حساب",
-      "paid": "مدفوع",
+      "paid": "خالص",
       "completed": "مكتمل",
       "failed": "فشل",
       "refunded": "مسترد",
@@ -781,7 +781,7 @@
         "pending": "قيد الانتظار",
         "processing": "نية حجز",
         "partial-paid": "باقي حساب",
-        "paid": "مدفوع",
+        "paid": "خالص",
         "completed": "مكتمل",
         "failed": "فشل",
         "refunded": "مسترد",

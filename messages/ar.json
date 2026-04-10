@@ -77,9 +77,10 @@
       "userId": "معرف المستخدم"
     },
     "copyWhatsapp": {
-      "button": "نسخ رسالة واتساب",
-      "success": "تم نسخ رسالة الطلب",
-      "failed": "فشل نسخ رسالة الطلب"
+      "button": "بدء رسالة واتساب",
+      "success": "تم فتح محادثة واتساب",
+      "failed": "فشل بدء رسالة واتساب",
+      "invalidPhone": "رقم هاتف العميل غير صالح لواتساب"
     },
     "easykashInfo": "معلومات إيزي كاش",
     "filters": {
@@ -129,6 +130,9 @@
       "orderNumber": "رقم الطلب",
       "customer": "العميل",
       "customerType": "نوع العميل",
+      "itemCount": "{count} منتج",
+      "quantityTotal": "الكمية {count}",
+      "refCode": "كود الإحالة",
       "amount": "المبلغ",
       "paidOfFull": "المدفوع {paid} / {full} {currency}",
       "remaining": "المتبقي {remaining} {currency}",
@@ -299,7 +303,7 @@
         "productMedia": "وسائط المنتج",
         "addImages": "إضافة صور",
         "addMedia": "إضافة وسائط",
-        "mediaHelp": "ارفع حتى 10 ملفات وسائط (صور وفيديو). يجب أن تكون الوسائط الأولى صورة.",
+        "mediaHelp": "ارفع حتى {count} ملفات وسائط (صور وفيديو). يجب أن تكون الوسائط الأولى صورة.",
         "platformShared": "مشترك (كل التطبيقات)",
         "platformManasik": "مناسك فقط",
         "platformGhadaq": "غدق فقط",

@@ -77,9 +77,10 @@
       "userId": "User ID"
     },
     "copyWhatsapp": {
-      "button": "Copy WhatsApp message",
-      "success": "Order message copied",
-      "failed": "Failed to copy order message"
+      "button": "Start WhatsApp message",
+      "success": "WhatsApp conversation opened",
+      "failed": "Failed to start WhatsApp message",
+      "invalidPhone": "Customer phone number is invalid for WhatsApp"
     },
     "easykashInfo": "EasyKash Info",
     "filters": {
@@ -129,6 +130,9 @@
       "orderNumber": "Order Number",
       "customer": "Customer",
       "customerType": "Customer Type",
+      "itemCount": "{count} item(s)",
+      "quantityTotal": "Qty {count}",
+      "refCode": "Ref",
       "amount": "Amount",
       "paidOfFull": "Paid {paid} / {full} {currency}",
       "remaining": "Remaining {remaining} {currency}",
@@ -299,7 +303,7 @@
         "productMedia": "Product Media",
         "addImages": "Add Images",
         "addMedia": "Add Media",
-        "mediaHelp": "Upload up to 10 media files (images and videos). The first media must be an image.",
+        "mediaHelp": "Upload up to {count} media files (images and videos). The first media must be an image.",
         "platformShared": "Shared (all apps)",
         "platformManasik": "Manasik only",
         "platformGhadaq": "Ghadaq only",

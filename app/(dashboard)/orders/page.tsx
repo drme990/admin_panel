@@ -16,7 +16,6 @@ import { Order, OrderPayment, OrderStatus } from '@/types/Order';
 import {
   LuSearch as Search,
   LuEye as Eye,
-  LuCopy as Copy,
   LuRefreshCw as RefreshCw,
   LuPackage as Package,
   LuMail as Mail,
@@ -28,6 +27,7 @@ import {
   LuUserRoundPlus as UserRoundPlus,
   LuTag as Tag,
 } from 'react-icons/lu';
+import { FaWhatsapp as WhatsappIcon } from 'react-icons/fa6';
 import { Referral } from '@/types/Referral';
 import Checkbox from '@/components/ui/checkbox';
 import { Tooltip } from '@/components/ui/tooltip';
@@ -159,6 +159,7 @@ export default function OrderHistoryPage() {
   const [referralFilter, setReferralFilter] = useState<string>(initialReferral);
   const [sourceFilter, setSourceFilter] = useState<string>(initialSource);
   const [referrals, setReferrals] = useState<Referral[]>([]);
+  const [searchInput, setSearchInput] = useState(initialQuery);
   const [searchQuery, setSearchQuery] = useState(initialQuery);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -168,12 +169,25 @@ export default function OrderHistoryPage() {
   const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
   const [bulkStatus, setBulkStatus] = useState('');
   const [bulkUpdating, setBulkUpdating] = useState(false);
-  const [copyingOrderId, setCopyingOrderId] = useState<string | null>(null);
+  const [whatsappOrderId, setWhatsappOrderId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setSearchQuery(searchInput.trim());
+      setPage(1);
+    }, 250);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [searchInput]);
 
   useEffect(() => {
     const fetchReferrals = async () => {
       try {
-        const res = await fetch('/api/referrals?limit=100');
+        const res = await fetch('/api/referrals?limit=100', {
+          cache: 'no-store',
+        });
         const data = await res.json();
         if (data.success) {
           setReferrals(data.data.referrals);
@@ -185,50 +199,71 @@ export default function OrderHistoryPage() {
     fetchReferrals();
   }, []);
 
-  const fetchOrders = useCallback(async () => {
-    setLoading(true);
-    try {
-      const params = new URLSearchParams({
-        page: String(page),
-        limit: '20',
-      });
-      if (statusFilter !== 'all') params.set('status', statusFilter);
-      if (referralFilter) params.set('referralId', referralFilter);
-      if (sourceFilter) params.set('source', sourceFilter);
-      if (searchQuery) params.set('search', searchQuery);
+  const fetchOrders = useCallback(
+    async (signal?: AbortSignal) => {
+      setLoading(true);
+      try {
+        const params = new URLSearchParams({
+          page: String(page),
+          limit: '20',
+          view: 'table',
+        });
+        if (statusFilter !== 'all') params.set('status', statusFilter);
+        if (referralFilter) params.set('referralId', referralFilter);
+        if (sourceFilter) params.set('source', sourceFilter);
+        if (searchQuery) params.set('search', searchQuery);
 
-      const normalizedRange = normalizeDateRange(fromDateFilter, toDateFilter);
-      if (normalizedRange.fromDate)
-        params.set('fromDate', normalizedRange.fromDate);
-      if (normalizedRange.toDate) params.set('toDate', normalizedRange.toDate);
+        const normalizedRange = normalizeDateRange(
+          fromDateFilter,
+          toDateFilter,
+        );
+        if (normalizedRange.fromDate)
+          params.set('fromDate', normalizedRange.fromDate);
+        if (normalizedRange.toDate)
+          params.set('toDate', normalizedRange.toDate);
 
-      const res = await fetch(`/api/orders?${params.toString()}`);
-      const data = await res.json();
+        const res = await fetch(`/api/orders?${params.toString()}`, {
+          cache: 'no-store',
+          signal,
+        });
+        const data = await res.json();
 
-      if (data.success) {
-        const result: OrdersResponse = data.data;
-        setOrders(result.orders);
-        setTotalPages(result.pagination.totalPages);
-        setTotalOrders(result.pagination.totalOrders);
-        setSelectedOrderIds([]);
+        if (data.success) {
+          const result: OrdersResponse = data.data;
+          setOrders(result.orders);
+          setTotalPages(result.pagination.totalPages);
+          setTotalOrders(result.pagination.totalOrders);
+          setSelectedOrderIds([]);
+        }
+      } catch (error) {
+        if ((error as { name?: string })?.name === 'AbortError') {
+          return;
+        }
+        console.error('Error fetching orders:', error);
+      } finally {
+        if (!signal?.aborted) {
+          setLoading(false);
+        }
       }
-    } catch (error) {
-      console.error('Error fetching orders:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, [
-    page,
-    statusFilter,
-    referralFilter,
-    sourceFilter,
-    searchQuery,
-    fromDateFilter,
-    toDateFilter,
-  ]);
+    },
+    [
+      page,
+      statusFilter,
+      referralFilter,
+      sourceFilter,
+      searchQuery,
+      fromDateFilter,
+      toDateFilter,
+    ],
+  );
 
   useEffect(() => {
-    fetchOrders();
+    const controller = new AbortController();
+    void fetchOrders(controller.signal);
+
+    return () => {
+      controller.abort();
+    };
   }, [fetchOrders]);
 
   const fetchOrderDetails = useCallback(
@@ -253,25 +288,24 @@ export default function OrderHistoryPage() {
     [t],
   );
 
-  const copyTextToClipboard = async (text: string) => {
-    if (navigator?.clipboard?.writeText) {
-      await navigator.clipboard.writeText(text);
-      return;
+  const normalizeWhatsappPhone = (rawPhone?: string) => {
+    if (!rawPhone) return null;
+
+    let normalized = rawPhone.trim();
+    if (!normalized) return null;
+
+    normalized = normalized.replace(/[\s().-]/g, '');
+    if (normalized.startsWith('00')) {
+      normalized = `+${normalized.slice(2)}`;
     }
 
-    const textArea = document.createElement('textarea');
-    textArea.value = text;
-    textArea.style.position = 'fixed';
-    textArea.style.opacity = '0';
-    document.body.appendChild(textArea);
-    textArea.focus();
-    textArea.select();
-    const copied = document.execCommand('copy');
-    document.body.removeChild(textArea);
-
-    if (!copied) {
-      throw new Error('Failed to copy text');
+    if (normalized.startsWith('+')) {
+      const digits = normalized.slice(1).replace(/\D/g, '');
+      return digits || null;
     }
+
+    const digitsOnly = normalized.replace(/\D/g, '');
+    return digitsOnly || null;
   };
 
   const viewOrder = async (order: Order) => {
@@ -294,22 +328,37 @@ export default function OrderHistoryPage() {
     setLoadingOrderDetails(false);
   };
 
-  const copyOrderWhatsappMessage = async (order: Order) => {
+  const startOrderWhatsappMessage = async (order: Order) => {
     try {
-      setCopyingOrderId(order._id);
+      setWhatsappOrderId(order._id);
       const fullOrder = await fetchOrderDetails(order._id, false);
       const resolvedOrder = fullOrder || order;
       const message =
         resolvedOrder.status === 'processing'
           ? buildProcessingOrderWhatsappFollowUpMessage(resolvedOrder)
           : buildOrderWhatsappMessageFromOrder(resolvedOrder);
-      await copyTextToClipboard(message);
+
+      const whatsappPhone = normalizeWhatsappPhone(
+        resolvedOrder.billingData?.phone,
+      );
+
+      if (!whatsappPhone) {
+        toast.error(t('copyWhatsapp.invalidPhone'));
+        return;
+      }
+
+      const whatsappUrl = `https://wa.me/${whatsappPhone}?text=${encodeURIComponent(message)}`;
+      const popup = window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+      if (!popup) {
+        window.location.assign(whatsappUrl);
+      }
+
       toast.success(t('copyWhatsapp.success'));
     } catch (error) {
-      console.error('Error copying WhatsApp order message:', error);
+      console.error('Error starting WhatsApp order message:', error);
       toast.error(t('copyWhatsapp.failed'));
     } finally {
-      setCopyingOrderId(null);
+      setWhatsappOrderId(null);
     }
   };
 
@@ -679,11 +728,16 @@ export default function OrderHistoryPage() {
     {
       header: t('table.status'),
       accessor: (row: Order) => (
-        <span
-          className={`inline-block px-2 py-0.5 text-xs font-medium rounded-full ${STATUS_COLORS[row.status] || ''}`}
-        >
-          {t(`status.${row.status}`)}
-        </span>
+        <div className="flex flex-col gap-1">
+          <span
+            className={`inline-block w-fit px-2 py-0.5 text-xs font-medium rounded-full ${STATUS_COLORS[row.status] || ''}`}
+          >
+            {t(`status.${row.status}`)}
+          </span>
+          <span className="text-[11px] text-secondary font-mono">
+            {t('table.refCode')}: {row.referralId || 'Default'}
+          </span>
+        </div>
       ),
     },
     {
@@ -721,15 +775,15 @@ export default function OrderHistoryPage() {
               size="custom"
               onClick={(e) => {
                 e.stopPropagation();
-                copyOrderWhatsappMessage(row);
+                startOrderWhatsappMessage(row);
               }}
-              disabled={copyingOrderId === row._id}
+              disabled={whatsappOrderId === row._id}
               aria-label={t('copyWhatsapp.button')}
             >
-              {copyingOrderId === row._id ? (
+              {whatsappOrderId === row._id ? (
                 <RefreshCw size={16} className="animate-spin" />
               ) : (
-                <Copy size={16} />
+                <WhatsappIcon size={16} />
               )}
             </Button>
           </Tooltip>
@@ -754,10 +808,9 @@ export default function OrderHistoryPage() {
           <input
             type="text"
             placeholder={t('filters.search')}
-            value={searchQuery}
+            value={searchInput}
             onChange={(e) => {
-              setSearchQuery(e.target.value);
-              setPage(1);
+              setSearchInput(e.target.value);
             }}
             className="w-full ps-9 pe-4 py-2 rounded-lg border border-stroke bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors text-sm"
           />
@@ -777,7 +830,9 @@ export default function OrderHistoryPage() {
         <Button
           variant="icon-primary"
           size="custom"
-          onClick={() => fetchOrders()}
+          onClick={() => {
+            void fetchOrders();
+          }}
           className="shrink-0"
         >
           <RefreshCw size={18} />
@@ -1119,21 +1174,40 @@ export default function OrderHistoryPage() {
                     <h3 className="font-semibold mb-3 flex items-center gap-2">
                       <Package size={16} /> {t('items')}
                     </h3>
+                    <div className="mb-3 text-xs text-secondary">
+                      {t('table.itemCount', {
+                        count: selectedOrder.items.length,
+                      })}{' '}
+                      •{' '}
+                      {t('table.quantityTotal', {
+                        count: selectedOrder.items.reduce(
+                          (sum, item) => sum + Number(item.quantity || 0),
+                          0,
+                        ),
+                      })}
+                    </div>
                     <div className="flex flex-col gap-2">
                       {selectedOrder.items.map((item, i) => (
                         <div
                           key={i}
-                          className="flex items-center justify-between gap-3 py-2 px-3 rounded-lg bg-background border border-stroke"
+                          className="flex items-start justify-between gap-3 py-3 px-3 rounded-lg bg-background border border-stroke"
                         >
-                          <div className="space-y-1">
-                            <span className="font-medium text-sm">
+                          <div className="space-y-1 min-w-0">
+                            <p className="font-medium text-sm truncate">
                               {locale === 'ar'
                                 ? item.productName.ar
                                 : item.productName.en}
-                            </span>
-                            <span className="text-xs text-secondary mx-2">
-                              x{item.quantity}
-                            </span>
+                            </p>
+                            <div className="flex items-center gap-2 text-xs text-secondary">
+                              <span>
+                                {t('table.quantityTotal', {
+                                  count: item.quantity,
+                                })}
+                              </span>
+                              <span>
+                                {item.price.toFixed(2)} {item.currency}
+                              </span>
+                            </div>
                             <div className="text-[11px] text-secondary font-mono">
                               <span>
                                 {t('productId')}: {item.productId}
@@ -1145,9 +1219,15 @@ export default function OrderHistoryPage() {
                               ) : null}
                             </div>
                           </div>
-                          <span className="font-bold text-sm">
-                            {item.price.toFixed(2)} {item.currency}
-                          </span>
+                          <div className="text-end shrink-0">
+                            <p className="font-bold text-sm text-success">
+                              {(item.price * item.quantity).toFixed(2)}{' '}
+                              {item.currency}
+                            </p>
+                            <p className="text-[11px] text-secondary">
+                              {item.quantity} x {item.price.toFixed(2)}
+                            </p>
+                          </div>
                         </div>
                       ))}
                     </div>

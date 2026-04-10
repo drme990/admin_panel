@@ -2,6 +2,17 @@
 
 import { useCallback } from 'react';
 import Image from 'next/image';
+import { useTranslations } from 'next-intl';
+import { toast } from 'react-toastify';
+import Button from '@/components/ui/button';
+
+import type { ProductMedia, ProductMediaPlatform } from '@/types/Product';
+export type { UploadProgressState } from '@/hooks/use-media-upload';
+import {
+  useMediaUpload,
+  type UploadProgressState,
+} from '@/hooks/use-media-upload';
+
 import {
   LuPlus as Plus,
   LuTrash2 as Trash2,
@@ -10,16 +21,6 @@ import {
   LuChevronRight as ChevronRight,
   LuVideo as VideoIcon,
 } from 'react-icons/lu';
-import { useTranslations } from 'next-intl';
-import { toast } from 'react-toastify';
-import Button from '@/components/ui/button';
-import {
-  useMediaUpload,
-  type UploadProgressState,
-} from '@/hooks/use-media-upload';
-import type { ProductMedia, ProductMediaPlatform } from '@/types/Product';
-
-export type { UploadProgressState } from '@/hooks/use-media-upload';
 
 interface MultiMediaUploadProps {
   media: ProductMedia[];
@@ -52,7 +53,7 @@ const isVideoUrl = (url: string) => {
 export default function MultiMediaUpload({
   media,
   onChange,
-  maxMedia = 10,
+  maxMedia = 20,
   onUploadProgressChange,
   onCancelUploadReady,
 }: MultiMediaUploadProps) {
@@ -333,7 +334,9 @@ export default function MultiMediaUpload({
         </label>
       )}
 
-      <p className="text-xs text-secondary">{t('form.mediaHelp')}</p>
+      <p className="text-xs text-secondary">
+        {t('form.mediaHelp', { count: maxMedia })}
+      </p>
     </div>
   );
 }

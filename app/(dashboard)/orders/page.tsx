@@ -824,7 +824,7 @@ export default function OrderHistoryPage() {
     {
       header: t('table.referral'),
       accessor: (row: Order) => (
-        <span className="text-[11px] text-muted font-mono rounded-full px-2 py-0.5 bg-primary border border-stroke w-fit">
+        <span className="text-[11px] text-primary font-mono rounded-full px-2 py-1 bg-muted/60 border border-stroke w-fit">
           {row.referralId || 'Default'}
         </span>
       ),

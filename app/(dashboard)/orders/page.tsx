@@ -805,11 +805,16 @@ export default function OrderHistoryPage() {
     },
     {
       header: t('table.amount'),
-      accessor: (row: Order) => (
-        <span className="font-bold text-success">
-          {row.totalAmount.toFixed(2)} {row.currency}
-        </span>
-      ),
+      accessor: (row: Order) => {
+        const displayedAmount =
+          typeof row.paidAmount === 'number' ? row.paidAmount : row.totalAmount;
+
+        return (
+          <span className="font-bold text-success">
+            {displayedAmount.toFixed(2)} {row.currency}
+          </span>
+        );
+      },
     },
     {
       header: t('table.status'),

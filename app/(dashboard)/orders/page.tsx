@@ -15,6 +15,7 @@ import { useTranslations, useLocale } from 'next-intl';
 import { Order, OrderPayment, OrderStatus } from '@/types/Order';
 import {
   LuSearch as Search,
+  LuCopy as Copy,
   LuEye as Eye,
   LuRefreshCw as RefreshCw,
   LuPackage as Package,
@@ -170,6 +171,12 @@ export default function OrderHistoryPage() {
   const [bulkStatus, setBulkStatus] = useState('');
   const [bulkUpdating, setBulkUpdating] = useState(false);
   const [whatsappOrderId, setWhatsappOrderId] = useState<string | null>(null);
+  const [copyingPhoneOrderId, setCopyingPhoneOrderId] = useState<string | null>(
+    null,
+  );
+  const [copyingMessageOrderId, setCopyingMessageOrderId] = useState<
+    string | null
+  >(null);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -288,7 +295,7 @@ export default function OrderHistoryPage() {
     [t],
   );
 
-  const normalizeWhatsappPhone = (rawPhone?: string) => {
+  const normalizeWhatsappPhone = (rawPhone?: string, withPlus = false) => {
     if (!rawPhone) return null;
 
     let normalized = rawPhone.trim();
@@ -301,11 +308,53 @@ export default function OrderHistoryPage() {
 
     if (normalized.startsWith('+')) {
       const digits = normalized.slice(1).replace(/\D/g, '');
-      return digits || null;
+      if (!digits) return null;
+      return withPlus ? `+${digits}` : digits;
     }
 
     const digitsOnly = normalized.replace(/\D/g, '');
-    return digitsOnly || null;
+    if (!digitsOnly) return null;
+    return withPlus ? `+${digitsOnly}` : digitsOnly;
+  };
+
+  const copyToClipboard = async (value: string) => {
+    if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(value);
+      return;
+    }
+
+    if (typeof document === 'undefined') {
+      throw new Error('Clipboard is not available');
+    }
+
+    const textArea = document.createElement('textarea');
+    textArea.value = value;
+    textArea.setAttribute('readonly', '');
+    textArea.style.position = 'fixed';
+    textArea.style.left = '-9999px';
+    document.body.appendChild(textArea);
+    textArea.select();
+
+    const copied = document.execCommand('copy');
+    document.body.removeChild(textArea);
+
+    if (!copied) {
+      throw new Error('Copy command failed');
+    }
+  };
+
+  const resolveOrderWhatsappPayload = async (order: Order) => {
+    const fullOrder = await fetchOrderDetails(order._id, false);
+    const resolvedOrder = fullOrder || order;
+    const message =
+      resolvedOrder.status === 'processing'
+        ? buildProcessingOrderWhatsappFollowUpMessage(resolvedOrder)
+        : buildOrderWhatsappMessageFromOrder(resolvedOrder);
+
+    return {
+      message,
+      whatsappPhone: normalizeWhatsappPhone(resolvedOrder.billingData?.phone),
+    };
   };
 
   const viewOrder = async (order: Order) => {
@@ -331,16 +380,8 @@ export default function OrderHistoryPage() {
   const startOrderWhatsappMessage = async (order: Order) => {
     try {
       setWhatsappOrderId(order._id);
-      const fullOrder = await fetchOrderDetails(order._id, false);
-      const resolvedOrder = fullOrder || order;
-      const message =
-        resolvedOrder.status === 'processing'
-          ? buildProcessingOrderWhatsappFollowUpMessage(resolvedOrder)
-          : buildOrderWhatsappMessageFromOrder(resolvedOrder);
-
-      const whatsappPhone = normalizeWhatsappPhone(
-        resolvedOrder.billingData?.phone,
-      );
+      const { message, whatsappPhone } =
+        await resolveOrderWhatsappPayload(order);
 
       if (!whatsappPhone) {
         toast.error(t('copyWhatsapp.invalidPhone'));
@@ -350,7 +391,8 @@ export default function OrderHistoryPage() {
       const whatsappUrl = `https://wa.me/${whatsappPhone}?text=${encodeURIComponent(message)}`;
       const popup = window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
       if (!popup) {
-        window.location.assign(whatsappUrl);
+        toast.error(t('copyWhatsapp.failed'));
+        return;
       }
 
       toast.success(t('copyWhatsapp.success'));
@@ -359,6 +401,43 @@ export default function OrderHistoryPage() {
       toast.error(t('copyWhatsapp.failed'));
     } finally {
       setWhatsappOrderId(null);
+    }
+  };
+
+  const copyOrderWhatsappNumber = async (order: Order) => {
+    try {
+      setCopyingPhoneOrderId(order._id);
+      const whatsappPhone = normalizeWhatsappPhone(
+        order.billingData?.phone,
+        true,
+      );
+
+      if (!whatsappPhone) {
+        toast.error(t('copyWhatsapp.invalidPhone'));
+        return;
+      }
+
+      await copyToClipboard(whatsappPhone);
+      toast.success(t('copyWhatsapp.copyNumberSuccess'));
+    } catch (error) {
+      console.error('Error copying WhatsApp number:', error);
+      toast.error(t('copyWhatsapp.copyNumberFailed'));
+    } finally {
+      setCopyingPhoneOrderId(null);
+    }
+  };
+
+  const copyOrderWhatsappMessage = async (order: Order) => {
+    try {
+      setCopyingMessageOrderId(order._id);
+      const { message } = await resolveOrderWhatsappPayload(order);
+      await copyToClipboard(message);
+      toast.success(t('copyWhatsapp.copyMessageSuccess'));
+    } catch (error) {
+      console.error('Error copying WhatsApp message:', error);
+      toast.error(t('copyWhatsapp.copyMessageFailed'));
+    } finally {
+      setCopyingMessageOrderId(null);
     }
   };
 
@@ -654,6 +733,13 @@ export default function OrderHistoryPage() {
         'border border-stroke text-foreground/80 hover:bg-background hover:text-foreground',
       activeClassName: 'bg-foreground text-background shadow-sm',
     },
+    {
+      label: 'default',
+      value: 'default',
+      className:
+        'border border-stroke text-foreground/80 hover:bg-background hover:text-foreground',
+      activeClassName: 'bg-foreground text-background shadow-sm',
+    },
     ...referrals.map((referral) => ({
       label: `${referral.name} (${referral.referralId})`,
       value: referral.referralId,
@@ -728,23 +814,26 @@ export default function OrderHistoryPage() {
     {
       header: t('table.status'),
       accessor: (row: Order) => (
-        <div className="flex flex-col gap-1">
-          <span
-            className={`inline-block w-fit px-2 py-0.5 text-xs font-medium rounded-full ${STATUS_COLORS[row.status] || ''}`}
-          >
-            {t(`status.${row.status}`)}
-          </span>
-          <span className="text-[11px] text-foreground font-mono rounded-full px-2 py-0.5 bg-background/80 border border-stroke w-fit">
-            {row.referralId || 'Default'}
-          </span>
-        </div>
+        <span
+          className={`inline-block w-fit px-2 py-0.5 text-xs font-medium rounded-full ${STATUS_COLORS[row.status] || ''}`}
+        >
+          {t(`status.${row.status}`)}
+        </span>
+      ),
+    },
+    {
+      header: t('table.referral'),
+      accessor: (row: Order) => (
+        <span className="text-[11px] text-muted font-mono rounded-full px-2 py-0.5 bg-primary border border-stroke w-fit">
+          {row.referralId || 'Default'}
+        </span>
       ),
     },
     {
       header: t('table.date'),
       accessor: (row: Order) => (
         <span className="text-sm text-secondary">
-          {formatDate(row.createdAt)}
+          {formatDate(row.updatedAt)}
         </span>
       ),
     },
@@ -787,9 +876,53 @@ export default function OrderHistoryPage() {
               )}
             </Button>
           </Tooltip>
+
+          <Tooltip
+            position={ToolTipPositions}
+            content={t('copyWhatsapp.copyNumber')}
+          >
+            <Button
+              variant="icon-primary"
+              size="custom"
+              onClick={(e) => {
+                e.stopPropagation();
+                void copyOrderWhatsappNumber(row);
+              }}
+              disabled={copyingPhoneOrderId === row._id}
+              aria-label={t('copyWhatsapp.copyNumber')}
+            >
+              {copyingPhoneOrderId === row._id ? (
+                <RefreshCw size={16} className="animate-spin" />
+              ) : (
+                <Phone size={16} />
+              )}
+            </Button>
+          </Tooltip>
+
+          <Tooltip
+            position={ToolTipPositions}
+            content={t('copyWhatsapp.copyMessage')}
+          >
+            <Button
+              variant="icon-primary"
+              size="custom"
+              onClick={(e) => {
+                e.stopPropagation();
+                void copyOrderWhatsappMessage(row);
+              }}
+              disabled={copyingMessageOrderId === row._id}
+              aria-label={t('copyWhatsapp.copyMessage')}
+            >
+              {copyingMessageOrderId === row._id ? (
+                <RefreshCw size={16} className="animate-spin" />
+              ) : (
+                <Copy size={16} />
+              )}
+            </Button>
+          </Tooltip>
         </div>
       ),
-      className: 'w-24',
+      className: 'w-44',
     },
   ];
 

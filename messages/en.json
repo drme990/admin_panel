@@ -80,7 +80,13 @@
       "button": "Start WhatsApp message",
       "success": "WhatsApp conversation opened",
       "failed": "Failed to start WhatsApp message",
-      "invalidPhone": "Customer phone number is invalid for WhatsApp"
+      "invalidPhone": "Customer phone number is invalid for WhatsApp",
+      "copyNumber": "Copy WhatsApp number",
+      "copyNumberSuccess": "WhatsApp number copied",
+      "copyNumberFailed": "Failed to copy WhatsApp number",
+      "copyMessage": "Copy WhatsApp message",
+      "copyMessageSuccess": "WhatsApp message copied",
+      "copyMessageFailed": "Failed to copy WhatsApp message"
     },
     "easykashInfo": "EasyKash Info",
     "filters": {
@@ -136,6 +142,7 @@
       "paidOfFull": "Paid {paid} / {full} {currency}",
       "remaining": "Remaining {remaining} {currency}",
       "status": "Status",
+      "referral": "Referral",
       "date": "Date",
       "actions": "Actions"
     }

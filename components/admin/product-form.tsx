@@ -27,7 +27,11 @@ import {
   LuCircleHelp as CircleHelp,
 } from 'react-icons/lu';
 import Loading from '../ui/loading';
-import { roundPrice } from '@/lib/currency-rounding';
+import {
+  buildCurrencyRoundingMap,
+  roundPrice,
+  type RoundingRule,
+} from '@/lib/currency-rounding';
 import {
   getReservationPreset,
   normalizeReservationFields,
@@ -99,6 +103,9 @@ export default function ProductForm({
   });
   const [addedPricePercentage, setAddedPricePercentage] = useState<number>(0);
   const [allProducts, setAllProducts] = useState<Product[]>([]);
+  const [currencyRoundingMap, setCurrencyRoundingMap] = useState<
+    Record<string, RoundingRule>
+  >({});
   const [hasChanges, setHasChanges] = useState(false);
   const [isFormDataReady, setIsFormDataReady] = useState(false);
   const [uploadProgress, setUploadProgress] =
@@ -134,6 +141,16 @@ export default function ProductForm({
       .then((r) => r.json())
       .then((d) => {
         if (d.success) setAllProducts(d.data.products || []);
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    fetch('/api/countries?active=true')
+      .then((r) => r.json())
+      .then((d) => {
+        if (!d.success || !Array.isArray(d.data)) return;
+        setCurrencyRoundingMap(buildCurrencyRoundingMap(d.data));
       })
       .catch(() => {});
   }, []);
@@ -252,7 +269,11 @@ export default function ProductForm({
       price: Math.ceil(size.price * multiplier),
       prices: size.prices.map((p) => ({
         ...p,
-        amount: roundPrice(p.amount * multiplier, p.currencyCode),
+        amount: roundPrice(
+          p.amount * multiplier,
+          p.currencyCode,
+          currencyRoundingMap,
+        ),
       })),
     }));
     setFormData({ ...formData, sizes: updatedSizes });

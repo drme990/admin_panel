@@ -27,16 +27,22 @@ interface Country {
   name: { ar: string; en: string };
   currencyCode: string;
   currencySymbol: string;
+  roundingRule?: 'nearest-ten' | 'nearest-five' | 'ceil';
   flagEmoji: string;
   isActive: boolean;
   sortOrder: number | null;
 }
+
+type RoundingRule = 'nearest-ten' | 'nearest-five' | 'ceil';
 
 export default function CountriesPage() {
   const [countries, setCountries] = useState<Country[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<'all' | 'active' | 'inactive'>('all');
+  const [savingRoundingByCountry, setSavingRoundingByCountry] = useState<
+    Record<string, boolean>
+  >({});
   const [reorderOpen, setReorderOpen] = useState(false);
   const [reorderList, setReorderList] = useState<Country[]>([]);
   const [reorderSaving, setReorderSaving] = useState(false);
@@ -51,6 +57,24 @@ export default function CountriesPage() {
       { label: t('filter.all'), value: 'all' },
       { label: t('filter.active'), value: 'active' },
       { label: t('filter.inactive'), value: 'inactive' },
+    ],
+    [t],
+  );
+
+  const roundingOptions: { label: string; value: RoundingRule }[] = useMemo(
+    () => [
+      {
+        label: t('roundingRules.ceil'),
+        value: 'ceil',
+      },
+      {
+        label: t('roundingRules.nearestFive'),
+        value: 'nearest-five',
+      },
+      {
+        label: t('roundingRules.nearestTen'),
+        value: 'nearest-ten',
+      },
     ],
     [t],
   );
@@ -187,6 +211,53 @@ export default function CountriesPage() {
     [t],
   );
 
+  const handleRoundingRuleChange = useCallback(
+    async (country: Country, nextRule: RoundingRule) => {
+      const previousRule = country.roundingRule ?? 'ceil';
+      if (previousRule === nextRule) return;
+
+      setCountries((prev) =>
+        prev.map((item) =>
+          item._id === country._id ? { ...item, roundingRule: nextRule } : item,
+        ),
+      );
+      setSavingRoundingByCountry((prev) => ({
+        ...prev,
+        [country._id]: true,
+      }));
+
+      try {
+        const response = await fetch(`/api/countries/${country._id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ roundingRule: nextRule }),
+        });
+
+        const data = await response.json();
+        if (!response.ok || !data.success) {
+          throw new Error(data.error || 'Failed to update rounding rule');
+        }
+
+        toast.success(t('messages.roundingUpdateSuccess'));
+      } catch {
+        setCountries((prev) =>
+          prev.map((item) =>
+            item._id === country._id
+              ? { ...item, roundingRule: previousRule }
+              : item,
+          ),
+        );
+        toast.error(t('messages.roundingUpdateFailed'));
+      } finally {
+        setSavingRoundingByCountry((prev) => ({
+          ...prev,
+          [country._id]: false,
+        }));
+      }
+    },
+    [t],
+  );
+
   const openReorderModal = () => {
     setReorderList([...activeCountries]);
     setReorderOpen(true);
@@ -293,6 +364,21 @@ export default function CountriesPage() {
         ),
       },
       {
+        header: t('table.rounding'),
+        accessor: (c: Country) => (
+          <div className="min-w-44">
+            <Dropdown<RoundingRule>
+              value={c.roundingRule ?? 'ceil'}
+              options={roundingOptions}
+              onChange={(value) => {
+                void handleRoundingRuleChange(c, value);
+              }}
+              disabled={Boolean(savingRoundingByCountry[c._id])}
+            />
+          </div>
+        ),
+      },
+      {
         header: t('table.status'),
         accessor: (c: Country) => (
           <Switch
@@ -303,7 +389,15 @@ export default function CountriesPage() {
         ),
       },
     ],
-    [t, locale, handleToggleActive, orderMap],
+    [
+      t,
+      locale,
+      handleToggleActive,
+      orderMap,
+      roundingOptions,
+      handleRoundingRuleChange,
+      savingRoundingByCountry,
+    ],
   );
 
   const activeCount = countries.filter((c) => c.isActive).length;

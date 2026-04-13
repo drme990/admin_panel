@@ -12,7 +12,7 @@ import Input from '@/components/ui/input';
 import Dropdown from '@/components/ui/dropdown';
 import Button from '@/components/ui/button';
 import { toast } from 'react-toastify';
-import { roundPrice } from '@/lib/currency-rounding';
+import { buildCurrencyRoundingMap, roundPrice } from '@/lib/currency-rounding';
 
 export interface CurrencyPrice {
   currencyCode: string;
@@ -27,6 +27,7 @@ interface Country {
   currencySymbol: string;
   name: { ar: string; en: string };
   isActive: boolean;
+  roundingRule?: 'nearest-ten' | 'nearest-five' | 'ceil';
 }
 
 interface MultiCurrencyPriceEditorProps {
@@ -127,6 +128,7 @@ export default function MultiCurrencyPriceEditor({
       const targetCurrencies = [
         ...new Set(countries.map((c) => c.currencyCode)),
       ];
+      const roundingMap = buildCurrencyRoundingMap(countries);
 
       let rates: Record<string, number>;
       try {
@@ -157,7 +159,9 @@ export default function MultiCurrencyPriceEditor({
         }
 
         const rate = rates[code.toLowerCase()];
-        const convertedAmount = rate ? roundPrice(basePrice * rate, code) : 0;
+        const convertedAmount = rate
+          ? roundPrice(basePrice * rate, code, roundingMap)
+          : 0;
 
         return {
           currencyCode: code,

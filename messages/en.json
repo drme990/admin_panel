@@ -421,8 +421,14 @@
         "nameEn": "Name (EN)",
         "nameAr": "Name (AR)",
         "currency": "Currency",
+        "rounding": "Rounding",
         "status": "Status",
         "order": "Order"
+      },
+      "roundingRules": {
+        "ceil": "Round Up (Integer)",
+        "nearestFive": "Round Up to 5",
+        "nearestTen": "Round Up to 10"
       },
       "status": {
         "active": "Active",
@@ -436,6 +442,8 @@
       "messages": {
         "saveFailed": "Failed to update country",
         "updateSuccess": "Country updated successfully",
+        "roundingUpdateSuccess": "Rounding rule updated successfully",
+        "roundingUpdateFailed": "Failed to update rounding rule",
         "orderSaved": "Currency order saved successfully",
         "reorderSuccess": "Currency order saved successfully",
         "reorderFailed": "Failed to save currency order"

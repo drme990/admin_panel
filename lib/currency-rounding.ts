@@ -1,33 +1,20 @@
 /**
  * Currency-specific rounding rules for auto-calculated prices.
- * Kept in sync with apps_backend/lib/currency-rounding.ts.
  *
- * - 'nearest-ten':  round UP to the nearest 10  (e.g. 4→10, 11→20, 30→30)
- * - 'nearest-five': round UP to the nearest 5   (e.g. 2→5, 6→10, 15→15)
- * - 'ceil':         Math.ceil – round UP to the nearest integer (default)
- *
- * Currencies not listed here fall back to 'ceil'.
- * Add new entries as needed — the key is the uppercase ISO 4217 code.
+ * Rules are configured from countries data in the admin backend.
  */
 
 export type RoundingRule = 'nearest-ten' | 'nearest-five' | 'ceil';
 
-const CURRENCY_ROUNDING: Record<string, RoundingRule> = {
-  // Round to nearest 10
-  EGP: 'nearest-ten',
-
-  // Round to nearest 5
-  SAR: 'nearest-five',
-  QAR: 'nearest-five',
-  USD: 'nearest-five',
-  EUR: 'nearest-five',
-  TRY: 'nearest-five',
+type CountryWithRounding = {
+  currencyCode: string;
+  roundingRule?: RoundingRule | null;
 };
 
-/** Apply the rounding rule for the given currency code. */
-export function roundPrice(amount: number, currencyCode: string): number {
-  const rule = CURRENCY_ROUNDING[currencyCode.toUpperCase()] ?? 'ceil';
-
+export function roundPriceByRule(
+  amount: number,
+  rule: RoundingRule = 'ceil',
+): number {
   switch (rule) {
     case 'nearest-ten':
       return Math.ceil(amount / 10) * 10;
@@ -37,4 +24,28 @@ export function roundPrice(amount: number, currencyCode: string): number {
     default:
       return Math.ceil(amount);
   }
+}
+
+export function buildCurrencyRoundingMap(
+  countries: CountryWithRounding[],
+): Record<string, RoundingRule> {
+  const map: Record<string, RoundingRule> = {};
+
+  for (const country of countries) {
+    const code = country.currencyCode?.toUpperCase();
+    if (!code || map[code]) continue;
+    map[code] = country.roundingRule ?? 'ceil';
+  }
+
+  return map;
+}
+
+/** Apply the rounding rule for the given currency code. */
+export function roundPrice(
+  amount: number,
+  currencyCode: string,
+  roundingMap?: Record<string, RoundingRule>,
+): number {
+  const rule = roundingMap?.[currencyCode.toUpperCase()] ?? 'ceil';
+  return roundPriceByRule(amount, rule);
 }

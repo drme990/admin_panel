@@ -421,8 +421,14 @@
         "nameEn": "الاسم (إنجليزي)",
         "nameAr": "الاسم (عربي)",
         "currency": "العملة",
+        "rounding": "التقريب",
         "status": "الحالة",
         "order": "الترتيب"
+      },
+      "roundingRules": {
+        "ceil": "تقريب للأعلى (عدد صحيح)",
+        "nearestFive": "تقريب للأعلى إلى 5",
+        "nearestTen": "تقريب للأعلى إلى 10"
       },
       "status": {
         "active": "نشط",
@@ -436,6 +442,8 @@
       "messages": {
         "saveFailed": "فشل تحديث البلد",
         "updateSuccess": "تم تحديث البلد بنجاح",
+        "roundingUpdateSuccess": "تم تحديث قاعدة التقريب بنجاح",
+        "roundingUpdateFailed": "فشل تحديث قاعدة التقريب",
         "orderSaved": "تم حفظ ترتيب العملات بنجاح",
         "reorderSuccess": "تم حفظ ترتيب العملات بنجاح",
         "reorderFailed": "فشل حفظ ترتيب العملات"

@@ -13,7 +13,7 @@ import Dropdown from '@/components/ui/dropdown';
 import Button from '@/components/ui/button';
 import { toast } from 'react-toastify';
 import { CurrencyPrice } from '@/types/Product';
-import { roundPrice } from '@/lib/currency-rounding';
+import { buildCurrencyRoundingMap, roundPrice } from '@/lib/currency-rounding';
 
 export interface CurrencyMinimumPayment {
   currencyCode: string;
@@ -28,6 +28,7 @@ interface Country {
   currencySymbol: string;
   name: { ar: string; en: string };
   isActive: boolean;
+  roundingRule?: 'nearest-ten' | 'nearest-five' | 'ceil';
 }
 
 interface MultiCurrencyMinimumPaymentEditorProps {
@@ -127,6 +128,7 @@ export default function MultiCurrencyMinimumPaymentEditor({
       const targetCurrencies = [
         ...new Set(countries.map((c) => c.currencyCode)),
       ];
+      const roundingMap = buildCurrencyRoundingMap(countries);
 
       if (minimumPaymentType === 'percentage') {
         // For percentage, just apply the same percentage to all currencies
@@ -183,7 +185,7 @@ export default function MultiCurrencyMinimumPaymentEditor({
 
             const rate = rates[code.toLowerCase()];
             const convertedValue = rate
-              ? roundPrice(baseMinimumValue * rate, code)
+              ? roundPrice(baseMinimumValue * rate, code, roundingMap)
               : 0;
 
             return {

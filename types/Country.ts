@@ -7,6 +7,7 @@ export interface Country {
   };
   currencyCode: string;
   currencySymbol: string;
+  roundingRule: 'nearest-ten' | 'nearest-five' | 'ceil';
   flagEmoji: string;
   isActive: boolean;
   sortOrder: number | null;

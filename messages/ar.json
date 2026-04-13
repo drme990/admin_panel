@@ -142,7 +142,6 @@
       "paidOfFull": "المدفوع {paid} / {full} {currency}",
       "remaining": "المتبقي {remaining} {currency}",
       "status": "الحالة",
-      "referral": "الإحالة",
       "date": "التاريخ",
       "actions": "إجراءات"
     }

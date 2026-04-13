@@ -14,6 +14,11 @@ export interface OrderWhatsappData {
   billingData: BillingData;
   reservationMap: Map<ReservationFieldKey, ReservationOrderField>;
   referralId?: string | null;
+  source?: Order['source'];
+}
+
+function getDefaultReferralCode(source?: Order['source']): string {
+  return source === 'ghadaq' ? 'default-GHD' : 'default-MNK';
 }
 
 function normalizeReservationOptionValue(
@@ -165,7 +170,7 @@ export function buildOrderWhatsappMessage(data: OrderWhatsappData): string {
     lines.push(`Ref Code: ${data.referralId.trim()}`);
   } else {
     lines.push(DIVIDER);
-    lines.push('Ref Code: Default');
+    lines.push(`Ref Code: ${getDefaultReferralCode(data.source)}`);
   }
 
   if (firstItem && firstItem.quantity === 1 && lines[0].startsWith('1 ')) {
@@ -191,6 +196,7 @@ export function buildOrderWhatsappMessageFromOrder(order: Order): string {
     billingData: order.billingData,
     reservationMap,
     referralId: order.referralId || null,
+    source: order.source,
   });
 }
 

@@ -122,6 +122,10 @@ function normalizeDateRange(fromDate: string, toDate: string) {
   return { fromDate, toDate };
 }
 
+function getDefaultReferralCode(source?: Order['source']): string {
+  return source === 'ghadaq' ? 'default-GHD' : 'default-MNK';
+}
+
 export default function OrderHistoryPage() {
   const t = useTranslations('orders');
   const locale = useLocale();
@@ -734,8 +738,15 @@ export default function OrderHistoryPage() {
       activeClassName: 'bg-foreground text-background shadow-sm',
     },
     {
-      label: 'default',
-      value: 'default',
+      label: 'default-MNK',
+      value: 'default-MNK',
+      className:
+        'border border-stroke text-foreground/80 hover:bg-background hover:text-foreground',
+      activeClassName: 'bg-foreground text-background shadow-sm',
+    },
+    {
+      label: 'default-GHD',
+      value: 'default-GHD',
       className:
         'border border-stroke text-foreground/80 hover:bg-background hover:text-foreground',
       activeClassName: 'bg-foreground text-background shadow-sm',
@@ -819,19 +830,18 @@ export default function OrderHistoryPage() {
     {
       header: t('table.status'),
       accessor: (row: Order) => (
-        <span
-          className={`inline-block w-fit px-2 py-0.5 text-xs font-medium rounded-full ${STATUS_COLORS[row.status] || ''}`}
-        >
-          {t(`status.${row.status}`)}
-        </span>
-      ),
-    },
-    {
-      header: t('table.referral'),
-      accessor: (row: Order) => (
-        <span className="text-[11px] text-primary font-mono rounded-full px-2 py-1 bg-muted/60 border border-stroke w-fit">
-          {row.referralId || 'Default'}
-        </span>
+        <div className="flex flex-col gap-1">
+          <span
+            className={`inline-block w-fit px-2 py-0.5 text-xs font-medium rounded-full ${STATUS_COLORS[row.status] || ''}`}
+          >
+            {t(`status.${row.status}`)}
+          </span>
+          <span
+            className={`inline-block w-fit px-2 py-0.5 text-[11px] rounded-full ${STATUS_COLORS[row.status] || ''}`}
+          >
+            {row.referralId || getDefaultReferralCode(row.source)}
+          </span>
+        </div>
       ),
     },
     {
@@ -845,89 +855,92 @@ export default function OrderHistoryPage() {
     {
       header: t('table.actions'),
       accessor: (row: Order) => (
-        <div className="flex items-center gap-2">
-          <Tooltip position={ToolTipPositions} content={t('viewDetails')}>
-            <Button
-              variant="icon-primary"
-              size="custom"
-              onClick={(e) => {
-                e.stopPropagation();
-                viewOrder(row);
-              }}
-              aria-label={t('viewDetails')}
-            >
-              <Eye size={16} />
-            </Button>
-          </Tooltip>
+        <div className="flex flex-col gap-2">
+          <div className="flex flex-row gap-2">
+            <Tooltip position={ToolTipPositions} content={t('viewDetails')}>
+              <Button
+                variant="icon-primary"
+                size="custom"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  viewOrder(row);
+                }}
+                aria-label={t('viewDetails')}
+              >
+                <Eye size={16} />
+              </Button>
+            </Tooltip>
 
-          <Tooltip
-            position={ToolTipPositions}
-            content={t('copyWhatsapp.button')}
-          >
-            <Button
-              variant="icon-primary"
-              size="custom"
-              onClick={(e) => {
-                e.stopPropagation();
-                startOrderWhatsappMessage(row);
-              }}
-              disabled={whatsappOrderId === row._id}
-              aria-label={t('copyWhatsapp.button')}
+            <Tooltip
+              position={ToolTipPositions}
+              content={t('copyWhatsapp.button')}
             >
-              {whatsappOrderId === row._id ? (
-                <RefreshCw size={16} className="animate-spin" />
-              ) : (
-                <WhatsappIcon size={16} />
-              )}
-            </Button>
-          </Tooltip>
+              <Button
+                variant="icon-primary"
+                size="custom"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  startOrderWhatsappMessage(row);
+                }}
+                disabled={whatsappOrderId === row._id}
+                aria-label={t('copyWhatsapp.button')}
+              >
+                {whatsappOrderId === row._id ? (
+                  <RefreshCw size={16} className="animate-spin" />
+                ) : (
+                  <WhatsappIcon size={16} />
+                )}
+              </Button>
+            </Tooltip>
+          </div>
 
-          <Tooltip
-            position={ToolTipPositions}
-            content={t('copyWhatsapp.copyNumber')}
-          >
-            <Button
-              variant="icon-primary"
-              size="custom"
-              onClick={(e) => {
-                e.stopPropagation();
-                void copyOrderWhatsappNumber(row);
-              }}
-              disabled={copyingPhoneOrderId === row._id}
-              aria-label={t('copyWhatsapp.copyNumber')}
+          <div className="flex flex-row gap-2">
+            <Tooltip
+              position={ToolTipPositions}
+              content={t('copyWhatsapp.copyNumber')}
             >
-              {copyingPhoneOrderId === row._id ? (
-                <RefreshCw size={16} className="animate-spin" />
-              ) : (
-                <Phone size={16} />
-              )}
-            </Button>
-          </Tooltip>
+              <Button
+                variant="icon-primary"
+                size="custom"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  void copyOrderWhatsappNumber(row);
+                }}
+                disabled={copyingPhoneOrderId === row._id}
+                aria-label={t('copyWhatsapp.copyNumber')}
+              >
+                {copyingPhoneOrderId === row._id ? (
+                  <RefreshCw size={16} className="animate-spin" />
+                ) : (
+                  <Phone size={16} />
+                )}
+              </Button>
+            </Tooltip>
 
-          <Tooltip
-            position={ToolTipPositions}
-            content={t('copyWhatsapp.copyMessage')}
-          >
-            <Button
-              variant="icon-primary"
-              size="custom"
-              onClick={(e) => {
-                e.stopPropagation();
-                void copyOrderWhatsappMessage(row);
-              }}
-              disabled={copyingMessageOrderId === row._id}
-              aria-label={t('copyWhatsapp.copyMessage')}
+            <Tooltip
+              position={ToolTipPositions}
+              content={t('copyWhatsapp.copyMessage')}
             >
-              {copyingMessageOrderId === row._id ? (
-                <RefreshCw size={16} className="animate-spin" />
-              ) : (
-                <Copy size={16} />
-              )}
-            </Button>
-          </Tooltip>
+              <Button
+                variant="icon-primary"
+                size="custom"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  void copyOrderWhatsappMessage(row);
+                }}
+                disabled={copyingMessageOrderId === row._id}
+                aria-label={t('copyWhatsapp.copyMessage')}
+              >
+                {copyingMessageOrderId === row._id ? (
+                  <RefreshCw size={16} className="animate-spin" />
+                ) : (
+                  <Copy size={16} />
+                )}
+              </Button>
+            </Tooltip>
+          </div>
         </div>
       ),
-      className: 'w-44',
     },
   ];
 

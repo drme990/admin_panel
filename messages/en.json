@@ -142,7 +142,6 @@
       "paidOfFull": "Paid {paid} / {full} {currency}",
       "remaining": "Remaining {remaining} {currency}",
       "status": "Status",
-      "referral": "Referral",
       "date": "Date",
       "actions": "Actions"
     }

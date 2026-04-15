@@ -142,7 +142,7 @@
       "paidOfFull": "المدفوع {paid} / {full} {currency}",
       "remaining": "المتبقي {remaining} {currency}",
       "status": "الحالة",
-      "date": "التاريخ",
+      "date": "آخر تحديث",
       "actions": "إجراءات"
     }
   },
@@ -233,6 +233,7 @@
         "cancel": "إلغاء"
       },
       "editProduct": "تعديل منتج",
+      "duplicateProduct": "نسخ المنتج",
       "deleteProduct": "حذف منتج",
       "deleteConfirm": "هل أنت متأكد من حذف هذا المنتج؟",
       "deleteConfirmTitle": "حذف المنتج",
@@ -289,6 +290,7 @@
         "addedPriceHelp": "أضف نسبة مئوية زيادة اختيارية لجميع الأسعار. على سبيل المثال، أدخل 3 لإضافة 3٪ لجميع الأسعار. تأكد من تعيين السعر الأساسي أولاً.",
         "addedPricePlaceholder": "أدخل النسبة المئوية (مثال: 3)",
         "applyButton": "تطبيق",
+        "allowHalfPayment": "السماح بدفع النصف",
         "allowPartialPayment": "السماح بالدفع الجزئي",
         "minimumPaymentType": "نوع الحد الأدنى للدفع",
         "minimumPaymentPercentage": "نسبة مئوية",
@@ -381,9 +383,11 @@
         "loadFailed": "فشل في تحميل المنتج",
         "saveFailed": "فشل حفظ المنتج",
         "deleteFailed": "فشل حذف المنتج",
+        "duplicateFailed": "فشل نسخ المنتج",
         "createSuccess": "تم إنشاء المنتج بنجاح",
         "updateSuccess": "تم تحديث المنتج بنجاح",
         "deleteSuccess": "تم حذف المنتج بنجاح",
+        "duplicateSuccess": "تم نسخ المنتج بنجاح",
         "invalidPercentage": "يرجى إدخال نسبة مئوية صحيحة",
         "setPriceFirst": "يرجى تعيين السعر الأساسي أولاً",
         "priceIncreased": "تمت زيادة السعر بنسبة {percentage}٪",

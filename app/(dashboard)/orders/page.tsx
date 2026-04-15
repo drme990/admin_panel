@@ -1133,7 +1133,7 @@ export default function OrderHistoryPage() {
                       {t(`status.${selectedOrder.status}`)}
                     </span>
                     <span className="text-sm text-secondary">
-                      {formatDate(selectedOrder.createdAt)}
+                      {formatDate(selectedOrder.updatedAt)}
                     </span>
                   </div>
 
@@ -1424,7 +1424,7 @@ export default function OrderHistoryPage() {
                       <InfoRow
                         icon={<Calendar size={14} />}
                         label={t('table.date')}
-                        value={formatDate(selectedOrder.createdAt)}
+                        value={formatDate(selectedOrder.updatedAt)}
                       />
                       <InfoRow
                         icon={<CreditCard size={14} />}

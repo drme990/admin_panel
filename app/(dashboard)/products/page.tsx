@@ -5,6 +5,8 @@ import { Product, getPrimaryProductImageUrl } from '@/types/Product';
 import {
   LuPlus as Plus,
   LuPencil as Pencil,
+  LuCopy as Copy,
+  LuLoaderCircle as LoaderCircle,
   LuTrash2 as Trash2,
   LuArrowUp as ArrowUp,
   LuArrowDown as ArrowDown,
@@ -23,6 +25,9 @@ import Button from '@/components/ui/button';
 export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [duplicatingProductId, setDuplicatingProductId] = useState<
+    string | null
+  >(null);
   const [reorderOpen, setReorderOpen] = useState(false);
   const [reorderList, setReorderList] = useState<Product[]>([]);
   const [reorderSaving, setReorderSaving] = useState(false);
@@ -71,6 +76,29 @@ export default function ProductsPage() {
       }
     } catch (error) {
       console.error('Error deleting product:', error);
+    }
+  };
+
+  const handleDuplicate = async (id: string) => {
+    try {
+      setDuplicatingProductId(id);
+      const res = await fetch(`/api/products/${id}/duplicate`, {
+        method: 'POST',
+      });
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || t('messages.duplicateFailed'));
+      }
+
+      toast.success(t('messages.duplicateSuccess'));
+      fetchProducts();
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : t('messages.duplicateFailed');
+      toast.error(message);
+    } finally {
+      setDuplicatingProductId(null);
     }
   };
 
@@ -181,6 +209,24 @@ export default function ProductsPage() {
               aria-label={t('editProduct')}
             >
               <Pencil size={16} />
+            </Button>
+          </Tooltip>
+          <Tooltip position={ToolTipPositions} content={t('duplicateProduct')}>
+            <Button
+              variant="icon-primary"
+              size="custom"
+              onClick={(e) => {
+                e.stopPropagation();
+                void handleDuplicate(product._id);
+              }}
+              disabled={duplicatingProductId === product._id}
+              aria-label={t('duplicateProduct')}
+            >
+              {duplicatingProductId === product._id ? (
+                <LoaderCircle size={16} className="animate-spin" />
+              ) : (
+                <Copy size={16} />
+              )}
             </Button>
           </Tooltip>
           <Tooltip position={ToolTipPositions} content={t('deleteProduct')}>

@@ -109,6 +109,8 @@ export interface Product {
   isBestSeller?: boolean;
   /** Whether the product is published (visible to customers). Default: true */
   isActive: boolean;
+  /** Whether paying half is available for this product. Default: true */
+  supportsHalfPayment?: boolean;
   /** All product media with per-platform visibility rules. */
   media: ProductMedia[];
   /**

@@ -79,6 +79,7 @@ export default function ProductForm({
     inStock: true,
     isBestSeller: false,
     isActive: true,
+    supportsHalfPayment: true,
     media: normalizeProductMedia([]),
     partialPayment: {
       isAllowed: false,
@@ -171,6 +172,7 @@ export default function ProductForm({
         inStock: product.inStock,
         isBestSeller: Boolean(product.isBestSeller),
         isActive: product.isActive !== false,
+        supportsHalfPayment: product.supportsHalfPayment !== false,
         media: normalizeProductMedia(product.media),
         partialPayment: {
           isAllowed: product.partialPayment?.isAllowed || false,
@@ -469,6 +471,7 @@ export default function ProductForm({
       inStock: formData.inStock,
       isBestSeller: formData.isBestSeller,
       isActive: formData.isActive,
+      supportsHalfPayment: formData.supportsHalfPayment,
       media: normalizeProductMedia(formData.media),
       partialPayment: {
         isAllowed: formData.partialPayment.isAllowed,
@@ -674,6 +677,20 @@ export default function ProductForm({
         </div>
 
         <div className="border border-stroke rounded-lg p-4 bg-background space-y-4">
+          <Switch
+            id="supportsHalfPayment"
+            checked={formData.supportsHalfPayment}
+            onChange={(checked) =>
+              setFormData({
+                ...formData,
+                supportsHalfPayment: checked,
+              })
+            }
+            label={t('form.allowHalfPayment')}
+          />
+
+          <hr className="border-stroke" />
+
           <Switch
             id="allowPartialPayment"
             checked={formData.partialPayment.isAllowed}

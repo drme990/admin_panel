@@ -142,7 +142,7 @@
       "paidOfFull": "Paid {paid} / {full} {currency}",
       "remaining": "Remaining {remaining} {currency}",
       "status": "Status",
-      "date": "Date",
+      "date": "Last Updated",
       "actions": "Actions"
     }
   },
@@ -233,6 +233,7 @@
         "cancel": "Cancel"
       },
       "editProduct": "Edit Product",
+      "duplicateProduct": "Duplicate Product",
       "deleteProduct": "Delete Product",
       "deleteConfirm": "Are you sure you want to delete this product?",
       "deleteConfirmTitle": "Delete Product",
@@ -289,6 +290,7 @@
         "addedPriceHelp": "Optionally add a percentage increase to all prices. For example, enter 3 to add 3% to all prices. Make sure to set the base price first.",
         "addedPricePlaceholder": "Enter percentage (e.g., 3)",
         "applyButton": "Apply",
+        "allowHalfPayment": "Allow Half Payment",
         "allowPartialPayment": "Allow Partial Payment",
         "minimumPaymentType": "Minimum Payment Type",
         "minimumPaymentPercentage": "Percentage",
@@ -381,9 +383,11 @@
         "loadFailed": "Failed to load product",
         "saveFailed": "Failed to save product",
         "deleteFailed": "Failed to delete product",
+        "duplicateFailed": "Failed to duplicate product",
         "createSuccess": "Product created successfully",
         "updateSuccess": "Product updated successfully",
         "deleteSuccess": "Product deleted successfully",
+        "duplicateSuccess": "Product duplicated successfully",
         "invalidPercentage": "Please enter a valid percentage",
         "setPriceFirst": "Please set the base price first",
         "priceIncreased": "Price increased by {percentage}%",

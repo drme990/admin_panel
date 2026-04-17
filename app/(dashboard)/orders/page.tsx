@@ -218,6 +218,7 @@ export default function OrderHistoryPage() {
           page: String(page),
           limit: '20',
           view: 'table',
+          tzOffsetMinutes: String(new Date().getTimezoneOffset()),
         });
         if (statusFilter !== 'all') params.set('status', statusFilter);
         if (referralFilter) params.set('referralId', referralFilter);

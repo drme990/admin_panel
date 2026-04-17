@@ -211,6 +211,10 @@
       "description": "Business insights across revenue, order health, payment behavior, and products.",
       "loadError": "Failed to load analytics data.",
       "revenueOverTime": "Revenue Over Time",
+      "earningsByCurrency": {
+        "title": "Earnings by Currency",
+        "description": "Based on paid payment records from order payments."
+      },
       "ordersByStatus": "Orders by Status",
       "paymentSplit": "Full Payment vs Partial Payment",
       "topProducts": "Top Products",

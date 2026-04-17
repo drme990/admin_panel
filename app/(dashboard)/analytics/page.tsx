@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import Loading from '@/components/ui/loading';
 import Dropdown from '@/components/ui/dropdown';
 import { OrdersByStatusChart } from '@/components/analytics/orders-by-status-chart';
@@ -14,6 +14,7 @@ import { RevenueOverTimeChart } from '@/components/analytics/revenue-over-time-c
 type DataPoint = { name: string; value: number };
 type RevenuePoint = { label: string; revenue: number };
 type PeriodFilter = '7d' | '30d' | '90d' | '12m';
+type SupportedEarningsCurrency = 'EGP' | 'SAR' | 'USD' | 'EUR';
 type StatusFilter =
   | 'all'
   | 'pending'
@@ -33,10 +34,12 @@ interface AnalyticsResponse {
   topProducts: DataPoint[];
   ordersByCountry: DataPoint[];
   ordersByWeekday: DataPoint[];
+  earningsByCurrency: Record<SupportedEarningsCurrency, number>;
 }
 
 export default function AnalyticsPage() {
   const t = useTranslations('admin.analytics');
+  const locale = useLocale();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<AnalyticsResponse | null>(null);
 
@@ -107,6 +110,29 @@ export default function AnalyticsPage() {
   const revenueData =
     period === '12m' ? data?.revenueByMonth || [] : data?.revenueByDay || [];
 
+  const earningsCards = useMemo(() => {
+    const currencyOrder: SupportedEarningsCurrency[] = [
+      'EGP',
+      'SAR',
+      'USD',
+      'EUR',
+    ];
+
+    return currencyOrder.map((currency) => {
+      const value = data?.earningsByCurrency?.[currency] ?? 0;
+      return {
+        currency,
+        value,
+        formattedValue: new Intl.NumberFormat(locale, {
+          style: 'currency',
+          currency,
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        }).format(value),
+      };
+    });
+  }, [data, locale]);
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -145,6 +171,30 @@ export default function AnalyticsPage() {
         </div>
       ) : (
         <>
+          <section className="rounded-site border border-stroke bg-card-bg p-6">
+            <div className="mb-4">
+              <h2 className="text-xl font-semibold text-foreground">
+                {t('earningsByCurrency.title')}
+              </h2>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+              {earningsCards.map((item) => (
+                <div
+                  key={item.currency}
+                  className="rounded-site border border-stroke bg-background p-4"
+                >
+                  <p className="text-xs font-medium tracking-wide text-secondary uppercase">
+                    {item.currency}
+                  </p>
+                  <p className="text-2xl font-bold text-foreground mt-2">
+                    {item.formattedValue}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </section>
+
           <RevenueOverTimeChart data={revenueData} />
 
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">

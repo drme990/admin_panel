@@ -32,6 +32,7 @@
       "couponCode": "Coupon Code",
       "couponDiscount": "Coupon Discount"
     },
+    "product": "Product",
     "payLink": {
       "description": "Create a secure payment link to collect the remaining amount for this order.",
       "createButton": "Pay Link",

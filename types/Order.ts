@@ -17,6 +17,19 @@ export type PaymentMethod =
   | 'valu'
   | 'other';
 
+type LocalizedOrderText = {
+  ar?: string;
+  en?: string;
+};
+
+type OrderItemSizeValue = string | LocalizedOrderText;
+
+interface OrderItemSizeOption {
+  name?: OrderItemSizeValue;
+  label?: OrderItemSizeValue;
+  value?: OrderItemSizeValue;
+}
+
 export interface OrderItem {
   productId: string;
   productSlug?: string;
@@ -27,6 +40,11 @@ export interface OrderItem {
   price: number;
   currency: string;
   quantity: number;
+  sizeIndex?: number;
+  sizeName?: OrderItemSizeValue;
+  sizeLabel?: OrderItemSizeValue;
+  size?: OrderItemSizeValue;
+  sizes?: OrderItemSizeOption[];
 }
 
 export interface BillingData {

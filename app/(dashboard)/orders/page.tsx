@@ -126,6 +126,75 @@ function getDefaultReferralCode(source?: Order['source']): string {
   return source === 'ghadaq' ? 'default-GHD' : 'default-MNK';
 }
 
+const NUMERIC_ONLY_SIZE_VALUE = /^\d+$/;
+
+function normalizeSizeText(value: string | undefined): string | null {
+  const trimmed = value?.trim();
+  if (!trimmed) return null;
+  return NUMERIC_ONLY_SIZE_VALUE.test(trimmed) ? null : trimmed;
+}
+
+function resolveLocalizedSizeValue(
+  value: string | { ar?: string; en?: string } | undefined,
+  locale: string,
+): string | null {
+  if (typeof value === 'string') return normalizeSizeText(value);
+  if (!value) return null;
+
+  if (locale === 'ar') {
+    return normalizeSizeText(value.ar) ?? normalizeSizeText(value.en);
+  }
+
+  return normalizeSizeText(value.en) ?? normalizeSizeText(value.ar);
+}
+
+function resolveOrderItemSizeLabel(
+  item: Order['items'][number] | undefined,
+  locale: string,
+  fallbackSizeIndex?: number | null,
+): string | null {
+  if (!item) return null;
+
+  const directSize =
+    resolveLocalizedSizeValue(item.sizeName, locale) ??
+    resolveLocalizedSizeValue(item.sizeLabel, locale) ??
+    resolveLocalizedSizeValue(item.size, locale);
+
+  if (directSize) {
+    return directSize;
+  }
+
+  const resolvedIndex =
+    typeof item.sizeIndex === 'number' ? item.sizeIndex : fallbackSizeIndex;
+
+  if (
+    typeof resolvedIndex !== 'number' ||
+    !Array.isArray(item.sizes) ||
+    resolvedIndex < 0 ||
+    resolvedIndex >= item.sizes.length
+  ) {
+    return null;
+  }
+
+  const sizeOption = item.sizes[resolvedIndex];
+  return (
+    resolveLocalizedSizeValue(sizeOption?.name, locale) ??
+    resolveLocalizedSizeValue(sizeOption?.label, locale) ??
+    resolveLocalizedSizeValue(sizeOption?.value, locale)
+  );
+}
+
+function getOrderItemDisplayName(
+  item: Order['items'][number],
+  locale: string,
+  fallbackSizeIndex?: number | null,
+): string {
+  const productName =
+    locale === 'ar' ? item.productName.ar : item.productName.en;
+  const sizeLabel = resolveOrderItemSizeLabel(item, locale, fallbackSizeIndex);
+  return sizeLabel ? `${productName} - ${sizeLabel}` : productName;
+}
+
 export default function OrderHistoryPage() {
   const t = useTranslations('orders');
   const locale = useLocale();
@@ -1346,9 +1415,11 @@ export default function OrderHistoryPage() {
                         >
                           <div className="space-y-1 min-w-0">
                             <p className="font-medium text-sm truncate">
-                              {locale === 'ar'
-                                ? item.productName.ar
-                                : item.productName.en}
+                              {getOrderItemDisplayName(
+                                item,
+                                locale,
+                                selectedOrder.sizeIndex,
+                              )}
                             </p>
                             <div className="flex items-center gap-2 text-xs text-secondary">
                               <span>

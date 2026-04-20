@@ -32,6 +32,7 @@
       "couponCode": "كود الكوبون",
       "couponDiscount": "خصم الكوبون"
     },
+    "product": "المنتج",
     "payLink": {
       "description": "أنشئ رابط دفع آمن لتحصيل المبلغ المتبقي لهذا الطلب.",
       "createButton": "رابط دفع",

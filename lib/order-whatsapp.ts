@@ -11,6 +11,7 @@ export interface OrderWhatsappData {
   currency: string;
   remainingAmount?: number;
   items: OrderItem[];
+  sizeIndex?: number | null;
   billingData: BillingData;
   reservationMap: Map<ReservationFieldKey, ReservationOrderField>;
   referralId?: string | null;
@@ -19,6 +20,70 @@ export interface OrderWhatsappData {
 
 function getDefaultReferralCode(source?: Order['source']): string {
   return source === 'ghadaq' ? 'default-GHD' : 'default-MNK';
+}
+
+const NUMERIC_ONLY_SIZE_VALUE = /^\d+$/;
+
+function normalizeSizeText(value: string | undefined): string | null {
+  const trimmed = value?.trim();
+  if (!trimmed) return null;
+  return NUMERIC_ONLY_SIZE_VALUE.test(trimmed) ? null : trimmed;
+}
+
+function resolveSizeValue(
+  value: string | { ar?: string; en?: string } | undefined,
+): string | null {
+  if (typeof value === 'string') return normalizeSizeText(value);
+  if (!value) return null;
+
+  return normalizeSizeText(value.ar) ?? normalizeSizeText(value.en);
+}
+
+function resolveOrderItemSizeLabel(
+  item: OrderItem | undefined,
+  fallbackSizeIndex?: number | null,
+): string | null {
+  if (!item) return null;
+
+  const directSize =
+    resolveSizeValue(item.sizeName) ??
+    resolveSizeValue(item.sizeLabel) ??
+    resolveSizeValue(item.size);
+
+  if (directSize) {
+    return directSize;
+  }
+
+  const resolvedIndex =
+    typeof item.sizeIndex === 'number' ? item.sizeIndex : fallbackSizeIndex;
+
+  if (
+    typeof resolvedIndex !== 'number' ||
+    !Array.isArray(item.sizes) ||
+    resolvedIndex < 0 ||
+    resolvedIndex >= item.sizes.length
+  ) {
+    return null;
+  }
+
+  const sizeOption = item.sizes[resolvedIndex];
+  return (
+    resolveSizeValue(sizeOption?.name) ??
+    resolveSizeValue(sizeOption?.label) ??
+    resolveSizeValue(sizeOption?.value)
+  );
+}
+
+function formatOrderItemNameWithSize(
+  item: OrderItem | undefined,
+  fallbackSizeIndex?: number | null,
+): string {
+  if (!item) return '';
+
+  const productName = item.productName.ar || item.productName.en || '';
+  const sizeLabel = resolveOrderItemSizeLabel(item, fallbackSizeIndex);
+
+  return sizeLabel ? `${productName} - ${sizeLabel}` : productName;
 }
 
 function normalizeReservationOptionValue(
@@ -116,9 +181,10 @@ export function buildOrderWhatsappMessage(data: OrderWhatsappData): string {
     reservationMap.get('executionDate')?.value?.trim() ?? '';
 
   const firstItem = data.items?.[0];
+  const firstItemName = formatOrderItemNameWithSize(firstItem, data.sizeIndex);
 
   const productLine = firstItem
-    ? `${firstItem.quantity} ${firstItem.productName.ar}${intention ? ` ${intention}` : ''}`
+    ? `${firstItem.quantity} ${firstItemName}${intention ? ` ${intention}` : ''}`
     : '';
 
   const remainingLine =
@@ -193,6 +259,7 @@ export function buildOrderWhatsappMessageFromOrder(order: Order): string {
     currency: order.currency,
     remainingAmount: order.remainingAmount,
     items: order.items,
+    sizeIndex: order.sizeIndex,
     billingData: order.billingData,
     reservationMap,
     referralId: order.referralId || null,
@@ -210,9 +277,8 @@ function getProcessingFollowUpProductName(order: Order): string {
   const firstItem = order.items?.[0];
   if (!firstItem) return 'المنتج';
 
-  return (
-    firstItem.productName?.ar?.trim() || firstItem.productName?.en || 'المنتج'
-  );
+  const productName = formatOrderItemNameWithSize(firstItem, order.sizeIndex);
+  return productName || 'المنتج';
 }
 
 function getProcessingFollowUpReservationName(order: Order): string {

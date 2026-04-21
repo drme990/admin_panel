@@ -137,7 +137,6 @@ export interface Order {
   source?: 'manasik' | 'ghadaq';
   countryCode?: string;
   locale?: string;
-  sizeIndex?: number;
   createdAt: string;
   updatedAt: string;
 }

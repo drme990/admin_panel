@@ -11,7 +11,6 @@ export interface OrderWhatsappData {
   currency: string;
   remainingAmount?: number;
   items: OrderItem[];
-  sizeIndex?: number | null;
   billingData: BillingData;
   reservationMap: Map<ReservationFieldKey, ReservationOrderField>;
   referralId?: string | null;
@@ -39,10 +38,7 @@ function resolveSizeValue(
   return normalizeSizeText(value.ar) ?? normalizeSizeText(value.en);
 }
 
-function resolveOrderItemSizeLabel(
-  item: OrderItem | undefined,
-  fallbackSizeIndex?: number | null,
-): string | null {
+function resolveOrderItemSizeLabel(item: OrderItem | undefined): string | null {
   if (!item) return null;
 
   const directSize =
@@ -54,8 +50,7 @@ function resolveOrderItemSizeLabel(
     return directSize;
   }
 
-  const resolvedIndex =
-    typeof item.sizeIndex === 'number' ? item.sizeIndex : fallbackSizeIndex;
+  const resolvedIndex = item.sizeIndex;
 
   if (
     typeof resolvedIndex !== 'number' ||
@@ -74,14 +69,11 @@ function resolveOrderItemSizeLabel(
   );
 }
 
-function formatOrderItemNameWithSize(
-  item: OrderItem | undefined,
-  fallbackSizeIndex?: number | null,
-): string {
+function formatOrderItemNameWithSize(item: OrderItem | undefined): string {
   if (!item) return '';
 
   const productName = item.productName.ar || item.productName.en || '';
-  const sizeLabel = resolveOrderItemSizeLabel(item, fallbackSizeIndex);
+  const sizeLabel = resolveOrderItemSizeLabel(item);
 
   return sizeLabel ? `${productName} - ${sizeLabel}` : productName;
 }
@@ -181,7 +173,7 @@ export function buildOrderWhatsappMessage(data: OrderWhatsappData): string {
     reservationMap.get('executionDate')?.value?.trim() ?? '';
 
   const firstItem = data.items?.[0];
-  const firstItemName = formatOrderItemNameWithSize(firstItem, data.sizeIndex);
+  const firstItemName = formatOrderItemNameWithSize(firstItem);
 
   const productLine = firstItem
     ? `${firstItem.quantity} ${firstItemName}${intention ? ` ${intention}` : ''}`
@@ -259,7 +251,6 @@ export function buildOrderWhatsappMessageFromOrder(order: Order): string {
     currency: order.currency,
     remainingAmount: order.remainingAmount,
     items: order.items,
-    sizeIndex: order.sizeIndex,
     billingData: order.billingData,
     reservationMap,
     referralId: order.referralId || null,
@@ -277,7 +268,7 @@ function getProcessingFollowUpProductName(order: Order): string {
   const firstItem = order.items?.[0];
   if (!firstItem) return 'المنتج';
 
-  const productName = formatOrderItemNameWithSize(firstItem, order.sizeIndex);
+  const productName = formatOrderItemNameWithSize(firstItem);
   return productName || 'المنتج';
 }
 

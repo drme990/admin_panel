@@ -151,7 +151,6 @@ function resolveLocalizedSizeValue(
 function resolveOrderItemSizeLabel(
   item: Order['items'][number] | undefined,
   locale: string,
-  fallbackSizeIndex?: number | null,
 ): string | null {
   if (!item) return null;
 
@@ -164,8 +163,7 @@ function resolveOrderItemSizeLabel(
     return directSize;
   }
 
-  const resolvedIndex =
-    typeof item.sizeIndex === 'number' ? item.sizeIndex : fallbackSizeIndex;
+  const resolvedIndex = item.sizeIndex;
 
   if (
     typeof resolvedIndex !== 'number' ||
@@ -187,11 +185,10 @@ function resolveOrderItemSizeLabel(
 function getOrderItemDisplayName(
   item: Order['items'][number],
   locale: string,
-  fallbackSizeIndex?: number | null,
 ): string {
   const productName =
     locale === 'ar' ? item.productName.ar : item.productName.en;
-  const sizeLabel = resolveOrderItemSizeLabel(item, locale, fallbackSizeIndex);
+  const sizeLabel = resolveOrderItemSizeLabel(item, locale);
   return sizeLabel ? `${productName} - ${sizeLabel}` : productName;
 }
 
@@ -1415,11 +1412,7 @@ export default function OrderHistoryPage() {
                         >
                           <div className="space-y-1 min-w-0">
                             <p className="font-medium text-sm truncate">
-                              {getOrderItemDisplayName(
-                                item,
-                                locale,
-                                selectedOrder.sizeIndex,
-                              )}
+                              {getOrderItemDisplayName(item, locale)}
                             </p>
                             <div className="flex items-center gap-2 text-xs text-secondary">
                               <span>

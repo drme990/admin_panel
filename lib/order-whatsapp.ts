@@ -22,11 +22,21 @@ function getDefaultReferralCode(source?: Order['source']): string {
 }
 
 const NUMERIC_ONLY_SIZE_VALUE = /^\d+$/;
+const IGNORED_SIZE_VALUES = new Set(['default', 'الافتراضي']);
 
 function normalizeSizeText(value: string | undefined): string | null {
   const trimmed = value?.trim();
   if (!trimmed) return null;
-  return NUMERIC_ONLY_SIZE_VALUE.test(trimmed) ? null : trimmed;
+
+  const normalized = trimmed.toLowerCase();
+  if (
+    NUMERIC_ONLY_SIZE_VALUE.test(normalized) ||
+    IGNORED_SIZE_VALUES.has(normalized)
+  ) {
+    return null;
+  }
+
+  return trimmed;
 }
 
 function resolveSizeValue(
@@ -75,7 +85,7 @@ function formatOrderItemNameWithSize(item: OrderItem | undefined): string {
   const productName = item.productName.ar || item.productName.en || '';
   const sizeLabel = resolveOrderItemSizeLabel(item);
 
-  return sizeLabel ? `${productName} - ${sizeLabel}` : productName;
+  return sizeLabel || productName;
 }
 
 function normalizeReservationOptionValue(

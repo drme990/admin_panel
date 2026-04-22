@@ -1,4 +1,4 @@
-export type ProjectName = 'ghadaq' | 'manasik';
+export type ProjectName = 'ghadaq' | 'manasik' | 'shared';
 
 export interface WorksImages {
   row1: string[];
@@ -14,6 +14,7 @@ export interface Appearance {
   _id: string;
   project: ProjectName;
   worksImages: WorksImages;
+  audioReviews?: string[];
   whatsAppDefaultMessage?: string;
   bannerText?: BannerText;
   createdAt: string;

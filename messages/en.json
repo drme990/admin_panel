@@ -700,6 +700,8 @@
       "worksImages": "Works Images",
       "worksDescription": "Manage the images displayed in the Our Works slider section. Select a project tab to manage its images.",
       "audioReviewsTitle": "Audio Reviews",
+      "audioReviewsArTitle": "Arabic Audio Reviews",
+      "audioReviewsEnTitle": "English Audio Reviews",
       "audioReviewsDescription": "Upload customer audio reviews and assign each one to Ghadaq, Manasik, or Shared. Shared reviews appear in both apps.",
       "audioPlatformLabel": "Audio Platform",
       "audioSingular": "audio",

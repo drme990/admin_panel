@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { toast } from 'react-toastify';
 import { LuSave as Save } from 'react-icons/lu';
@@ -51,14 +51,38 @@ function normalizeBannerText(value: unknown): BannerText {
   };
 }
 
-function normalizeAudioReviews(value: unknown): string[] {
-  if (!Array.isArray(value)) return [];
-  return value.filter((item): item is string => typeof item === 'string');
+function normalizeAudioReviews(value: unknown): { ar: string[]; en: string[] } {
+  const raw = value as { ar?: unknown; en?: unknown } | undefined;
+
+  const ar = Array.isArray(raw?.ar)
+    ? raw.ar.filter((item): item is string => typeof item === 'string')
+    : [];
+
+  const en = Array.isArray(raw?.en)
+    ? raw.en.filter((item): item is string => typeof item === 'string')
+    : [];
+
+  // Fallback for old format (array of strings)
+  if (Array.isArray(value) && ar.length === 0 && en.length === 0) {
+    return {
+      ar: value.filter((item): item is string => typeof item === 'string'),
+      en: [],
+    };
+  }
+
+  return { ar, en };
 }
 
-function getAllAudios(audioReviews: Record<ProjectName, string[]>) {
+function getAllAudiosForLang(
+  audioReviews: Record<ProjectName, { ar: string[]; en: string[] }>,
+  lang: 'ar' | 'en',
+) {
   return PROJECTS.flatMap((project) =>
-    audioReviews[project.key].map((url) => ({ url, project: project.key })),
+    audioReviews[project.key][lang].map((url) => ({
+      url,
+      project: project.key,
+      lang,
+    })),
   );
 }
 
@@ -71,11 +95,11 @@ export default function AppearancePage() {
     shared: { row1: [], row2: [] },
   });
   const [audioReviews, setAudioReviews] = useState<
-    Record<ProjectName, string[]>
+    Record<ProjectName, { ar: string[]; en: string[] }>
   >({
-    ghadaq: [],
-    manasik: [],
-    shared: [],
+    ghadaq: { ar: [], en: [] },
+    manasik: { ar: [], en: [] },
+    shared: { ar: [], en: [] },
   });
   const [defaultMessages, setDefaultMessages] = useState<
     Record<ProjectName, string>
@@ -97,10 +121,15 @@ export default function AppearancePage() {
     null,
   );
 
-  const handleAudioUploaded = useCallback((url: string) => {
+  const onAudioUploadedRef = useRef<(url: string) => void>(() => {});
+
+  const handleAudioUploaded = useCallback((url: string, lang: 'ar' | 'en') => {
     setAudioReviews((prev) => ({
       ...prev,
-      shared: [...prev.shared, url],
+      shared: {
+        ...prev.shared,
+        [lang]: [...prev.shared[lang], url],
+      },
     }));
   }, []);
 
@@ -111,7 +140,7 @@ export default function AppearancePage() {
     cancelUpload: cancelAudioUpload,
   } = useAudioUpload({
     t,
-    onUploaded: handleAudioUploaded,
+    onUploaded: (url) => onAudioUploadedRef.current(url),
   });
 
   const loadAppearance = useCallback(async () => {
@@ -151,13 +180,13 @@ export default function AppearancePage() {
       setAudioReviews({
         ghadaq: byProject.ghadaq?.success
           ? normalizeAudioReviews(byProject.ghadaq.data?.audioReviews)
-          : [],
+          : { ar: [], en: [] },
         manasik: byProject.manasik?.success
           ? normalizeAudioReviews(byProject.manasik.data?.audioReviews)
-          : [],
+          : { ar: [], en: [] },
         shared: byProject.shared?.success
           ? normalizeAudioReviews(byProject.shared.data?.audioReviews)
-          : [],
+          : { ar: [], en: [] },
       });
 
       setDefaultMessages({
@@ -244,14 +273,17 @@ export default function AppearancePage() {
     }));
   };
 
-  const handleDeleteAudio = async (globalIndex: number) => {
-    const allAudios = getAllAudios(audioReviews);
+  const handleDeleteAudio = async (globalIndex: number, lang: 'ar' | 'en') => {
+    const allAudios = getAllAudiosForLang(audioReviews, lang);
     const audio = allAudios[globalIndex];
     if (!audio) return;
 
     setAudioReviews((prev) => ({
       ...prev,
-      [audio.project]: prev[audio.project].filter((url) => url !== audio.url),
+      [audio.project]: {
+        ...prev[audio.project],
+        [lang]: prev[audio.project][lang].filter((url) => url !== audio.url),
+      },
     }));
 
     try {
@@ -268,15 +300,22 @@ export default function AppearancePage() {
   const handleAudioPlatformChange = (
     globalIndex: number,
     targetProject: ProjectName,
+    lang: 'ar' | 'en',
   ) => {
-    const allAudios = getAllAudios(audioReviews);
+    const allAudios = getAllAudiosForLang(audioReviews, lang);
     const audio = allAudios[globalIndex];
     if (!audio || audio.project === targetProject) return;
 
     setAudioReviews((prev) => ({
       ...prev,
-      [audio.project]: prev[audio.project].filter((url) => url !== audio.url),
-      [targetProject]: [...prev[targetProject], audio.url],
+      [audio.project]: {
+        ...prev[audio.project],
+        [lang]: prev[audio.project][lang].filter((url) => url !== audio.url),
+      },
+      [targetProject]: {
+        ...prev[targetProject],
+        [lang]: [...prev[targetProject][lang], audio.url],
+      },
     }));
   };
 
@@ -331,10 +370,7 @@ export default function AppearancePage() {
               worksImages: images[key],
               audioReviews: audioReviews[key],
               whatsAppDefaultMessage: defaultMessages[key],
-              bannerText: {
-                ar: bannerTexts[key].ar,
-                en: bannerTexts[key].en,
-              },
+              bannerText: bannerTexts[key],
             }),
           });
 
@@ -424,22 +460,57 @@ export default function AppearancePage() {
       )}
 
       {isSharedTab && (
-        <AudioReviewsSection
-          audioReviews={audioReviews}
-          uploading={uploadingAudio}
-          onUpload={handleAudioFileSelect}
-          onDelete={handleDeleteAudio}
-          onPlatformChange={handleAudioPlatformChange}
-          title={t('audioReviewsTitle')}
-          description={t('audioReviewsDescription')}
-          addLabel={t('addAudio')}
-          uploadingLabel={t('uploading')}
-          noAudioText={t('noAudioReviews')}
-          audioSingular={t('audioSingular')}
-          audioPlural={t('audioPlural')}
-          deleteLabel={t('deleteAudio')}
-          platformLabel={t('audioPlatformLabel')}
-        />
+        <div className="space-y-8">
+          <AudioReviewsSection
+            audioReviews={
+              Object.fromEntries(
+                PROJECTS.map((p) => [p.key, audioReviews[p.key].ar]),
+              ) as Record<ProjectName, string[]>
+            }
+            uploading={uploadingAudio}
+            onUpload={(e) => {
+              onAudioUploadedRef.current = (url) =>
+                handleAudioUploaded(url, 'ar');
+              handleAudioFileSelect(e);
+            }}
+            onDelete={(i) => handleDeleteAudio(i, 'ar')}
+            onPlatformChange={(i, p) => handleAudioPlatformChange(i, p, 'ar')}
+            title={t('audioReviewsArTitle')}
+            description={t('audioReviewsDescription')}
+            addLabel={t('addAudio')}
+            uploadingLabel={t('uploading')}
+            noAudioText={t('noAudioReviews')}
+            audioSingular={t('audioSingular')}
+            audioPlural={t('audioPlural')}
+            deleteLabel={t('deleteAudio')}
+            platformLabel={t('audioPlatformLabel')}
+          />
+
+          <AudioReviewsSection
+            audioReviews={
+              Object.fromEntries(
+                PROJECTS.map((p) => [p.key, audioReviews[p.key].en]),
+              ) as Record<ProjectName, string[]>
+            }
+            uploading={uploadingAudio}
+            onUpload={(e) => {
+              onAudioUploadedRef.current = (url) =>
+                handleAudioUploaded(url, 'en');
+              handleAudioFileSelect(e);
+            }}
+            onDelete={(i) => handleDeleteAudio(i, 'en')}
+            onPlatformChange={(i, p) => handleAudioPlatformChange(i, p, 'en')}
+            title={t('audioReviewsEnTitle')}
+            description={t('audioReviewsDescription')}
+            addLabel={t('addAudio')}
+            uploadingLabel={t('uploading')}
+            noAudioText={t('noAudioReviews')}
+            audioSingular={t('audioSingular')}
+            audioPlural={t('audioPlural')}
+            deleteLabel={t('deleteAudio')}
+            platformLabel={t('audioPlatformLabel')}
+          />
+        </div>
       )}
 
       {!isSharedTab && (

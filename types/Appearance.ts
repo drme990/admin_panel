@@ -14,7 +14,7 @@ export interface Appearance {
   _id: string;
   project: ProjectName;
   worksImages: WorksImages;
-  audioReviews?: string[];
+  audioReviews?: { ar: string[]; en: string[] };
   whatsAppDefaultMessage?: string;
   bannerText?: BannerText;
   createdAt: string;

@@ -39,6 +39,7 @@ import {
   ReservationField,
   ReservationFieldKey,
 } from '@/lib/reservation-fields';
+import Checkbox from '../ui/checkbox';
 
 interface ProductFormProps {
   product?: Product | null;
@@ -351,6 +352,15 @@ export default function ProductForm({
     );
     if (existing) return;
 
+    // Filter options for intention field based on workAsSacrifice setting
+    let fieldOptions = preset.options;
+    if (key === 'intention' && !formData.workAsSacrifice && fieldOptions) {
+      fieldOptions = fieldOptions.filter(
+        (opt) =>
+          !opt.en.toLowerCase().includes('aqeeqah') && opt.ar !== 'عقيقة',
+      );
+    }
+
     setFormData({
       ...formData,
       reservationFields: [
@@ -359,11 +369,43 @@ export default function ProductForm({
           key: preset.key,
           type: preset.type,
           label: preset.label,
-          options: preset.options,
+          options: fieldOptions,
           required: false,
           supportsMulti: Boolean(preset.supportsMulti),
         },
       ],
+    });
+  };
+
+  const updateIntentionOptions = (optionEn: string, isSelected: boolean) => {
+    const intentionField = formData.reservationFields.find(
+      (f) => f.key === 'intention',
+    );
+    if (!intentionField) return;
+
+    const preset = getReservationPreset('intention');
+    const allOptions = preset?.options || [];
+
+    let currentOptions = intentionField.options || allOptions;
+
+    if (isSelected) {
+      // Add option if not present
+      const optionToAdd = allOptions.find((o) => o.en === optionEn);
+      if (optionToAdd && !currentOptions.find((o) => o.en === optionEn)) {
+        currentOptions = [...currentOptions, optionToAdd];
+      }
+    } else {
+      // Remove option
+      currentOptions = currentOptions.filter((o) => o.en !== optionEn);
+    }
+
+    setFormData({
+      ...formData,
+      reservationFields: formData.reservationFields.map((field) =>
+        field.key === 'intention'
+          ? { ...field, options: currentOptions }
+          : field,
+      ),
     });
   };
 
@@ -851,9 +893,57 @@ export default function ProductForm({
           <Switch
             id="workAsSacrifice"
             checked={formData.workAsSacrifice}
-            onChange={(checked) =>
-              setFormData({ ...formData, workAsSacrifice: checked })
-            }
+            onChange={(checked) => {
+              const newFormData = { ...formData, workAsSacrifice: checked };
+
+              // Update intention options when workAsSacrifice changes
+              const intentionField = formData.reservationFields.find(
+                (f) => f.key === 'intention',
+              );
+              if (intentionField) {
+                const preset = getReservationPreset('intention');
+                const allOptions = preset?.options || [];
+                const aqeeqahOption = allOptions.find(
+                  (o) =>
+                    o.en.toLowerCase().includes('aqeeqah') || o.ar === 'عقيقة',
+                );
+
+                if (checked && aqeeqahOption) {
+                  // Turning ON - add Aqeeqah option if not present
+                  const hasAqeeqah = (intentionField.options || []).some(
+                    (o) => o.en === aqeeqahOption.en,
+                  );
+                  if (!hasAqeeqah) {
+                    newFormData.reservationFields =
+                      formData.reservationFields.map((f) =>
+                        f.key === 'intention'
+                          ? {
+                              ...f,
+                              options: [...(f.options || []), aqeeqahOption],
+                            }
+                          : f,
+                      );
+                  }
+                } else if (!checked) {
+                  // Turning OFF - remove Aqeeqah option
+                  newFormData.reservationFields =
+                    formData.reservationFields.map((f) =>
+                      f.key === 'intention'
+                        ? {
+                            ...f,
+                            options: (f.options || []).filter(
+                              (o) =>
+                                !o.en.toLowerCase().includes('aqeeqah') &&
+                                o.ar !== 'عقيقة',
+                            ),
+                          }
+                        : f,
+                    );
+                }
+              }
+
+              setFormData(newFormData);
+            }}
             label={t('form.workAsSacrificeLabel')}
           />
           {formData.workAsSacrifice && (
@@ -1109,6 +1199,49 @@ export default function ProductForm({
                           <CircleHelp size={16} />
                         </span>
                       </Tooltip>
+                    </div>
+                  )}
+
+                  {isActive && field && preset.key === 'intention' && (
+                    <div className="space-y-3 pt-2 border-t border-stroke">
+                      <p className="text-xs font-medium text-secondary">
+                        {t('form.intentionOptionsLabel', { defaultValue: 'Available Options (Select which options to show for this product)' })}
+                      </p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {(preset.options || []).map((option) => {
+                          // Hide Aqeeqah option if product is not marked as sacrifice
+                          const isAqeeqah = option.en.toLowerCase().includes('aqeeqah') || option.ar === 'عقيقة';
+                          if (isAqeeqah && !formData.workAsSacrifice) {
+                            return null;
+                          }
+
+                          const isSelected = (field.options || []).some(
+                            (o) => o.en === option.en,
+                          );
+
+                          return (
+                            <label
+                              key={`intention_option_${option.en}`}
+                              className="flex items-center gap-2 p-2 rounded-lg border border-stroke hover:bg-background/50 cursor-pointer transition-colors"
+                            >
+                              <Checkbox
+                                checked={isSelected}
+                                onChange={(checked) =>
+                                  updateIntentionOptions(option.en, checked)
+                                }
+                              />
+                              <span className="text-sm">
+                                {option.ar} / {option.en}
+                              </span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                      {!formData.workAsSacrifice && (
+                        <p className="text-xs text-secondary">
+                          {t('form.aqeeqahOptionHidden', { defaultValue: 'Aqeeqah option is hidden because this product is not marked as Sacrifice' })}
+                        </p>
+                      )}
                     </div>
                   )}
                 </div>

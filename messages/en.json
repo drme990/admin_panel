@@ -375,7 +375,9 @@
         "reservationMaxLengthHelp": "Maximum number of characters allowed (leave empty for no limit)",
         "reservationRequired": "Required field",
         "reservationSupportsMulti": "Allow entering multiple names",
-        "reservationSupportsMultiTooltip": "Enable this when customers may submit more than one beneficiary name for the same field."
+        "reservationSupportsMultiTooltip": "Enable this when customers may submit more than one beneficiary name for the same field.",
+        "intentionOptionsLabel": "Available Options (Select which options to show for this product)",
+        "aqeeqahOptionHidden": "Aqeeqah option is hidden because this product is not marked as Sacrifice"
       },
       "buttons": {
         "cancel": "Cancel",

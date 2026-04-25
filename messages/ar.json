@@ -374,7 +374,9 @@
         "reservationMaxLengthHelp": "الحد الأقصى لعدد الأحرف المسموح بها (اتركه فارغاً بدون حد)",
         "reservationRequired": "حقل إلزامي",
         "reservationSupportsMulti": "السماح بإدخال أكثر من اسم",
-        "reservationSupportsMultiTooltip": "فعّل هذا الخيار عندما يمكن للعميل إدخال أكثر من اسم مستفيد داخل نفس الحقل."
+        "reservationSupportsMultiTooltip": "فعّل هذا الخيار عندما يمكن للعميل إدخال أكثر من اسم مستفيد داخل نفس الحقل.",
+        "intentionOptionsLabel": "الخيارات المتاحة (حدد الخيارات التي تريد عرضها لهذا المنتج)",
+        "aqeeqahOptionHidden": "خيار العقيقة مخفي لأن هذا المنتج غير مُعلَّم كأضحية"
       },
       "buttons": {
         "cancel": "إلغاء",

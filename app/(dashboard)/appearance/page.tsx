@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { toast } from 'react-toastify';
 import { LuSave as Save } from 'react-icons/lu';
@@ -8,9 +8,9 @@ import { PageLoading } from '@/components/ui/loading';
 import Button from '@/components/ui/button';
 import Tabs from '@/components/ui/tabs';
 import UploadProgressDisplay from '@/components/admin/upload-progress-display';
-import { useAudioUpload } from '@/hooks/use-audio-upload';
-import { BannerText, WorksImages, ProjectName } from '@/types/Appearance';
+import { BannerText, WorksImages, ProjectName, AudioReview } from '@/types/Appearance';
 import { AudioReviewsSection } from './components/AudioReviewsSection';
+import { useMultipleAudioUpload } from '@/hooks/use-multiple-audio-upload';
 import { BannerTextEditor } from './components/BannerTextEditor';
 import { WhatsAppMessageEditor } from './components/WhatsAppMessageEditor';
 import { WorksImagesSection } from './components/WorksImagesSection';
@@ -51,39 +51,19 @@ function normalizeBannerText(value: unknown): BannerText {
   };
 }
 
-function normalizeAudioReviews(value: unknown): { ar: string[]; en: string[] } {
-  const raw = value as { ar?: unknown; en?: unknown } | undefined;
-
-  const ar = Array.isArray(raw?.ar)
-    ? raw.ar.filter((item): item is string => typeof item === 'string')
-    : [];
-
-  const en = Array.isArray(raw?.en)
-    ? raw.en.filter((item): item is string => typeof item === 'string')
-    : [];
-
-  // Fallback for old format (array of strings)
-  if (Array.isArray(value) && ar.length === 0 && en.length === 0) {
-    return {
-      ar: value.filter((item): item is string => typeof item === 'string'),
-      en: [],
-    };
-  }
-
-  return { ar, en };
+function normalizeAudioReviews(value: unknown): AudioReview[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter(
+    (item): item is AudioReview =>
+      typeof item === 'object' &&
+      item !== null &&
+      typeof (item as AudioReview).id === 'string' &&
+      typeof (item as AudioReview).url === 'string',
+  );
 }
 
-function getAllAudiosForLang(
-  audioReviews: Record<ProjectName, { ar: string[]; en: string[] }>,
-  lang: 'ar' | 'en',
-) {
-  return PROJECTS.flatMap((project) =>
-    audioReviews[project.key][lang].map((url) => ({
-      url,
-      project: project.key,
-      lang,
-    })),
-  );
+function generateId(): string {
+  return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
 }
 
 export default function AppearancePage() {
@@ -94,13 +74,7 @@ export default function AppearancePage() {
     manasik: { row1: [], row2: [] },
     shared: { row1: [], row2: [] },
   });
-  const [audioReviews, setAudioReviews] = useState<
-    Record<ProjectName, { ar: string[]; en: string[] }>
-  >({
-    ghadaq: { ar: [], en: [] },
-    manasik: { ar: [], en: [] },
-    shared: { ar: [], en: [] },
-  });
+  const [audioReviews, setAudioReviews] = useState<AudioReview[]>([]);
   const [defaultMessages, setDefaultMessages] = useState<
     Record<ProjectName, string>
   >({
@@ -121,26 +95,25 @@ export default function AppearancePage() {
     null,
   );
 
-  const onAudioUploadedRef = useRef<(url: string) => void>(() => {});
-
-  const handleAudioUploaded = useCallback((url: string, lang: 'ar' | 'en') => {
-    setAudioReviews((prev) => ({
+  const handleAudioUploaded = useCallback((url: string) => {
+    setAudioReviews((prev) => [
       ...prev,
-      shared: {
-        ...prev.shared,
-        [lang]: [...prev.shared[lang], url],
+      {
+        id: generateId(),
+        url,
+        nameAr: 'مستخدم',
+        nameEn: 'User',
+        userImage: '',
+        platform: 'shared',
+        language: 'shared',
+        isMain: false,
       },
-    }));
+    ]);
   }, []);
 
-  const {
-    uploading: uploadingAudio,
-    uploadState: audioUploadState,
-    handleFileSelect: handleAudioFileSelect,
-    cancelUpload: cancelAudioUpload,
-  } = useAudioUpload({
+  const { uploading: uploadingAudio, uploadState: audioUploadProgress, handleFileSelect: handleMultipleAudioUpload, cancelUpload: handleCancelAudioUpload } = useMultipleAudioUpload({
     t,
-    onUploaded: (url) => onAudioUploadedRef.current(url),
+    onUploaded: handleAudioUploaded,
   });
 
   const loadAppearance = useCallback(async () => {
@@ -177,17 +150,22 @@ export default function AppearancePage() {
             : { row1: [], row2: [] },
       });
 
-      setAudioReviews({
-        ghadaq: byProject.ghadaq?.success
-          ? normalizeAudioReviews(byProject.ghadaq.data?.audioReviews)
-          : { ar: [], en: [] },
-        manasik: byProject.manasik?.success
-          ? normalizeAudioReviews(byProject.manasik.data?.audioReviews)
-          : { ar: [], en: [] },
-        shared: byProject.shared?.success
-          ? normalizeAudioReviews(byProject.shared.data?.audioReviews)
-          : { ar: [], en: [] },
+      // Combine audio reviews from all projects into a single array
+      const allAudioReviews: AudioReview[] = [];
+      (['ghadaq', 'manasik', 'shared'] as ProjectName[]).forEach((project) => {
+        const projectData = byProject[project];
+        if (projectData?.success && projectData.data?.audioReviews) {
+          const normalized = normalizeAudioReviews(projectData.data.audioReviews);
+          // If audio doesn't have platform set, default to the project it came from
+          normalized.forEach((audio) => {
+            if (!audio.platform) {
+              audio.platform = project === 'shared' ? 'shared' : project;
+            }
+          });
+          allAudioReviews.push(...normalized);
+        }
       });
+      setAudioReviews(allAudioReviews);
 
       setDefaultMessages({
         ghadaq:
@@ -273,18 +251,11 @@ export default function AppearancePage() {
     }));
   };
 
-  const handleDeleteAudio = async (globalIndex: number, lang: 'ar' | 'en') => {
-    const allAudios = getAllAudiosForLang(audioReviews, lang);
-    const audio = allAudios[globalIndex];
+  const handleDeleteAudio = async (id: string) => {
+    const audio = audioReviews.find((a) => a.id === id);
     if (!audio) return;
 
-    setAudioReviews((prev) => ({
-      ...prev,
-      [audio.project]: {
-        ...prev[audio.project],
-        [lang]: prev[audio.project][lang].filter((url) => url !== audio.url),
-      },
-    }));
+    setAudioReviews((prev) => prev.filter((a) => a.id !== id));
 
     try {
       await fetch('/api/upload/audio', {
@@ -297,26 +268,30 @@ export default function AppearancePage() {
     }
   };
 
-  const handleAudioPlatformChange = (
-    globalIndex: number,
-    targetProject: ProjectName,
-    lang: 'ar' | 'en',
-  ) => {
-    const allAudios = getAllAudiosForLang(audioReviews, lang);
-    const audio = allAudios[globalIndex];
-    if (!audio || audio.project === targetProject) return;
+  const handleAudioUpdate = (id: string, updates: Partial<AudioReview>) => {
+    setAudioReviews((prev) =>
+      prev.map((a) => (a.id === id ? { ...a, ...updates } : a)),
+    );
+  };
 
-    setAudioReviews((prev) => ({
-      ...prev,
-      [audio.project]: {
-        ...prev[audio.project],
-        [lang]: prev[audio.project][lang].filter((url) => url !== audio.url),
-      },
-      [targetProject]: {
-        ...prev[targetProject],
-        [lang]: [...prev[targetProject][lang], audio.url],
-      },
-    }));
+  const handleAudioSetMain = (id: string) => {
+    const targetAudio = audioReviews.find((a) => a.id === id);
+    if (!targetAudio) return;
+
+    const newIsMain = !targetAudio.isMain;
+
+    setAudioReviews((prev) =>
+      prev.map((a) => {
+        if (a.id === id) {
+          return { ...a, isMain: newIsMain };
+        }
+        // If turning ON, unset other audios on the same platform
+        if (newIsMain && a.platform === targetAudio.platform && a.isMain) {
+          return { ...a, isMain: false };
+        }
+        return a;
+      }),
+    );
   };
 
   const handleMoveImage = (fromRow: 'row1' | 'row2', index: number) => {
@@ -363,12 +338,15 @@ export default function AppearancePage() {
     try {
       const responses = await Promise.all(
         PROJECTS.map(async ({ key }) => {
+          const isShared = key === 'shared';
           const res = await fetch(`/api/appearance/${key}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               worksImages: images[key],
-              audioReviews: audioReviews[key],
+              // Save all audio reviews to the shared project only,
+              // and explicitly clear from others to avoid old data lingering
+              audioReviews: isShared ? audioReviews : [],
               whatsAppDefaultMessage: defaultMessages[key],
               bannerText: bannerTexts[key],
             }),
@@ -399,12 +377,6 @@ export default function AppearancePage() {
 
   return (
     <div className="space-y-6">
-      <UploadProgressDisplay
-        uploadProgress={audioUploadState}
-        onCancel={cancelAudioUpload}
-        cancelDisabled={!uploadingAudio}
-      />
-
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-foreground mb-2">
@@ -459,59 +431,21 @@ export default function AppearancePage() {
         />
       )}
 
-      {isSharedTab && (
-        <div className="space-y-8">
-          <AudioReviewsSection
-            audioReviews={
-              Object.fromEntries(
-                PROJECTS.map((p) => [p.key, audioReviews[p.key].ar]),
-              ) as Record<ProjectName, string[]>
-            }
-            uploading={uploadingAudio}
-            onUpload={(e) => {
-              onAudioUploadedRef.current = (url) =>
-                handleAudioUploaded(url, 'ar');
-              handleAudioFileSelect(e);
-            }}
-            onDelete={(i) => handleDeleteAudio(i, 'ar')}
-            onPlatformChange={(i, p) => handleAudioPlatformChange(i, p, 'ar')}
-            title={t('audioReviewsArTitle')}
-            description={t('audioReviewsDescription')}
-            addLabel={t('addAudio')}
-            uploadingLabel={t('uploading')}
-            noAudioText={t('noAudioReviews')}
-            audioSingular={t('audioSingular')}
-            audioPlural={t('audioPlural')}
-            deleteLabel={t('deleteAudio')}
-            platformLabel={t('audioPlatformLabel')}
-          />
+      <UploadProgressDisplay
+        uploadProgress={audioUploadProgress}
+        onCancel={handleCancelAudioUpload}
+        cancelDisabled={!uploadingAudio}
+      />
 
-          <AudioReviewsSection
-            audioReviews={
-              Object.fromEntries(
-                PROJECTS.map((p) => [p.key, audioReviews[p.key].en]),
-              ) as Record<ProjectName, string[]>
-            }
-            uploading={uploadingAudio}
-            onUpload={(e) => {
-              onAudioUploadedRef.current = (url) =>
-                handleAudioUploaded(url, 'en');
-              handleAudioFileSelect(e);
-            }}
-            onDelete={(i) => handleDeleteAudio(i, 'en')}
-            onPlatformChange={(i, p) => handleAudioPlatformChange(i, p, 'en')}
-            title={t('audioReviewsEnTitle')}
-            description={t('audioReviewsDescription')}
-            addLabel={t('addAudio')}
-            uploadingLabel={t('uploading')}
-            noAudioText={t('noAudioReviews')}
-            audioSingular={t('audioSingular')}
-            audioPlural={t('audioPlural')}
-            deleteLabel={t('deleteAudio')}
-            platformLabel={t('audioPlatformLabel')}
-          />
-        </div>
-      )}
+      <AudioReviewsSection
+        audioReviews={audioReviews}
+        uploading={uploadingAudio}
+        onUpload={handleMultipleAudioUpload}
+        onDelete={handleDeleteAudio}
+        onUpdate={handleAudioUpdate}
+        onSetMain={handleAudioSetMain}
+        onRemoveImage={(id) => handleAudioUpdate(id, { userImage: '' })}
+      />
 
       {!isSharedTab && (
         <>

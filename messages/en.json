@@ -712,6 +712,7 @@
       "audioInvalidType": "Invalid audio type. Allowed formats: MP3, WAV, OGG, WEBM, MP4, M4A, AAC.",
       "audioFileTooLarge": "Audio file is too large. Maximum allowed size is {size}.",
       "audioUploadFailed": "Failed to upload audio",
+      "audioUploadCancelled": "Audio upload cancelled",
       "bannerTitle": "Top Banner Text",
       "bannerDescription": "Set separate Arabic and English scrolling banner messages shown above the site header.",
       "bannerLabelAr": "Banner Text (Arabic)",

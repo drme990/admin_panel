@@ -711,6 +711,7 @@
       "audioInvalidType": "نوع الملف الصوتي غير صالح. الصيغ المسموحة: MP3 و WAV و OGG و WEBM و MP4 و M4A و AAC.",
       "audioFileTooLarge": "حجم الملف الصوتي كبير جدًا. الحد الأقصى المسموح هو {size}.",
       "audioUploadFailed": "فشل رفع الملف الصوتي",
+      "audioUploadCancelled": "تم إلغاء رفع الملف الصوتي",
       "bannerTitle": "نص الشريط العلوي",
       "bannerDescription": "حدد نصاً عربياً ونصاً إنجليزياً للشريط المتحرك فوق ترويسة الموقع.",
       "bannerLabelAr": "نص الشريط (عربي)",

@@ -59,6 +59,14 @@ export default function CustomersPage() {
     [t],
   );
 
+  const stats = useMemo(() => {
+    const total = customers.length;
+    const manasik = customers.filter((c) => c.appId === 'manasik').length;
+    const ghadaq = customers.filter((c) => c.appId === 'ghadaq').length;
+
+    return { total, manasik, ghadaq };
+  }, [customers]);
+
   const fetchCustomers = useCallback(async () => {
     try {
       setLoading(true);
@@ -229,6 +237,26 @@ export default function CustomersPage() {
           {t('title')}
         </h1>
         <p className="text-secondary">{t('description')}</p>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {/* Total */}
+        <div className="bg-card-bg border border-stroke rounded-site p-4">
+          <p className="text-sm text-secondary">{t('stats.total')}</p>
+          <p className="text-2xl font-bold text-foreground">{stats.total}</p>
+        </div>
+
+        {/* Manasik */}
+        <div className="bg-card-bg border border-stroke rounded-site p-4">
+          <p className="text-sm text-secondary">{t('stats.manasik')}</p>
+          <p className="text-2xl font-bold text-blue-500">{stats.manasik}</p>
+        </div>
+
+        {/* Ghadaq */}
+        <div className="bg-card-bg border border-stroke rounded-site p-4">
+          <p className="text-sm text-secondary">{t('stats.ghadaq')}</p>
+          <p className="text-2xl font-bold text-purple-500">{stats.ghadaq}</p>
+        </div>
       </div>
 
       <div className="bg-card-bg border border-stroke rounded-site p-4 space-y-4">

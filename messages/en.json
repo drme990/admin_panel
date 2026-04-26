@@ -602,6 +602,11 @@
         "active": "Active",
         "banned": "Banned"
       },
+      "stats": {
+        "total": "Total Customers",
+        "manasik": "Manasik",
+        "ghadaq": "Ghadaq"
+      },
       "table": {
         "name": "Customer",
         "phone": "Phone",

@@ -8,7 +8,12 @@ import { PageLoading } from '@/components/ui/loading';
 import Button from '@/components/ui/button';
 import Tabs from '@/components/ui/tabs';
 import UploadProgressDisplay from '@/components/admin/upload-progress-display';
-import { BannerText, WorksImages, ProjectName, AudioReview } from '@/types/Appearance';
+import {
+  BannerText,
+  WorksImages,
+  ProjectName,
+  AudioReview,
+} from '@/types/Appearance';
 import { AudioReviewsSection } from './components/AudioReviewsSection';
 import { useMultipleAudioUpload } from '@/hooks/use-multiple-audio-upload';
 import { BannerTextEditor } from './components/BannerTextEditor';
@@ -63,7 +68,10 @@ function normalizeAudioReviews(value: unknown): AudioReview[] {
 }
 
 function generateId(): string {
-  return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+  return (
+    Math.random().toString(36).substring(2, 15) +
+    Math.random().toString(36).substring(2, 15)
+  );
 }
 
 export default function AppearancePage() {
@@ -111,7 +119,12 @@ export default function AppearancePage() {
     ]);
   }, []);
 
-  const { uploading: uploadingAudio, uploadState: audioUploadProgress, handleFileSelect: handleMultipleAudioUpload, cancelUpload: handleCancelAudioUpload } = useMultipleAudioUpload({
+  const {
+    uploading: uploadingAudio,
+    uploadState: audioUploadProgress,
+    handleFileSelect: handleMultipleAudioUpload,
+    cancelUpload: handleCancelAudioUpload,
+  } = useMultipleAudioUpload({
     t,
     onUploaded: handleAudioUploaded,
   });
@@ -155,7 +168,9 @@ export default function AppearancePage() {
       (['ghadaq', 'manasik', 'shared'] as ProjectName[]).forEach((project) => {
         const projectData = byProject[project];
         if (projectData?.success && projectData.data?.audioReviews) {
-          const normalized = normalizeAudioReviews(projectData.data.audioReviews);
+          const normalized = normalizeAudioReviews(
+            projectData.data.audioReviews,
+          );
           // If audio doesn't have platform set, default to the project it came from
           normalized.forEach((audio) => {
             if (!audio.platform) {
@@ -431,21 +446,25 @@ export default function AppearancePage() {
         />
       )}
 
-      <UploadProgressDisplay
-        uploadProgress={audioUploadProgress}
-        onCancel={handleCancelAudioUpload}
-        cancelDisabled={!uploadingAudio}
-      />
+      {isSharedTab && (
+        <>
+          <UploadProgressDisplay
+            uploadProgress={audioUploadProgress}
+            onCancel={handleCancelAudioUpload}
+            cancelDisabled={!uploadingAudio}
+          />
 
-      <AudioReviewsSection
-        audioReviews={audioReviews}
-        uploading={uploadingAudio}
-        onUpload={handleMultipleAudioUpload}
-        onDelete={handleDeleteAudio}
-        onUpdate={handleAudioUpdate}
-        onSetMain={handleAudioSetMain}
-        onRemoveImage={(id) => handleAudioUpdate(id, { userImage: '' })}
-      />
+          <AudioReviewsSection
+            audioReviews={audioReviews}
+            uploading={uploadingAudio}
+            onUpload={handleMultipleAudioUpload}
+            onDelete={handleDeleteAudio}
+            onUpdate={handleAudioUpdate}
+            onSetMain={handleAudioSetMain}
+            onRemoveImage={(id) => handleAudioUpdate(id, { userImage: '' })}
+          />
+        </>
+      )}
 
       {!isSharedTab && (
         <>

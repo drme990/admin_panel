@@ -217,7 +217,7 @@
         "description": "Based on paid payment records from order payments."
       },
       "ordersByStatus": "Orders by Status",
-      "paymentSplit": "Full Payment vs Partial Payment",
+      "paymentSplit": "Payment Types",
       "topProducts": "Top Products",
       "ordersByCountry": "Orders by Country",
       "ordersByWeekday": "Orders by Weekday",

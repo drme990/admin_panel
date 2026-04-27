@@ -14,6 +14,7 @@ import {
   ProjectName,
   AudioReview,
 } from '@/types/Appearance';
+import { setAudioAsMain } from '@/lib/audio-main-logic';
 import { AudioReviewsSection } from './components/AudioReviewsSection';
 import { useMultipleAudioUpload } from '@/hooks/use-multiple-audio-upload';
 import { BannerTextEditor } from './components/BannerTextEditor';
@@ -290,23 +291,7 @@ export default function AppearancePage() {
   };
 
   const handleAudioSetMain = (id: string) => {
-    const targetAudio = audioReviews.find((a) => a.id === id);
-    if (!targetAudio) return;
-
-    const newIsMain = !targetAudio.isMain;
-
-    setAudioReviews((prev) =>
-      prev.map((a) => {
-        if (a.id === id) {
-          return { ...a, isMain: newIsMain };
-        }
-        // If turning ON, unset other audios on the same platform
-        if (newIsMain && a.platform === targetAudio.platform && a.isMain) {
-          return { ...a, isMain: false };
-        }
-        return a;
-      }),
-    );
+    setAudioReviews((prev) => setAudioAsMain(prev, id));
   };
 
   const handleMoveImage = (fromRow: 'row1' | 'row2', index: number) => {

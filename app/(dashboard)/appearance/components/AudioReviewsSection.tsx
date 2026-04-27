@@ -15,6 +15,7 @@ import {
 import Button from '@/components/ui/button';
 import { AudioReview, ProjectName, AudioLanguage } from '@/types/Appearance';
 import Dropdown from '@/components/ui/dropdown';
+import Image from 'next/image';
 
 interface AudioReviewsSectionProps {
   audioReviews: AudioReview[];
@@ -176,9 +177,12 @@ export function AudioReviewsSection(props: AudioReviewsSectionProps) {
     <div className="space-y-6 border border-stroke/60 rounded-2xl p-6 bg-card-bg shadow-sm">
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-1">
-          <h2 className="text-xl font-semibold tracking-tight">Audio Reviews</h2>
+          <h2 className="text-xl font-semibold tracking-tight">
+            Audio Reviews
+          </h2>
           <p className="text-sm text-secondary/80 leading-relaxed">
-            Manage audio reviews with names, images, platform and language assignment.
+            Manage audio reviews with names, images, platform and language
+            assignment.
           </p>
         </div>
 
@@ -207,7 +211,9 @@ export function AudioReviewsSection(props: AudioReviewsSectionProps) {
                     size="sm"
                     onClick={() => onSetMain(audio.id)}
                     className="flex items-center gap-1.5 text-xs"
-                    title={audio.isMain ? 'Main audio (plays first)' : 'Set as main'}
+                    title={
+                      audio.isMain ? 'Main audio (plays first)' : 'Set as main'
+                    }
                   >
                     <LuStar className="w-3.5 h-3.5" />
                     {audio.isMain ? 'Main' : 'Set Main'}
@@ -261,7 +267,9 @@ export function AudioReviewsSection(props: AudioReviewsSectionProps) {
                     title="Upload user image"
                   >
                     {audio.userImage ? (
-                      <img
+                      <Image
+                        width={56}
+                        height={56}
                         src={audio.userImage}
                         alt={audio.nameEn}
                         className="w-14 h-14 rounded-full object-cover border border-stroke group-hover:opacity-80 transition-opacity"
@@ -307,21 +315,29 @@ export function AudioReviewsSection(props: AudioReviewsSectionProps) {
                 <div className="flex-1 space-y-3">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
-                      <label className="text-xs text-secondary mb-1 block">Name (AR)</label>
+                      <label className="text-xs text-secondary mb-1 block">
+                        Name (AR)
+                      </label>
                       <input
                         type="text"
                         value={audio.nameAr}
-                        onChange={(e) => onUpdate(audio.id, { nameAr: e.target.value })}
+                        onChange={(e) =>
+                          onUpdate(audio.id, { nameAr: e.target.value })
+                        }
                         className="w-full px-3 py-2 text-sm border border-stroke rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
                         placeholder="اسم المستخدم"
                       />
                     </div>
                     <div>
-                      <label className="text-xs text-secondary mb-1 block">Name (EN)</label>
+                      <label className="text-xs text-secondary mb-1 block">
+                        Name (EN)
+                      </label>
                       <input
                         type="text"
                         value={audio.nameEn}
-                        onChange={(e) => onUpdate(audio.id, { nameEn: e.target.value })}
+                        onChange={(e) =>
+                          onUpdate(audio.id, { nameEn: e.target.value })
+                        }
                         className="w-full px-3 py-2 text-sm border border-stroke rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
                         placeholder="User Name"
                       />

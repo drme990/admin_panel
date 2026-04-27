@@ -13,7 +13,7 @@ import { RevenueOverTimeChart } from '@/components/analytics/revenue-over-time-c
 
 type DataPoint = { name: string; value: number };
 type RevenuePoint = { label: string; revenue: number };
-type PeriodFilter = '7d' | '30d' | '90d' | '12m';
+type PeriodFilter = '1d' | '2d' | '7d' | '30d' | '90d' | '12m';
 type SupportedEarningsCurrency = 'EGP' | 'SAR' | 'USD' | 'EUR';
 type StatusFilter =
   | 'all'
@@ -48,6 +48,8 @@ export default function AnalyticsPage() {
 
   const periodOptions = useMemo(
     () => [
+      { value: '1d' as const, label: 'Last 1 Day' },
+      { value: '2d' as const, label: 'Last 2 Days' },
       { value: '7d' as const, label: 'Last 7 Days' },
       { value: '30d' as const, label: 'Last 30 Days' },
       { value: '90d' as const, label: 'Last 90 Days' },
@@ -90,6 +92,12 @@ export default function AnalyticsPage() {
         } else if (period === '12m') {
           days = 365;
           months = 12;
+        } else if (period === '1d') {
+          days = 1;
+          months = 1;
+        } else if (period === '2d') {
+          days = 2;
+          months = 1;
         }
 
         const response = await fetch(

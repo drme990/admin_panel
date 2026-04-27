@@ -216,7 +216,7 @@
         "title": "الأرباح حسب العملة"
       },
       "ordersByStatus": "الطلبات حسب الحالة",
-      "paymentSplit": "الدفع الكامل مقابل الدفع الجزئي",
+      "paymentSplit": "أنواع الدفع",
       "topProducts": "أكثر المنتجات مبيعاً",
       "ordersByCountry": "الطلبات حسب البلد",
       "ordersByWeekday": "الطلبات حسب يوم الأسبوع",

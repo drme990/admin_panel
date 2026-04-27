@@ -9,7 +9,7 @@ interface DataPoint {
   value: number;
 }
 
-const COLORS = ['#10b981', '#f59e0b'];
+const COLORS = ['#10b981', '#3b82f6', '#f59e0b'];
 
 export function PaymentSplitChart({
   data,

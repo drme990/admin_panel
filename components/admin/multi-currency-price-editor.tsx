@@ -219,6 +219,19 @@ export default function MultiCurrencyPriceEditor({
     ...new Set(countries.map((c) => c.currencyCode)),
   ];
 
+  const applyManualState = (manual: boolean) => {
+    const updatedPrices: CurrencyPrice[] = availableCurrencies.map((code) => {
+      const existing = prices.find((p) => p.currencyCode === code);
+      return {
+        currencyCode: code,
+        amount: existing?.amount ?? 0,
+        isManual: manual,
+      };
+    });
+
+    onChange(updatedPrices);
+  };
+
   if (loading) {
     return (
       <div className="text-sm text-secondary">
@@ -291,6 +304,27 @@ export default function MultiCurrencyPriceEditor({
           ? t('form.calculating')
           : t('form.autoCalculatePrices')}
       </Button>
+
+      <div className="grid grid-cols-2 gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => applyManualState(true)}
+          className="w-full"
+        >
+          {t('form.setAllManual')}
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => applyManualState(false)}
+          className="w-full"
+        >
+          {t('form.setAllAuto')}
+        </Button>
+      </div>
 
       {/* Currency Prices */}
       <div className="space-y-3">

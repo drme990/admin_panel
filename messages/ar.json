@@ -256,6 +256,11 @@
         "inStock": "متوفر",
         "outOfStock": "غير متوفر"
       },
+      "settings": {
+        "title": "إعدادات سريعة",
+        "inStock": "متوفر",
+        "active": "نشط"
+      },
       "form": {
         "nameAr": "الاسم (عربي) *",
         "nameEn": "الاسم (إنجليزي) *",
@@ -272,6 +277,8 @@
         "basePrice": "السعر الأساسي",
         "currencyPrices": "الأسعار حسب العملة",
         "autoCalculatePrices": "حساب الأسعار تلقائياً",
+        "setAllManual": "تعيين الكل يدوي",
+        "setAllAuto": "تعيين الكل تلقائي",
         "calculating": "جاري الحساب...",
         "manual": "يدوي",
         "auto": "تلقائي",

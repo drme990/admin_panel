@@ -257,6 +257,11 @@
         "inStock": "In Stock",
         "outOfStock": "Out of Stock"
       },
+      "settings": {
+        "title": "Quick settings",
+        "inStock": "In Stock",
+        "active": "Active"
+      },
       "form": {
         "nameAr": "Name (Arabic) *",
         "nameEn": "Name (English) *",
@@ -273,6 +278,8 @@
         "basePrice": "Base Price",
         "currencyPrices": "Prices by Currency",
         "autoCalculatePrices": "Auto Calculate Prices",
+        "setAllManual": "Set all to manual",
+        "setAllAuto": "Set all to auto",
         "calculating": "Calculating...",
         "manual": "Manual",
         "auto": "Auto",

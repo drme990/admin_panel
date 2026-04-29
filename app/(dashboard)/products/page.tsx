@@ -11,6 +11,7 @@ import {
   LuArrowUp as ArrowUp,
   LuArrowDown as ArrowDown,
   LuListOrdered as ListOrdered,
+  LuSettings2 as Settings2,
 } from 'react-icons/lu';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -21,6 +22,7 @@ import { useLocale, useTranslations } from 'next-intl';
 import { toast } from 'react-toastify';
 import ConfirmModal, { useConfirmModal } from '@/components/ui/confirm-modal';
 import Button from '@/components/ui/button';
+import Switch from '@/components/ui/switch';
 
 export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -31,6 +33,8 @@ export default function ProductsPage() {
   const [reorderOpen, setReorderOpen] = useState(false);
   const [reorderList, setReorderList] = useState<Product[]>([]);
   const [reorderSaving, setReorderSaving] = useState(false);
+  const [settingsOpenId, setSettingsOpenId] = useState<string | null>(null);
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
   const router = useRouter();
   const t = useTranslations('admin.products');
   const { confirm, modalProps } = useConfirmModal();
@@ -38,6 +42,17 @@ export default function ProductsPage() {
 
   useEffect(() => {
     fetchProducts();
+  }, []);
+
+  useEffect(() => {
+    const handleDocumentClick = (event: MouseEvent) => {
+      const target = event.target as Element | null;
+      if (target?.closest('[data-product-settings]')) return;
+      setSettingsOpenId(null);
+    };
+
+    document.addEventListener('click', handleDocumentClick);
+    return () => document.removeEventListener('click', handleDocumentClick);
   }, []);
 
   const fetchProducts = async () => {
@@ -138,6 +153,38 @@ export default function ProductsPage() {
     }
   };
 
+  const updateProductFlags = async (
+    productId: string,
+    updates: Partial<Pick<Product, 'inStock' | 'isActive'>>,
+  ) => {
+    try {
+      setUpdatingId(productId);
+      const res = await fetch(`/api/products/${productId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      });
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        throw new Error(data?.error || t('messages.saveFailed'));
+      }
+
+      setProducts((prev) =>
+        prev.map((product) =>
+          product._id === productId ? { ...product, ...updates } : product,
+        ),
+      );
+      toast.success(t('messages.updateSuccess'));
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : t('messages.saveFailed');
+      toast.error(message);
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
   const columns = [
     {
       header: t('table.order'),
@@ -198,6 +245,49 @@ export default function ProductsPage() {
       header: t('table.actions'),
       accessor: (product: Product) => (
         <div className="flex items-center gap-2">
+          <div className="relative" data-product-settings>
+            <Tooltip position={ToolTipPositions} content={t('settings.title')}>
+              <Button
+                variant="icon-primary"
+                size="custom"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSettingsOpenId((current) =>
+                    current === product._id ? null : product._id,
+                  );
+                }}
+                aria-label={t('settings.title')}
+              >
+                <Settings2 size={16} />
+              </Button>
+            </Tooltip>
+
+            {settingsOpenId === product._id && (
+              <div className="absolute z-20 bottom-full mb-2 w-56 rounded-lg border border-stroke bg-card-bg shadow-lg p-3 inset-e-0">
+                <p className="text-xs font-semibold text-secondary uppercase tracking-wide mb-3">
+                  {t('settings.title')}
+                </p>
+                <div className="space-y-3">
+                  <Switch
+                    checked={product.inStock}
+                    onChange={(checked) =>
+                      updateProductFlags(product._id, { inStock: checked })
+                    }
+                    disabled={updatingId === product._id}
+                    label={t('settings.inStock')}
+                  />
+                  <Switch
+                    checked={product.isActive}
+                    onChange={(checked) =>
+                      updateProductFlags(product._id, { isActive: checked })
+                    }
+                    disabled={updatingId === product._id}
+                    label={t('settings.active')}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
           <Tooltip position={ToolTipPositions} content={t('editProduct')}>
             <Button
               variant="icon-primary"

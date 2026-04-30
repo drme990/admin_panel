@@ -8,7 +8,7 @@ interface CheckboxProps {
   checked: boolean;
   onChange: (checked: boolean) => void;
   onClick?: (e: React.MouseEvent<HTMLButtonElement>) => void;
-  label?: string;
+  label?: string | React.ReactNode;
   description?: string;
   disabled?: boolean;
   size?: 'sm' | 'md' | 'lg';
@@ -98,9 +98,9 @@ export default function Checkbox({
           }}
         >
           {label && (
-            <span className="text-sm font-medium text-foreground leading-tight">
-              {label}
-            </span>
+            <div className="text-sm font-medium text-foreground leading-tight">
+              {typeof label === 'string' ? <span>{label}</span> : label}
+            </div>
           )}
 
           {description && (

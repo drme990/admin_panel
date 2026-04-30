@@ -329,6 +329,23 @@ export default function CountriesPage() {
     });
   };
 
+  const selectSelfOnly = () => {
+    if (visibilityCountry) {
+      setVisibleToCountries([visibilityCountry.code]);
+    }
+  };
+
+  const selectAllCountries = () => {
+    const allActiveCodes = countries
+      .filter((c) => c.isActive)
+      .map((c) => c.code);
+    setVisibleToCountries(allActiveCodes);
+  };
+
+  const clearAllCountries = () => {
+    setVisibleToCountries([]);
+  };
+
   const saveVisibilitySettings = async () => {
     if (!visibilityCountry) return;
 
@@ -691,13 +708,49 @@ export default function CountriesPage() {
           {/* Specific Countries Selection */}
           {visibilityMode === 'specific' && (
             <div className="space-y-3">
-              <label className="block text-sm font-medium text-foreground">
-                {t('visibilitySettings.selectCountries')}
-              </label>
+              <div className="flex items-center justify-between">
+                <label className="block text-sm font-medium text-foreground">
+                  {t('visibilitySettings.selectCountries')}
+                </label>
+                <div className="flex gap-2">
+                  <Button
+                    variant="ghost"
+                    size="custom"
+                    onClick={selectSelfOnly}
+                    className="text-xs px-2 py-1 h-auto"
+                    title={t('visibilitySettings.selfOnly')}
+                  >
+                    {t('visibilitySettings.selfOnly')}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="custom"
+                    onClick={selectAllCountries}
+                    className="text-xs px-2 py-1 h-auto"
+                    title={t('visibilitySettings.selectAll')}
+                  >
+                    {t('visibilitySettings.selectAll')}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="custom"
+                    onClick={clearAllCountries}
+                    className="text-xs px-2 py-1 h-auto"
+                    title={t('visibilitySettings.clearAll')}
+                  >
+                    {t('visibilitySettings.clearAll')}
+                  </Button>
+                </div>
+              </div>
               <div className="max-h-60 overflow-y-auto border border-stroke rounded-site p-3 space-y-2">
                 {countries
-                  .filter((c) => c.code !== visibilityCountry?.code && c.isActive)
+                  .filter((c) => c.isActive)
                   .sort((a, b) => {
+                    const isOwnA = a.code === visibilityCountry?.code;
+                    const isOwnB = b.code === visibilityCountry?.code;
+                    // Put own country first
+                    if (isOwnA && !isOwnB) return -1;
+                    if (!isOwnA && isOwnB) return 1;
                     const nameA = locale === 'ar' ? a.name.ar : a.name.en;
                     const nameB = locale === 'ar' ? b.name.ar : b.name.en;
                     return nameA.localeCompare(nameB);
@@ -707,11 +760,19 @@ export default function CountriesPage() {
                       key={country._id}
                       checked={visibleToCountries.includes(country.code)}
                       onChange={() => toggleVisibleToCountry(country.code)}
-                      label={`${locale === 'ar' ? country.name.ar : country.name.en} (${country.code})`}
+                      label={
+                        <span className="flex items-center gap-2">
+                          {country.code === visibilityCountry?.code && (
+                            <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">
+                              {t('visibilitySettings.ownCountry')}
+                            </span>
+                          )}
+                          <span>{locale === 'ar' ? country.name.ar : country.name.en} ({country.code})</span>
+                        </span>
+                      }
                     />
                   ))}
-                {countries.filter((c) => c.code !== visibilityCountry?.code && c.isActive)
-                  .length === 0 && (
+                {countries.filter((c) => c.isActive).length === 0 && (
                   <p className="text-sm text-secondary text-center py-4">
                     {t('visibilitySettings.noCountriesAvailable')}
                   </p>

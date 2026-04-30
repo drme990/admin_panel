@@ -441,7 +441,8 @@
         "currency": "Currency",
         "rounding": "Rounding",
         "status": "Status",
-        "order": "Order"
+        "order": "Order",
+        "actions": "Actions"
       },
       "roundingRules": {
         "ceil": "Round Up (Integer)",
@@ -457,6 +458,18 @@
         "active": "Active",
         "inactive": "Inactive"
       },
+      "visibilitySettings": {
+        "title": "Visibility Settings",
+        "modeLabel": "Who can see this country?",
+        "allCountries": "All countries",
+        "specificCountries": "Specific countries only",
+        "selectCountries": "Select countries that can see this country:",
+        "noCountriesAvailable": "No other active countries available",
+        "visibleToOther": "Show when IP country is unknown (Other)",
+        "visibleToOtherDescription": "Display this country to users whose IP location couldn't be detected or is not in our list",
+        "save": "Save Settings",
+        "cancel": "Cancel"
+      },
       "messages": {
         "saveFailed": "Failed to update country",
         "updateSuccess": "Country updated successfully",
@@ -464,7 +477,9 @@
         "roundingUpdateFailed": "Failed to update rounding rule",
         "orderSaved": "Currency order saved successfully",
         "reorderSuccess": "Currency order saved successfully",
-        "reorderFailed": "Failed to save currency order"
+        "reorderFailed": "Failed to save currency order",
+        "visibilityUpdateSuccess": "Visibility settings saved successfully",
+        "visibilityUpdateFailed": "Failed to save visibility settings"
       }
     },
     "coupons": {

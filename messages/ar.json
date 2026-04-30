@@ -440,7 +440,8 @@
         "currency": "العملة",
         "rounding": "التقريب",
         "status": "الحالة",
-        "order": "الترتيب"
+        "order": "الترتيب",
+        "actions": "الإجراءات"
       },
       "roundingRules": {
         "ceil": "تقريب للأعلى (عدد صحيح)",
@@ -456,6 +457,18 @@
         "active": "نشط",
         "inactive": "غير نشط"
       },
+      "visibilitySettings": {
+        "title": "إعدادات الظهور",
+        "modeLabel": "من يمكنه رؤية هذا البلد؟",
+        "allCountries": "جميع البلدان",
+        "specificCountries": "بلدان محددة فقط",
+        "selectCountries": "اختر البلدان التي يمكنها رؤية هذا البلد:",
+        "noCountriesAvailable": "لا توجد بلدان نشطة أخرى متاحة",
+        "visibleToOther": "الإظهار عندما يكون بلد IP غير معروف (أخرى)",
+        "visibleToOtherDescription": "عرض هذا البلد للمستخدمين الذين لم يتمكن النظام من تحديد موقع IP الخاص بهم أو ليس في قائمتنا",
+        "save": "حفظ الإعدادات",
+        "cancel": "إلغاء"
+      },
       "messages": {
         "saveFailed": "فشل تحديث البلد",
         "updateSuccess": "تم تحديث البلد بنجاح",
@@ -463,7 +476,9 @@
         "roundingUpdateFailed": "فشل تحديث قاعدة التقريب",
         "orderSaved": "تم حفظ ترتيب العملات بنجاح",
         "reorderSuccess": "تم حفظ ترتيب العملات بنجاح",
-        "reorderFailed": "فشل حفظ ترتيب العملات"
+        "reorderFailed": "فشل حفظ ترتيب العملات",
+        "visibilityUpdateSuccess": "تم حفظ إعدادات الظهور بنجاح",
+        "visibilityUpdateFailed": "فشل حفظ إعدادات الظهور"
       }
     },
     "coupons": {

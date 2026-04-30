@@ -6,6 +6,7 @@ import {
   LuArrowUp as ArrowUp,
   LuArrowDown as ArrowDown,
   LuListOrdered as ListOrdered,
+  LuSettings2 as Settings2,
 } from 'react-icons/lu';
 import * as flags from 'country-flag-icons/react/3x2';
 import { useTranslations, useLocale } from 'next-intl';
@@ -13,6 +14,7 @@ import Dropdown from '@/components/ui/dropdown';
 import Table from '@/components/ui/table';
 import Modal from '@/components/ui/modal';
 import Switch from '@/components/ui/switch';
+import Checkbox from '@/components/ui/checkbox';
 import Button from '@/components/ui/button';
 import { toast } from 'react-toastify';
 
@@ -31,6 +33,9 @@ interface Country {
   flagEmoji: string;
   isActive: boolean;
   sortOrder: number | null;
+  visibilityMode?: 'all' | 'specific';
+  visibleToCountries?: string[];
+  visibleToOther?: boolean;
 }
 
 type RoundingRule = 'nearest-ten' | 'nearest-five' | 'ceil';
@@ -46,6 +51,15 @@ export default function CountriesPage() {
   const [reorderOpen, setReorderOpen] = useState(false);
   const [reorderList, setReorderList] = useState<Country[]>([]);
   const [reorderSaving, setReorderSaving] = useState(false);
+
+  // Visibility settings modal state
+  const [visibilityOpen, setVisibilityOpen] = useState(false);
+  const [visibilityCountry, setVisibilityCountry] = useState<Country | null>(null);
+  const [visibilityMode, setVisibilityMode] = useState<'all' | 'specific'>('all');
+  const [visibleToCountries, setVisibleToCountries] = useState<string[]>([]);
+  const [visibleToOther, setVisibleToOther] = useState(true);
+  const [visibilitySaving, setVisibilitySaving] = useState(false);
+
   const t = useTranslations('admin.countries');
   const locale = useLocale();
 
@@ -296,6 +310,80 @@ export default function CountriesPage() {
     }
   };
 
+  // Visibility settings handlers
+  const openVisibilityModal = (country: Country) => {
+    setVisibilityCountry(country);
+    setVisibilityMode(country.visibilityMode ?? 'all');
+    setVisibleToCountries(country.visibleToCountries ?? []);
+    setVisibleToOther(country.visibleToOther ?? true);
+    setVisibilityOpen(true);
+  };
+
+  const toggleVisibleToCountry = (countryCode: string) => {
+    setVisibleToCountries((prev) => {
+      const isSelected = prev.includes(countryCode);
+      if (isSelected) {
+        return prev.filter((code) => code !== countryCode);
+      }
+      return [...prev, countryCode];
+    });
+  };
+
+  const saveVisibilitySettings = async () => {
+    if (!visibilityCountry) return;
+
+    setVisibilitySaving(true);
+    const previousSettings = {
+      visibilityMode: visibilityCountry.visibilityMode ?? 'all',
+      visibleToCountries: visibilityCountry.visibleToCountries ?? [],
+      visibleToOther: visibilityCountry.visibleToOther ?? true,
+    };
+
+    // Optimistic update
+    setCountries((prev) =>
+      prev.map((c) =>
+        c._id === visibilityCountry._id
+          ? {
+              ...c,
+              visibilityMode,
+              visibleToCountries,
+              visibleToOther,
+            }
+          : c,
+      ),
+    );
+
+    try {
+      const response = await fetch(`/api/countries/${visibilityCountry._id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          visibilityMode,
+          visibleToCountries,
+          visibleToOther,
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Failed to update visibility settings');
+      }
+
+      toast.success(t('messages.visibilityUpdateSuccess'));
+      setVisibilityOpen(false);
+    } catch {
+      // Revert optimistic update
+      setCountries((prev) =>
+        prev.map((c) =>
+          c._id === visibilityCountry._id ? { ...c, ...previousSettings } : c,
+        ),
+      );
+      toast.error(t('messages.visibilityUpdateFailed'));
+    } finally {
+      setVisibilitySaving(false);
+    }
+  };
+
   const getFlagComponent = (countryCode: string) => {
     try {
       const flagComponents = flags as FlagComponents;
@@ -387,6 +475,21 @@ export default function CountriesPage() {
             onChange={() => handleToggleActive(c)}
           />
         ),
+      },
+      {
+        header: t('table.actions'),
+        accessor: (c: Country) => (
+          <Button
+            variant="ghost"
+            size="custom"
+            onClick={() => openVisibilityModal(c)}
+            className="p-2 hover:text-primary"
+            title={t('visibilitySettings.title')}
+          >
+            <Settings2 size={18} />
+          </Button>
+        ),
+        className: 'text-center w-20',
       },
     ],
     [
@@ -519,6 +622,113 @@ export default function CountriesPage() {
               </div>
             </div>
           ))}
+        </div>
+      </Modal>
+
+      {/* Visibility Settings Modal */}
+      <Modal
+        isOpen={visibilityOpen}
+        onClose={() => {
+          if (!visibilitySaving) setVisibilityOpen(false);
+        }}
+        title={
+          visibilityCountry
+            ? `${t('visibilitySettings.title')} - ${locale === 'ar' ? visibilityCountry.name.ar : visibilityCountry.name.en}`
+            : t('visibilitySettings.title')
+        }
+        size="lg"
+        footer={
+          <div className="flex items-center justify-end gap-3">
+            <Button
+              variant="outline"
+              onClick={() => setVisibilityOpen(false)}
+              disabled={visibilitySaving}
+            >
+              {t('visibilitySettings.cancel')}
+            </Button>
+            <Button onClick={saveVisibilitySettings} disabled={visibilitySaving}>
+              {visibilitySaving ? '...' : t('visibilitySettings.save')}
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-6">
+          {/* Visibility Mode Toggle */}
+          <div className="space-y-3">
+            <label className="block text-sm font-medium text-foreground">
+              {t('visibilitySettings.modeLabel')}
+            </label>
+            <div className="flex gap-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="visibilityMode"
+                  value="all"
+                  checked={visibilityMode === 'all'}
+                  onChange={() => setVisibilityMode('all')}
+                  className="w-4 h-4 text-primary focus:ring-primary"
+                />
+                <span className="text-sm text-foreground">
+                  {t('visibilitySettings.allCountries')}
+                </span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="visibilityMode"
+                  value="specific"
+                  checked={visibilityMode === 'specific'}
+                  onChange={() => setVisibilityMode('specific')}
+                  className="w-4 h-4 text-primary focus:ring-primary"
+                />
+                <span className="text-sm text-foreground">
+                  {t('visibilitySettings.specificCountries')}
+                </span>
+              </label>
+            </div>
+          </div>
+
+          {/* Specific Countries Selection */}
+          {visibilityMode === 'specific' && (
+            <div className="space-y-3">
+              <label className="block text-sm font-medium text-foreground">
+                {t('visibilitySettings.selectCountries')}
+              </label>
+              <div className="max-h-60 overflow-y-auto border border-stroke rounded-site p-3 space-y-2">
+                {countries
+                  .filter((c) => c.code !== visibilityCountry?.code && c.isActive)
+                  .sort((a, b) => {
+                    const nameA = locale === 'ar' ? a.name.ar : a.name.en;
+                    const nameB = locale === 'ar' ? b.name.ar : b.name.en;
+                    return nameA.localeCompare(nameB);
+                  })
+                  .map((country) => (
+                    <Checkbox
+                      key={country._id}
+                      checked={visibleToCountries.includes(country.code)}
+                      onChange={() => toggleVisibleToCountry(country.code)}
+                      label={`${locale === 'ar' ? country.name.ar : country.name.en} (${country.code})`}
+                    />
+                  ))}
+                {countries.filter((c) => c.code !== visibilityCountry?.code && c.isActive)
+                  .length === 0 && (
+                  <p className="text-sm text-secondary text-center py-4">
+                    {t('visibilitySettings.noCountriesAvailable')}
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Other/Unknown IP Setting */}
+          <div className="pt-4 border-t border-stroke">
+            <Checkbox
+              checked={visibleToOther}
+              onChange={setVisibleToOther}
+              label={t('visibilitySettings.visibleToOther')}
+              description={t('visibilitySettings.visibleToOtherDescription')}
+            />
+          </div>
         </div>
       </Modal>
     </div>

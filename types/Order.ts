@@ -120,6 +120,10 @@ export interface Order {
   couponCode?: string;
   couponId?: string;
   couponDiscount?: number;
+  // Upgrade discount
+  isUpgrade?: boolean;
+  fromProductId?: string;
+  upgradeDiscount?: number;
   // Partial payment
   fullAmount?: number;
   paidAmount?: number;
@@ -138,4 +142,16 @@ export interface Order {
   locale?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+// Extended order with populated product info (from API)
+export interface OrderWithProductDetails extends Order {
+  fromProduct?: {
+    _id: string;
+    name: {
+      ar: string;
+      en: string;
+    };
+    slug: string;
+  } | null;
 }

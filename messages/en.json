@@ -22,6 +22,8 @@
       "guest": "Public Guest",
       "registered": "Registered User"
     },
+    "yes": "Yes",
+    "no": "No",
     "referral": "Referral",
     "amountDetails": "Amount Details",
     "totals": {
@@ -30,7 +32,10 @@
       "paidAmount": "Paid Amount",
       "remainingAmount": "Remaining Amount",
       "couponCode": "Coupon Code",
-      "couponDiscount": "Coupon Discount"
+      "couponDiscount": "Coupon Discount",
+      "isUpgrade": "Upgrade Order",
+      "upgradeDiscount": "Upgrade Discount",
+      "originalProduct": "Original Product"
     },
     "product": "Product",
     "payLink": {

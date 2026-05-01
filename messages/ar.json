@@ -22,6 +22,8 @@
       "guest": "زائر عام",
       "registered": "مستخدم مسجل"
     },
+    "yes": "نعم",
+    "no": "لا",
     "referral": "الإحالة",
     "amountDetails": "تفاصيل المبالغ",
     "totals": {
@@ -30,7 +32,10 @@
       "paidAmount": "المبلغ المدفوع",
       "remainingAmount": "المبلغ المتبقي",
       "couponCode": "كود الكوبون",
-      "couponDiscount": "خصم الكوبون"
+      "couponDiscount": "خصم الكوبون",
+      "isUpgrade": "طلب ترقية",
+      "upgradeDiscount": "خصم الترقية",
+      "originalProduct": "المنتج الأصلي"
     },
     "product": "المنتج",
     "payLink": {

@@ -1279,6 +1279,28 @@ export default function OrderHistoryPage() {
                         label={t('totals.couponDiscount')}
                         value={`${(selectedOrder.couponDiscount ?? 0).toFixed(2)} ${selectedOrder.currency}`}
                       />
+                      {/* Upgrade Discount Info */}
+                      {selectedOrder.isUpgrade && (
+                        <>
+                          <InfoRow
+                            icon={<Tag size={14} />}
+                            label={t('totals.isUpgrade')}
+                            value={t('yes')}
+                          />
+                          <InfoRow
+                            icon={<Tag size={14} />}
+                            label={t('totals.upgradeDiscount')}
+                            value={`${(selectedOrder.upgradeDiscount ?? 0).toFixed(0)}%`}
+                          />
+                          {selectedOrder.fromProductId && (
+                            <InfoRow
+                              icon={<Package size={14} />}
+                              label={t('totals.originalProduct')}
+                              value={selectedOrder.fromProductId}
+                            />
+                          )}
+                        </>
+                      )}
                     </div>
                   </div>
 

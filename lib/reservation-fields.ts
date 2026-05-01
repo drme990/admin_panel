@@ -138,12 +138,15 @@ export function normalizeReservationFields(input: unknown): ReservationField[] {
 
     if (!matched) return [];
 
+    // Preserve custom options from the matched field if available
+    const customOptions = (matched as { options?: ReservationFieldOption[] }).options;
+
     return [
       {
         key: preset.key,
         type: preset.type,
         label: preset.label,
-        options: preset.options,
+        options: customOptions ?? preset.options,
         required: Boolean(matched.required),
         maxLength:
           preset.type === 'text' || preset.type === 'textarea'

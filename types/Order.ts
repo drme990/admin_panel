@@ -115,7 +115,6 @@ export interface Order {
   totalAmount: number;
   currency: string;
   status: OrderStatus;
-  paymentMethod?: PaymentMethod;
   billingData: BillingData;
   // Coupon
   couponCode?: string;
@@ -135,7 +134,7 @@ export interface Order {
   payments?: OrderPayment[];
   paymentAttempts?: PaymentAttempt[];
   source?: 'manasik' | 'ghadaq';
-  countryCode?: string;
+  location?: string;
   locale?: string;
   createdAt: string;
   updatedAt: string;

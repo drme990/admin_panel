@@ -1492,11 +1492,6 @@ export default function OrderHistoryPage() {
                         value={formatDate(selectedOrder.updatedAt)}
                       />
                       <InfoRow
-                        icon={<CreditCard size={14} />}
-                        label={t('paymentMethod')}
-                        value={selectedOrder.paymentMethod || 'N/A'}
-                      />
-                      <InfoRow
                         icon={<Hash size={14} />}
                         label={t('locale')}
                         value={selectedOrder.locale || 'N/A'}

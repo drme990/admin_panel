@@ -11,6 +11,7 @@ import {
   LuArrowRight as ArrowRight,
 } from 'react-icons/lu';
 import Button from '@/components/ui/button';
+import { useLocale } from 'next-intl';
 
 interface ImageRowEditorProps {
   label: string;
@@ -48,6 +49,7 @@ export function ImageRowEditor({
   row,
 }: ImageRowEditorProps) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const local = useLocale();
 
   return (
     <div className="border border-stroke rounded-xl p-5 space-y-4 bg-card-bg">
@@ -87,7 +89,9 @@ export function ImageRowEditor({
                     disabled={index === 0}
                     className="w-7 h-7 bg-white/90 text-gray-900 rounded-md flex items-center justify-center hover:bg-white disabled:opacity-40"
                   >
-                    <ArrowLeft className="w-3.5 h-3.5" />
+                    <ArrowLeft
+                      className={`w-3.5 h-3.5 ${local === 'ar' && 'rotate-180'}`}
+                    />
                   </Button>
 
                   <Button
@@ -98,7 +102,9 @@ export function ImageRowEditor({
                     disabled={index === images.length - 1}
                     className="w-7 h-7 bg-white/90 text-gray-900 rounded-md flex items-center justify-center hover:bg-white disabled:opacity-40"
                   >
-                    <ArrowRight className="w-3.5 h-3.5" />
+                    <ArrowRight
+                      className={`w-3.5 h-3.5 ${local === 'ar' && 'rotate-180'}`}
+                    />
                   </Button>
                 </div>
 

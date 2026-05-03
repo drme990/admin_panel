@@ -79,6 +79,8 @@ export default function ProductForm({
     baseCurrency: 'SAR',
     inStock: true,
     isBestSeller: false,
+    label_ar: '',
+    label_en: '',
     isActive: true,
     supportsHalfPayment: true,
     media: normalizeProductMedia([]),
@@ -172,6 +174,8 @@ export default function ProductForm({
         baseCurrency: product.baseCurrency || 'SAR',
         inStock: product.inStock,
         isBestSeller: Boolean(product.isBestSeller),
+        label_ar: product.label?.ar || '',
+        label_en: product.label?.en || '',
         isActive: product.isActive !== false,
         supportsHalfPayment: product.supportsHalfPayment !== false,
         media: normalizeProductMedia(product.media),
@@ -512,6 +516,9 @@ export default function ProductForm({
       baseCurrency: formData.baseCurrency,
       inStock: formData.inStock,
       isBestSeller: formData.isBestSeller,
+      label: formData.label_ar || formData.label_en
+        ? { ar: formData.label_ar, en: formData.label_en }
+        : null,
       isActive: formData.isActive,
       supportsHalfPayment: formData.supportsHalfPayment,
       media: normalizeProductMedia(formData.media),
@@ -656,6 +663,28 @@ export default function ProductForm({
               </span>
             </Tooltip>
           </div>
+        </div>
+
+        {/* Label Fields */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
+          <Input
+            id="label_ar"
+            label={t('form.labelAr')}
+            value={formData.label_ar}
+            onChange={(e) =>
+              setFormData({ ...formData, label_ar: e.target.value })
+            }
+            placeholder={t('form.labelPlaceholderAr')}
+          />
+          <Input
+            id="label_en"
+            label={t('form.labelEn')}
+            value={formData.label_en}
+            onChange={(e) =>
+              setFormData({ ...formData, label_en: e.target.value })
+            }
+            placeholder={t('form.labelPlaceholderEn')}
+          />
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">

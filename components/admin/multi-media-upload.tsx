@@ -2,7 +2,7 @@
 
 import { useCallback } from 'react';
 import Image from 'next/image';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { toast } from 'react-toastify';
 import Button from '@/components/ui/button';
 
@@ -58,6 +58,7 @@ export default function MultiMediaUpload({
   onCancelUploadReady,
 }: MultiMediaUploadProps) {
   const t = useTranslations('admin.products');
+  const locale = useLocale();
 
   const mediaUrls = media.map((item) => item.url);
 
@@ -221,7 +222,10 @@ export default function MultiMediaUpload({
                         disabled={uploading}
                         className="p-1.5 bg-white/90 hover:bg-white text-black"
                       >
-                        <ChevronLeft size={16} />
+                        <ChevronLeft
+                          size={16}
+                          className={locale === 'ar' ? 'rotate-180' : ''}
+                        />
                       </Button>
                     )}
 
@@ -234,7 +238,10 @@ export default function MultiMediaUpload({
                         disabled={uploading}
                         className="p-1.5 bg-white/90 hover:bg-white text-black"
                       >
-                        <ChevronRight size={16} />
+                        <ChevronRight
+                          size={16}
+                          className={locale === 'ar' ? 'rotate-180' : ''}
+                        />
                       </Button>
                     )}
                   </div>

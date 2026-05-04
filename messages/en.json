@@ -306,6 +306,8 @@
         "labelEn": "Label (English)",
         "labelPlaceholderAr": "e.g., عيد الأضحى",
         "labelPlaceholderEn": "e.g., Eid Al-Adha",
+        "showAlways": "Show in all label filters",
+        "showAlwaysTooltip": "This product will appear in all label filters regardless of its assigned label",
         "preview": "Preview",
         "addedPrice": "Added Price (%)",
         "addedPriceHelp": "Optionally add a percentage increase to all prices. For example, enter 3 to add 3% to all prices. Make sure to set the base price first.",

@@ -81,6 +81,7 @@ export default function ProductForm({
     isBestSeller: false,
     label_ar: '',
     label_en: '',
+    showAlways: false,
     isActive: true,
     supportsHalfPayment: true,
     media: normalizeProductMedia([]),
@@ -176,6 +177,7 @@ export default function ProductForm({
         isBestSeller: Boolean(product.isBestSeller),
         label_ar: product.label?.ar || '',
         label_en: product.label?.en || '',
+        showAlways: product.showAlways === true,
         isActive: product.isActive !== false,
         supportsHalfPayment: product.supportsHalfPayment !== false,
         media: normalizeProductMedia(product.media),
@@ -519,6 +521,7 @@ export default function ProductForm({
       label: formData.label_ar || formData.label_en
         ? { ar: formData.label_ar, en: formData.label_en }
         : null,
+      showAlways: formData.showAlways,
       isActive: formData.isActive,
       supportsHalfPayment: formData.supportsHalfPayment,
       media: normalizeProductMedia(formData.media),
@@ -683,8 +686,24 @@ export default function ProductForm({
             onChange={(e) =>
               setFormData({ ...formData, label_en: e.target.value })
             }
-            placeholder={t('form.labelPlaceholderEn')}
           />
+        </div>
+
+        {/* Show Always Toggle */}
+        <div className="flex items-center gap-2 pt-2">
+          <Switch
+            id="showAlways"
+            checked={formData.showAlways}
+            onChange={(checked) =>
+              setFormData({ ...formData, showAlways: checked })
+            }
+            label={t('form.showAlways') || 'Show in all label filters'}
+          />
+          <Tooltip content={t('form.showAlwaysTooltip') || 'This product will appear in all label filters regardless of its assigned label'} position="top">
+            <span className="inline-flex text-secondary hover:text-foreground transition-colors cursor-help">
+              <CircleHelp size={16} />
+            </span>
+          </Tooltip>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">

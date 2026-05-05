@@ -22,6 +22,8 @@ export interface ProductSize {
   prices: CurrencyPrice[];
   /** How many people / slots this size feeds / covers */
   feedsUp?: number;
+  /** Whether this size is available to customers */
+  isAvailable?: boolean;
 }
 
 /**

@@ -55,11 +55,56 @@ export default function MultiCurrencyPriceEditor({
   const [countries, setCountries] = useState<Country[]>([]);
   const [loading, setLoading] = useState(true);
   const [autoCalculating, setAutoCalculating] = useState(false);
+  const [mainRates, setMainRates] = useState<Record<string, number> | null>(
+    null,
+  );
   const t = useTranslations('admin.products');
 
   useEffect(() => {
     fetchCountries();
   }, []);
+
+  useEffect(() => {
+    if (!mainCurrency) return;
+
+    let isActive = true;
+
+    const fetchMainRates = async () => {
+      try {
+        const now = new Date();
+        const today = formatDate(now);
+        const yesterdayDate = new Date(now);
+        yesterdayDate.setDate(now.getDate() - 1);
+        const yesterday = formatDate(yesterdayDate);
+
+        let rates: Record<string, number>;
+        try {
+          rates = await fetchRatesForDate(mainCurrency, today);
+        } catch (todayError) {
+          console.warn(
+            `Exchange rate release ${today} unavailable for ${mainCurrency}; retrying ${yesterday}`,
+            todayError,
+          );
+          rates = await fetchRatesForDate(mainCurrency, yesterday);
+        }
+
+        if (isActive) {
+          setMainRates(rates);
+        }
+      } catch (error) {
+        console.warn('Failed to load exchange rates', error);
+        if (isActive) {
+          setMainRates(null);
+        }
+      }
+    };
+
+    void fetchMainRates();
+
+    return () => {
+      isActive = false;
+    };
+  }, [mainCurrency]);
 
   const fetchCountries = async () => {
     try {
@@ -209,6 +254,29 @@ export default function MultiCurrencyPriceEditor({
     return price?.amount || 0;
   };
 
+  const getEgpValue = (code: string, amount: number): number | null => {
+    if (!mainRates || amount <= 0) return null;
+
+    const rateToEgp = mainRates.egp;
+    if (!Number.isFinite(rateToEgp)) return null;
+
+    const upperCode = code.toUpperCase();
+    const upperMain = mainCurrency.toUpperCase();
+
+    if (upperCode === 'EGP') {
+      return amount;
+    }
+
+    if (upperCode === upperMain) {
+      return amount * (rateToEgp as number);
+    }
+
+    const rateToCode = mainRates[code.toLowerCase()];
+    if (!Number.isFinite(rateToCode) || !rateToCode) return null;
+
+    return (amount / rateToCode) * (rateToEgp as number);
+  };
+
   const isManualPrice = (code: string): boolean => {
     const price = prices.find((p) => p.currencyCode === code);
     return price?.isManual || false;
@@ -226,6 +294,20 @@ export default function MultiCurrencyPriceEditor({
         currencyCode: code,
         amount: existing?.amount ?? 0,
         isManual: manual,
+      };
+    });
+
+    onChange(updatedPrices);
+  };
+
+  const toggleManualState = () => {
+    const updatedPrices: CurrencyPrice[] = availableCurrencies.map((code) => {
+      const existing = prices.find((p) => p.currencyCode === code);
+      const currentManual = existing?.isManual ?? false;
+      return {
+        currencyCode: code,
+        amount: existing?.amount ?? 0,
+        isManual: !currentManual,
       };
     });
 
@@ -305,7 +387,7 @@ export default function MultiCurrencyPriceEditor({
           : t('form.autoCalculatePrices')}
       </Button>
 
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
         <Button
           type="button"
           variant="outline"
@@ -324,6 +406,15 @@ export default function MultiCurrencyPriceEditor({
         >
           {t('form.setAllAuto')}
         </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={toggleManualState}
+          className="w-full"
+        >
+          {t('form.oppositeAll')}
+        </Button>
       </div>
 
       {/* Currency Prices */}
@@ -337,6 +428,7 @@ export default function MultiCurrencyPriceEditor({
           {availableCurrencies.map((code) => {
             const isManual = isManualPrice(code);
             const amount = getPriceForCurrency(code);
+            const egpValue = getEgpValue(code, amount);
 
             return (
               <div
@@ -391,6 +483,15 @@ export default function MultiCurrencyPriceEditor({
                       placeholder="0.00"
                     />
                   </div>
+                  {egpValue !== null && (
+                    <p className="mt-1 text-xs text-secondary">
+                      {t('form.egpExchangeHint', {
+                        amount: new Intl.NumberFormat(undefined, {
+                          maximumFractionDigits: 2,
+                        }).format(egpValue),
+                      })}
+                    </p>
+                  )}
                 </div>
               </div>
             );

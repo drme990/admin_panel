@@ -68,6 +68,7 @@ export default function ProductForm({
     price: 0,
     prices: [] as CurrencyPrice[],
     feedsUp: 0,
+    isAvailable: true,
   };
 
   const [formData, setFormData] = useState({
@@ -96,6 +97,7 @@ export default function ProductForm({
       price: number;
       prices: CurrencyPrice[];
       feedsUp: number;
+      isAvailable: boolean;
     }[],
     workAsSacrifice: false,
     sacrificeCount: 1,
@@ -195,6 +197,7 @@ export default function ProductForm({
                 price: s.price || 0,
                 prices: s.prices || [],
                 feedsUp: s.feedsUp ?? 0,
+                isAvailable: s.isAvailable !== false,
               }))
             : [{ ...defaultSize }],
         workAsSacrifice: product.workAsSacrifice || false,
@@ -315,7 +318,7 @@ export default function ProductForm({
   const updateSize = (
     index: number,
     field: string,
-    value: string | number | CurrencyPrice[],
+    value: string | number | boolean | CurrencyPrice[],
   ) => {
     const updatedSizes = [...formData.sizes];
     const size = { ...updatedSizes[index] };
@@ -330,6 +333,8 @@ export default function ProductForm({
       size.prices = value as CurrencyPrice[];
     } else if (field === 'feedsUp') {
       size.feedsUp = value as number;
+    } else if (field === 'isAvailable') {
+      size.isAvailable = value as boolean;
     }
 
     updatedSizes[index] = size;
@@ -518,9 +523,10 @@ export default function ProductForm({
       baseCurrency: formData.baseCurrency,
       inStock: formData.inStock,
       isBestSeller: formData.isBestSeller,
-      label: formData.label_ar || formData.label_en
-        ? { ar: formData.label_ar, en: formData.label_en }
-        : null,
+      label:
+        formData.label_ar || formData.label_en
+          ? { ar: formData.label_ar, en: formData.label_en }
+          : null,
       showAlways: formData.showAlways,
       isActive: formData.isActive,
       supportsHalfPayment: formData.supportsHalfPayment,
@@ -699,7 +705,13 @@ export default function ProductForm({
             }
             label={t('form.showAlways') || 'Show in all label filters'}
           />
-          <Tooltip content={t('form.showAlwaysTooltip') || 'This product will appear in all label filters regardless of its assigned label'} position="top">
+          <Tooltip
+            content={
+              t('form.showAlwaysTooltip') ||
+              'This product will appear in all label filters regardless of its assigned label'
+            }
+            position="top"
+          >
             <span className="inline-flex text-secondary hover:text-foreground transition-colors cursor-help">
               <CircleHelp size={16} />
             </span>
@@ -887,6 +899,18 @@ export default function ProductForm({
                   onChange={(e) => updateSize(index, 'name.en', e.target.value)}
                 />
               </div>
+
+              <Switch
+                id={`sizeAvailable_${index}`}
+                checked={size.isAvailable !== false}
+                onChange={(checked) =>
+                  updateSize(index, 'isAvailable', checked)
+                }
+                label={t('form.sizeAvailableLabel')}
+              />
+              <p className="text-xs text-secondary">
+                {t('form.sizeAvailabilityHelp')}
+              </p>
 
               <div className="space-y-2">
                 <label className="text-xs font-medium text-secondary">
@@ -1253,12 +1277,17 @@ export default function ProductForm({
                   {isActive && field && preset.key === 'intention' && (
                     <div className="space-y-3 pt-2 border-t border-stroke">
                       <p className="text-xs font-medium text-secondary">
-                        {t('form.intentionOptionsLabel', { defaultValue: 'Available Options (Select which options to show for this product)' })}
+                        {t('form.intentionOptionsLabel', {
+                          defaultValue:
+                            'Available Options (Select which options to show for this product)',
+                        })}
                       </p>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         {(preset.options || []).map((option) => {
                           // Hide Aqeeqah option if product is not marked as sacrifice
-                          const isAqeeqah = option.en.toLowerCase().includes('aqeeqah') || option.ar === 'عقيقة';
+                          const isAqeeqah =
+                            option.en.toLowerCase().includes('aqeeqah') ||
+                            option.ar === 'عقيقة';
                           if (isAqeeqah && !formData.workAsSacrifice) {
                             return null;
                           }
@@ -1287,7 +1316,10 @@ export default function ProductForm({
                       </div>
                       {!formData.workAsSacrifice && (
                         <p className="text-xs text-secondary">
-                          {t('form.aqeeqahOptionHidden', { defaultValue: 'Aqeeqah option is hidden because this product is not marked as Sacrifice' })}
+                          {t('form.aqeeqahOptionHidden', {
+                            defaultValue:
+                              'Aqeeqah option is hidden because this product is not marked as Sacrifice',
+                          })}
                         </p>
                       )}
                     </div>

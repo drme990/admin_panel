@@ -14,9 +14,9 @@ import Dropdown from '@/components/ui/dropdown';
 import Table from '@/components/ui/table';
 import Modal from '@/components/ui/modal';
 import Switch from '@/components/ui/switch';
-import Checkbox from '@/components/ui/checkbox';
 import Button from '@/components/ui/button';
 import { toast } from 'react-toastify';
+import VisibilitySettingsModal from './components/visibility-settings-modal';
 
 type FlagComponents = Record<
   string,
@@ -33,9 +33,9 @@ interface Country {
   flagEmoji: string;
   isActive: boolean;
   sortOrder: number | null;
+  region?: string;
   visibilityMode?: 'all' | 'specific';
   visibleToCountries?: string[];
-  visibleToOther?: boolean;
 }
 
 type RoundingRule = 'nearest-ten' | 'nearest-five' | 'ceil';
@@ -54,11 +54,15 @@ export default function CountriesPage() {
 
   // Visibility settings modal state
   const [visibilityOpen, setVisibilityOpen] = useState(false);
-  const [visibilityCountry, setVisibilityCountry] = useState<Country | null>(null);
-  const [visibilityMode, setVisibilityMode] = useState<'all' | 'specific'>('all');
+  const [visibilityCountry, setVisibilityCountry] = useState<Country | null>(
+    null,
+  );
+  const [visibilityMode, setVisibilityMode] = useState<'all' | 'specific'>(
+    'all',
+  );
   const [visibleToCountries, setVisibleToCountries] = useState<string[]>([]);
-  const [visibleToOther, setVisibleToOther] = useState(true);
   const [visibilitySaving, setVisibilitySaving] = useState(false);
+  const [regionFilter, setRegionFilter] = useState('all');
 
   const t = useTranslations('admin.countries');
   const locale = useLocale();
@@ -74,6 +78,7 @@ export default function CountriesPage() {
     ],
     [t],
   );
+  const [regionTableFilter, setRegionTableFilter] = useState('all');
 
   const roundingOptions: { label: string; value: RoundingRule }[] = useMemo(
     () => [
@@ -92,6 +97,30 @@ export default function CountriesPage() {
     ],
     [t],
   );
+
+  const regionOptions = useMemo(() => {
+    const activeRegions = countries
+      .filter((country) => country.isActive)
+      .map((country) => country.region)
+      .filter((region): region is string => Boolean(region));
+    const uniqueRegions = Array.from(new Set(activeRegions)).sort((a, b) =>
+      a.localeCompare(b),
+    );
+    const hasUnassigned = countries.some(
+      (country) => country.isActive && !country.region,
+    );
+    const options = [
+      { label: t('visibilitySettings.regionAll'), value: 'all' },
+      ...uniqueRegions.map((region) => ({ label: region, value: region })),
+    ];
+    if (hasUnassigned) {
+      options.push({
+        label: t('visibilitySettings.regionUnknown'),
+        value: '__unknown__',
+      });
+    }
+    return options;
+  }, [countries, t]);
 
   useEffect(() => {
     fetchCountries();
@@ -135,18 +164,33 @@ export default function CountriesPage() {
 
   const filteredCountries = useMemo(() => {
     let result = [...countries];
-    // Sort: active countries first by sortOrder, inactive after alphabetically (null sortOrder last)
+
+    // Sort
     result.sort((a, b) => {
       if (a.isActive !== b.isActive) return a.isActive ? -1 : 1;
       const ao = a.sortOrder ?? Infinity;
       const bo = b.sortOrder ?? Infinity;
       if (ao !== bo) return ao - bo;
+
       const nameA = locale === 'ar' ? a.name.ar : a.name.en;
       const nameB = locale === 'ar' ? b.name.ar : b.name.en;
       return nameA.localeCompare(nameB);
     });
+
+    // Active filter
     if (filter === 'active') result = result.filter((c) => c.isActive);
     else if (filter === 'inactive') result = result.filter((c) => !c.isActive);
+
+    // ✅ NEW: Region filter
+    if (regionTableFilter !== 'all') {
+      result = result.filter((c) =>
+        regionTableFilter === '__unknown__'
+          ? !c.region
+          : c.region === regionTableFilter,
+      );
+    }
+
+    // Search
     if (search.trim()) {
       const q = search.toLowerCase();
       result = result.filter(
@@ -157,11 +201,13 @@ export default function CountriesPage() {
           c.currencyCode.toLowerCase().includes(q),
       );
     }
+
     return result;
-  }, [countries, filter, search, locale]);
+  }, [countries, filter, regionTableFilter, search, locale]);
 
   const handleToggleActive = useCallback(
     async (country: Country) => {
+      if (country.code === 'OT') return;
       const newValue = !country.isActive;
 
       // Optimistic toggle
@@ -312,10 +358,17 @@ export default function CountriesPage() {
 
   // Visibility settings handlers
   const openVisibilityModal = (country: Country) => {
+    const mode = country.visibilityMode ?? 'all';
+    const baseVisible = country.visibleToCountries ?? [];
+    const normalizedVisible =
+      mode === 'specific'
+        ? Array.from(new Set([...baseVisible, country.code]))
+        : baseVisible;
+
     setVisibilityCountry(country);
-    setVisibilityMode(country.visibilityMode ?? 'all');
-    setVisibleToCountries(country.visibleToCountries ?? []);
-    setVisibleToOther(country.visibleToOther ?? true);
+    setVisibilityMode(mode);
+    setVisibleToCountries(normalizedVisible);
+    setRegionFilter('all');
     setVisibilityOpen(true);
   };
 
@@ -329,31 +382,35 @@ export default function CountriesPage() {
     });
   };
 
-  const selectSelfOnly = () => {
-    if (visibilityCountry) {
-      setVisibleToCountries([visibilityCountry.code]);
-    }
-  };
-
   const selectAllCountries = () => {
-    const allActiveCodes = countries
-      .filter((c) => c.isActive)
-      .map((c) => c.code);
-    setVisibleToCountries(allActiveCodes);
+    const codes = activeVisibilityCountries.map((c) => c.code);
+
+    if (visibilityCountry) {
+      codes.push(visibilityCountry.code);
+    }
+
+    setVisibleToCountries(Array.from(new Set(codes)));
   };
 
   const clearAllCountries = () => {
-    setVisibleToCountries([]);
+    if (visibilityCountry) {
+      setVisibleToCountries([visibilityCountry.code]);
+    } else {
+      setVisibleToCountries([]);
+    }
   };
 
   const saveVisibilitySettings = async () => {
     if (!visibilityCountry) return;
 
     setVisibilitySaving(true);
+    const normalizedVisibleToCountries =
+      visibilityMode === 'specific'
+        ? Array.from(new Set([...visibleToCountries, visibilityCountry.code]))
+        : visibleToCountries;
     const previousSettings = {
       visibilityMode: visibilityCountry.visibilityMode ?? 'all',
       visibleToCountries: visibilityCountry.visibleToCountries ?? [],
-      visibleToOther: visibilityCountry.visibleToOther ?? true,
     };
 
     // Optimistic update
@@ -363,8 +420,7 @@ export default function CountriesPage() {
           ? {
               ...c,
               visibilityMode,
-              visibleToCountries,
-              visibleToOther,
+              visibleToCountries: normalizedVisibleToCountries,
             }
           : c,
       ),
@@ -376,8 +432,7 @@ export default function CountriesPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           visibilityMode,
-          visibleToCountries,
-          visibleToOther,
+          visibleToCountries: normalizedVisibleToCountries,
         }),
       });
 
@@ -400,6 +455,32 @@ export default function CountriesPage() {
       setVisibilitySaving(false);
     }
   };
+
+  const regionTableOptions = useMemo(() => {
+    const regions = countries
+      .map((c) => c.region)
+      .filter((r): r is string => Boolean(r));
+
+    const unique = Array.from(new Set(regions)).sort((a, b) =>
+      a.localeCompare(b),
+    );
+
+    const hasUnknown = countries.some((c) => !c.region);
+
+    const options = [
+      { label: t('visibilitySettings.regionAll'), value: 'all' },
+      ...unique.map((r) => ({ label: r, value: r })),
+    ];
+
+    if (hasUnknown) {
+      options.push({
+        label: t('visibilitySettings.regionUnknown'),
+        value: '__unknown__',
+      });
+    }
+
+    return options;
+  }, [countries, t]);
 
   const getFlagComponent = (countryCode: string) => {
     try {
@@ -490,6 +571,7 @@ export default function CountriesPage() {
             id={`country-${c._id}`}
             checked={c.isActive}
             onChange={() => handleToggleActive(c)}
+            disabled={c.code === 'OT'}
           />
         ),
       },
@@ -521,6 +603,39 @@ export default function CountriesPage() {
   );
 
   const activeCount = countries.filter((c) => c.isActive).length;
+
+  const activeVisibilityCountries = useMemo(() => {
+    let filtered = countries.filter((c) => c.isActive);
+
+    // Remove current country from list
+    if (visibilityCountry) {
+      filtered = filtered.filter((c) => c.code !== visibilityCountry.code);
+    }
+
+    // Region filter
+    if (regionFilter !== 'all') {
+      filtered = filtered.filter((country) =>
+        regionFilter === '__unknown__'
+          ? !country.region
+          : country.region === regionFilter,
+      );
+    }
+
+    return filtered.sort((a, b) => {
+      const nameA = locale === 'ar' ? a.name.ar : a.name.en;
+      const nameB = locale === 'ar' ? b.name.ar : b.name.en;
+      return nameA.localeCompare(nameB);
+    });
+  }, [countries, regionFilter, visibilityCountry, locale]);
+
+  useEffect(() => {
+    if (visibilityMode !== 'specific' || !visibilityCountry) return;
+    setVisibleToCountries((prev) =>
+      prev.includes(visibilityCountry.code)
+        ? prev
+        : [...prev, visibilityCountry.code],
+    );
+  }, [visibilityMode, visibilityCountry]);
 
   return (
     <div className="space-y-6">
@@ -558,12 +673,22 @@ export default function CountriesPage() {
             className="w-full ps-10 pe-4 py-2.5 bg-card-bg border border-stroke rounded-site text-foreground placeholder:text-secondary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
           />
         </div>
+
+        {/* Active filter */}
         <div className="w-44">
           <Dropdown<'all' | 'active' | 'inactive'>
             value={filter}
             options={filterOptions}
             onChange={(v) => setFilter(v)}
-            placeholder={t('filter.all')}
+          />
+        </div>
+
+        {/* ✅ NEW Region filter */}
+        <div className="w-52">
+          <Dropdown<string>
+            value={regionTableFilter}
+            options={regionTableOptions}
+            onChange={setRegionTableFilter}
           />
         </div>
       </div>
@@ -643,155 +768,23 @@ export default function CountriesPage() {
       </Modal>
 
       {/* Visibility Settings Modal */}
-      <Modal
-        isOpen={visibilityOpen}
-        onClose={() => {
-          if (!visibilitySaving) setVisibilityOpen(false);
-        }}
-        title={
-          visibilityCountry
-            ? `${t('visibilitySettings.title')} - ${locale === 'ar' ? visibilityCountry.name.ar : visibilityCountry.name.en}`
-            : t('visibilitySettings.title')
-        }
-        size="lg"
-        footer={
-          <div className="flex items-center justify-end gap-3">
-            <Button
-              variant="outline"
-              onClick={() => setVisibilityOpen(false)}
-              disabled={visibilitySaving}
-            >
-              {t('visibilitySettings.cancel')}
-            </Button>
-            <Button onClick={saveVisibilitySettings} disabled={visibilitySaving}>
-              {visibilitySaving ? '...' : t('visibilitySettings.save')}
-            </Button>
-          </div>
-        }
-      >
-        <div className="space-y-6">
-          {/* Visibility Mode Toggle */}
-          <div className="space-y-3">
-            <label className="block text-sm font-medium text-foreground">
-              {t('visibilitySettings.modeLabel')}
-            </label>
-            <div className="flex gap-4">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="visibilityMode"
-                  value="all"
-                  checked={visibilityMode === 'all'}
-                  onChange={() => setVisibilityMode('all')}
-                  className="w-4 h-4 text-primary focus:ring-primary"
-                />
-                <span className="text-sm text-foreground">
-                  {t('visibilitySettings.allCountries')}
-                </span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="visibilityMode"
-                  value="specific"
-                  checked={visibilityMode === 'specific'}
-                  onChange={() => setVisibilityMode('specific')}
-                  className="w-4 h-4 text-primary focus:ring-primary"
-                />
-                <span className="text-sm text-foreground">
-                  {t('visibilitySettings.specificCountries')}
-                </span>
-              </label>
-            </div>
-          </div>
-
-          {/* Specific Countries Selection */}
-          {visibilityMode === 'specific' && (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <label className="block text-sm font-medium text-foreground">
-                  {t('visibilitySettings.selectCountries')}
-                </label>
-                <div className="flex gap-2">
-                  <Button
-                    variant="ghost"
-                    size="custom"
-                    onClick={selectSelfOnly}
-                    className="text-xs px-2 py-1 h-auto"
-                    title={t('visibilitySettings.selfOnly')}
-                  >
-                    {t('visibilitySettings.selfOnly')}
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="custom"
-                    onClick={selectAllCountries}
-                    className="text-xs px-2 py-1 h-auto"
-                    title={t('visibilitySettings.selectAll')}
-                  >
-                    {t('visibilitySettings.selectAll')}
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="custom"
-                    onClick={clearAllCountries}
-                    className="text-xs px-2 py-1 h-auto"
-                    title={t('visibilitySettings.clearAll')}
-                  >
-                    {t('visibilitySettings.clearAll')}
-                  </Button>
-                </div>
-              </div>
-              <div className="max-h-60 overflow-y-auto border border-stroke rounded-site p-3 space-y-2">
-                {countries
-                  .filter((c) => c.isActive)
-                  .sort((a, b) => {
-                    const isOwnA = a.code === visibilityCountry?.code;
-                    const isOwnB = b.code === visibilityCountry?.code;
-                    // Put own country first
-                    if (isOwnA && !isOwnB) return -1;
-                    if (!isOwnA && isOwnB) return 1;
-                    const nameA = locale === 'ar' ? a.name.ar : a.name.en;
-                    const nameB = locale === 'ar' ? b.name.ar : b.name.en;
-                    return nameA.localeCompare(nameB);
-                  })
-                  .map((country) => (
-                    <Checkbox
-                      key={country._id}
-                      checked={visibleToCountries.includes(country.code)}
-                      onChange={() => toggleVisibleToCountry(country.code)}
-                      label={
-                        <span className="flex items-center gap-2">
-                          {country.code === visibilityCountry?.code && (
-                            <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">
-                              {t('visibilitySettings.ownCountry')}
-                            </span>
-                          )}
-                          <span>{locale === 'ar' ? country.name.ar : country.name.en} ({country.code})</span>
-                        </span>
-                      }
-                    />
-                  ))}
-                {countries.filter((c) => c.isActive).length === 0 && (
-                  <p className="text-sm text-secondary text-center py-4">
-                    {t('visibilitySettings.noCountriesAvailable')}
-                  </p>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Other/Unknown IP Setting */}
-          <div className="pt-4 border-t border-stroke">
-            <Checkbox
-              checked={visibleToOther}
-              onChange={setVisibleToOther}
-              label={t('visibilitySettings.visibleToOther')}
-              description={t('visibilitySettings.visibleToOtherDescription')}
-            />
-          </div>
-        </div>
-      </Modal>
+      <VisibilitySettingsModal
+        visibilityOpen={visibilityOpen}
+        setVisibilityOpen={setVisibilityOpen}
+        visibilityCountry={visibilityCountry}
+        visibilityMode={visibilityMode}
+        setVisibilityMode={setVisibilityMode}
+        visibleToCountries={visibleToCountries}
+        toggleVisibleToCountry={toggleVisibleToCountry}
+        selectAllCountries={selectAllCountries}
+        clearAllCountries={clearAllCountries}
+        saveVisibilitySettings={saveVisibilitySettings}
+        visibilitySaving={visibilitySaving}
+        regionFilter={regionFilter}
+        setRegionFilter={setRegionFilter}
+        regionOptions={regionOptions}
+        activeVisibilityCountries={activeVisibilityCountries}
+      />
     </div>
   );
 }

@@ -60,6 +60,10 @@ export default function MultiCurrencyPriceEditor({
   );
   const t = useTranslations('admin.products');
 
+  const roundToNearestTen = (value: number) => {
+    return Math.round(value / 10) * 10;
+  };
+
   useEffect(() => {
     fetchCountries();
   }, []);
@@ -484,11 +488,11 @@ export default function MultiCurrencyPriceEditor({
                     />
                   </div>
                   {egpValue !== null && (
-                    <p className="mt-1 text-xs text-secondary">
+                    <p className="text-xs">
                       {t('form.egpExchangeHint', {
                         amount: new Intl.NumberFormat(undefined, {
                           maximumFractionDigits: 2,
-                        }).format(egpValue),
+                        }).format(roundToNearestTen(egpValue)),
                       })}
                     </p>
                   )}

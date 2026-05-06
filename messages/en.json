@@ -156,7 +156,7 @@
     "navigation": {
       "dashboard": "Dashboard",
       "products": "Products",
-      "products-discovery": "Products Discovery",
+      "products-discovery": "Products Pricing",
       "orders": "Orders",
       "booking": "Booking",
       "coupons": "Coupons",
@@ -488,12 +488,11 @@
         "specificCountries": "Specific countries only",
         "selectCountries": "Select countries this country can see:",
         "noCountriesAvailable": "No active countries available",
-        "selfOnly": "Self only",
         "selectAll": "Select all",
         "clearAll": "Clear all",
-        "ownCountry": "This country",
-        "visibleToOther": "Show this country to Other users",
-        "visibleToOtherDescription": "Display this country to users whose IP location couldn't be detected or is not in our list",
+        "regionLabel": "Region",
+        "regionAll": "All regions",
+        "regionUnknown": "No region",
         "save": "Save Settings",
         "cancel": "Cancel"
       },
@@ -600,7 +599,7 @@
       },
       "pageLabels": {
         "products": "Products",
-        "products-discovery": "Products Discovery",
+        "products-discovery": "Products Pricing",
         "orders": "Orders",
         "customers": "Customers",
         "analytics": "Analytics",

@@ -156,7 +156,7 @@
     "navigation": {
       "dashboard": "لوحة التحكم",
       "products": "المنتجات",
-      "products-discovery": "اكتشاف المنتجات",
+      "products-discovery": "اسعار المنتجات",
       "orders": "الطلبات",
       "booking": "الحجز",
       "coupons": "الكوبونات",
@@ -435,7 +435,7 @@
       }
     },
     "productsDiscover": {
-      "title": "اكتشاف المنتجات",
+      "title": "اسعار المنتجات",
       "description": "اكتشف واعرض المنتجات مع الأسعار المباشرة",
       "allCurrencies": "جميع العملات",
       "loading": "جاري التحميل..."
@@ -487,12 +487,11 @@
         "specificCountries": "بلدان محددة فقط",
         "selectCountries": "اختر البلدان التي يمكن لهذا البلد رؤيتها:",
         "noCountriesAvailable": "لا توجد بلدان نشطة متاحة",
-        "selfOnly": "هذا البلد فقط",
         "selectAll": "اختر الكل",
         "clearAll": "مسح الكل",
-        "ownCountry": "هذا البلد",
-        "visibleToOther": "إظهار هذا البلد لمستخدمي (أخرى)",
-        "visibleToOtherDescription": "عرض هذا البلد للمستخدمين الذين لم يتمكن النظام من تحديد موقع IP الخاص بهم أو ليس في قائمتنا",
+        "regionLabel": "المنطقة",
+        "regionAll": "كل المناطق",
+        "regionUnknown": "بدون منطقة",
         "save": "حفظ الإعدادات",
         "cancel": "إلغاء"
       },
@@ -599,7 +598,7 @@
       },
       "pageLabels": {
         "products": "المنتجات",
-        "products-discovery": "اكتشاف المنتجات",
+        "products-discovery": "اسعار المنتجات",
         "orders": "الطلبات",
         "customers": "العملاء",
         "analytics": "التحليلات",

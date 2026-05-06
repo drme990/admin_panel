@@ -1,10 +1,24 @@
 'use client';
 
 import Link from 'next/link';
+import { useState, useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
+import { useLocale, useTranslations } from 'next-intl';
+
+import Logo from '@/components/shared/logo';
+import UserMenu from '@/components/shared/user-menu';
+import { AuthProvider, useAuth } from '@/components/providers/auth-provider';
+import { PageLoading } from '@/components/ui/loading';
+import Button from '@/components/ui/button';
+
 import { cn } from '@/lib/utils';
+import type { AdminPage } from '@/types/User';
+
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+
 import {
-  LuLayoutDashboard as LayoutDashboard,
+  LuLayoutDashboard,
   LuPackage,
   LuUsers,
   LuMenu,
@@ -20,23 +34,14 @@ import {
   LuWallet,
   LuUserCog,
   LuChartNoAxesCombined,
+  LuBaggageClaim,
 } from 'react-icons/lu';
-import { useState, useEffect } from 'react';
-import Logo from '@/components/shared/logo';
-import UserMenu from '@/components/shared/user-menu';
-import { AuthProvider, useAuth } from '@/components/providers/auth-provider';
-import { useLocale, useTranslations } from 'next-intl';
-import { ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
-import { PageLoading } from '@/components/ui/loading';
-import Button from '@/components/ui/button';
-import type { AdminPage } from '@/types/User';
 
 const navItems = [
   {
     key: 'dashboard',
     href: '/',
-    icon: LayoutDashboard,
+    icon: LuLayoutDashboard,
     superAdminOnly: false,
     permissionKey: null,
   },
@@ -46,6 +51,13 @@ const navItems = [
     icon: LuPackage,
     superAdminOnly: false,
     permissionKey: 'products',
+  },
+  {
+    key: 'products-discovery',
+    href: '/products-discovery',
+    icon: LuBaggageClaim,
+    superAdminOnly: false,
+    permissionKey: 'products-discovery',
   },
   {
     key: 'orders',
@@ -155,6 +167,27 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   // Check if current route is second-level or deeper (e.g., /products/new)
   const pathSegments = pathname.split('/').filter(Boolean);
   const isDeepRoute = pathSegments.length > 1;
+  const currentPageKey = (() => {
+    if (pathSegments.length === 0) return null;
+    const page = pathSegments[0];
+    const pageMap: Record<string, AdminPage> = {
+      products: 'products',
+      'products-discovery': 'products-discovery',
+      orders: 'orders',
+      customers: 'customers',
+      analytics: 'analytics',
+      booking: 'booking',
+      coupons: 'coupons',
+      countries: 'countries',
+      admins: 'admins',
+      referrals: 'referrals',
+      appearance: 'appearance',
+      exchange: 'exchange',
+      logs: 'activityLogs',
+      payments: 'payments',
+    };
+    return pageMap[page] ?? null;
+  })();
 
   // Handle authentication redirect
   useEffect(() => {
@@ -162,6 +195,16 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
       router.push('/login');
     }
   }, [user, loading, pathname, router]);
+
+  useEffect(() => {
+    if (loading || !user || pathname === '/login') return;
+    if (user.role === 'super_admin') return;
+    if (!currentPageKey) return;
+    const allowed = user.allowedPages?.includes(currentPageKey) ?? false;
+    if (!allowed) {
+      router.replace('/');
+    }
+  }, [currentPageKey, loading, pathname, router, user]);
 
   // Show login page without admin layout chrome
   if (pathname === '/login') {

@@ -156,6 +156,7 @@
     "navigation": {
       "dashboard": "لوحة التحكم",
       "products": "المنتجات",
+      "products-discovery": "اكتشاف المنتجات",
       "orders": "الطلبات",
       "booking": "الحجز",
       "coupons": "الكوبونات",
@@ -225,6 +226,7 @@
       "topProducts": "أكثر المنتجات مبيعاً",
       "ordersByCountry": "الطلبات حسب البلد",
       "ordersByWeekday": "الطلبات حسب يوم الأسبوع",
+      "ordersByLocation": "الطلبات حسب الموقع",
       "period": {
         "day": "آخر 30 يوم",
         "month": "آخر 12 شهر"
@@ -432,6 +434,12 @@
         "reorderSuccess": "تم إعادة ترتيب المنتجات بنجاح"
       }
     },
+    "productsDiscover": {
+      "title": "اكتشاف المنتجات",
+      "description": "اكتشف واعرض المنتجات مع الأسعار المباشرة",
+      "allCurrencies": "جميع العملات",
+      "loading": "جاري التحميل..."
+    },
     "countries": {
       "title": "إدارة البلدان",
       "description": "تفعيل أو إلغاء تفعيل البلدان في المنصة",
@@ -591,6 +599,7 @@
       },
       "pageLabels": {
         "products": "المنتجات",
+        "products-discovery": "اكتشاف المنتجات",
         "orders": "الطلبات",
         "customers": "العملاء",
         "analytics": "التحليلات",

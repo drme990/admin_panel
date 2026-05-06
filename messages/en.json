@@ -156,6 +156,7 @@
     "navigation": {
       "dashboard": "Dashboard",
       "products": "Products",
+      "products-discovery": "Products Discovery",
       "orders": "Orders",
       "booking": "Booking",
       "coupons": "Coupons",
@@ -226,6 +227,7 @@
       "topProducts": "Top Products",
       "ordersByCountry": "Orders by Country",
       "ordersByWeekday": "Orders by Weekday",
+      "ordersByLocation": "Orders by Location",
       "period": {
         "day": "Last 30 Days",
         "month": "Last 12 Months"
@@ -433,6 +435,12 @@
         "reorderSuccess": "Products reordered successfully"
       }
     },
+    "productsDiscover": {
+      "title": "Products Discovery",
+      "description": "Discover and preview products with live pricing",
+      "allCurrencies": "All Currencies",
+      "loading": "Loading..."
+    },
     "countries": {
       "title": "Countries Management",
       "description": "Activate or deactivate countries for the platform",
@@ -592,6 +600,7 @@
       },
       "pageLabels": {
         "products": "Products",
+        "products-discovery": "Products Discovery",
         "orders": "Orders",
         "customers": "Customers",
         "analytics": "Analytics",

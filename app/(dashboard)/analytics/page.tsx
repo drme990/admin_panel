@@ -10,6 +10,7 @@ import { TopProductsChart } from '@/components/analytics/top-products-chart';
 import { OrdersByCountryChart } from '@/components/analytics/orders-by-country-chart';
 import { OrdersByWeekdayChart } from '@/components/analytics/orders-by-weekday-chart';
 import { RevenueOverTimeChart } from '@/components/analytics/revenue-over-time-chart';
+import OrdersByLocationChart from '@/components/analytics/orders-by-location-chart';
 
 type DataPoint = { name: string; value: number };
 type RevenuePoint = { label: string; revenue: number };
@@ -34,6 +35,7 @@ interface AnalyticsResponse {
   topProducts: DataPoint[];
   ordersByCountry: DataPoint[];
   ordersByWeekday: DataPoint[];
+  ordersByLocation: DataPoint[]; 
   earningsByCurrency: Record<SupportedEarningsCurrency, number>;
 }
 
@@ -179,6 +181,7 @@ export default function AnalyticsPage() {
         </div>
       ) : (
         <>
+          {/* Earnings Cards */}
           <section className="rounded-site border border-stroke bg-card-bg p-6">
             <div className="mb-4">
               <h2 className="text-xl font-semibold text-foreground">
@@ -205,6 +208,8 @@ export default function AnalyticsPage() {
 
           <RevenueOverTimeChart data={revenueData} />
 
+          <OrdersByWeekdayChart data={data.ordersByWeekday} />
+
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
             <OrdersByStatusChart data={data.ordersByStatus} />
             <PaymentSplitChart data={data.paymentTypeBreakdown} />
@@ -214,7 +219,7 @@ export default function AnalyticsPage() {
 
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
             <OrdersByCountryChart data={data.ordersByCountry} />
-            <OrdersByWeekdayChart data={data.ordersByWeekday} />
+            <OrdersByLocationChart data={data.ordersByLocation} />
           </div>
         </>
       )}

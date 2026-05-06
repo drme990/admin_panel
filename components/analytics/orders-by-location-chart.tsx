@@ -28,6 +28,9 @@ export default function OrdersByLocationChart({
 }) {
   const t = useTranslations('admin.analytics');
 
+  // 🌍 Convert country codes → full names
+  const regionNames = new Intl.DisplayNames(['en'], { type: 'region' });
+
   return (
     <div
       className={cn(
@@ -68,15 +71,30 @@ export default function OrdersByLocationChart({
             <YAxis
               type="category"
               dataKey="name"
+              tickFormatter={(value) =>
+                regionNames.of(value as string) || value
+              }
               stroke="var(--secondary)"
               fontSize={12}
               tickLine={false}
               axisLine={false}
-              width={110}
+              width={160} // increased for longer names
             />
 
             {/* Tooltip */}
             <Tooltip
+              formatter={(value, _name, item) => {
+                const countryCode = item?.payload?.name;
+                const fullName =
+                  regionNames.of(countryCode as string) || countryCode;
+
+                // Normalize value (handles number | string | array | undefined)
+                const normalizedValue = Array.isArray(value)
+                  ? value.join(', ')
+                  : (value ?? 0);
+
+                return [normalizedValue, fullName];
+              }}
               contentStyle={{
                 backgroundColor: 'var(--card-bg)',
                 border: '1px solid var(--stroke)',

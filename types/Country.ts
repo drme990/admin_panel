@@ -13,6 +13,7 @@ export interface Country {
   sortOrder: number | null;
   visibilityMode?: 'all' | 'specific';
   visibleToCountries?: string[];
+  visibleToOther?: boolean;
   createdAt?: string;
   updatedAt?: string;
 }

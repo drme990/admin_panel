@@ -435,10 +435,15 @@
         "reorderSuccess": "Products reordered successfully"
       }
     },
-    "productsDiscover": {
-      "title": "Products Discovery",
-      "description": "Discover and preview products with live pricing",
-      "allCurrencies": "All Currencies",
+    "productsPricing": {
+      "title": "Products Pricing",
+      "description": "Review product pricing across countries and sizes",
+      "allCountries": "All countries",
+      "countryPlaceholder": "Select a country",
+      "searchCountry": "Search countries...",
+      "noCountriesFound": "No countries found",
+      "minPartialPayment": "Min partial payment",
+      "minPartialUnavailable": "Not set",
       "loading": "Loading..."
     },
     "countries": {

@@ -123,7 +123,9 @@ export default function VisibilitySettingsModal({
         {visibilityMode === 'specific' && (
           <div className="space-y-3">
             <div className="flex justify-between items-center">
-              <span>{t('visibilitySettings.selectCountries')}</span>
+              <span className="text-sm font-medium text-foreground">
+                {t('visibilitySettings.selectCountries')}
+              </span>
 
               <div className="flex gap-2">
                 <Button onClick={selectAllCountries} variant="ghost">
@@ -136,11 +138,18 @@ export default function VisibilitySettingsModal({
               </div>
             </div>
 
-            <Dropdown<string>
-              value={regionFilter}
-              options={regionOptions}
-              onChange={setRegionFilter}
-            />
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+              <span className="text-xs text-secondary">
+                {t('visibilitySettings.regionLabel')}
+              </span>
+              <div className="w-56">
+                <Dropdown<string>
+                  value={regionFilter}
+                  options={regionOptions}
+                  onChange={setRegionFilter}
+                />
+              </div>
+            </div>
 
             <div className="h-60 overflow-y-auto border border-stroke p-3 space-y-2 rounded">
               {activeVisibilityCountries.map((country) => (

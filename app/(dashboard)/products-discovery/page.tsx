@@ -2,20 +2,30 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { Product } from '@/types/Product';
-import Dropdown from '@/components/ui/dropdown';
 import { useTranslations } from 'next-intl';
 import ProductCard from './components/product-card';
+import CountrySelector from '@/app/(dashboard)/products-discovery/components/country-selector';
 
-type CurrencyFilter = 'ALL' | string;
+interface CountryOption {
+  code: string;
+  name: { ar: string; en: string };
+  currencyCode: string;
+  flagEmoji?: string;
+}
 
-export default function ProductsDiscover() {
+type CountryFilter = 'ALL' | string;
+
+export default function ProductsPricing() {
   const [products, setProducts] = useState<Product[]>([]);
+  const [countries, setCountries] = useState<CountryOption[]>([]);
   const [loading, setLoading] = useState(true);
-  const [currency, setCurrency] = useState<CurrencyFilter>('ALL');
-  const t = useTranslations('admin.productsDiscover');
+  const [countriesLoading, setCountriesLoading] = useState(true);
+  const [countryCode, setCountryCode] = useState<CountryFilter>('ALL');
+  const t = useTranslations('admin.productsPricing');
 
   useEffect(() => {
-    fetchProducts();
+    void fetchProducts();
+    void fetchCountries();
   }, []);
 
   const fetchProducts = async () => {
@@ -33,26 +43,27 @@ export default function ProductsDiscover() {
     }
   };
 
-  // Collect currencies dynamically
-  const currencyOptions = useMemo(() => {
-    const set = new Set<string>();
+  const fetchCountries = async () => {
+    try {
+      const res = await fetch('/api/countries?active=true');
+      const data = await res.json();
 
-    products.forEach((p) => {
-      const size = p.sizes?.[0];
-      if (!size) return;
+      if (data.success) {
+        setCountries(data.data);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setCountriesLoading(false);
+    }
+  };
 
-      set.add(p.baseCurrency);
-      size.prices?.forEach((pr) => set.add(pr.currencyCode));
-    });
+  const selectedCountry = useMemo(
+    () => countries.find((country) => country.code === countryCode) || null,
+    [countries, countryCode],
+  );
 
-    return [
-      { label: t('allCurrencies'), value: 'ALL' },
-      ...Array.from(set).map((c) => ({
-        label: c,
-        value: c,
-      })),
-    ];
-  }, [products, t]);
+  const currencyFilter = selectedCountry?.currencyCode ?? 'ALL';
 
   return (
     <div className="container-site py-8 space-y-6">
@@ -64,10 +75,15 @@ export default function ProductsDiscover() {
         </div>
 
         <div className="w-56">
-          <Dropdown
-            value={currency}
-            options={currencyOptions}
-            onChange={(val) => setCurrency(val)}
+          <CountrySelector
+            value={countryCode}
+            onChange={setCountryCode}
+            countries={countries}
+            placeholder={t('countryPlaceholder')}
+            allOptionLabel={t('allCountries')}
+            searchPlaceholder={t('searchCountry')}
+            noResultsLabel={t('noCountriesFound')}
+            disabled={countriesLoading}
           />
         </div>
       </div>
@@ -83,7 +99,7 @@ export default function ProductsDiscover() {
             <ProductCard
               key={product._id}
               product={product}
-              currency={currency}
+              currencyCode={currencyFilter}
             />
           ))}
         </div>

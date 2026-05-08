@@ -434,10 +434,15 @@
         "reorderSuccess": "تم إعادة ترتيب المنتجات بنجاح"
       }
     },
-    "productsDiscover": {
+    "productsPricing": {
       "title": "اسعار المنتجات",
-      "description": "اكتشف واعرض المنتجات مع الأسعار المباشرة",
-      "allCurrencies": "جميع العملات",
+      "description": "راجع أسعار المنتجات عبر البلدان والمقاسات",
+      "allCountries": "كل البلدان",
+      "countryPlaceholder": "اختر بلد",
+      "searchCountry": "ابحث عن بلد...",
+      "noCountriesFound": "لا توجد بلدان",
+      "minPartialPayment": "الحد الأدنى للدفع الجزئي",
+      "minPartialUnavailable": "غير محدد",
       "loading": "جاري التحميل..."
     },
     "countries": {

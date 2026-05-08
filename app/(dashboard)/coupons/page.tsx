@@ -84,10 +84,8 @@ export default function CouponsPage() {
       maxDiscountAmount: formData.maxDiscountAmount
         ? Number(formData.maxDiscountAmount)
         : undefined,
-      description: {
-        ar: formData.description_ar,
-        en: formData.description_en,
-      },
+      description_ar: formData.description_ar || undefined,
+      description_en: formData.description_en || undefined,
     };
 
     try {

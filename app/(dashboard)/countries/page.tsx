@@ -29,7 +29,12 @@ interface Country {
   name: { ar: string; en: string };
   currencyCode: string;
   currencySymbol: string;
-  roundingRule?: 'nearest-ten' | 'nearest-five' | 'ceil';
+  roundingRule?:
+    | 'nearest-ten'
+    | 'nearest-five'
+    | 'nearest-fifty'
+    | 'nearest-hundred'
+    | 'ceil';
   flagEmoji: string;
   isActive: boolean;
   sortOrder: number | null;
@@ -38,7 +43,12 @@ interface Country {
   visibleToCountries?: string[];
 }
 
-type RoundingRule = 'nearest-ten' | 'nearest-five' | 'ceil';
+type RoundingRule =
+  | 'nearest-ten'
+  | 'nearest-five'
+  | 'nearest-fifty'
+  | 'nearest-hundred'
+  | 'ceil';
 
 export default function CountriesPage() {
   const [countries, setCountries] = useState<Country[]>([]);
@@ -47,6 +57,9 @@ export default function CountriesPage() {
   const [filter, setFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [savingRoundingByCountry, setSavingRoundingByCountry] = useState<
     Record<string, boolean>
+  >({});
+  const [roundingDraftByCountry, setRoundingDraftByCountry] = useState<
+    Record<string, RoundingRule | undefined>
   >({});
   const [reorderOpen, setReorderOpen] = useState(false);
   const [reorderList, setReorderList] = useState<Country[]>([]);
@@ -94,6 +107,14 @@ export default function CountriesPage() {
         label: t('roundingRules.nearestTen'),
         value: 'nearest-ten',
       },
+      {
+        label: t('roundingRules.nearestFifty'),
+        value: 'nearest-fifty',
+      },
+      {
+        label: t('roundingRules.nearestHundred'),
+        value: 'nearest-hundred',
+      },
     ],
     [t],
   );
@@ -122,11 +143,7 @@ export default function CountriesPage() {
     return options;
   }, [countries, t]);
 
-  useEffect(() => {
-    fetchCountries();
-  }, []);
-
-  const fetchCountries = async () => {
+  const fetchCountries = useCallback(async () => {
     try {
       const response = await fetch('/api/countries?active=false');
       const data = await response.json();
@@ -136,7 +153,11 @@ export default function CountriesPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchCountries();
+  }, [fetchCountries]);
 
   // Active countries in their sorted order — used for Order column display
   const activeCountries = useMemo(
@@ -268,29 +289,79 @@ export default function CountriesPage() {
         toast.error(t('messages.saveFailed'));
       }
     },
-    [t],
+    [fetchCountries, t],
   );
 
-  const handleRoundingRuleChange = useCallback(
-    async (country: Country, nextRule: RoundingRule) => {
-      const previousRule = country.roundingRule ?? 'ceil';
-      if (previousRule === nextRule) return;
-
-      setCountries((prev) =>
-        prev.map((item) =>
-          item._id === country._id ? { ...item, roundingRule: nextRule } : item,
-        ),
+  const setRoundingDraftForCurrency = useCallback(
+    (currencyCode: string, nextRule: RoundingRule) => {
+      const sameCurrencyCountries = countries.filter(
+        (country) => country.currencyCode === currencyCode,
       );
-      setSavingRoundingByCountry((prev) => ({
-        ...prev,
-        [country._id]: true,
-      }));
 
-      try {
+      setRoundingDraftByCountry((prev) => {
+        const next = { ...prev };
+        sameCurrencyCountries.forEach((country) => {
+          next[country._id] = nextRule;
+        });
+        return next;
+      });
+    },
+    [countries],
+  );
+
+  const pendingRoundingCurrencies = useMemo(() => {
+    const pending = new Map<
+      string,
+      { country: Country; nextRule: RoundingRule }
+    >();
+
+    countries.forEach((country) => {
+      const nextRule = roundingDraftByCountry[country._id];
+      if (!nextRule) return;
+
+      const currentRule = country.roundingRule ?? 'ceil';
+      if (currentRule === nextRule) return;
+
+      if (!pending.has(country.currencyCode)) {
+        pending.set(country.currencyCode, { country, nextRule });
+      }
+    });
+
+    return Array.from(pending.values());
+  }, [countries, roundingDraftByCountry]);
+
+  const hasPendingRoundingChanges = pendingRoundingCurrencies.length > 0;
+  const isSavingRoundingChanges = useMemo(
+    () => Object.values(savingRoundingByCountry).some(Boolean),
+    [savingRoundingByCountry],
+  );
+
+  const savePendingRoundingChanges = useCallback(async () => {
+    if (!pendingRoundingCurrencies.length) return;
+
+    const savingIds = pendingRoundingCurrencies.flatMap(({ country }) =>
+      countries
+        .filter((item) => item.currencyCode === country.currencyCode)
+        .map((item) => item._id),
+    );
+    setSavingRoundingByCountry((prev) => {
+      const next = { ...prev };
+      savingIds.forEach((id) => {
+        next[id] = true;
+      });
+      return next;
+    });
+
+    const succeededCurrencyCodes: string[] = [];
+
+    try {
+      for (const { country, nextRule } of pendingRoundingCurrencies) {
         const response = await fetch(`/api/countries/${country._id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ roundingRule: nextRule }),
+          body: JSON.stringify({
+            roundingRule: nextRule,
+          }),
         });
 
         const data = await response.json();
@@ -298,25 +369,33 @@ export default function CountriesPage() {
           throw new Error(data.error || 'Failed to update rounding rule');
         }
 
-        toast.success(t('messages.roundingUpdateSuccess'));
-      } catch {
-        setCountries((prev) =>
-          prev.map((item) =>
-            item._id === country._id
-              ? { ...item, roundingRule: previousRule }
-              : item,
-          ),
-        );
-        toast.error(t('messages.roundingUpdateFailed'));
-      } finally {
-        setSavingRoundingByCountry((prev) => ({
-          ...prev,
-          [country._id]: false,
-        }));
+        succeededCurrencyCodes.push(country.currencyCode);
       }
-    },
-    [t],
-  );
+
+      await fetchCountries();
+      setRoundingDraftByCountry((prev) => {
+        const next = { ...prev };
+        countries.forEach((country) => {
+          if (succeededCurrencyCodes.includes(country.currencyCode)) {
+            delete next[country._id];
+          }
+        });
+        return next;
+      });
+
+      toast.success(t('messages.roundingUpdateSuccess'));
+    } catch {
+      toast.error(t('messages.roundingUpdateFailed'));
+    } finally {
+      setSavingRoundingByCountry((prev) => {
+        const next = { ...prev };
+        savingIds.forEach((id) => {
+          next[id] = false;
+        });
+        return next;
+      });
+    }
+  }, [countries, fetchCountries, pendingRoundingCurrencies, t]);
 
   const openReorderModal = () => {
     setReorderList([...activeCountries]);
@@ -383,7 +462,7 @@ export default function CountriesPage() {
   };
 
   const selectAllCountries = () => {
-    const codes = activeVisibilityCountries.map((c) => c.code);
+    const codes = activeVisibilityCountries.map((country) => country.code);
 
     if (visibilityCountry) {
       codes.push(visibilityCountry.code);
@@ -415,14 +494,14 @@ export default function CountriesPage() {
 
     // Optimistic update
     setCountries((prev) =>
-      prev.map((c) =>
-        c._id === visibilityCountry._id
+      prev.map((country) =>
+        country._id === visibilityCountry._id
           ? {
-              ...c,
+              ...country,
               visibilityMode,
               visibleToCountries: normalizedVisibleToCountries,
             }
-          : c,
+          : country,
       ),
     );
 
@@ -446,8 +525,10 @@ export default function CountriesPage() {
     } catch {
       // Revert optimistic update
       setCountries((prev) =>
-        prev.map((c) =>
-          c._id === visibilityCountry._id ? { ...c, ...previousSettings } : c,
+        prev.map((country) =>
+          country._id === visibilityCountry._id
+            ? { ...country, ...previousSettings }
+            : country,
         ),
       );
       toast.error(t('messages.visibilityUpdateFailed'));
@@ -552,12 +633,12 @@ export default function CountriesPage() {
       {
         header: t('table.rounding'),
         accessor: (c: Country) => (
-          <div className="min-w-44">
+          <div className="min-w-64 space-y-2">
             <Dropdown<RoundingRule>
-              value={c.roundingRule ?? 'ceil'}
+              value={roundingDraftByCountry[c._id] ?? c.roundingRule ?? 'ceil'}
               options={roundingOptions}
               onChange={(value) => {
-                void handleRoundingRuleChange(c, value);
+                setRoundingDraftForCurrency(c.currencyCode, value);
               }}
               disabled={Boolean(savingRoundingByCountry[c._id])}
             />
@@ -597,8 +678,9 @@ export default function CountriesPage() {
       handleToggleActive,
       orderMap,
       roundingOptions,
-      handleRoundingRuleChange,
       savingRoundingByCountry,
+      roundingDraftByCountry,
+      setRoundingDraftForCurrency,
     ],
   );
 
@@ -649,14 +731,25 @@ export default function CountriesPage() {
             {t('status.active').toLowerCase()}
           </p>
         </div>
-        <Button
-          variant="secondary"
-          onClick={openReorderModal}
-          disabled={activeCount === 0}
-        >
-          <ListOrdered size={20} />
-          {t('reorderButton')}
-        </Button>
+        <div className="flex items-center gap-2.5">
+          <Button
+            variant="secondary"
+            onClick={openReorderModal}
+            disabled={activeCount === 0}
+          >
+            <ListOrdered size={20} />
+            {t('reorderButton')}
+          </Button>
+          <Button
+            variant="primary"
+            onClick={() => void savePendingRoundingChanges()}
+            disabled={!hasPendingRoundingChanges || isSavingRoundingChanges}
+          >
+            {isSavingRoundingChanges
+              ? '...'
+              : t('messages.saveRoundingChanges')}
+          </Button>
+        </div>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3">

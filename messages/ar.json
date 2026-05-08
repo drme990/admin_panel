@@ -295,8 +295,6 @@
         "loadingCurrencies": "جاري تحميل العملات...",
         "enterBasePriceAlert": "يرجى إدخال سعر أساسي صحيح أولاً",
         "calculateFailedAlert": "فشل حساب الأسعار. يرجى المحاولة مرة أخرى.",
-        "manualPriceHelp": "الأسعار اليدوية يتم تعيينها من قبلك ولن يتم الكتابة عليها عند الحساب التلقائي",
-        "autoPriceHelp": "الأسعار التلقائية يتم حسابها من السعر الأساسي وستتحدث عند النقر على \"حساب الأسعار تلقائياً\"",
         "productImage": "صورة المنتج",
         "chooseImage": "اختر صورة",
         "imageHelp": "ارفع حتى 10 صور. الصورة الأولى ستكون الصورة الرئيسية.",
@@ -476,6 +474,7 @@
         "nearestFive": "تقريب للأعلى إلى 5",
         "nearestTen": "تقريب للأعلى إلى 10"
       },
+      "roundingSyncLabel": "تطبيق على جميع بلدان {currency}",
       "status": {
         "active": "نشط",
         "inactive": "غير نشط"
@@ -505,6 +504,8 @@
         "updateSuccess": "تم تحديث البلد بنجاح",
         "roundingUpdateSuccess": "تم تحديث قاعدة التقريب بنجاح",
         "roundingUpdateFailed": "فشل تحديث قاعدة التقريب",
+        "saveRounding": "حفظ",
+        "saveRoundingChanges": "حفظ تغييرات التقريب",
         "orderSaved": "تم حفظ ترتيب العملات بنجاح",
         "reorderSuccess": "تم حفظ ترتيب العملات بنجاح",
         "reorderFailed": "فشل حفظ ترتيب العملات",

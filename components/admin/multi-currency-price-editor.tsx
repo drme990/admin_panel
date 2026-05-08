@@ -173,10 +173,10 @@ export default function MultiCurrencyPriceEditor({
       yesterdayDate.setDate(now.getDate() - 1);
       const yesterday = formatDate(yesterdayDate);
 
-      // Get all unique currency codes
+      // Get all unique currency codes (sorted A→Z)
       const targetCurrencies = [
         ...new Set(countries.map((c) => c.currencyCode)),
-      ];
+      ].sort((a, b) => a.localeCompare(b));
       const roundingMap = buildCurrencyRoundingMap(countries);
 
       let rates: Record<string, number>;
@@ -286,10 +286,10 @@ export default function MultiCurrencyPriceEditor({
     return price?.isManual || false;
   };
 
-  // Get unique currencies
+  // Get unique currencies sorted A→Z
   const availableCurrencies = [
     ...new Set(countries.map((c) => c.currencyCode)),
-  ];
+  ].sort((a, b) => a.localeCompare(b));
 
   const applyManualState = (manual: boolean) => {
     const updatedPrices: CurrencyPrice[] = availableCurrencies.map((code) => {
@@ -500,17 +500,6 @@ export default function MultiCurrencyPriceEditor({
               </div>
             );
           })}
-        </div>
-
-        <div className="text-xs text-secondary mt-2">
-          <p>
-            <Lock className="inline mx-2" size={16} />{' '}
-            {t('form.manualPriceHelp')}
-          </p>
-          <p>
-            <Unlock className="inline mx-2" size={16} />{' '}
-            {t('form.autoPriceHelp')}
-          </p>
         </div>
       </div>
     </div>

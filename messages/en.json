@@ -296,8 +296,6 @@
         "loadingCurrencies": "Loading currencies...",
         "enterBasePriceAlert": "Please enter a valid base price first",
         "calculateFailedAlert": "Failed to calculate prices. Please try again.",
-        "manualPriceHelp": "Manual prices are set by you and won't be overwritten by auto-calculation",
-        "autoPriceHelp": "Auto prices are calculated from the base price and will update when you click \"Auto Calculate Prices\"",
         "productImage": "Product Image",
         "chooseImage": "Choose Image",
         "imageHelp": "Upload up to 10 images. First image will be the main image.",
@@ -475,8 +473,11 @@
       "roundingRules": {
         "ceil": "Round Up (Integer)",
         "nearestFive": "Round Up to 5",
-        "nearestTen": "Round Up to 10"
+        "nearestTen": "Round Up to 10",
+        "nearestFifty": "Round Up to 50",
+        "nearestHundred": "Round Up to 100"
       },
+      "roundingSyncLabel": "Apply to all {currency} countries",
       "status": {
         "active": "Active",
         "inactive": "Inactive"
@@ -506,6 +507,8 @@
         "updateSuccess": "Country updated successfully",
         "roundingUpdateSuccess": "Rounding rule updated successfully",
         "roundingUpdateFailed": "Failed to update rounding rule",
+        "saveRounding": "Save",
+        "saveRoundingChanges": "Save Rounding Changes",
         "orderSaved": "Currency order saved successfully",
         "reorderSuccess": "Currency order saved successfully",
         "reorderFailed": "Failed to save currency order",

@@ -4,7 +4,12 @@
  * Rules are configured from countries data in the admin backend.
  */
 
-export type RoundingRule = 'nearest-ten' | 'nearest-five' | 'ceil';
+export type RoundingRule =
+  | 'nearest-ten'
+  | 'nearest-five'
+  | 'nearest-fifty'
+  | 'nearest-hundred'
+  | 'ceil';
 
 type CountryWithRounding = {
   currencyCode: string;
@@ -20,6 +25,10 @@ export function roundPriceByRule(
       return Math.ceil(amount / 10) * 10;
     case 'nearest-five':
       return Math.ceil(amount / 5) * 5;
+    case 'nearest-fifty':
+      return Math.ceil(amount / 50) * 50;
+    case 'nearest-hundred':
+      return Math.ceil(amount / 100) * 100;
     case 'ceil':
     default:
       return Math.ceil(amount);

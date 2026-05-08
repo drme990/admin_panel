@@ -472,7 +472,9 @@
       "roundingRules": {
         "ceil": "تقريب للأعلى (عدد صحيح)",
         "nearestFive": "تقريب للأعلى إلى 5",
-        "nearestTen": "تقريب للأعلى إلى 10"
+        "nearestTen": "تقريب للأعلى إلى 10",
+        "nearestFifty": "تقريب للأعلى إلى 50",
+        "nearestHundred": "تقريب للأعلى إلى 100"
       },
       "roundingSyncLabel": "تطبيق على جميع بلدان {currency}",
       "status": {

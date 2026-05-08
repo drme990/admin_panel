@@ -872,16 +872,6 @@ export default function OrderHistoryPage() {
       ),
     },
     {
-      header: t('table.customerType'),
-      accessor: (row: Order) => (
-        <span className="text-sm font-medium">
-          {isOrderGuest(row)
-            ? t('customerType.guest')
-            : t('customerType.registered')}
-        </span>
-      ),
-    },
-    {
       header: t('table.amount'),
       accessor: (row: Order) => {
         const displayedAmount =

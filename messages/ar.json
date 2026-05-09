@@ -165,10 +165,64 @@
       "customers": "العملاء",
       "analytics": "التحليلات",
       "referrals": "الإحالات",
+      "refTracker": "متتبع الإحالة",
       "activityLogs": "سجل النشاطات",
       "appearance": "المظهر",
       "exchange": "أسعار الصرف",
       "payments": "المدفوعات"
+    },
+    "refTracker": {
+      "title": "متتبع الإحالة",
+      "description": "تتبع جلسات التطبيق ومصادر الإحالة والنقرات المهمة التي تقود إلى مسار الدفع.",
+      "refresh": "تحديث",
+      "loading": "جارٍ تحميل بيانات المتتبع...",
+      "emptyMessage": "لا توجد بيانات للمتتبع",
+      "filters": {
+        "title": "المرشحات",
+        "app": "التطبيق",
+        "action": "الإجراء",
+        "session": "الجلسة",
+        "user": "معرف المستخدم",
+        "ref": "الإحالة",
+        "product": "المنتج",
+        "clear": "مسح المرشحات"
+      },
+      "app": {
+        "all": "كل التطبيقات",
+        "manasik": "مناسك",
+        "ghadaq": "غدق"
+      },
+      "actions": {
+        "all": "كل الإجراءات",
+        "sessionCreated": "تم إنشاء الجلسة",
+        "navigateProducts": "الانتقال إلى المنتجات",
+        "selectProduct": "اختيار منتج",
+        "payNow": "ادفع الآن",
+        "checkoutChoice": "اختيار الدفع",
+        "proceedToPayment": "الانتقال إلى الدفع"
+      },
+      "choices": {
+        "full": "دفع المبلغ كاملاً",
+        "half": "دفع النصف",
+        "custom": "دفع مبلغ مخصص",
+        "customAmount": "تأكيد المبلغ المخصص",
+        "customQuantityKeep": "الاحتفاظ بالكمية",
+        "customQuantitySetOne": "تعيين الكمية إلى 1",
+        "reservationDetails": "الانتقال إلى تفاصيل الحجز"
+      },
+      "table": {
+        "createdAt": "وقت الإنشاء",
+        "app": "التطبيق",
+        "sessionNumber": "الجلسة",
+        "userId": "معرف المستخدم",
+        "ref": "الإحالة",
+        "ip": "IP",
+        "action": "الإجراء",
+        "path": "المسار",
+        "productName": "المنتج",
+        "buttonLabel": "الزر",
+        "choice": "الخيار"
+      }
     },
     "loading": "جاري التحميل...",
     "redirecting": "جاري التوجيه للدخول...",

@@ -9,6 +9,7 @@ export type AdminPage =
   | 'countries'
   | 'admins'
   | 'referrals'
+  | 'refTracker'
   | 'activityLogs'
   | 'appearance'
   | 'exchange'
@@ -25,6 +26,7 @@ export const ALL_ADMIN_PAGES: AdminPage[] = [
   'countries',
   'admins',
   'referrals',
+  'refTracker',
   'activityLogs',
   'appearance',
   'exchange',

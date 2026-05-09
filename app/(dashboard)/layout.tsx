@@ -35,6 +35,7 @@ import {
   LuUserCog,
   LuChartNoAxesCombined,
   LuBaggageClaim,
+  LuRadar,
 } from 'react-icons/lu';
 
 const navItems = [
@@ -123,6 +124,13 @@ const navItems = [
     permissionKey: 'referrals',
   },
   {
+    key: 'refTracker',
+    href: '/ref-tracker',
+    icon: LuRadar,
+    superAdminOnly: false,
+    permissionKey: 'refTracker',
+  },
+  {
     key: 'appearance',
     href: '/appearance',
     icon: LuPalette,
@@ -181,6 +189,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
       countries: 'countries',
       admins: 'admins',
       referrals: 'referrals',
+      'ref-tracker': 'refTracker',
       appearance: 'appearance',
       exchange: 'exchange',
       logs: 'activityLogs',

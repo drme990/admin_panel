@@ -150,6 +150,14 @@ export default function CustomersPage() {
   const columns = useMemo(
     () => [
       {
+        header: t('table.userId'),
+        accessor: (customer: Customer) => (
+          <span className="text-secondary font-mono text-xs break-all">
+            {customer._id}
+          </span>
+        ),
+      },
+      {
         header: t('table.name'),
         accessor: (customer: Customer) => (
           <div className="min-w-45">

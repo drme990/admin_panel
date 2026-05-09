@@ -65,6 +65,7 @@ export default function RefTrackerPage() {
     sessionNumber: '',
     userId: '',
     ref: '',
+    ip: '',
     productName: '',
   });
 
@@ -80,6 +81,7 @@ export default function RefTrackerPage() {
         params.set('sessionNumber', filters.sessionNumber);
       if (filters.userId) params.set('userId', filters.userId);
       if (filters.ref) params.set('ref', filters.ref);
+      if (filters.ip) params.set('ip', filters.ip);
       if (filters.productName) params.set('productName', filters.productName);
 
       const response = await fetch(`/api/ref-tracker?${params.toString()}`);
@@ -97,6 +99,7 @@ export default function RefTrackerPage() {
   }, [
     filters.action,
     filters.appId,
+    filters.ip,
     filters.productName,
     filters.ref,
     filters.sessionNumber,
@@ -304,6 +307,14 @@ export default function RefTrackerPage() {
             placeholder={t('filters.ref')}
           />
           <Input
+            value={filters.ip}
+            onChange={(e) => {
+              setPage(1);
+              setFilters((prev) => ({ ...prev, ip: e.target.value }));
+            }}
+            placeholder={t('filters.ip')}
+          />
+          <Input
             value={filters.productName}
             onChange={(e) => {
               setPage(1);
@@ -325,6 +336,7 @@ export default function RefTrackerPage() {
                 sessionNumber: '',
                 userId: '',
                 ref: '',
+                ip: '',
                 productName: '',
               });
             }}

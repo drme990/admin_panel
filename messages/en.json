@@ -184,6 +184,7 @@
         "session": "Session",
         "user": "User ID",
         "ref": "Ref",
+        "ip": "IP Address",
         "product": "Product",
         "clear": "Clear filters"
       },
@@ -722,6 +723,7 @@
       },
       "table": {
         "name": "Customer",
+        "userId": "User ID",
         "phone": "Phone",
         "app": "App",
         "status": "Status",

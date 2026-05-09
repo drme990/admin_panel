@@ -697,7 +697,7 @@
     "customers": {
       "title": "Customers",
       "description": "Manage customers from both apps and control ban status",
-      "searchPlaceholder": "Search by name, email, or phone...",
+      "searchPlaceholder": "Search by name, email, phone, user ID, or IP...",
       "emptyMessage": "No customers found",
       "ban": "Ban",
       "unban": "Unban",

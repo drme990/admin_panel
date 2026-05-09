@@ -436,9 +436,11 @@
       "title": "اسعار المنتجات",
       "description": "راجع أسعار المنتجات عبر البلدان والمقاسات",
       "allCountries": "كل البلدان",
+      "allLabels": "كل الوسوم",
       "countryPlaceholder": "اختر بلد",
       "searchCountry": "ابحث عن بلد...",
       "noCountriesFound": "لا توجد بلدان",
+      "clearFilters": "مسح الفلاتر",
       "minPartialPayment": "الحد الأدنى للدفع الجزئي",
       "minPartialUnavailable": "غير محدد",
       "loading": "جاري التحميل..."

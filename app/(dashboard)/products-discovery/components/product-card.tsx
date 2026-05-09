@@ -4,6 +4,8 @@ import { useMemo, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import Image from 'next/image';
 
+import Tabs from '@/components/ui/tabs';
+
 import { Product, getPrimaryProductImageUrl } from '@/types/Product';
 
 import { cn } from '@/lib/utils';
@@ -22,6 +24,11 @@ export default function ProductCard({ product, currencyCode }: Props) {
   const image = getPrimaryProductImageUrl(product);
 
   const activeSize = product.sizes?.[activeSizeIndex];
+
+  const sizeOptions = product.sizes.map((size, index) => ({
+    value: String(index),
+    label: locale === 'ar' ? size.name.ar : size.name.en,
+  }));
 
   const partialPayment = product.partialPayment;
 
@@ -105,22 +112,13 @@ export default function ProductCard({ product, currencyCode }: Props) {
 
         {/* Size Selector */}
         {product.sizes.length > 1 && (
-          <div className="absolute top-2 right-2 flex items-center gap-1 rounded-xl border border-white/10 bg-black/30 p-1 backdrop-blur-md">
-            {product.sizes.map((size, i) => (
-              <button
-                key={i}
-                onClick={() => setActiveSizeIndex(i)}
-                className={cn(
-                  'rounded-lg px-2 py-1 text-[11px] font-medium transition',
-                  i === activeSizeIndex
-                    ? 'bg-primary text-primary-text'
-                    : 'text-white/80 hover:bg-white/10',
-                )}
-              >
-                {locale === 'ar' ? size.name.ar : size.name.en}
-              </button>
-            ))}
-          </div>
+          <Tabs
+            value={String(activeSizeIndex)}
+            options={sizeOptions}
+            onChange={(value) => setActiveSizeIndex(Number(value))}
+            size="sm"
+            className="absolute top-2 right-2"
+          />
         )}
       </div>
 

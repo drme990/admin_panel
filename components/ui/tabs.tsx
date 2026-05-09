@@ -16,7 +16,7 @@ interface TabsProps<T extends TabValue> {
   options: Array<TabsOption<T>>;
   onChange: (value: T) => void;
   className?: string;
-  size?: 'sm' | 'md';
+  size?: 'sm' | 'md' | 'lg';
 }
 
 export default function Tabs<T extends TabValue>({
@@ -26,10 +26,16 @@ export default function Tabs<T extends TabValue>({
   className,
   size = 'md',
 }: TabsProps<T>) {
+  const sizeClasses = {
+    sm: 'px-2 py-1 text-[11px]',
+    md: 'px-3 py-1.5 text-xs',
+    lg: 'px-4 py-2 text-sm',
+  };
+
   return (
     <div
       className={cn(
-        'inline-flex items-center gap-1 rounded-lg border border-stroke bg-background p-1',
+        'inline-flex items-center gap-1 rounded-xl border border-white/10 bg-black/30 p-1 backdrop-blur-md',
         className,
       )}
       role="tablist"
@@ -46,13 +52,11 @@ export default function Tabs<T extends TabValue>({
             aria-selected={active}
             onClick={() => onChange(option.value)}
             className={cn(
-              'rounded-md font-medium transition-colors',
-              size === 'sm' ? 'px-2.5 py-1 text-xs' : 'px-3 py-1.5 text-sm',
+              'rounded-lg font-medium transition',
+              sizeClasses[size],
               active
-                ? option.activeClassName ||
-                    'gradient-site gradient-text shadow-lg'
-                : option.className ||
-                    'border border-stroke text-foreground hover:bg-foreground hover:text-background',
+                ? option.activeClassName || 'gradient-site gradient-text'
+                : option.className || 'text-white/80 hover:bg-white/10',
             )}
           >
             {option.label}

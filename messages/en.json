@@ -437,9 +437,11 @@
       "title": "Products Pricing",
       "description": "Review product pricing across countries and sizes",
       "allCountries": "All countries",
+      "allLabels": "All labels",
       "countryPlaceholder": "Select a country",
       "searchCountry": "Search countries...",
       "noCountriesFound": "No countries found",
+      "clearFilters": "Clear filters",
       "minPartialPayment": "Min partial payment",
       "minPartialUnavailable": "Not set",
       "loading": "Loading..."

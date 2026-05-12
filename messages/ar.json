@@ -545,10 +545,15 @@
       },
       "visibilitySettings": {
         "title": "إعدادات الظهور",
-        "modeLabel": "ما البلدان التي يمكن لهذا البلد رؤيتها؟",
-        "allCountries": "جميع البلدان",
-        "specificCountries": "بلدان محددة فقط",
-        "selectCountries": "اختر البلدان التي يمكن لهذا البلد رؤيتها:",
+        "modeLabel": "وضع الظهور",
+        "noSettings": "بدون إعدادات",
+        "customSettings": "إعدادات مخصصة",
+        "modeDescription": "بدون إعدادات يعرض كل البلدان بشكل طبيعي. الإعدادات المخصصة تتيح لك تحديد البلدان التي ترى السعر الحقيقي أو سعر الصرف.",
+        "priceTabs": {
+          "realPrice": "السعر الحقيقي",
+          "exchangePrice": "سعر الصرف"
+        },
+        "selectCountries": "اختر البلدان لهذا النوع من السعر:",
         "noCountriesAvailable": "لا توجد بلدان نشطة متاحة",
         "selectAll": "اختر الكل",
         "clearAll": "مسح الكل",
@@ -569,7 +574,9 @@
         "reorderSuccess": "تم حفظ ترتيب العملات بنجاح",
         "reorderFailed": "فشل حفظ ترتيب العملات",
         "visibilityUpdateSuccess": "تم حفظ إعدادات الظهور بنجاح",
-        "visibilityUpdateFailed": "فشل حفظ إعدادات الظهور"
+        "visibilityUpdateFailed": "فشل حفظ إعدادات الظهور",
+        "visibilityConflictingPriceMode": "لا يمكن إضافة نفس البلد في وضعي السعر الحقيقي وسعر الصرف معًا.",
+        "visibilitySelectAllSkippedConflicts": "تم تخطي بعض البلدان لأنها محددة مسبقًا في وضع السعر الآخر."
       }
     },
     "coupons": {

@@ -17,8 +17,14 @@ export interface Country {
   isActive: boolean;
   sortOrder: number | null;
   region?: string;
-  visibilityMode?: 'all' | 'specific';
-  visibleToCountries?: string[];
+  visibilityMode?: 'all' | 'custom';
+  countriesToSee ?: Record<
+    string,
+    {
+      realPrice?: boolean;
+      exchangePrice?: boolean;
+    }
+  >;
   createdAt?: string;
   updatedAt?: string;
 }

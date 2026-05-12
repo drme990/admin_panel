@@ -4,6 +4,7 @@ import Modal from '@/components/ui/modal';
 import Button from '@/components/ui/button';
 import Checkbox from '@/components/ui/checkbox';
 import Dropdown from '@/components/ui/dropdown';
+import Tabs from '@/components/ui/tabs';
 import { useTranslations, useLocale } from 'next-intl';
 
 interface Country {
@@ -12,10 +13,14 @@ interface Country {
   name: { ar: string; en: string };
 }
 
-interface Option {
-  label: string;
-  value: string;
+type VisibilityTab = 'realPrice' | 'exchangePrice';
+
+interface CountryVisibilityOptions {
+  realPrice?: boolean;
+  exchangePrice?: boolean;
 }
+
+type CountryVisibilityMap = Record<string, CountryVisibilityOptions>;
 
 interface VisibilitySettingsModalProps {
   visibilityOpen: boolean;
@@ -23,10 +28,13 @@ interface VisibilitySettingsModalProps {
 
   visibilityCountry: Country | null;
 
-  visibilityMode: 'all' | 'specific';
-  setVisibilityMode: (mode: 'all' | 'specific') => void;
+  visibilityMode: 'all' | 'custom';
+  setVisibilityMode: (mode: 'all' | 'custom') => void;
 
-  visibleToCountries: string[];
+  visibilityTab: VisibilityTab;
+  setVisibilityTab: (tab: VisibilityTab) => void;
+
+  countriesToSee : CountryVisibilityMap;
   toggleVisibleToCountry: (code: string) => void;
 
   selectAllCountries: () => void;
@@ -37,7 +45,7 @@ interface VisibilitySettingsModalProps {
 
   regionFilter: string;
   setRegionFilter: (value: string) => void;
-  regionOptions: Option[];
+  regionOptions: Array<{ label: string; value: string }>;
 
   activeVisibilityCountries: Country[];
 }
@@ -48,7 +56,9 @@ export default function VisibilitySettingsModal({
   visibilityCountry,
   visibilityMode,
   setVisibilityMode,
-  visibleToCountries,
+  visibilityTab,
+  setVisibilityTab,
+  countriesToSee ,
   toggleVisibleToCountry,
   selectAllCountries,
   clearAllCountries,
@@ -61,6 +71,17 @@ export default function VisibilitySettingsModal({
 }: VisibilitySettingsModalProps) {
   const t = useTranslations('admin.countries');
   const locale = useLocale();
+
+  const priceTabOptions = [
+    {
+      value: 'realPrice' as const,
+      label: t('visibilitySettings.priceTabs.realPrice'),
+    },
+    {
+      value: 'exchangePrice' as const,
+      label: t('visibilitySettings.priceTabs.exchangePrice'),
+    },
+  ];
 
   return (
     <Modal
@@ -94,35 +115,43 @@ export default function VisibilitySettingsModal({
       }
     >
       <div className="space-y-6">
-        {/* Mode */}
         <div className="space-y-3">
           <label className="block text-sm font-medium text-foreground">
             {t('visibilitySettings.modeLabel')}
           </label>
 
-          <div className="flex gap-4">
+          <div className="flex flex-col sm:flex-row gap-3">
             <label className="flex items-center gap-2 cursor-pointer">
               <Checkbox
                 checked={visibilityMode === 'all'}
                 onChange={() => setVisibilityMode('all')}
               />
-              {t('visibilitySettings.allCountries')}
+              {t('visibilitySettings.noSettings')}
             </label>
 
             <label className="flex items-center gap-2 cursor-pointer">
               <Checkbox
-                checked={visibilityMode === 'specific'}
-                onChange={() => setVisibilityMode('specific')}
+                checked={visibilityMode === 'custom'}
+                onChange={() => setVisibilityMode('custom')}
               />
-              {t('visibilitySettings.specificCountries')}
+              {t('visibilitySettings.customSettings')}
             </label>
           </div>
+
+          <p className="text-sm text-secondary">
+            {t('visibilitySettings.modeDescription')}
+          </p>
         </div>
 
-        {/* Countries */}
-        {visibilityMode === 'specific' && (
+        {visibilityMode === 'custom' && (
           <div className="space-y-3">
-            <div className="flex justify-between items-center">
+            <Tabs<VisibilityTab>
+              value={visibilityTab}
+              options={priceTabOptions}
+              onChange={setVisibilityTab}
+            />
+
+            <div className="flex justify-between items-center gap-3">
               <span className="text-sm font-medium text-foreground">
                 {t('visibilitySettings.selectCountries')}
               </span>
@@ -155,7 +184,11 @@ export default function VisibilitySettingsModal({
               {activeVisibilityCountries.map((country) => (
                 <Checkbox
                   key={country._id}
-                  checked={visibleToCountries.includes(country.code)}
+                  checked={Boolean(
+                    countriesToSee [country.code.toUpperCase()]?.[
+                      visibilityTab
+                    ],
+                  )}
                   onChange={() => toggleVisibleToCountry(country.code)}
                   label={`${
                     locale === 'ar' ? country.name.ar : country.name.en

@@ -546,10 +546,15 @@
       },
       "visibilitySettings": {
         "title": "Visibility Settings",
-        "modeLabel": "Which countries can this country see?",
-        "allCountries": "All countries",
-        "specificCountries": "Specific countries only",
-        "selectCountries": "Select countries this country can see:",
+        "modeLabel": "Visibility mode",
+        "noSettings": "No Settings",
+        "customSettings": "Custom Settings",
+        "modeDescription": "No Settings shows all countries normally. Custom Settings lets you choose which countries see Real Price or Exchange price.",
+        "priceTabs": {
+          "realPrice": "Real Price",
+          "exchangePrice": "Exchange price"
+        },
+        "selectCountries": "Choose countries for this price type:",
         "noCountriesAvailable": "No active countries available",
         "selectAll": "Select all",
         "clearAll": "Clear all",
@@ -570,7 +575,9 @@
         "reorderSuccess": "Currency order saved successfully",
         "reorderFailed": "Failed to save currency order",
         "visibilityUpdateSuccess": "Visibility settings saved successfully",
-        "visibilityUpdateFailed": "Failed to save visibility settings"
+        "visibilityUpdateFailed": "Failed to save visibility settings",
+        "visibilityConflictingPriceMode": "A country can only be in one price mode (Real Price or Exchange price).",
+        "visibilitySelectAllSkippedConflicts": "Some countries were skipped because they are already selected in the other price mode."
       }
     },
     "coupons": {

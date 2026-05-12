@@ -39,9 +39,24 @@ interface Country {
   isActive: boolean;
   sortOrder: number | null;
   region?: string;
-  visibilityMode?: 'all' | 'specific';
-  visibleToCountries?: string[];
+  visibilityMode?: 'all' | 'custom';
+  countriesToSee ?: Record<
+    string,
+    {
+      realPrice?: boolean;
+      exchangePrice?: boolean;
+    }
+  >;
 }
+
+type VisibilityTab = 'realPrice' | 'exchangePrice';
+
+type VisibilityCountryOptions = {
+  realPrice?: boolean;
+  exchangePrice?: boolean;
+};
+
+type VisibilityCountryMap = Record<string, VisibilityCountryOptions>;
 
 type RoundingRule =
   | 'nearest-ten'
@@ -70,10 +85,11 @@ export default function CountriesPage() {
   const [visibilityCountry, setVisibilityCountry] = useState<Country | null>(
     null,
   );
-  const [visibilityMode, setVisibilityMode] = useState<'all' | 'specific'>(
-    'all',
-  );
-  const [visibleToCountries, setVisibleToCountries] = useState<string[]>([]);
+  const [visibilityMode, setVisibilityMode] = useState<'all' | 'custom'>('all');
+  const [visibilityTab, setVisibilityTab] =
+    useState<VisibilityTab>('realPrice');
+  const [countriesToSee, setCountriesToSee] =
+    useState<VisibilityCountryMap>({});
   const [visibilitySaving, setVisibilitySaving] = useState(false);
   const [regionFilter, setRegionFilter] = useState('all');
 
@@ -117,6 +133,57 @@ export default function CountriesPage() {
       },
     ],
     [t],
+  );
+
+  const normalizeVisibilityMap = useCallback(
+    (raw?: Country['countriesToSee']) => {
+      if (!raw) return {};
+
+      return Object.entries(raw).reduce<VisibilityCountryMap>(
+        (acc, [code, options]) => {
+          const realPrice = Boolean(options?.realPrice);
+          const exchangePrice = Boolean(options?.exchangePrice);
+
+          if (!realPrice && !exchangePrice) {
+            return acc;
+          }
+
+          acc[code.toUpperCase()] = { realPrice, exchangePrice };
+          return acc;
+        },
+        {},
+      );
+    },
+    [],
+  );
+
+  const isCountryEnabledForTab = useCallback(
+    (countryCode: string, tab: VisibilityTab) =>
+      Boolean(countriesToSee[countryCode.toUpperCase()]?.[tab]),
+    [countriesToSee],
+  );
+
+  const setCountryTabValue = useCallback(
+    (countryCode: string, tab: VisibilityTab, enabled: boolean) => {
+      setCountriesToSee((prev) => {
+        const key = countryCode.toUpperCase();
+        const current = prev[key] ?? {};
+        const next = {
+          ...prev,
+          [key]: {
+            ...current,
+            [tab]: enabled,
+          },
+        };
+
+        if (!next[key].realPrice && !next[key].exchangePrice) {
+          delete next[key];
+        }
+
+        return next;
+      });
+    },
+    [],
   );
 
   const regionOptions = useMemo(() => {
@@ -202,7 +269,7 @@ export default function CountriesPage() {
     if (filter === 'active') result = result.filter((c) => c.isActive);
     else if (filter === 'inactive') result = result.filter((c) => !c.isActive);
 
-    // ✅ NEW: Region filter
+    // Region filter
     if (regionTableFilter !== 'all') {
       result = result.filter((c) =>
         regionTableFilter === '__unknown__'
@@ -438,59 +505,97 @@ export default function CountriesPage() {
   // Visibility settings handlers
   const openVisibilityModal = (country: Country) => {
     const mode = country.visibilityMode ?? 'all';
-    const baseVisible = country.visibleToCountries ?? [];
-    const normalizedVisible =
-      mode === 'specific'
-        ? Array.from(new Set([...baseVisible, country.code]))
-        : baseVisible;
+    const normalizedVisible = normalizeVisibilityMap(
+      country.countriesToSee,
+    );
 
     setVisibilityCountry(country);
     setVisibilityMode(mode);
-    setVisibleToCountries(normalizedVisible);
+    setCountriesToSee(normalizedVisible);
+    setVisibilityTab('realPrice');
     setRegionFilter('all');
     setVisibilityOpen(true);
   };
 
   const toggleVisibleToCountry = (countryCode: string) => {
-    setVisibleToCountries((prev) => {
-      const isSelected = prev.includes(countryCode);
-      if (isSelected) {
-        return prev.filter((code) => code !== countryCode);
+    const isEnabled = isCountryEnabledForTab(countryCode, visibilityTab);
+
+    if (!isEnabled) {
+      const oppositeTab: VisibilityTab =
+        visibilityTab === 'realPrice' ? 'exchangePrice' : 'realPrice';
+
+      if (isCountryEnabledForTab(countryCode, oppositeTab)) {
+        toast.error(t('messages.visibilityConflictingPriceMode'));
+        return;
       }
-      return [...prev, countryCode];
-    });
+    }
+
+    setCountryTabValue(countryCode, visibilityTab, !isEnabled);
   };
 
   const selectAllCountries = () => {
-    const codes = activeVisibilityCountries.map((country) => country.code);
+    setCountriesToSee((prev) => {
+      const next = { ...prev };
+      let skippedConflicts = 0;
 
-    if (visibilityCountry) {
-      codes.push(visibilityCountry.code);
-    }
+      activeVisibilityCountries.forEach((country) => {
+        const key = country.code.toUpperCase();
+        const current = next[key] ?? {};
 
-    setVisibleToCountries(Array.from(new Set(codes)));
+        const oppositeTab: VisibilityTab =
+          visibilityTab === 'realPrice' ? 'exchangePrice' : 'realPrice';
+        if (current[oppositeTab]) {
+          skippedConflicts += 1;
+          return;
+        }
+
+        next[key] = { ...current, [visibilityTab]: true };
+      });
+
+      if (skippedConflicts > 0) {
+        toast.error(t('messages.visibilitySelectAllSkippedConflicts'));
+      }
+
+      return next;
+    });
   };
 
   const clearAllCountries = () => {
-    if (visibilityCountry) {
-      setVisibleToCountries([visibilityCountry.code]);
-    } else {
-      setVisibleToCountries([]);
-    }
+    setCountriesToSee((prev) => {
+      const next = { ...prev };
+      Object.keys(next).forEach((countryCode) => {
+        const current = next[countryCode];
+        const cleared = {
+          ...current,
+          [visibilityTab]: false,
+        };
+
+        if (!cleared.realPrice && !cleared.exchangePrice) {
+          delete next[countryCode];
+          return;
+        }
+
+        next[countryCode] = cleared;
+      });
+      return next;
+    });
   };
 
   const saveVisibilitySettings = async () => {
     if (!visibilityCountry) return;
 
     setVisibilitySaving(true);
-    const normalizedVisibleToCountries =
-      visibilityMode === 'specific'
-        ? Array.from(new Set([...visibleToCountries, visibilityCountry.code]))
-        : visibleToCountries;
     const previousSettings = {
       visibilityMode: visibilityCountry.visibilityMode ?? 'all',
-      visibleToCountries: visibilityCountry.visibleToCountries ?? [],
+      countriesToSee : normalizeVisibilityMap(
+        visibilityCountry.countriesToSee ,
+      ),
     };
+
+    // Use the current countriesToSee state directly, don't normalize it again
+    // The state should already be in the correct format
+    const countriesToSeeToSend =
+      visibilityMode === 'custom' ? countriesToSee : {};
 
     // Optimistic update
     setCountries((prev) =>
@@ -499,7 +604,7 @@ export default function CountriesPage() {
           ? {
               ...country,
               visibilityMode,
-              visibleToCountries: normalizedVisibleToCountries,
+              countriesToSee : normalizeVisibilityMap(countriesToSeeToSend),
             }
           : country,
       ),
@@ -511,9 +616,10 @@ export default function CountriesPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           visibilityMode,
-          visibleToCountries: normalizedVisibleToCountries,
+          countriesToSee : countriesToSeeToSend,
         }),
       });
+      
 
       const data = await response.json();
       if (!response.ok || !data.success) {
@@ -689,9 +795,11 @@ export default function CountriesPage() {
   const activeVisibilityCountries = useMemo(() => {
     let filtered = countries.filter((c) => c.isActive);
 
-    // Remove current country from list
+    // Never allow selecting the country itself; self visibility is resolved by backend.
     if (visibilityCountry) {
-      filtered = filtered.filter((c) => c.code !== visibilityCountry.code);
+      filtered = filtered.filter(
+        (country) => country.code !== visibilityCountry.code,
+      );
     }
 
     // Region filter
@@ -709,15 +817,6 @@ export default function CountriesPage() {
       return nameA.localeCompare(nameB);
     });
   }, [countries, regionFilter, visibilityCountry, locale]);
-
-  useEffect(() => {
-    if (visibilityMode !== 'specific' || !visibilityCountry) return;
-    setVisibleToCountries((prev) =>
-      prev.includes(visibilityCountry.code)
-        ? prev
-        : [...prev, visibilityCountry.code],
-    );
-  }, [visibilityMode, visibilityCountry]);
 
   return (
     <div className="space-y-6">
@@ -867,7 +966,9 @@ export default function CountriesPage() {
         visibilityCountry={visibilityCountry}
         visibilityMode={visibilityMode}
         setVisibilityMode={setVisibilityMode}
-        visibleToCountries={visibleToCountries}
+        visibilityTab={visibilityTab}
+        setVisibilityTab={setVisibilityTab}
+        countriesToSee ={countriesToSee }
         toggleVisibleToCountry={toggleVisibleToCountry}
         selectAllCountries={selectAllCountries}
         clearAllCountries={clearAllCountries}

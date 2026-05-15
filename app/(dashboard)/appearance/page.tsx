@@ -447,6 +447,7 @@ export default function AppearancePage() {
             onUpdate={handleAudioUpdate}
             onSetMain={handleAudioSetMain}
             onRemoveImage={(id) => handleAudioUpdate(id, { userImage: '' })}
+            t={t}
           />
         </>
       )}

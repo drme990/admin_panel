@@ -13,14 +13,7 @@ import Dropdown from '@/components/ui/dropdown';
 
 import { toast } from 'react-toastify';
 
-import {
-  LuBan,
-  LuShieldCheck,
-  LuSearch,
-  LuPencil,
-  LuCheck,
-  LuX,
-} from 'react-icons/lu';
+import { LuBan, LuShieldCheck, LuSearch, LuPencil } from 'react-icons/lu';
 
 type Customer = {
   _id: string;
@@ -33,7 +26,7 @@ type Customer = {
   ref: string | null;
   createdAt: string;
 };
- 
+
 type Referral = {
   _id: string;
   name: string;
@@ -55,9 +48,13 @@ export default function CustomersPage() {
   const [banFilter, setBanFilter] = useState<BanFilter>('all');
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [isRefModalOpen, setIsRefModalOpen] = useState(false);
-  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
+    null,
+  );
   const [referrals, setReferrals] = useState<Referral[]>([]);
-  const [tempSelectedRefId, setTempSelectedRefId] = useState<string | null>(null);
+  const [tempSelectedRefId, setTempSelectedRefId] = useState<string | null>(
+    null,
+  );
   const [fetchingRefs, setFetchingRefs] = useState(false);
   const ToolTipPositions = useLocale() === 'ar' ? 'right' : 'left';
 
@@ -117,7 +114,7 @@ export default function CustomersPage() {
   useEffect(() => {
     fetchCustomers();
   }, [fetchCustomers]);
- 
+
   const fetchReferrals = useCallback(async () => {
     try {
       setFetchingRefs(true);
@@ -132,7 +129,7 @@ export default function CustomersPage() {
       setFetchingRefs(false);
     }
   }, []);
- 
+
   useEffect(() => {
     fetchReferrals();
   }, [fetchReferrals]);
@@ -185,7 +182,7 @@ export default function CustomersPage() {
     },
     [confirm, t],
   );
- 
+
   const handleUpdateRef = useCallback(
     async (customer: Customer, ref: string | null) => {
       setUpdatingId(customer._id);
@@ -198,13 +195,13 @@ export default function CustomersPage() {
             body: JSON.stringify({ ref: ref || null }),
           },
         );
- 
+
         const data = await response.json();
         if (!data.success) {
           toast.error(data.error || t('messages.updateFailed'));
           return;
         }
- 
+
         setCustomers((prev) =>
           prev.map((item) =>
             item._id === customer._id && item.appId === customer.appId
@@ -305,7 +302,7 @@ export default function CustomersPage() {
                 <LuPencil size={16} />
               </Button>
             </Tooltip>
- 
+
             {customer.isBanned ? (
               <Tooltip content={t('unban')} position={ToolTipPositions}>
                 <Button
@@ -337,7 +334,7 @@ export default function CustomersPage() {
     ],
     [handleToggleBan, handleUpdateRef, t, updatingId, ToolTipPositions],
   );
- 
+
   const referralOptions = useMemo(() => {
     const options = referrals.map((r) => ({
       label: `${r.name} (${r.referralId})`,
@@ -412,7 +409,7 @@ export default function CustomersPage() {
       />
 
       <ConfirmModal {...modalProps} />
- 
+
       <Modal
         isOpen={isRefModalOpen}
         onClose={() => setIsRefModalOpen(false)}
@@ -420,10 +417,7 @@ export default function CustomersPage() {
         size="md"
         footer={
           <div className="flex justify-end gap-3">
-            <Button
-              variant="outline"
-              onClick={() => setIsRefModalOpen(false)}
-            >
+            <Button variant="outline" onClick={() => setIsRefModalOpen(false)}>
               {t('cancel')}
             </Button>
             <Button
@@ -434,14 +428,17 @@ export default function CustomersPage() {
               }
               disabled={updatingId === selectedCustomer?._id}
             >
-              {updatingId === selectedCustomer?._id ? t('saving') || 'Saving...' : t('save') || 'Save'}
+              {updatingId === selectedCustomer?._id
+                ? t('saving') || 'Saving...'
+                : t('save') || 'Save'}
             </Button>
           </div>
         }
       >
-        <div className="space-y-4 py-4 min-h-[200px]">
+        <div className="space-y-4 py-4 min-h-50">
           <p className="text-secondary text-sm mb-1">
-            {t('referralSelectionLabel') || 'Select a referral partner for this customer:'}
+            {t('referralSelectionLabel') ||
+              'Select a referral partner for this customer:'}
           </p>
           <Dropdown
             value={tempSelectedRefId || ''}
@@ -449,11 +446,15 @@ export default function CustomersPage() {
             onChange={(val) => setTempSelectedRefId(val || null)}
             placeholder="Select Referral"
           />
- 
+
           {tempSelectedRefId && (
             <div className="p-3 bg-primary/5 border border-primary/20 rounded-lg">
-              <p className="text-xs text-primary font-medium mb-1 uppercase">Selected ID</p>
-              <p className="text-lg font-mono text-foreground">{tempSelectedRefId}</p>
+              <p className="text-xs text-primary font-medium mb-1 uppercase">
+                Selected ID
+              </p>
+              <p className="text-lg font-mono text-foreground">
+                {tempSelectedRefId}
+              </p>
             </div>
           )}
         </div>

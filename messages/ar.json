@@ -884,7 +884,39 @@
       "saveFailed": "فشل حفظ إعدادات المظهر",
       "saveSuccess": "تم حفظ إعدادات المظهر بنجاح",
       "noImages": "لا توجد صور. انقر على 'إضافة صورة' للرفع.",
-      "uploadFailed": "فشل رفع الصورة"
+      "uploadFailed": "فشل رفع الصورة",
+      "audio": {
+        "title": "التقييمات الصوتية",
+        "description": "إدارة وتنظيم التقييمات الصوتية للعملاء.",
+        "count_single": "صوت",
+        "count_multiple": "أصوات",
+        "empty_title": "لا توجد تقييمات صوتية حتى الآن",
+        "main": "الرئيسي",
+        "setMain": "تعيين كرئيسي",
+        "mainTooltip": "الصوت الرئيسي (يعمل أولاً)",
+        "setMainTooltip": "تعيين كصوت رئيسي",
+        "delete": "حذف الصوت",
+        "uploadUserImage": "رفع صورة المستخدم",
+        "removeImage": "إزالة الصورة",
+        "nameAr": "الاسم (عربي)",
+        "nameEn": "الاسم (إنجليزي)",
+        "nameArPlaceholder": "اسم المستخدم",
+        "nameEnPlaceholder": "User Name",
+        "uploading": "جارٍ الرفع...",
+        "addAudio": "إضافة صوت",
+        "play": "تشغيل",
+        "pause": "إيقاف",
+        "platforms": {
+          "ghadaq": "غدق",
+          "manasik": "مناسك",
+          "shared": "مشترك"
+        },
+        "languages": {
+          "ar": "عربي",
+          "en": "إنجليزي",
+          "shared": "مشترك"
+        }
+      }
     },
     "booking": {
       "title": "الحجز",

@@ -885,7 +885,39 @@
       "saveFailed": "Failed to save appearance settings",
       "saveSuccess": "Appearance settings saved successfully",
       "noImages": "No images yet. Click 'Add Image' to upload.",
-      "uploadFailed": "Failed to upload image"
+      "uploadFailed": "Failed to upload image",
+      "audio": {
+        "title": "Audio Reviews",
+        "description": "Manage and organize customer audio reviews.",
+        "count_single": "audio",
+        "count_multiple": "audios",
+        "empty_title": "No audio reviews yet",
+        "main": "Main",
+        "setMain": "Set Main",
+        "mainTooltip": "Main audio (plays first)",
+        "setMainTooltip": "Set as main",
+        "delete": "Delete audio",
+        "uploadUserImage": "Upload user image",
+        "removeImage": "Remove image",
+        "nameAr": "Name (AR)",
+        "nameEn": "Name (EN)",
+        "nameArPlaceholder": "Arabic Name",
+        "nameEnPlaceholder": "User Name",
+        "uploading": "Uploading...",
+        "addAudio": "Add Audio",
+        "play": "Play",
+        "pause": "Pause",
+        "platforms": {
+          "ghadaq": "Ghadaq",
+          "manasik": "Manasik",
+          "shared": "Shared"
+        },
+        "languages": {
+          "ar": "AR",
+          "en": "EN",
+          "shared": "Shared"
+        }
+      }
     },
     "booking": {
       "title": "Booking",

@@ -2,18 +2,20 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
+import Table from '@/components/ui/table';
+import Button from '@/components/ui/button';
+import Input from '@/components/ui/input';
+import Tabs from '@/components/ui/tabs';
+import ConfirmModal, { useConfirmModal } from '@/components/ui/confirm-modal';
+import Tooltip from '@/components/ui/tooltip';
+
+import { toast } from 'react-toastify';
+
 import {
   LuBan as Ban,
   LuShieldCheck as ShieldCheck,
   LuSearch as Search,
 } from 'react-icons/lu';
-import Table from '@/components/ui/table';
-import Button from '@/components/ui/button';
-import Input from '@/components/ui/input';
-import Tabs from '@/components/ui/tabs';
-import { toast } from 'react-toastify';
-import ConfirmModal, { useConfirmModal } from '@/components/ui/confirm-modal';
-import { Tooltip } from '@/components/ui/tooltip';
 
 type Customer = {
   _id: string;

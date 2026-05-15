@@ -2,11 +2,6 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { Coupon } from '@/types/Coupon';
-import {
-  LuPlus as Plus,
-  LuPencil as Pencil,
-  LuTrash2 as Trash2,
-} from 'react-icons/lu';
 import Table from '@/components/ui/table';
 import Modal from '@/components/ui/modal';
 import Input from '@/components/ui/input';
@@ -15,8 +10,10 @@ import { useTranslations } from 'next-intl';
 import { toast } from 'react-toastify';
 import ConfirmModal, { useConfirmModal } from '@/components/ui/confirm-modal';
 import Button from '@/components/ui/button';
-import { Tooltip } from '@/components/ui/tooltip';
+import Tooltip from '@/components/ui/tooltip';
 import Pagination from '@/components/ui/pagination';
+
+import { LuPlus, LuPencil, LuTrash2 } from 'react-icons/lu';
 
 export default function CouponsPage() {
   const [coupons, setCoupons] = useState<Coupon[]>([]);
@@ -250,7 +247,7 @@ export default function CouponsPage() {
               }}
               aria-label={t('editCoupon')}
             >
-              <Pencil size={16} />
+              <LuPencil size={16} />
             </Button>
           </Tooltip>
           <Tooltip position="left" content={t('buttons.deleteCoupon')}>
@@ -263,7 +260,7 @@ export default function CouponsPage() {
               }}
               aria-label={t('buttons.deleteCoupon')}
             >
-              <Trash2 size={16} />
+              <LuTrash2 size={16} />
             </Button>
           </Tooltip>
         </div>
@@ -281,7 +278,7 @@ export default function CouponsPage() {
           <p className="text-secondary">{t('description')}</p>
         </div>
         <Button onClick={() => openModal()}>
-          <Plus size={20} />
+          <LuPlus size={20} />
           {t('addCoupon')}
         </Button>
       </div>

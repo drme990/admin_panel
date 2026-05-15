@@ -92,6 +92,8 @@ export default function CountriesPage() {
     useState<VisibilityCountryMap>({});
   const [visibilitySaving, setVisibilitySaving] = useState(false);
   const [regionFilter, setRegionFilter] = useState('all');
+  const [copyFromCountryModalOpen, setCopyFromCountryModalOpen] = useState(false);
+  const [copyFromCountryId, setCopyFromCountryId] = useState<string | null>(null);
 
   const t = useTranslations('admin.countries');
   const locale = useLocale();
@@ -514,6 +516,7 @@ export default function CountriesPage() {
     setCountriesToSee(normalizedVisible);
     setVisibilityTab('realPrice');
     setRegionFilter('all');
+    setCopyFromCountryId(null);
     setVisibilityOpen(true);
   };
 
@@ -592,8 +595,6 @@ export default function CountriesPage() {
       ),
     };
 
-    // Use the current countriesToSee state directly, don't normalize it again
-    // The state should already be in the correct format
     const countriesToSeeToSend =
       visibilityMode === 'custom' ? countriesToSee : {};
 
@@ -619,7 +620,7 @@ export default function CountriesPage() {
           countriesToSee : countriesToSeeToSend,
         }),
       });
-      
+
 
       const data = await response.json();
       if (!response.ok || !data.success) {
@@ -641,6 +642,23 @@ export default function CountriesPage() {
     } finally {
       setVisibilitySaving(false);
     }
+  };
+
+  const handleCopyFromCountry = (countryId: string) => {
+    const sourceCountry = countries.find(c => c._id === countryId);
+    if (!sourceCountry || !visibilityCountry) return;
+
+    const copiedSettings = normalizeVisibilityMap(sourceCountry.countriesToSee);
+    
+    // Add the current country to the visibility settings as well
+    const currentCountryCode = visibilityCountry.code.toUpperCase();
+    copiedSettings[currentCountryCode] = {
+      realPrice: true,
+      exchangePrice: true,
+    };
+
+    setCountriesToSee(copiedSettings);
+    setVisibilityMode('custom');
   };
 
   const regionTableOptions = useMemo(() => {
@@ -978,6 +996,12 @@ export default function CountriesPage() {
         setRegionFilter={setRegionFilter}
         regionOptions={regionOptions}
         activeVisibilityCountries={activeVisibilityCountries}
+        copyFromCountryModalOpen={copyFromCountryModalOpen}
+        setCopyFromCountryModalOpen={setCopyFromCountryModalOpen}
+        copyFromCountryId={copyFromCountryId}
+        setCopyFromCountryId={setCopyFromCountryId}
+        allCountries={countries}
+        onCopyFromCountry={handleCopyFromCountry}
       />
     </div>
   );

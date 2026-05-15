@@ -1,7 +1,19 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useLocale, useTranslations } from 'next-intl';
+import { useRouter } from 'next/navigation';
 import { Product, getPrimaryProductImageUrl } from '@/types/Product';
+import Image from 'next/image';
+import Table from '@/components/ui/table';
+import Modal from '@/components/ui/modal';
+import Tooltip from '@/components/ui/tooltip';
+import ConfirmModal, { useConfirmModal } from '@/components/ui/confirm-modal';
+import Button from '@/components/ui/button';
+import Switch from '@/components/ui/switch';
+
+import { toast } from 'react-toastify';
+
 import {
   LuPlus as Plus,
   LuPencil as Pencil,
@@ -13,16 +25,6 @@ import {
   LuListOrdered as ListOrdered,
   LuSettings2 as Settings2,
 } from 'react-icons/lu';
-import Image from 'next/image';
-import { useRouter } from 'next/navigation';
-import Table from '@/components/ui/table';
-import Modal from '@/components/ui/modal';
-import { Tooltip } from '@/components/ui/tooltip';
-import { useLocale, useTranslations } from 'next-intl';
-import { toast } from 'react-toastify';
-import ConfirmModal, { useConfirmModal } from '@/components/ui/confirm-modal';
-import Button from '@/components/ui/button';
-import Switch from '@/components/ui/switch';
 
 export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);

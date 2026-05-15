@@ -553,10 +553,22 @@
           "realPrice": "السعر الحقيقي",
           "exchangePrice": "سعر الصرف"
         },
+        "copyModal": {
+          "title": "استخدام إعدادات الظهور من بلد آخر",
+          "description": "اختر البلد الذي تريد نسخ إعدادات الظهور منه لهذا النوع من السعر.",
+          "selectCountry": "اختر بلدًا",
+          "copyButton": "نسخ الإعدادات",
+          "cancel": "إلغاء",
+          "copying": "جارٍ النسخ...",
+          "copySuccess": "تم نسخ إعدادات الظهور بنجاح",
+          "copyFailed": "فشل نسخ إعدادات الظهور",
+          "copyDescription": "سيؤدي هذا إلى نسخ جميع إعدادات الرؤية من البلد المحدد وتطبيقها على هذا البلد."
+        },
         "selectCountries": "اختر البلدان لهذا النوع من السعر:",
         "noCountriesAvailable": "لا توجد بلدان نشطة متاحة",
         "selectAll": "اختر الكل",
         "clearAll": "مسح الكل",
+        "copyFromCountryTooltip": "نسخ الإعدادات من بلد آخر",
         "regionLabel": "المنطقة",
         "regionAll": "كل المناطق",
         "regionUnknown": "بدون منطقة",

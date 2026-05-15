@@ -3,6 +3,17 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { User, AdminPage, ALL_ADMIN_PAGES } from '@/types/User';
+import Table from '@/components/ui/table';
+import Modal from '@/components/ui/modal';
+import Dropdown from '@/components/ui/dropdown';
+import Input from '@/components/ui/input';
+import ConfirmModal, { useConfirmModal } from '@/components/ui/confirm-modal';
+import Button from '@/components/ui/button';
+import Tooltip from '@/components/ui/tooltip';
+import { useAuth } from '@/components/providers/auth-provider';
+
+import { toast } from 'react-toastify';
+
 import {
   LuPlus as Plus,
   LuTrash2 as Trash2,
@@ -10,15 +21,6 @@ import {
   LuUserCog as UserCog,
   LuPencil as Pencil,
 } from 'react-icons/lu';
-import Table from '@/components/ui/table';
-import Modal from '@/components/ui/modal';
-import Dropdown from '@/components/ui/dropdown';
-import Input from '@/components/ui/input';
-import { toast } from 'react-toastify';
-import ConfirmModal, { useConfirmModal } from '@/components/ui/confirm-modal';
-import { useAuth } from '@/components/providers/auth-provider';
-import Button from '@/components/ui/button';
-import { Tooltip } from '@/components/ui/tooltip';
 
 type ModalMode = 'add' | 'edit';
 
@@ -207,7 +209,10 @@ export default function UsersPage() {
               </Tooltip>
             )}
             {canDelete(user) && (
-              <Tooltip position={ToolTipPositions} content={t('deleteConfirmButton')}>
+              <Tooltip
+                position={ToolTipPositions}
+                content={t('deleteConfirmButton')}
+              >
                 <Button
                   variant="icon-danger"
                   size="custom"

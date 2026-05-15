@@ -1,16 +1,21 @@
 'use client';
 
+import { useTranslations, useLocale } from 'next-intl';
 import Modal from '@/components/ui/modal';
 import Button from '@/components/ui/button';
 import Checkbox from '@/components/ui/checkbox';
 import Dropdown from '@/components/ui/dropdown';
 import Tabs from '@/components/ui/tabs';
-import { useTranslations, useLocale } from 'next-intl';
+import Tooltip from '@/components/ui/tooltip';
+import CopySettingsModal from './copy-settings-modal';
+
+import { LuCopy } from 'react-icons/lu';
 
 interface Country {
   _id: string;
   code: string;
   name: { ar: string; en: string };
+  isActive: boolean;
 }
 
 type VisibilityTab = 'realPrice' | 'exchangePrice';
@@ -34,7 +39,7 @@ interface VisibilitySettingsModalProps {
   visibilityTab: VisibilityTab;
   setVisibilityTab: (tab: VisibilityTab) => void;
 
-  countriesToSee : CountryVisibilityMap;
+  countriesToSee: CountryVisibilityMap;
   toggleVisibleToCountry: (code: string) => void;
 
   selectAllCountries: () => void;
@@ -48,6 +53,13 @@ interface VisibilitySettingsModalProps {
   regionOptions: Array<{ label: string; value: string }>;
 
   activeVisibilityCountries: Country[];
+
+  copyFromCountryModalOpen: boolean;
+  setCopyFromCountryModalOpen: (open: boolean) => void;
+  copyFromCountryId: string | null;
+  setCopyFromCountryId: (id: string | null) => void;
+  allCountries: Country[];
+  onCopyFromCountry: (countryId: string) => void;
 }
 
 export default function VisibilitySettingsModal({
@@ -58,7 +70,7 @@ export default function VisibilitySettingsModal({
   setVisibilityMode,
   visibilityTab,
   setVisibilityTab,
-  countriesToSee ,
+  countriesToSee,
   toggleVisibleToCountry,
   selectAllCountries,
   clearAllCountries,
@@ -68,6 +80,12 @@ export default function VisibilitySettingsModal({
   setRegionFilter,
   regionOptions,
   activeVisibilityCountries,
+  copyFromCountryModalOpen,
+  setCopyFromCountryModalOpen,
+  copyFromCountryId,
+  setCopyFromCountryId,
+  allCountries,
+  onCopyFromCountry,
 }: VisibilitySettingsModalProps) {
   const t = useTranslations('admin.countries');
   const locale = useLocale();
@@ -82,6 +100,15 @@ export default function VisibilitySettingsModal({
       label: t('visibilitySettings.priceTabs.exchangePrice'),
     },
   ];
+
+  // Filter countries for copy dropdown (exclude current country and inactive countries)
+  const availableCountriesForCopy = allCountries
+    .filter((c) => c.isActive && c._id !== visibilityCountry?._id)
+    .map((c) => ({
+      label: `${locale === 'ar' ? c.name.ar : c.name.en} (${c.code})`,
+      value: c._id,
+    }))
+    .sort((a, b) => a.label.localeCompare(b.label));
 
   return (
     <Modal
@@ -157,13 +184,26 @@ export default function VisibilitySettingsModal({
               </span>
 
               <div className="flex gap-2">
-                <Button onClick={selectAllCountries} variant="ghost">
+                <Button size="sm" onClick={selectAllCountries} variant="ghost">
                   {t('visibilitySettings.selectAll')}
                 </Button>
 
-                <Button onClick={clearAllCountries} variant="ghost">
+                <Button size="sm" onClick={clearAllCountries} variant="ghost">
                   {t('visibilitySettings.clearAll')}
                 </Button>
+
+                <Tooltip
+                  content={t('visibilitySettings.copyFromCountryTooltip')}
+                  position={locale === 'ar' ? 'right' : 'left'}
+                >
+                  <Button
+                    onClick={() => setCopyFromCountryModalOpen(true)}
+                    variant="icon"
+                    size="custom"
+                  >
+                    <LuCopy className="text-lg" />
+                  </Button>
+                </Tooltip>
               </div>
             </div>
 
@@ -185,9 +225,7 @@ export default function VisibilitySettingsModal({
                 <Checkbox
                   key={country._id}
                   checked={Boolean(
-                    countriesToSee [country.code.toUpperCase()]?.[
-                      visibilityTab
-                    ],
+                    countriesToSee[country.code.toUpperCase()]?.[visibilityTab],
                   )}
                   onChange={() => toggleVisibleToCountry(country.code)}
                   label={`${
@@ -204,6 +242,17 @@ export default function VisibilitySettingsModal({
             </div>
           </div>
         )}
+
+        {/* Copy from Country Modal */}
+        <CopySettingsModal
+          copyFromCountryModalOpen={copyFromCountryModalOpen}
+          setCopyFromCountryModalOpen={setCopyFromCountryModalOpen}
+          copyFromCountryId={copyFromCountryId}
+          setCopyFromCountryId={setCopyFromCountryId}
+          availableCountriesForCopy={availableCountriesForCopy}
+          onCopyFromCountry={onCopyFromCountry}
+          t={t}
+        />
       </div>
     </Modal>
   );

@@ -1,12 +1,14 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { Product, normalizeProductMedia } from '@/types/Product';
 import Input from '@/components/ui/input';
 import Switch from '@/components/ui/switch';
 import Button from '@/components/ui/button';
-import { Tooltip } from '@/components/ui/tooltip';
+import Tooltip from '@/components/ui/tooltip';
+import Checkbox from '../ui/checkbox';
 import MultiCurrencyPriceEditor, {
   CurrencyPrice,
 } from '@/components/admin/multi-currency-price-editor';
@@ -18,14 +20,7 @@ import MultiMediaUpload, {
 } from '@/components/admin/multi-media-upload';
 import UploadProgressDisplay from '@/components/admin/upload-progress-display';
 import RichTextEditor from '@/components/ui/rich-text-editor';
-import { useTranslations } from 'next-intl';
-import { toast } from 'react-toastify';
-import {
-  LuPlus as Plus,
-  LuX as X,
-  LuClipboardList as ClipboardList,
-  LuCircleHelp as CircleHelp,
-} from 'react-icons/lu';
+
 import Loading from '../ui/loading';
 import {
   buildCurrencyRoundingMap,
@@ -39,7 +34,14 @@ import {
   ReservationField,
   ReservationFieldKey,
 } from '@/lib/reservation-fields';
-import Checkbox from '../ui/checkbox';
+import { toast } from 'react-toastify';
+
+import {
+  LuPlus as Plus,
+  LuX as X,
+  LuClipboardList as ClipboardList,
+  LuCircleHelp as CircleHelp,
+} from 'react-icons/lu';
 
 interface ProductFormProps {
   product?: Product | null;

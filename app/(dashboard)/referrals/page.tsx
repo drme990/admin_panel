@@ -1,22 +1,23 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useLocale, useTranslations } from 'next-intl';
+import Modal from '@/components/ui/modal';
+import Input from '@/components/ui/input';
+import Table from '@/components/ui/table';
+import Pagination from '@/components/ui/pagination';
+import ConfirmModal, { useConfirmModal } from '@/components/ui/confirm-modal';
+import { Referral } from '@/types/Referral';
+import Button from '@/components/ui/button';
+import Tooltip from '@/components/ui/tooltip';
+import { toast } from 'react-toastify';
+
 import {
   LuPlus as Plus,
   LuPen as Edit,
   LuTrash2 as Trash2,
   LuSearch as Search,
 } from 'react-icons/lu';
-import { useLocale, useTranslations } from 'next-intl';
-import Modal from '@/components/ui/modal';
-import Input from '@/components/ui/input';
-import Table from '@/components/ui/table';
-import Pagination from '@/components/ui/pagination';
-import { toast } from 'react-toastify';
-import ConfirmModal, { useConfirmModal } from '@/components/ui/confirm-modal';
-import { Referral } from '@/types/Referral';
-import Button from '@/components/ui/button';
-import { Tooltip } from '@/components/ui/tooltip';
 
 export default function ReferralsPage() {
   const [referrals, setReferrals] = useState<Referral[]>([]);

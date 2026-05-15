@@ -7,8 +7,9 @@ import Table from '@/components/ui/table';
 import Pagination from '@/components/ui/pagination';
 import Dropdown from '@/components/ui/dropdown';
 import Button from '@/components/ui/button';
-import { Tooltip } from '@/components/ui/tooltip';
+import Tooltip from '@/components/ui/tooltip';
 import ConfirmModal, { useConfirmModal } from '@/components/ui/confirm-modal';
+
 import { LuCopy, LuLink2, LuRefreshCcw, LuTrash2 } from 'react-icons/lu';
 
 type LinkStatus = 'unused' | 'opened' | 'used';

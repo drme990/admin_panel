@@ -554,10 +554,22 @@
           "realPrice": "Real Price",
           "exchangePrice": "Exchange price"
         },
+        "copyModal": {
+          "title": "Use Another Country Settings",
+          "description": "Select a country to copy its visibility settings from. This will apply the same visibility rules to the current country.",
+          "selectCountry": "Select a country",
+          "copyButton": "Copy Settings",
+          "cancel": "Cancel",
+          "copying": "Copying...",
+          "copySuccess": "Visibility settings copied successfully",
+          "copyFailed": "Failed to copy visibility settings",
+          "copyDescription": "This will copy all visibility settings from the selected country and apply them to this country."
+        },
         "selectCountries": "Choose countries for this price type:",
         "noCountriesAvailable": "No active countries available",
         "selectAll": "Select all",
         "clearAll": "Clear all",
+        "copyFromCountryTooltip": "Copy settings from another country",
         "regionLabel": "Region",
         "regionAll": "All regions",
         "regionUnknown": "No region",

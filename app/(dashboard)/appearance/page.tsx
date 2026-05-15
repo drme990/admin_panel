@@ -2,24 +2,29 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
-import { toast } from 'react-toastify';
-import { LuSave as Save } from 'react-icons/lu';
-import { PageLoading } from '@/components/ui/loading';
-import Button from '@/components/ui/button';
-import Tabs from '@/components/ui/tabs';
-import UploadProgressDisplay from '@/components/admin/upload-progress-display';
+
 import {
   BannerText,
   WorksImages,
   ProjectName,
   AudioReview,
+  DocumentationAnswer,
 } from '@/types/Appearance';
+import { PageLoading } from '@/components/ui/loading';
+import Button from '@/components/ui/button';
+import Tabs from '@/components/ui/tabs';
 import { setAudioAsMain } from '@/lib/audio-main-logic';
-import { AudioReviewsSection } from './components/AudioReviewsSection';
+import UploadProgressDisplay from '@/components/admin/upload-progress-display';
+import AudioReviewsSection from './components/audio-reviews-section';
+import BannerTextEditor from './components/banner-text-editor';
+import WhatsAppMessageEditor from './components/whatsapp-message-editor';
+import WorksImagesSection from './components/works-images-section';
+import DocumentationSection from './components/documentation-section';
 import { useMultipleAudioUpload } from '@/hooks/use-multiple-audio-upload';
-import { BannerTextEditor } from './components/BannerTextEditor';
-import { WhatsAppMessageEditor } from './components/WhatsAppMessageEditor';
-import { WorksImagesSection } from './components/WorksImagesSection';
+
+import { toast } from 'react-toastify';
+
+import { LuSave as Save } from 'react-icons/lu';
 
 type AppearanceApiResponse = {
   success?: boolean;
@@ -28,6 +33,7 @@ type AppearanceApiResponse = {
     whatsAppDefaultMessage?: string;
     bannerText?: unknown;
     audioReviews?: unknown;
+    documentationAnswer?: unknown;
   };
 };
 
@@ -44,6 +50,7 @@ const PROJECT_TAB_OPTIONS: Array<{ value: ProjectName; label: string }> =
   }));
 
 const EMPTY_BANNER_TEXT: BannerText = { ar: '', en: '' };
+const EMPTY_DOCUMENTATION_ANSWER: DocumentationAnswer = { ar: '', en: '' };
 
 function normalizeBannerText(value: unknown): BannerText {
   if (typeof value === 'string') {
@@ -97,6 +104,13 @@ export default function AppearancePage() {
     ghadaq: EMPTY_BANNER_TEXT,
     manasik: EMPTY_BANNER_TEXT,
     shared: EMPTY_BANNER_TEXT,
+  });
+  const [documentationAnswers, setDocumentationAnswers] = useState<
+    Record<ProjectName, DocumentationAnswer>
+  >({
+    ghadaq: EMPTY_DOCUMENTATION_ANSWER,
+    manasik: EMPTY_DOCUMENTATION_ANSWER,
+    shared: EMPTY_DOCUMENTATION_ANSWER,
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -211,6 +225,18 @@ export default function AppearancePage() {
         shared: byProject.shared?.success
           ? normalizeBannerText(byProject.shared.data?.bannerText)
           : EMPTY_BANNER_TEXT,
+      });
+
+      setDocumentationAnswers({
+        ghadaq: byProject.ghadaq?.success
+          ? normalizeBannerText(byProject.ghadaq.data?.documentationAnswer)
+          : EMPTY_DOCUMENTATION_ANSWER,
+        manasik: byProject.manasik?.success
+          ? normalizeBannerText(byProject.manasik.data?.documentationAnswer)
+          : EMPTY_DOCUMENTATION_ANSWER,
+        shared: byProject.shared?.success
+          ? normalizeBannerText(byProject.shared.data?.documentationAnswer)
+          : EMPTY_DOCUMENTATION_ANSWER,
       });
     } catch {
       toast.error(t('loadFailed'));
@@ -349,6 +375,7 @@ export default function AppearancePage() {
               audioReviews: isShared ? audioReviews : [],
               whatsAppDefaultMessage: defaultMessages[key],
               bannerText: bannerTexts[key],
+              documentationAnswer: documentationAnswers[key],
             }),
           });
 
@@ -448,6 +475,22 @@ export default function AppearancePage() {
             onSetMain={handleAudioSetMain}
             onRemoveImage={(id) => handleAudioUpdate(id, { userImage: '' })}
             t={t}
+          />
+
+          <DocumentationSection
+            value={documentationAnswers[activeProject]}
+            onChange={(value) =>
+              setDocumentationAnswers((prev) => ({
+                ...prev,
+                [activeProject]: value,
+              }))
+            }
+            title={t('documentationTitle')}
+            description={t('documentationDescription')}
+            labelAr={t('documentationLabelAr')}
+            labelEn={t('documentationLabelEn')}
+            placeholderAr={t('documentationPlaceholderAr')}
+            placeholderEn={t('documentationPlaceholderEn')}
           />
         </>
       )}

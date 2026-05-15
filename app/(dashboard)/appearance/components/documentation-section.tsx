@@ -1,10 +1,10 @@
 'use client';
 
-import { BannerText } from '@/types/Appearance';
+import { DocumentationAnswer } from '@/types/Appearance';
 
-interface BannerTextEditorProps {
-  value: BannerText;
-  onChange: (value: BannerText) => void;
+interface DocumentationSectionProps {
+  value: DocumentationAnswer;
+  onChange: (value: DocumentationAnswer) => void;
   title: string;
   description: string;
   labelAr: string;
@@ -13,7 +13,7 @@ interface BannerTextEditorProps {
   placeholderEn: string;
 }
 
-export function BannerTextEditor({
+export default function DocumentationSection({
   value,
   onChange,
   title,
@@ -22,7 +22,7 @@ export function BannerTextEditor({
   labelEn,
   placeholderAr,
   placeholderEn,
-}: BannerTextEditorProps) {
+}: DocumentationSectionProps) {
   return (
     <div className="space-y-3 border border-stroke rounded-xl p-5 bg-card-bg">
       <div>
@@ -42,7 +42,7 @@ export function BannerTextEditor({
               ar: e.target.value,
             })
           }
-          rows={3}
+          rows={4}
           className="w-full px-3 py-2 text-sm border border-stroke rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-success"
           placeholder={placeholderAr}
         />
@@ -60,7 +60,7 @@ export function BannerTextEditor({
               en: e.target.value,
             })
           }
-          rows={3}
+          rows={4}
           className="w-full px-3 py-2 text-sm border border-stroke rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-success"
           placeholder={placeholderEn}
         />

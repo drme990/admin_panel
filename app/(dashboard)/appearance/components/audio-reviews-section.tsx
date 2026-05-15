@@ -139,7 +139,7 @@ function MiniAudioPlayer({
   );
 }
 
-export function AudioReviewsSection(props: AudioReviewsSectionProps) {
+export default function AudioReviewsSection(props: AudioReviewsSectionProps) {
   const {
     audioReviews,
     uploading,

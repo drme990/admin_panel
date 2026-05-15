@@ -1,6 +1,6 @@
 'use client';
 
-import { ImageRowEditor } from './ImageRowEditor';
+import ImageRowEditor from './image-row-editor';
 import { WorksImages } from '@/types/Appearance';
 
 interface WorksImagesSectionProps {
@@ -29,7 +29,7 @@ interface WorksImagesSectionProps {
   uploadingLabel: string;
 }
 
-export function WorksImagesSection({
+export default function WorksImagesSection({
   images,
   uploadingRow,
   onUploadRow1,

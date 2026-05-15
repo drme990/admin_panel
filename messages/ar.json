@@ -316,7 +316,7 @@
       },
       "status": {
         "inStock": "متوفر",
-        "outOfStock": "غير متوفر"
+        "outOfStock": "نفذت"
       },
       "settings": {
         "title": "إعدادات سريعة",
@@ -870,6 +870,12 @@
       "whatsAppDescription": "حدد رسالة واتساب الافتراضية التي تظهر في الزر العائم في الواجهة.",
       "whatsAppDefaultMessageLabel": "رسالة واتساب الافتراضية",
       "whatsAppDefaultMessagePlaceholder": "اكتب الرسالة الافتراضية التي ستظهر في واتساب...",
+      "documentationTitle": "إجابة التوثيق",
+      "documentationDescription": "حدد إجابة سؤال 'كيف أستلم التوثيق؟' التي تظهر في صفحة تفاصيل المنتج.",
+      "documentationLabelAr": "إجابة التوثيق (عربي)",
+      "documentationLabelEn": "إجابة التوثيق (إنجليزي)",
+      "documentationPlaceholderAr": "اكتب الإجابة العربية للتوثيق...",
+      "documentationPlaceholderEn": "اكتب الإجابة الإنجليزية للتوثيق...",
       "row1": "الصف الأول (المتحرك الأول)",
       "row2": "الصف الثاني (المتحرك الثاني)",
       "addImage": "إضافة صورة",

@@ -9,7 +9,7 @@ interface WhatsAppMessageEditorProps {
   placeholder: string;
 }
 
-export function WhatsAppMessageEditor({
+export default function WhatsAppMessageEditor({
   value,
   onChange,
   title,

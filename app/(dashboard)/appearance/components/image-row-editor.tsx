@@ -31,7 +31,7 @@ interface ImageRowEditorProps {
   uploadingLabel: string;
 }
 
-export function ImageRowEditor({
+export default function ImageRowEditor({
   label,
   images,
   uploading,

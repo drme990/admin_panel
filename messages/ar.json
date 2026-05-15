@@ -745,12 +745,19 @@
         "phone": "الهاتف",
         "app": "التطبيق",
         "status": "الحالة",
+        "ref": "معرف الإحالة",
         "createdAt": "تاريخ الإنشاء",
         "actions": "الإجراءات"
       },
+      "editRef": "تعديل معرف الإحالة",
+      "referralSearchPlaceholder": "البحث بالاسم أو المعرف أو الهاتف...",
+      "referralSelectionLabel": "اختر شريك الإحالة لهذا العميل:",
+      "save": "حفظ الإحالة",
+      "saving": "جارٍ الحفظ...",
       "messages": {
         "fetchFailed": "فشل جلب العملاء",
         "updateFailed": "فشل تحديث العميل",
+        "updateSuccess": "تم تحديث العميل بنجاح",
         "banSuccess": "تم حظر العميل بنجاح",
         "unbanSuccess": "تم إلغاء حظر العميل بنجاح"
       }

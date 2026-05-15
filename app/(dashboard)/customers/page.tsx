@@ -8,13 +8,18 @@ import Input from '@/components/ui/input';
 import Tabs from '@/components/ui/tabs';
 import ConfirmModal, { useConfirmModal } from '@/components/ui/confirm-modal';
 import Tooltip from '@/components/ui/tooltip';
+import Modal from '@/components/ui/modal';
+import Dropdown from '@/components/ui/dropdown';
 
 import { toast } from 'react-toastify';
 
 import {
-  LuBan as Ban,
-  LuShieldCheck as ShieldCheck,
-  LuSearch as Search,
+  LuBan,
+  LuShieldCheck,
+  LuSearch,
+  LuPencil,
+  LuCheck,
+  LuX,
 } from 'react-icons/lu';
 
 type Customer = {
@@ -25,7 +30,15 @@ type Customer = {
   country: string;
   appId: 'ghadaq' | 'manasik';
   isBanned: boolean;
+  ref: string | null;
   createdAt: string;
+};
+ 
+type Referral = {
+  _id: string;
+  name: string;
+  referralId: string;
+  phone: string;
 };
 
 type AppFilter = 'all' | 'ghadaq' | 'manasik';
@@ -41,6 +54,11 @@ export default function CustomersPage() {
   const [appFilter, setAppFilter] = useState<AppFilter>('all');
   const [banFilter, setBanFilter] = useState<BanFilter>('all');
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [isRefModalOpen, setIsRefModalOpen] = useState(false);
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [referrals, setReferrals] = useState<Referral[]>([]);
+  const [tempSelectedRefId, setTempSelectedRefId] = useState<string | null>(null);
+  const [fetchingRefs, setFetchingRefs] = useState(false);
   const ToolTipPositions = useLocale() === 'ar' ? 'right' : 'left';
 
   const appFilterOptions = useMemo(
@@ -99,6 +117,25 @@ export default function CustomersPage() {
   useEffect(() => {
     fetchCustomers();
   }, [fetchCustomers]);
+ 
+  const fetchReferrals = useCallback(async () => {
+    try {
+      setFetchingRefs(true);
+      const response = await fetch('/api/referrals?limit=200');
+      const data = await response.json();
+      if (data.success) {
+        setReferrals(data.data.referrals || []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch referrals:', error);
+    } finally {
+      setFetchingRefs(false);
+    }
+  }, []);
+ 
+  useEffect(() => {
+    fetchReferrals();
+  }, [fetchReferrals]);
 
   const handleToggleBan = useCallback(
     async (customer: Customer) => {
@@ -148,6 +185,44 @@ export default function CustomersPage() {
     },
     [confirm, t],
   );
+ 
+  const handleUpdateRef = useCallback(
+    async (customer: Customer, ref: string | null) => {
+      setUpdatingId(customer._id);
+      try {
+        const response = await fetch(
+          `/api/customers/${customer.appId}/${customer._id}/ref`,
+          {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ref: ref || null }),
+          },
+        );
+ 
+        const data = await response.json();
+        if (!data.success) {
+          toast.error(data.error || t('messages.updateFailed'));
+          return;
+        }
+ 
+        setCustomers((prev) =>
+          prev.map((item) =>
+            item._id === customer._id && item.appId === customer.appId
+              ? { ...item, ref: ref || null }
+              : item,
+          ),
+        );
+        toast.success(t('messages.updateSuccess'));
+        setIsRefModalOpen(false);
+        setSelectedCustomer(null);
+      } catch {
+        toast.error(t('messages.updateFailed'));
+      } finally {
+        setUpdatingId(null);
+      }
+    },
+    [t],
+  );
 
   const columns = useMemo(
     () => [
@@ -183,6 +258,14 @@ export default function CustomersPage() {
         ),
       },
       {
+        header: t('table.ref'),
+        accessor: (customer: Customer) => (
+          <span className="text-secondary font-mono text-sm">
+            {customer.ref || '-'}
+          </span>
+        ),
+      },
+      {
         header: t('table.status'),
         accessor: (customer: Customer) => (
           <span
@@ -208,6 +291,21 @@ export default function CustomersPage() {
         header: t('table.actions'),
         accessor: (customer: Customer) => (
           <div className="flex items-center gap-2">
+            <Tooltip content={t('editRef')} position={ToolTipPositions}>
+              <Button
+                variant="icon-primary"
+                size="custom"
+                onClick={() => {
+                  setSelectedCustomer(customer);
+                  setTempSelectedRefId(customer.ref || null);
+                  setIsRefModalOpen(true);
+                }}
+                aria-label={t('editRef')}
+              >
+                <LuPencil size={16} />
+              </Button>
+            </Tooltip>
+ 
             {customer.isBanned ? (
               <Tooltip content={t('unban')} position={ToolTipPositions}>
                 <Button
@@ -217,7 +315,7 @@ export default function CustomersPage() {
                   disabled={updatingId === customer._id}
                   aria-label={t('unban')}
                 >
-                  <ShieldCheck size={16} />
+                  <LuShieldCheck size={16} />
                 </Button>
               </Tooltip>
             ) : (
@@ -229,7 +327,7 @@ export default function CustomersPage() {
                   disabled={updatingId === customer._id}
                   aria-label={t('ban')}
                 >
-                  <Ban size={16} />
+                  <LuBan size={16} />
                 </Button>
               </Tooltip>
             )}
@@ -237,8 +335,16 @@ export default function CustomersPage() {
         ),
       },
     ],
-    [handleToggleBan, t, updatingId, ToolTipPositions],
+    [handleToggleBan, handleUpdateRef, t, updatingId, ToolTipPositions],
   );
+ 
+  const referralOptions = useMemo(() => {
+    const options = referrals.map((r) => ({
+      label: `${r.name} (${r.referralId})`,
+      value: r.referralId,
+    }));
+    return [{ label: 'None / Clear', value: '' }, ...options];
+  }, [referrals]);
 
   return (
     <div className="space-y-6">
@@ -275,7 +381,7 @@ export default function CustomersPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder={t('searchPlaceholder')}
-            suffix={<Search className="text-secondary" size={18} />}
+            suffix={<LuSearch className="text-secondary" size={18} />}
           />
 
           <div className="flex items-center gap-2 flex-wrap">
@@ -306,6 +412,52 @@ export default function CustomersPage() {
       />
 
       <ConfirmModal {...modalProps} />
+ 
+      <Modal
+        isOpen={isRefModalOpen}
+        onClose={() => setIsRefModalOpen(false)}
+        title={t('editRef')}
+        size="md"
+        footer={
+          <div className="flex justify-end gap-3">
+            <Button
+              variant="outline"
+              onClick={() => setIsRefModalOpen(false)}
+            >
+              {t('cancel')}
+            </Button>
+            <Button
+              variant="primary"
+              onClick={() =>
+                selectedCustomer &&
+                handleUpdateRef(selectedCustomer, tempSelectedRefId)
+              }
+              disabled={updatingId === selectedCustomer?._id}
+            >
+              {updatingId === selectedCustomer?._id ? t('saving') || 'Saving...' : t('save') || 'Save'}
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-4 py-4 min-h-[200px]">
+          <p className="text-secondary text-sm mb-1">
+            {t('referralSelectionLabel') || 'Select a referral partner for this customer:'}
+          </p>
+          <Dropdown
+            value={tempSelectedRefId || ''}
+            options={referralOptions}
+            onChange={(val) => setTempSelectedRefId(val || null)}
+            placeholder="Select Referral"
+          />
+ 
+          {tempSelectedRefId && (
+            <div className="p-3 bg-primary/5 border border-primary/20 rounded-lg">
+              <p className="text-xs text-primary font-medium mb-1 uppercase">Selected ID</p>
+              <p className="text-lg font-mono text-foreground">{tempSelectedRefId}</p>
+            </div>
+          )}
+        </div>
+      </Modal>
     </div>
   );
 }

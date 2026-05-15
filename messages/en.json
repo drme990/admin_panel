@@ -746,12 +746,19 @@
         "phone": "Phone",
         "app": "App",
         "status": "Status",
+        "ref": "Referral ID",
         "createdAt": "Created At",
         "actions": "Actions"
       },
+      "editRef": "Edit Referral ID",
+      "referralSearchPlaceholder": "Search by name, ID, or phone...",
+      "referralSelectionLabel": "Select a referral partner for this customer:",
+      "save": "Save Referral",
+      "saving": "Saving...",
       "messages": {
         "fetchFailed": "Failed to fetch customers",
         "updateFailed": "Failed to update customer",
+        "updateSuccess": "Customer updated successfully",
         "banSuccess": "Customer banned successfully",
         "unbanSuccess": "Customer unbanned successfully"
       }

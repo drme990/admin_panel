@@ -165,65 +165,10 @@
       "customers": "Customers",
       "analytics": "Analytics",
       "referrals": "Referrals",
-      "refTracker": "Ref Tracker",
       "activityLogs": "Activity Logs",
       "appearance": "Appearance",
       "exchange": "Exchange Rates",
       "payments": "Payments"
-    },
-    "refTracker": {
-      "title": "Ref Tracker",
-      "description": "Track app sessions, referral sources, and the key clicks that lead into the checkout flow.",
-      "refresh": "Refresh",
-      "loading": "Loading tracker events...",
-      "emptyMessage": "No tracker events found",
-      "filters": {
-        "title": "Filters",
-        "app": "App",
-        "action": "Action",
-        "session": "Session",
-        "user": "User ID",
-        "ref": "Ref",
-        "ip": "IP Address",
-        "product": "Product",
-        "clear": "Clear filters"
-      },
-      "app": {
-        "all": "All Apps",
-        "manasik": "Manasik",
-        "ghadaq": "Ghadaq"
-      },
-      "actions": {
-        "all": "All Actions",
-        "sessionCreated": "Session Created",
-        "navigateProducts": "Navigate to Products",
-        "selectProduct": "Select Product",
-        "payNow": "Pay Now",
-        "checkoutChoice": "Checkout Choice",
-        "proceedToPayment": "Proceed to Payment"
-      },
-      "choices": {
-        "full": "Pay Full Amount",
-        "half": "Pay Half",
-        "custom": "Pay Custom Amount",
-        "customAmount": "Confirm Custom Amount",
-        "customQuantityKeep": "Keep Quantity",
-        "customQuantitySetOne": "Set Quantity to 1",
-        "reservationDetails": "Proceed to Reservation Details"
-      },
-      "table": {
-        "createdAt": "Created At",
-        "app": "App",
-        "sessionNumber": "Session",
-        "userId": "User ID",
-        "ref": "Ref",
-        "ip": "IP",
-        "action": "Action",
-        "path": "Path",
-        "productName": "Product",
-        "buttonLabel": "Button",
-        "choice": "Choice"
-      }
     },
     "loading": "Loading dashboard...",
     "redirecting": "Redirecting to login...",
@@ -731,6 +676,22 @@
         "ghadaq": "Ghadaq",
         "allStatus": "All Status"
       },
+      "common": {
+        "allReferences": "All References",
+        "defaultReferral": "No Referral",
+        "clearReferral": "Clear Referral",
+        "loadingRefs": "Loading referrals...",
+        "historyIcon": "Referral history",
+        "historyLoadFailed": "Failed to load referral history",
+        "bulkApplyRef": "Apply Ref",
+        "bulkApplying": "Applying...",
+        "bulkClearSelection": "Clear Selection",
+        "bulkSelectionLabel": "{count} customers selected",
+        "bulkDropdownLabel": "Bulk ref update",
+        "selectAllCustomers": "Select all customers",
+        "selectCustomer": "Select {name}",
+        "selectReferral": "Select referral"
+      },
       "status": {
         "active": "Active",
         "banned": "Banned"
@@ -738,7 +699,9 @@
       "stats": {
         "total": "Total Customers",
         "manasik": "Manasik",
-        "ghadaq": "Ghadaq"
+        "ghadaq": "Ghadaq",
+        "active": "Active",
+        "banned": "Banned"
       },
       "table": {
         "name": "Customer",
@@ -755,6 +718,27 @@
       "referralSelectionLabel": "Select a referral partner for this customer:",
       "save": "Save Referral",
       "saving": "Saving...",
+      "ordersModal": {
+        "title": "Orders",
+        "close": "Close",
+        "emptyMessage": "No paid orders found for this customer",
+        "loadFailed": "Failed to load customer orders",
+        "orderNumber": "Order Number",
+        "totalAmount": "Total Amount",
+        "status": "Status",
+        "created": "Created",
+        "paidAmount": "Paid Amount",
+        "remainingAmount": "Remaining Amount",
+        "itemsLabel": "Items ({count})"
+      },
+      "historyModal": {
+        "title": "Referral History",
+        "close": "Close",
+        "emptyMessage": "No referral history found.",
+        "changeLabel": "Referral Change",
+        "changedBy": "Changed By",
+        "arrow": "→"
+      },
       "messages": {
         "fetchFailed": "Failed to fetch customers",
         "updateFailed": "Failed to update customer",

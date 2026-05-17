@@ -6,14 +6,24 @@ import Table from '@/components/ui/table';
 import Button from '@/components/ui/button';
 import Input from '@/components/ui/input';
 import Tabs from '@/components/ui/tabs';
+import BulkAction from '@/components/ui/bulk-action';
+import Checkbox from '@/components/ui/checkbox';
 import ConfirmModal, { useConfirmModal } from '@/components/ui/confirm-modal';
 import Tooltip from '@/components/ui/tooltip';
-import Modal from '@/components/ui/modal';
 import Dropdown from '@/components/ui/dropdown';
 
 import { toast } from 'react-toastify';
 
-import { LuBan, LuShieldCheck, LuSearch, LuPencil } from 'react-icons/lu';
+import {
+  LuBan,
+  LuShieldCheck,
+  LuSearch,
+  LuShoppingCart,
+  LuHistory,
+} from 'react-icons/lu';
+import CustomerOrdersModal from './components/customer-orders-modal';
+import CustomerRefHistoryModal from './components/customer-ref-history-modal';
+import { Order } from '@/types/Order';
 
 type Customer = {
   _id: string;
@@ -36,9 +46,31 @@ type Referral = {
 
 type AppFilter = 'all' | 'ghadaq' | 'manasik';
 type BanFilter = 'all' | 'banned' | 'active';
+type RefFilter = 'all' | 'default' | string;
+
+type CustomerRefHistory = {
+  _id: string;
+  previousRef: string | null;
+  newRef: string | null;
+  changedByUserName: string;
+  changedByUserEmail: string;
+  changeSource: 'single' | 'bulk';
+  createdAt: string;
+};
+
+function getCustomerKey(customer: Customer): string {
+  return `${customer.appId}:${customer._id}`;
+}
+
+function normalizeRefValue(value: string): string | null {
+  if (!value || value === 'default') return null;
+  return value;
+}
 
 export default function CustomersPage() {
   const t = useTranslations('admin.customers');
+  const tCommon = useTranslations('admin.customers.common');
+  const tOrders = useTranslations('admin.customers.ordersModal');
   const { confirm, modalProps } = useConfirmModal();
 
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -46,17 +78,51 @@ export default function CustomersPage() {
   const [search, setSearch] = useState('');
   const [appFilter, setAppFilter] = useState<AppFilter>('all');
   const [banFilter, setBanFilter] = useState<BanFilter>('all');
+  const [refFilter, setRefFilter] = useState<RefFilter>('all');
   const [updatingId, setUpdatingId] = useState<string | null>(null);
-  const [isRefModalOpen, setIsRefModalOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
     null,
   );
-  const [referrals, setReferrals] = useState<Referral[]>([]);
-  const [tempSelectedRefId, setTempSelectedRefId] = useState<string | null>(
-    null,
+  const [selectedCustomerKeys, setSelectedCustomerKeys] = useState<string[]>(
+    [],
   );
+  const [referrals, setReferrals] = useState<Referral[]>([]);
   const [fetchingRefs, setFetchingRefs] = useState(false);
   const ToolTipPositions = useLocale() === 'ar' ? 'right' : 'left';
+
+  const [bulkRefValue, setBulkRefValue] = useState('');
+  const [bulkUpdating, setBulkUpdating] = useState(false);
+
+  // User orders modal state
+  const [isOrdersModalOpen, setIsOrdersModalOpen] = useState(false);
+  const [customerOrders, setCustomerOrders] = useState<Order[]>([]);
+  const [loadingOrders, setLoadingOrders] = useState(false);
+
+  // Ref history modal state
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [selectedHistoryCustomer, setSelectedHistoryCustomer] = useState<{
+    _id: string;
+    name: string;
+    ref: string | null;
+    appId: Customer['appId'];
+  } | null>(null);
+  const [refHistory, setRefHistory] = useState<CustomerRefHistory[]>([]);
+
+  // Pagination state
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(20);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+
+  // Stats from API (all customers, not filtered)
+  const [stats, setStats] = useState({
+    total: 0,
+    manasik: 0,
+    ghadaq: 0,
+    banned: 0,
+    active: 0,
+  });
 
   const appFilterOptions = useMemo(
     () => [
@@ -76,13 +142,26 @@ export default function CustomersPage() {
     [t],
   );
 
-  const stats = useMemo(() => {
-    const total = customers.length;
-    const manasik = customers.filter((c) => c.appId === 'manasik').length;
-    const ghadaq = customers.filter((c) => c.appId === 'ghadaq').length;
+  const refFilterOptions = useMemo(() => {
+    const options = referrals.map((r) => ({
+      label: r.referralId,
+      value: r.referralId,
+    }));
+    return [
+      { value: 'all' as const, label: tCommon('allReferences') },
+      { value: '__none__' as const, label: tCommon('defaultReferral') },
+      ...options,
+    ];
+  }, [referrals, tCommon]);
 
-    return { total, manasik, ghadaq };
-  }, [customers]);
+  const refActionOptions = useMemo(() => {
+    const options = referrals.map((r) => ({
+      label: r.referralId,
+      value: r.referralId,
+    }));
+
+    return [{ label: tCommon('clearReferral'), value: '__none__' }, ...options];
+  }, [referrals, tCommon]);
 
   const fetchCustomers = useCallback(async () => {
     try {
@@ -92,7 +171,10 @@ export default function CustomersPage() {
       if (appFilter !== 'all') params.set('appId', appFilter);
       if (banFilter === 'banned') params.set('isBanned', 'true');
       if (banFilter === 'active') params.set('isBanned', 'false');
+      if (refFilter !== 'all') params.set('ref', refFilter);
       if (search.trim()) params.set('search', search.trim());
+      params.set('page', page.toString());
+      params.set('limit', limit.toString());
 
       const query = params.toString();
       const url = query ? `/api/customers?${query}` : '/api/customers';
@@ -101,6 +183,17 @@ export default function CustomersPage() {
 
       if (data.success) {
         setCustomers(data.data.customers || []);
+        setTotal(data.data.pagination?.total || 0);
+        setTotalPages(data.data.pagination?.totalPages || 0);
+        setStats(
+          data.data.stats || {
+            total: 0,
+            manasik: 0,
+            ghadaq: 0,
+            banned: 0,
+            active: 0,
+          },
+        );
       } else {
         toast.error(data.error || t('messages.fetchFailed'));
       }
@@ -109,7 +202,15 @@ export default function CustomersPage() {
     } finally {
       setLoading(false);
     }
-  }, [appFilter, banFilter, search, t]);
+  }, [appFilter, banFilter, refFilter, search, page, limit, t]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [appFilter, banFilter, refFilter, search]);
+
+  useEffect(() => {
+    setSelectedCustomerKeys([]);
+  }, [page, appFilter, banFilter, refFilter, search, limit]);
 
   useEffect(() => {
     fetchCustomers();
@@ -133,6 +234,88 @@ export default function CustomersPage() {
   useEffect(() => {
     fetchReferrals();
   }, [fetchReferrals]);
+
+  const fetchCustomerOrders = useCallback(
+    async (customer: Customer) => {
+      try {
+        setLoadingOrders(true);
+        const response = await fetch(
+          `/api/customers/${customer.appId}/${customer._id}/orders`,
+        );
+        const data = await response.json();
+
+        if (data.success) {
+          setCustomerOrders(data.data.orders || []);
+        } else {
+          toast.error(data.error || tOrders('loadFailed'));
+        }
+      } catch (error) {
+        console.error('Error fetching customer orders:', error);
+        toast.error(tOrders('loadFailed'));
+      } finally {
+        setLoadingOrders(false);
+      }
+    },
+    [tOrders],
+  );
+
+  const fetchCustomerRefHistory = useCallback(
+    async (customer: Customer) => {
+      try {
+        setLoadingHistory(true);
+        const response = await fetch(
+          `/api/customers/${customer.appId}/${customer._id}/ref-history`,
+        );
+        const data = await response.json();
+
+        if (data.success) {
+          setRefHistory(data.data.history || []);
+        } else {
+          toast.error(data.error || tCommon('historyLoadFailed'));
+        }
+      } catch (error) {
+        console.error('Error fetching customer ref history:', error);
+        toast.error(tCommon('historyLoadFailed'));
+      } finally {
+        setLoadingHistory(false);
+      }
+    },
+    [tCommon],
+  );
+
+  const updateCustomerRef = useCallback(
+    async (customer: Customer, nextRefValue: string) => {
+      const nextRef = normalizeRefValue(nextRefValue);
+      setUpdatingId(customer._id);
+
+      try {
+        const response = await fetch(
+          `/api/customers/${customer.appId}/${customer._id}/ref`,
+          {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ref: nextRef }),
+          },
+        );
+
+        const data = await response.json();
+        if (!data.success) {
+          toast.error(data.error || t('messages.updateFailed'));
+          return false;
+        }
+
+        await fetchCustomers();
+        toast.success(t('messages.updateSuccess'));
+        return true;
+      } catch {
+        toast.error(t('messages.updateFailed'));
+        return false;
+      } finally {
+        setUpdatingId(null);
+      }
+    },
+    [fetchCustomers, t],
+  );
 
   const handleToggleBan = useCallback(
     async (customer: Customer) => {
@@ -183,46 +366,128 @@ export default function CustomersPage() {
     [confirm, t],
   );
 
-  const handleUpdateRef = useCallback(
-    async (customer: Customer, ref: string | null) => {
-      setUpdatingId(customer._id);
-      try {
-        const response = await fetch(
-          `/api/customers/${customer.appId}/${customer._id}/ref`,
-          {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ref: ref || null }),
-          },
-        );
-
-        const data = await response.json();
-        if (!data.success) {
-          toast.error(data.error || t('messages.updateFailed'));
-          return;
-        }
-
-        setCustomers((prev) =>
-          prev.map((item) =>
-            item._id === customer._id && item.appId === customer.appId
-              ? { ...item, ref: ref || null }
-              : item,
-          ),
-        );
-        toast.success(t('messages.updateSuccess'));
-        setIsRefModalOpen(false);
-        setSelectedCustomer(null);
-      } catch {
-        toast.error(t('messages.updateFailed'));
-      } finally {
-        setUpdatingId(null);
-      }
+  const handleRefDropdownChange = useCallback(
+    async (customer: Customer, nextRefValue: string) => {
+      await updateCustomerRef(customer, nextRefValue);
     },
-    [t],
+    [updateCustomerRef],
+  );
+
+  const handleToggleCustomerSelection = useCallback((customer: Customer) => {
+    const key = getCustomerKey(customer);
+    setSelectedCustomerKeys((prev) =>
+      prev.includes(key) ? prev.filter((item) => item !== key) : [...prev, key],
+    );
+  }, []);
+
+  const handleToggleAllCustomers = useCallback(() => {
+    const allKeys = customers.map(getCustomerKey);
+    const allSelected =
+      allKeys.length > 0 &&
+      allKeys.every((key) => selectedCustomerKeys.includes(key));
+
+    if (allSelected) {
+      setSelectedCustomerKeys([]);
+      return;
+    }
+
+    setSelectedCustomerKeys(allKeys);
+  }, [customers, selectedCustomerKeys]);
+
+  const handleClearSelection = useCallback(() => {
+    setSelectedCustomerKeys([]);
+    setBulkRefValue('');
+  }, []);
+
+  const handleBulkApplyRef = useCallback(async () => {
+    const selected = customers.filter((customer) =>
+      selectedCustomerKeys.includes(getCustomerKey(customer)),
+    );
+
+    if (selected.length === 0 || !bulkRefValue) {
+      return;
+    }
+
+    setBulkUpdating(true);
+    try {
+      const response = await fetch('/api/customers/bulk-ref', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ref: normalizeRefValue(bulkRefValue),
+          customers: selected.map((customer) => ({
+            id: customer._id,
+            appId: customer.appId,
+          })),
+        }),
+      });
+
+      const data = await response.json();
+      if (!data.success) {
+        toast.error(data.error || t('messages.updateFailed'));
+        return;
+      }
+
+      await fetchCustomers();
+      handleClearSelection();
+      toast.success(t('messages.updateSuccess'));
+    } catch {
+      toast.error(t('messages.updateFailed'));
+    } finally {
+      setBulkUpdating(false);
+    }
+  }, [
+    bulkRefValue,
+    customers,
+    fetchCustomers,
+    handleClearSelection,
+    selectedCustomerKeys,
+    t,
+  ]);
+
+  const handleOpenHistory = useCallback(
+    async (customer: Customer) => {
+      setSelectedHistoryCustomer(customer);
+      setRefHistory([]);
+      setIsHistoryModalOpen(true);
+      await fetchCustomerRefHistory(customer);
+    },
+    [fetchCustomerRefHistory],
+  );
+
+  const handleViewOrders = useCallback(
+    (customer: Customer) => {
+      setSelectedCustomer(customer);
+      setIsOrdersModalOpen(true);
+      fetchCustomerOrders(customer);
+    },
+    [fetchCustomerOrders],
   );
 
   const columns = useMemo(
     () => [
+      {
+        header: (
+          <Checkbox
+            checked={
+              customers.length > 0 &&
+              customers.every((customer) =>
+                selectedCustomerKeys.includes(getCustomerKey(customer)),
+              )
+            }
+            onChange={handleToggleAllCustomers}
+            aria-label={tCommon('selectAllCustomers')}
+          />
+        ),
+        accessor: (customer: Customer) => (
+          <Checkbox
+            checked={selectedCustomerKeys.includes(getCustomerKey(customer))}
+            onChange={() => handleToggleCustomerSelection(customer)}
+            aria-label={tCommon('selectCustomer', { name: customer.name })}
+          />
+        ),
+        className: 'w-12',
+      },
       {
         header: t('table.userId'),
         accessor: (customer: Customer) => (
@@ -257,9 +522,14 @@ export default function CustomersPage() {
       {
         header: t('table.ref'),
         accessor: (customer: Customer) => (
-          <span className="text-secondary font-mono text-sm">
-            {customer.ref || '-'}
-          </span>
+          <Dropdown
+            value={customer.ref || 'default'}
+            options={refActionOptions}
+            onChange={(value) => handleRefDropdownChange(customer, value)}
+            placeholder={tCommon('selectReferral')}
+            disabled={loading || bulkUpdating || updatingId === customer._id}
+            className="min-w-52"
+          />
         ),
       },
       {
@@ -288,18 +558,28 @@ export default function CustomersPage() {
         header: t('table.actions'),
         accessor: (customer: Customer) => (
           <div className="flex items-center gap-2">
-            <Tooltip content={t('editRef')} position={ToolTipPositions}>
+            <Tooltip content={tOrders('title')} position={ToolTipPositions}>
               <Button
                 variant="icon-primary"
                 size="custom"
-                onClick={() => {
-                  setSelectedCustomer(customer);
-                  setTempSelectedRefId(customer.ref || null);
-                  setIsRefModalOpen(true);
-                }}
-                aria-label={t('editRef')}
+                onClick={() => handleViewOrders(customer)}
+                aria-label={tOrders('title')}
               >
-                <LuPencil size={16} />
+                <LuShoppingCart size={16} />
+              </Button>
+            </Tooltip>
+
+            <Tooltip
+              content={tCommon('historyIcon')}
+              position={ToolTipPositions}
+            >
+              <Button
+                variant="icon-primary"
+                size="custom"
+                onClick={() => handleOpenHistory(customer)}
+                aria-label={tCommon('historyIcon')}
+              >
+                <LuHistory size={16} />
               </Button>
             </Tooltip>
 
@@ -332,16 +612,25 @@ export default function CustomersPage() {
         ),
       },
     ],
-    [handleToggleBan, handleUpdateRef, t, updatingId, ToolTipPositions],
+    [
+      customers,
+      handleOpenHistory,
+      handleToggleAllCustomers,
+      handleToggleBan,
+      handleToggleCustomerSelection,
+      handleViewOrders,
+      handleRefDropdownChange,
+      loading,
+      bulkUpdating,
+      tCommon,
+      tOrders,
+      refActionOptions,
+      selectedCustomerKeys,
+      t,
+      ToolTipPositions,
+      updatingId,
+    ],
   );
-
-  const referralOptions = useMemo(() => {
-    const options = referrals.map((r) => ({
-      label: `${r.name} (${r.referralId})`,
-      value: r.referralId,
-    }));
-    return [{ label: 'None / Clear', value: '' }, ...options];
-  }, [referrals]);
 
   return (
     <div className="space-y-6">
@@ -352,7 +641,7 @@ export default function CustomersPage() {
         <p className="text-secondary">{t('description')}</p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         {/* Total */}
         <div className="bg-card-bg border border-stroke rounded-site p-4">
           <p className="text-sm text-secondary">{t('stats.total')}</p>
@@ -370,10 +659,22 @@ export default function CustomersPage() {
           <p className="text-sm text-secondary">{t('stats.ghadaq')}</p>
           <p className="text-2xl font-bold text-purple-500">{stats.ghadaq}</p>
         </div>
+
+        {/* Active */}
+        <div className="bg-card-bg border border-stroke rounded-site p-4">
+          <p className="text-sm text-secondary">{t('stats.active')}</p>
+          <p className="text-2xl font-bold text-emerald-500">{stats.active}</p>
+        </div>
+
+        {/* Banned */}
+        <div className="bg-card-bg border border-stroke rounded-site p-4">
+          <p className="text-sm text-secondary">{t('stats.banned')}</p>
+          <p className="text-2xl font-bold text-red-500">{stats.banned}</p>
+        </div>
       </div>
 
       <div className="bg-card-bg border border-stroke rounded-site p-4 space-y-4">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-3">
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -398,8 +699,41 @@ export default function CustomersPage() {
               size="sm"
             />
           </div>
+
+          <div className="flex items-center gap-2 flex-wrap">
+            {fetchingRefs ? (
+              <span className="text-sm text-secondary">
+                {tCommon('loadingRefs')}
+              </span>
+            ) : (
+              <Tabs
+                value={refFilter}
+                options={refFilterOptions}
+                onChange={setRefFilter}
+                size="sm"
+              />
+            )}
+          </div>
         </div>
       </div>
+
+      <BulkAction
+        selectedCount={selectedCustomerKeys.length}
+        value={bulkRefValue}
+        options={refActionOptions}
+        onValueChange={setBulkRefValue}
+        onApply={handleBulkApplyRef}
+        onClear={handleClearSelection}
+        applyLabel={tCommon('bulkApplyRef')}
+        applyingLabel={tCommon('bulkApplying')}
+        clearLabel={tCommon('bulkClearSelection')}
+        selectionLabel={tCommon('bulkSelectionLabel', {
+          count: selectedCustomerKeys.length,
+        })}
+        dropdownLabel={tCommon('bulkDropdownLabel')}
+        disabled={!bulkRefValue}
+        loading={bulkUpdating}
+      />
 
       <Table<Customer>
         columns={columns}
@@ -408,57 +742,96 @@ export default function CustomersPage() {
         emptyMessage={t('emptyMessage')}
       />
 
-      <ConfirmModal {...modalProps} />
-
-      <Modal
-        isOpen={isRefModalOpen}
-        onClose={() => setIsRefModalOpen(false)}
-        title={t('editRef')}
-        size="md"
-        footer={
-          <div className="flex justify-end gap-3">
-            <Button variant="outline" onClick={() => setIsRefModalOpen(false)}>
-              {t('cancel')}
-            </Button>
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between gap-4">
+          <div className="text-sm text-secondary">
+            {t('pagination.showing', {
+              start: (page - 1) * limit + 1,
+              end: Math.min(page * limit, total),
+              total,
+            })}
+          </div>
+          <div className="flex items-center gap-2">
             <Button
-              variant="primary"
-              onClick={() =>
-                selectedCustomer &&
-                handleUpdateRef(selectedCustomer, tempSelectedRefId)
-              }
-              disabled={updatingId === selectedCustomer?._id}
+              variant="outline"
+              size="sm"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1 || loading}
             >
-              {updatingId === selectedCustomer?._id
-                ? t('saving') || 'Saving...'
-                : t('save') || 'Save'}
+              {t('pagination.previous') || 'Previous'}
+            </Button>
+            <div className="flex items-center gap-1">
+              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                let pageNum;
+                if (totalPages <= 5) {
+                  pageNum = i + 1;
+                } else if (page <= 3) {
+                  pageNum = i + 1;
+                } else if (page >= totalPages - 2) {
+                  pageNum = totalPages - 4 + i;
+                } else {
+                  pageNum = page - 2 + i;
+                }
+                return (
+                  <button
+                    key={pageNum}
+                    onClick={() => setPage(pageNum)}
+                    className={`px-3 py-1 rounded text-sm ${
+                      page === pageNum
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-card-bg border border-stroke hover:bg-stroke'
+                    }`}
+                    disabled={loading}
+                  >
+                    {pageNum}
+                  </button>
+                );
+              })}
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages || loading}
+            >
+              {t('pagination.next') || 'Next'}
             </Button>
           </div>
-        }
-      >
-        <div className="space-y-4 py-4 min-h-50">
-          <p className="text-secondary text-sm mb-1">
-            {t('referralSelectionLabel') ||
-              'Select a referral partner for this customer:'}
-          </p>
-          <Dropdown
-            value={tempSelectedRefId || ''}
-            options={referralOptions}
-            onChange={(val) => setTempSelectedRefId(val || null)}
-            placeholder="Select Referral"
-          />
-
-          {tempSelectedRefId && (
-            <div className="p-3 bg-primary/5 border border-primary/20 rounded-lg">
-              <p className="text-xs text-primary font-medium mb-1 uppercase">
-                Selected ID
-              </p>
-              <p className="text-lg font-mono text-foreground">
-                {tempSelectedRefId}
-              </p>
-            </div>
-          )}
+          <select
+            value={limit}
+            onChange={(e) => {
+              setLimit(Number(e.target.value));
+              setPage(1);
+            }}
+            className="px-3 py-1 rounded border border-stroke bg-card-bg text-sm"
+            disabled={loading}
+          >
+            <option value={10}>10</option>
+            <option value={20}>20</option>
+            <option value={50}>50</option>
+            <option value={100}>100</option>
+          </select>
         </div>
-      </Modal>
+      )}
+
+      <ConfirmModal {...modalProps} />
+
+      <CustomerOrdersModal
+        isOrdersModalOpen={isOrdersModalOpen}
+        setIsOrdersModalOpen={setIsOrdersModalOpen}
+        selectedCustomer={selectedCustomer}
+        customerOrders={customerOrders}
+        loadingOrders={loadingOrders}
+      />
+
+      <CustomerRefHistoryModal
+        isOpen={isHistoryModalOpen}
+        onClose={() => setIsHistoryModalOpen(false)}
+        loading={loadingHistory}
+        customer={selectedHistoryCustomer}
+        history={refHistory}
+      />
     </div>
   );
 }

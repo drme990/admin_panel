@@ -8,6 +8,7 @@ interface PaginationProps {
   onPageChange: (page: number) => void;
   hasNextPage?: boolean;
   hasPrevPage?: boolean;
+  disabled?: boolean;
 }
 
 export default function Pagination({
@@ -16,6 +17,7 @@ export default function Pagination({
   onPageChange,
   hasNextPage,
   hasPrevPage,
+  disabled = false,
 }: PaginationProps) {
   const canGoPrev = hasPrevPage ?? currentPage > 1;
   const canGoNext = hasNextPage ?? currentPage < totalPages;
@@ -66,7 +68,7 @@ export default function Pagination({
           size="custom"
           type="button"
           onClick={() => onPageChange(currentPage - 1)}
-          disabled={!canGoPrev}
+          disabled={disabled || !canGoPrev}
           className="p-2 rounded-lg hover:bg-background transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <LuChevronRight
@@ -87,6 +89,7 @@ export default function Pagination({
               type="button"
               key={page}
               onClick={() => onPageChange(page as number)}
+              disabled={disabled}
               className={`px-3 py-1 rounded-lg transition-colors ${
                 currentPage === page
                   ? 'bg-success text-white'
@@ -103,7 +106,7 @@ export default function Pagination({
           size="custom"
           type="button"
           onClick={() => onPageChange(currentPage + 1)}
-          disabled={!canGoNext}
+          disabled={disabled || !canGoNext}
           className="p-2 rounded-lg hover:bg-background transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <LuChevronLeft

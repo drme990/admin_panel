@@ -7,6 +7,7 @@ import Button from '@/components/ui/button';
 import Input from '@/components/ui/input';
 import Tabs from '@/components/ui/tabs';
 import BulkAction from '@/components/ui/bulk-action';
+import Pagination from '@/components/ui/pagination';
 import Checkbox from '@/components/ui/checkbox';
 import ConfirmModal, { useConfirmModal } from '@/components/ui/confirm-modal';
 import Tooltip from '@/components/ui/tooltip';
@@ -111,9 +112,8 @@ export default function CustomersPage() {
 
   // Pagination state
   const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(20);
-  const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
+  const limit = 20;
 
   // Stats from API (all customers, not filtered)
   const [stats, setStats] = useState({
@@ -183,7 +183,6 @@ export default function CustomersPage() {
 
       if (data.success) {
         setCustomers(data.data.customers || []);
-        setTotal(data.data.pagination?.total || 0);
         setTotalPages(data.data.pagination?.totalPages || 0);
         setStats(
           data.data.stats || {
@@ -744,74 +743,13 @@ export default function CustomersPage() {
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between gap-4">
-          <div className="text-sm text-secondary">
-            {t('pagination.showing', {
-              start: (page - 1) * limit + 1,
-              end: Math.min(page * limit, total),
-              total,
-            })}
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page === 1 || loading}
-            >
-              {t('pagination.previous') || 'Previous'}
-            </Button>
-            <div className="flex items-center gap-1">
-              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                let pageNum;
-                if (totalPages <= 5) {
-                  pageNum = i + 1;
-                } else if (page <= 3) {
-                  pageNum = i + 1;
-                } else if (page >= totalPages - 2) {
-                  pageNum = totalPages - 4 + i;
-                } else {
-                  pageNum = page - 2 + i;
-                }
-                return (
-                  <button
-                    key={pageNum}
-                    onClick={() => setPage(pageNum)}
-                    className={`px-3 py-1 rounded text-sm ${
-                      page === pageNum
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-card-bg border border-stroke hover:bg-stroke'
-                    }`}
-                    disabled={loading}
-                  >
-                    {pageNum}
-                  </button>
-                );
-              })}
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              disabled={page === totalPages || loading}
-            >
-              {t('pagination.next') || 'Next'}
-            </Button>
-          </div>
-          <select
-            value={limit}
-            onChange={(e) => {
-              setLimit(Number(e.target.value));
-              setPage(1);
-            }}
-            className="px-3 py-1 rounded border border-stroke bg-card-bg text-sm"
+        <div className="space-y-4">
+          <Pagination
+            currentPage={page}
+            totalPages={totalPages}
+            onPageChange={setPage}
             disabled={loading}
-          >
-            <option value={10}>10</option>
-            <option value={20}>20</option>
-            <option value={50}>50</option>
-            <option value={100}>100</option>
-          </select>
+          />
         </div>
       )}
 

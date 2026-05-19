@@ -131,6 +131,10 @@ export interface Product {
   upgradeDiscount?: number;
   /** Optional feature bullets shown to customers in upgrade modal */
   upgradeFeatures?: ProductUpgradeFeatures | null;
+  recommendProduct?: {
+    recommend: boolean;
+    product: string | null;
+  } | null;
   workAsSacrifice?: boolean;
   sacrificeCount?: number;
   reservationFields?: ReservationField[];

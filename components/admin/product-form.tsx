@@ -108,6 +108,8 @@ export default function ProductForm({
     upgradeFeaturesAr: '',
     upgradeFeaturesEn: '',
     canBeUpgraded: false,
+    recommendProduct: false,
+    recommendProductId: '' as string,
     reservationFields: [] as ReservationField[],
   });
   const [addedPricePercentage, setAddedPricePercentage] = useState<number>(0);
@@ -209,6 +211,8 @@ export default function ProductForm({
         upgradeFeaturesAr: (product.upgradeFeatures?.ar || []).join('\n'),
         upgradeFeaturesEn: (product.upgradeFeatures?.en || []).join('\n'),
         canBeUpgraded: !!product.upgradeTo,
+        recommendProduct: product.recommendProduct?.recommend || false,
+        recommendProductId: product.recommendProduct?.product || '',
         reservationFields: normalizeReservationFields(
           product.reservationFields,
         ),
@@ -556,6 +560,12 @@ export default function ProductForm({
         if (ar.length === 0 && en.length === 0) return null;
         return { ar, en };
       })(),
+      recommendProduct: formData.recommendProduct
+        ? {
+            recommend: true,
+            product: formData.recommendProductId || null,
+          }
+        : null,
       reservationFields: formData.reservationFields,
     };
 
@@ -1148,6 +1158,55 @@ export default function ProductForm({
               )}
             </div>
           )}
+          
+          <hr className="border-stroke" />
+          
+          <div className="pt-2">
+            <h4 className="text-sm font-semibold text-foreground mb-2">
+              {t('form.recommendProductLabel')}
+            </h4>
+            <Switch
+              id="recommendProduct"
+              checked={formData.recommendProduct}
+              onChange={(checked) => {
+                if (!checked) {
+                  setFormData({
+                    ...formData,
+                    recommendProduct: false,
+                    recommendProductId: '',
+                  });
+                } else {
+                  setFormData({ ...formData, recommendProduct: true });
+                }
+              }}
+              label={t('form.recommendProductToggle')}
+            />
+            {formData.recommendProduct && (
+              <div className="space-y-3 mt-4">
+                <div>
+                  <label className="block text-xs font-medium text-secondary mb-1">
+                    {t('form.recommendProductSelect')}
+                  </label>
+                  <select
+                    value={formData.recommendProductId}
+                    onChange={(e) =>
+                      setFormData({ ...formData, recommendProductId: e.target.value })
+                    }
+                    className="w-full px-3 py-2 text-sm border border-stroke rounded-site bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-success"
+                  >
+                    <option value="">{t('form.upgradeToPlaceholder')}</option>
+                    {allProducts
+                      .filter((p) => p._id !== product?._id)
+                      .map((p) => (
+                        <option key={p._id} value={p._id}>
+                          {p.name.ar} — {p.name.en}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="space-y-3 p-4 border border-stroke rounded-site">

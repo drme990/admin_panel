@@ -182,53 +182,76 @@ export function buildOrderWhatsappMessage(data: OrderWhatsappData): string {
   const executionDate =
     reservationMap.get('executionDate')?.value?.trim() ?? '';
 
-  const firstItem = data.items?.[0];
-  const firstItemName = formatOrderItemNameWithSize(firstItem);
-
-  const secondItem = data.items?.[1];
-  const secondItemName = formatOrderItemNameWithSize(secondItem);
-
-  const productLine = firstItem
-    ? `${firstItem.quantity} ${firstItemName}${
-        secondItem ? ` مع ${secondItemName}` : ''
-      }${intention ? ` ${intention}` : ''}`
-    : '';
-
-  const remainingLine =
-    (data.remainingAmount ?? 0) > 0
-      ? `✅ باقي ${(data.remainingAmount ?? 0).toLocaleString('ar-EG')} ${data.currency}`
-      : '✅ خالص';
+  // --- Build per‑item blocks (first two items only) ---
+  const itemsToShow = data.items?.slice(0, 2) ?? [];
+  const itemBlocks: string[] = [];
 
   const memorialLine =
     isAlive === 'متوفي'
       ? `عن روح ${gender === 'انثى' ? 'المرحومة' : gender === 'ذكور و اناث' ? 'المرحومين' : 'المرحوم'} بإذن الله`
       : '';
 
+  for (let i = 0; i < itemsToShow.length; i++) {
+    const item = itemsToShow[i];
+    const itemName = formatOrderItemNameWithSize(item);
+    if (!itemName) continue;
+
+    // Quantity handling: only show number if >1
+    const quantityText = item.quantity > 1 ? `${item.quantity} ` : '';
+    let intentionText = '';
+
+    if (intention) {
+      if (i === 0) {
+        intentionText = ` ${intention}`; // first item: " صدقة"
+      } else {
+        intentionText = ` عن ${intention}`; // second item: " عن صدقة"
+      }
+    }
+
+    const itemLine = `${quantityText}${itemName}${intentionText}`;
+
+    // Build the block lines
+    const blockLines: string[] = [itemLine];
+    if (memorialLine) blockLines.push('', memorialLine);
+    if (sacrificeFor) blockLines.push('', sacrificeFor); // name appears here
+    if (shortDuaa) blockLines.push('', shortDuaa);
+
+    itemBlocks.push(blockLines.join('\n'));
+  }
+
+  // Join blocks with a divider (no extra blank line after divider)
+  const productSection = itemBlocks.join('\n------------------\n');
+
+  const remainingLine =
+    (data.remainingAmount ?? 0) > 0
+      ? `✅ باقي ${(data.remainingAmount ?? 0).toLocaleString('ar-EG')} ${data.currency}`
+      : '✅ خالص';
+
   const DIVIDER = '------------------';
   const genderEmoji =
     gender === 'انثى' ? '♀️' : gender === 'ذكور و اناث' ? '♂️♀️' : '♂️';
 
-  const lines: string[] = [productLine, ''];
+  const lines: string[] = [];
 
-  if (memorialLine) {
-    lines.push(memorialLine, '');
+  // Add product blocks (already contain memorialLine, sacrificeFor, shortDuaa)
+  if (productSection) {
+    lines.push(productSection, ''); // blank line after the last block
   }
-  if (sacrificeFor) {
-    lines.push(sacrificeFor, '');
-  }
-  if (shortDuaa) {
-    lines.push(shortDuaa, '');
-  }
+
+  // Add photo if present
   if (photo) {
     lines.push(`🤳🏻صورة: ${photo}`);
     lines.push(DIVIDER);
   }
+
   lines.push(remainingLine);
   lines.push(DIVIDER);
+
   if (executionDate && !isNextDayExecutionDate(executionDate)) {
     lines.push(`🗓️  *تنفيذ ${formatExecutionDate(executionDate)}*`);
     lines.push(DIVIDER);
   }
+
   lines.push(
     `${genderEmoji} ${gender || '-'}${isAlive ? ` - ${isAlive}` : ''}`,
   );
@@ -238,16 +261,13 @@ export function buildOrderWhatsappMessage(data: OrderWhatsappData): string {
   lines.push(data.billingData.fullName);
   lines.push(`📨ايميل: ${data.billingData.email}`);
   lines.push(`واتساب: ${data.billingData.phone}`);
+
   if (data.referralId?.trim()) {
     lines.push(DIVIDER);
     lines.push(`Ref Code: ${data.referralId.trim()}`);
   } else {
     lines.push(DIVIDER);
     lines.push(`Ref Code: ${getDefaultReferralCode(data.source)}`);
-  }
-
-  if (firstItem && firstItem.quantity === 1 && lines[0].startsWith('1 ')) {
-    lines[0] = lines[0].replace(/^1 /, '');
   }
 
   return lines.join('\n');

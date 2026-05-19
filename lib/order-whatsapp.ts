@@ -185,8 +185,13 @@ export function buildOrderWhatsappMessage(data: OrderWhatsappData): string {
   const firstItem = data.items?.[0];
   const firstItemName = formatOrderItemNameWithSize(firstItem);
 
+  const secondItem = data.items?.[1];
+  const secondItemName = formatOrderItemNameWithSize(secondItem);
+
   const productLine = firstItem
-    ? `${firstItem.quantity} ${firstItemName}${intention ? ` ${intention}` : ''}`
+    ? `${firstItem.quantity} ${firstItemName}${
+        secondItem ? ` مع ${secondItemName}` : ''
+      }${intention ? ` ${intention}` : ''}`
     : '';
 
   const remainingLine =

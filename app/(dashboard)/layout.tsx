@@ -35,6 +35,7 @@ import {
   LuUserCog,
   LuChartNoAxesCombined,
   LuBaggageClaim,
+  LuRadar,
 } from 'react-icons/lu';
 
 const navItems = [
@@ -121,6 +122,13 @@ const navItems = [
     icon: LuUserRoundPlus,
     superAdminOnly: false,
     permissionKey: 'referrals',
+  },
+  {
+    key: 'refTracker',
+    href: '/ref-tracker',
+    icon: LuRadar,
+    superAdminOnly: false,
+    permissionKey: 'refTracker',
   },
   {
     key: 'appearance',

@@ -16,6 +16,15 @@ export interface DocumentationAnswer {
   en: string;
 }
 
+export type ProductBannerTarget = 'ghadaq' | 'manasik' | 'both';
+
+export interface ProductBanner {
+  id: string;
+  imageUrl: string;
+  target: ProductBannerTarget;
+  link: string;
+}
+
 export interface AudioReview {
   id: string;
   url: string;
@@ -35,6 +44,7 @@ export interface Appearance {
   whatsAppDefaultMessage?: string;
   bannerText?: BannerText;
   documentationAnswer?: DocumentationAnswer;
+  productsBanners?: ProductBanner[];
   createdAt: string;
   updatedAt: string;
 }

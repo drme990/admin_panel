@@ -9,6 +9,8 @@ import {
   ProjectName,
   AudioReview,
   DocumentationAnswer,
+  ProductBanner,
+  ProductBannerTarget,
 } from '@/types/Appearance';
 import { PageLoading } from '@/components/ui/loading';
 import Button from '@/components/ui/button';
@@ -20,6 +22,7 @@ import BannerTextEditor from './components/banner-text-editor';
 import WhatsAppMessageEditor from './components/whatsapp-message-editor';
 import WorksImagesSection from './components/works-images-section';
 import DocumentationSection from './components/documentation-section';
+import ProductsBannerSection from './components/products-banner-section';
 import { useMultipleAudioUpload } from '@/hooks/use-multiple-audio-upload';
 
 import { toast } from 'react-toastify';
@@ -34,6 +37,7 @@ type AppearanceApiResponse = {
     bannerText?: unknown;
     audioReviews?: unknown;
     documentationAnswer?: unknown;
+    productsBanners?: unknown;
   };
 };
 
@@ -75,6 +79,42 @@ function normalizeAudioReviews(value: unknown): AudioReview[] {
   );
 }
 
+function normalizeProductsBanners(value: unknown): ProductBanner[] {
+  if (!Array.isArray(value)) return [];
+
+  return value
+    .map((item) => {
+      if (!item || typeof item !== 'object') return null;
+
+      const raw = item as {
+        id?: unknown;
+        imageUrl?: unknown;
+        target?: unknown;
+        link?: unknown;
+      };
+
+      const id = typeof raw.id === 'string' ? raw.id.trim() : '';
+      const imageUrl = typeof raw.imageUrl === 'string' ? raw.imageUrl : '';
+      const target =
+        raw.target === 'ghadaq' ||
+        raw.target === 'manasik' ||
+        raw.target === 'both'
+          ? raw.target
+          : 'both';
+      const link = typeof raw.link === 'string' ? raw.link : '';
+
+      if (!id || !imageUrl) return null;
+
+      return {
+        id,
+        imageUrl,
+        target,
+        link,
+      } as ProductBanner;
+    })
+    .filter((item): item is ProductBanner => Boolean(item));
+}
+
 function generateId(): string {
   return (
     Math.random().toString(36).substring(2, 15) +
@@ -112,11 +152,13 @@ export default function AppearancePage() {
     manasik: EMPTY_DOCUMENTATION_ANSWER,
     shared: EMPTY_DOCUMENTATION_ANSWER,
   });
+  const [productsBanners, setProductsBanners] = useState<ProductBanner[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploadingRow, setUploadingRow] = useState<'row1' | 'row2' | null>(
     null,
   );
+  const [uploadingProductBanner, setUploadingProductBanner] = useState(false);
 
   const handleAudioUploaded = useCallback((url: string) => {
     setAudioReviews((prev) => [
@@ -238,6 +280,12 @@ export default function AppearancePage() {
           ? normalizeBannerText(byProject.shared.data?.documentationAnswer)
           : EMPTY_DOCUMENTATION_ANSWER,
       });
+
+      setProductsBanners(
+        byProject.shared?.success
+          ? normalizeProductsBanners(byProject.shared.data?.productsBanners)
+          : [],
+      );
     } catch {
       toast.error(t('loadFailed'));
     } finally {
@@ -320,6 +368,81 @@ export default function AppearancePage() {
     setAudioReviews((prev) => setAudioAsMain(prev, id));
   };
 
+  const handleUploadProductBanner = useCallback(
+    async (file: File) => {
+      setUploadingProductBanner(true);
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('folder', 'appearance');
+
+        const res = await fetch('/api/upload/image', {
+          method: 'POST',
+          body: formData,
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error);
+
+        setProductsBanners((prev) => [
+          ...prev,
+          {
+            id: generateId(),
+            imageUrl: data.data.url,
+            target: 'both',
+            link: '',
+          },
+        ]);
+      } catch {
+        toast.error(t('uploadFailed'));
+      } finally {
+        setUploadingProductBanner(false);
+      }
+    },
+    [t],
+  );
+
+  const handleDeleteProductBanner = useCallback((id: string) => {
+    setProductsBanners((prev) => prev.filter((banner) => banner.id !== id));
+  }, []);
+
+  const handleUpdateProductBanner = useCallback(
+    (id: string, updates: Partial<ProductBanner>) => {
+      setProductsBanners((prev) =>
+        prev.map((banner) =>
+          banner.id === id ? { ...banner, ...updates } : banner,
+        ),
+      );
+    },
+    [],
+  );
+
+  const handleMoveProductBanner = useCallback(
+    (id: string, direction: 'up' | 'down') => {
+      setProductsBanners((prev) => {
+        const index = prev.findIndex((banner) => banner.id === id);
+        if (index === -1) return prev;
+
+        const targetIndex = direction === 'up' ? index - 1 : index + 1;
+        if (targetIndex < 0 || targetIndex >= prev.length) return prev;
+
+        const next = [...prev];
+        const [moved] = next.splice(index, 1);
+        next.splice(targetIndex, 0, moved);
+        return next;
+      });
+    },
+    [],
+  );
+
+  const productBannerTargetOptions: Array<{
+    value: ProductBannerTarget;
+    label: string;
+  }> = [
+    { value: 'ghadaq', label: t('productsBannerTargetGhadaq') },
+    { value: 'manasik', label: t('productsBannerTargetManasik') },
+    { value: 'both', label: t('productsBannerTargetBoth') },
+  ];
+
   const handleMoveImage = (fromRow: 'row1' | 'row2', index: number) => {
     const toRow = fromRow === 'row1' ? 'row2' : 'row1';
     const imgUrl = currentImages[fromRow][index];
@@ -376,6 +499,7 @@ export default function AppearancePage() {
               whatsAppDefaultMessage: defaultMessages[key],
               bannerText: bannerTexts[key],
               documentationAnswer: documentationAnswers[key],
+              productsBanners: isShared ? productsBanners : [],
             }),
           });
 
@@ -475,6 +599,27 @@ export default function AppearancePage() {
             onSetMain={handleAudioSetMain}
             onRemoveImage={(id) => handleAudioUpdate(id, { userImage: '' })}
             t={t}
+          />
+
+          <ProductsBannerSection
+            banners={productsBanners}
+            uploading={uploadingProductBanner}
+            onUpload={handleUploadProductBanner}
+            onDelete={handleDeleteProductBanner}
+            onUpdate={handleUpdateProductBanner}
+            onMove={handleMoveProductBanner}
+            title={t('productsBannerTitle')}
+            description={t('productsBannerDescription')}
+            emptyText={t('productsBannerEmpty')}
+            addLabel={t('productsBannerAddImage')}
+            uploadingLabel={t('uploading')}
+            targetLabel={t('productsBannerTargetLabel')}
+            linkLabel={t('productsBannerLinkLabel')}
+            linkPlaceholder={t('productsBannerLinkPlaceholder')}
+            moveEarlierLabel={t('moveEarlier')}
+            moveLaterLabel={t('moveLater')}
+            deleteLabel={t('productsBannerDelete')}
+            targetOptions={productBannerTargetOptions}
           />
 
           <DocumentationSection

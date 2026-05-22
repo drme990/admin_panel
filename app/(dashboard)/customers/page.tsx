@@ -12,6 +12,14 @@ import Checkbox from '@/components/ui/checkbox';
 import ConfirmModal, { useConfirmModal } from '@/components/ui/confirm-modal';
 import Tooltip from '@/components/ui/tooltip';
 import Dropdown from '@/components/ui/dropdown';
+import CountrySelector from '@/components/shared/country-selector';
+import CustomerOrdersModal from './components/customer-orders-modal';
+import CustomerRefHistoryModal from './components/customer-ref-history-modal';
+import CustomerCountryHistoryModal, {
+  CountryHistoryEntry,
+} from './components/customer-country-history-modal';
+import CustomerInfoModal from './components/customer-info-modal';
+import { Order } from '@/types/Order';
 
 import { toast } from 'react-toastify';
 
@@ -21,10 +29,9 @@ import {
   LuSearch,
   LuShoppingCart,
   LuHistory,
+  LuInfo,
+  LuGlobe,
 } from 'react-icons/lu';
-import CustomerOrdersModal from './components/customer-orders-modal';
-import CustomerRefHistoryModal from './components/customer-ref-history-modal';
-import { Order } from '@/types/Order';
 
 type Customer = {
   _id: string;
@@ -32,6 +39,10 @@ type Customer = {
   email: string;
   phone: string;
   country: string;
+  detectedCountry?: string | null;
+  registrationIp?: string;
+  lastLoginIp?: string;
+  lastLoginAt?: string;
   appId: 'ghadaq' | 'manasik';
   isBanned: boolean;
   ref: string | null;
@@ -73,6 +84,7 @@ export default function CustomersPage() {
   const tCommon = useTranslations('admin.customers.common');
   const tOrders = useTranslations('admin.customers.ordersModal');
   const { confirm, modalProps } = useConfirmModal();
+  const locale = useLocale();
 
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -89,7 +101,7 @@ export default function CustomersPage() {
   );
   const [referrals, setReferrals] = useState<Referral[]>([]);
   const [fetchingRefs, setFetchingRefs] = useState(false);
-  const ToolTipPositions = useLocale() === 'ar' ? 'right' : 'left';
+  const ToolTipPositions = locale === 'ar' ? 'right' : 'left';
 
   const [bulkRefValue, setBulkRefValue] = useState('');
   const [bulkUpdating, setBulkUpdating] = useState(false);
@@ -109,6 +121,19 @@ export default function CustomersPage() {
     appId: Customer['appId'];
   } | null>(null);
   const [refHistory, setRefHistory] = useState<CustomerRefHistory[]>([]);
+
+  // Country state
+  const [isCountryHistoryModalOpen, setIsCountryHistoryModalOpen] =
+    useState(false);
+  const [loadingCountryHistory, setLoadingCountryHistory] = useState(false);
+  const [countryHistory, setCountryHistory] = useState<CountryHistoryEntry[]>(
+    [],
+  );
+
+  const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
+  const [updatingCountryId, setUpdatingCountryId] = useState<string | null>(
+    null,
+  );
 
   // Pagination state
   const [page, setPage] = useState(1);
@@ -316,6 +341,78 @@ export default function CustomersPage() {
     [fetchCustomers, t],
   );
 
+  const fetchCustomerCountryHistory = useCallback(
+    async (customer: Customer) => {
+      try {
+        setLoadingCountryHistory(true);
+        const response = await fetch(
+          `/api/customers/${customer.appId}/${customer._id}/detected-country-history`,
+        );
+        const data = await response.json();
+
+        if (data.success) {
+          setCountryHistory(data.data || []);
+        } else {
+          toast.error(data.error || 'Failed to load country history');
+        }
+      } catch (error) {
+        console.error('Error fetching customer country history:', error);
+        toast.error('Failed to load country history');
+      } finally {
+        setLoadingCountryHistory(false);
+      }
+    },
+    [],
+  );
+
+  const updateCustomerCountry = useCallback(
+    async (customer: Customer, nextCountry: string) => {
+      setUpdatingCountryId(getCustomerKey(customer));
+
+      try {
+        const response = await fetch(
+          `/api/customers/${customer.appId}/${customer._id}/detected-country`,
+          {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ detectedCountry: nextCountry || null }),
+          },
+        );
+
+        const data = await response.json();
+        if (!data.success) {
+          toast.error(data.error || t('messages.updateFailed'));
+          return false;
+        }
+
+        setCustomers((prev) =>
+          prev.map((item) =>
+            item._id === customer._id && item.appId === customer.appId
+              ? { ...item, detectedCountry: nextCountry || null }
+              : item,
+          ),
+        );
+
+        setSelectedCustomer((current) =>
+          current &&
+          current._id === customer._id &&
+          current.appId === customer.appId
+            ? { ...current, detectedCountry: nextCountry || null }
+            : current,
+        );
+
+        toast.success(t('messages.updateSuccess'));
+        return true;
+      } catch {
+        toast.error(t('messages.updateFailed'));
+        return false;
+      } finally {
+        setUpdatingCountryId(null);
+      }
+    },
+    [t],
+  );
+
   const handleToggleBan = useCallback(
     async (customer: Customer) => {
       const nextIsBanned = !customer.isBanned;
@@ -463,6 +560,28 @@ export default function CustomersPage() {
     [fetchCustomerOrders],
   );
 
+  const handleOpenInfo = useCallback((customer: Customer) => {
+    setSelectedCustomer(customer);
+    setIsInfoModalOpen(true);
+  }, []);
+
+  const handleOpenCountryHistory = useCallback(
+    async (customer: Customer) => {
+      setSelectedCustomer(customer);
+      setCountryHistory([]);
+      setIsCountryHistoryModalOpen(true);
+      await fetchCustomerCountryHistory(customer);
+    },
+    [fetchCustomerCountryHistory],
+  );
+
+  const handleCountryChange = useCallback(
+    async (customer: Customer, nextCountry: string) => {
+      await updateCustomerCountry(customer, nextCountry);
+    },
+    [updateCustomerCountry],
+  );
+
   const columns = useMemo(
     () => [
       {
@@ -519,6 +638,27 @@ export default function CustomersPage() {
         ),
       },
       {
+        header: locale === 'ar' ? 'البلد' : 'Country',
+        accessor: (customer: Customer) => (
+          <CountrySelector
+            value={customer.detectedCountry || ''}
+            onChange={(nextCountry) =>
+              handleCountryChange(customer, nextCountry)
+            }
+            placeholder={locale === 'ar' ? 'اختر البلد' : 'Select country'}
+            allowClear
+            clearLabel={locale === 'ar' ? 'حذف البلد' : 'Clear country'}
+            disabled={
+              loading ||
+              bulkUpdating ||
+              updatingId === customer._id ||
+              updatingCountryId === getCustomerKey(customer)
+            }
+            className="min-w-56"
+          />
+        ),
+      },
+      {
         header: t('table.ref'),
         accessor: (customer: Customer) => (
           <Dropdown
@@ -556,7 +696,7 @@ export default function CustomersPage() {
       {
         header: t('table.actions'),
         accessor: (customer: Customer) => (
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap justify-center gap-2 w-30">
             <Tooltip content={tOrders('title')} position={ToolTipPositions}>
               <Button
                 variant="icon-primary"
@@ -579,6 +719,31 @@ export default function CustomersPage() {
                 aria-label={tCommon('historyIcon')}
               >
                 <LuHistory size={16} />
+              </Button>
+            </Tooltip>
+
+            <Tooltip content={tCommon('infoIcon')} position={ToolTipPositions}>
+              <Button
+                variant="icon-primary"
+                size="custom"
+                onClick={() => handleOpenInfo(customer)}
+                aria-label={tCommon('infoIcon')}
+              >
+                <LuInfo size={16} />
+              </Button>
+            </Tooltip>
+
+            <Tooltip
+              content={tCommon('countryHistoryIcon')}
+              position={ToolTipPositions}
+            >
+              <Button
+                variant="icon-primary"
+                size="custom"
+                onClick={() => handleOpenCountryHistory(customer)}
+                aria-label={tCommon('countryHistoryIcon')}
+              >
+                <LuGlobe size={16} />
               </Button>
             </Tooltip>
 
@@ -619,6 +784,9 @@ export default function CustomersPage() {
       handleToggleCustomerSelection,
       handleViewOrders,
       handleRefDropdownChange,
+      handleCountryChange,
+      handleOpenInfo,
+      handleOpenCountryHistory,
       loading,
       bulkUpdating,
       tCommon,
@@ -628,6 +796,8 @@ export default function CustomersPage() {
       t,
       ToolTipPositions,
       updatingId,
+      updatingCountryId,
+      locale,
     ],
   );
 
@@ -769,6 +939,20 @@ export default function CustomersPage() {
         loading={loadingHistory}
         customer={selectedHistoryCustomer}
         history={refHistory}
+      />
+
+      <CustomerInfoModal
+        isOpen={isInfoModalOpen}
+        onClose={() => setIsInfoModalOpen(false)}
+        customer={selectedCustomer}
+      />
+
+      <CustomerCountryHistoryModal
+        isOpen={isCountryHistoryModalOpen}
+        onClose={() => setIsCountryHistoryModalOpen(false)}
+        loading={loadingCountryHistory}
+        customer={selectedCustomer}
+        history={countryHistory}
       />
     </div>
   );

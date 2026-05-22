@@ -1,4 +1,10 @@
 {
+  "countrySelector": {
+    "countryPlaceholder": "Select a country",
+    "searchCountry": "Search for a country...",
+    "noCountriesFound": "No countries found matching your search.",
+    "clearCountry": "Clear country selection"
+  },
   "orders": {
     "pageTitle": "Order History",
     "orderDetails": "Order Details",
@@ -748,7 +754,10 @@
         "bulkDropdownLabel": "Bulk ref update",
         "selectAllCustomers": "Select all customers",
         "selectCustomer": "Select {name}",
-        "selectReferral": "Select referral"
+        "selectReferral": "Select referral",
+        "infoIcon": "Info",
+        "countrySetterIcon": "Set Detected Country",
+        "countryHistoryIcon": "Country History"
       },
       "status": {
         "active": "Active",
@@ -803,6 +812,33 @@
         "updateSuccess": "Customer updated successfully",
         "banSuccess": "Customer banned successfully",
         "unbanSuccess": "Customer unbanned successfully"
+      },
+      "infoModal": {
+        "title": "Info",
+        "close": "Close",
+        "email": "Email",
+        "registrationIp": "Registration IP",
+        "lastLoginIp": "Last Login IP",
+        "lastLoginTime": "Last Login Time",
+        "detectedCountry": "Detected Country",
+        "notAvailable": "N/A"
+      },
+      "countrySetterModal": {
+        "title": "Set Detected Country",
+        "close": "Cancel",
+        "save": "Save",
+        "label": "Detected Country",
+        "placeholder": "e.g. US, UK, EG, SA...",
+        "hint": "Leave blank to remove the detected country. This overrides the automatic IP detection."
+      },
+      "countryHistoryModal": {
+        "title": "Country History",
+        "close": "Close",
+        "emptyMessage": "No country history found.",
+        "changeLabel": "Country Change",
+        "changedBy": "Changed By",
+        "arrow": "->",
+        "none": "None"
       }
     },
     "referrals": {

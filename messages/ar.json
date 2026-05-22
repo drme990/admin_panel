@@ -1,4 +1,10 @@
 {
+  "countrySelector": {
+    "countryPlaceholder": "اختر الدولة",
+    "searchCountry": "ابحث عن دولة...",
+    "noCountriesFound": "لا توجد دول مطابقة لبحثك.",
+    "clearCountry": "مسح اختيار الدولة"
+  },
   "orders": {
     "pageTitle": "سجل الطلبات",
     "orderDetails": "تفاصيل الطلب",
@@ -747,7 +753,10 @@
         "bulkDropdownLabel": "تحديث الإحالة بشكل جماعي",
         "selectAllCustomers": "تحديد كل العملاء",
         "selectCustomer": "تحديد {name}",
-        "selectReferral": "اختر الإحالة"
+        "selectReferral": "اختر الإحالة",
+        "infoIcon": "معلومات",
+        "countrySetterIcon": "تعيين الدولة المكتشفة",
+        "countryHistoryIcon": "سجل الدولة"
       },
       "status": {
         "active": "نشط",
@@ -802,6 +811,33 @@
         "updateSuccess": "تم تحديث العميل بنجاح",
         "banSuccess": "تم حظر العميل بنجاح",
         "unbanSuccess": "تم إلغاء حظر العميل بنجاح"
+      },
+      "infoModal": {
+        "title": "معلومات",
+        "close": "إغلاق",
+        "email": "البريد الإلكتروني",
+        "registrationIp": "IP التسجيل",
+        "lastLoginIp": "آخر IP لتسجيل الدخول",
+        "lastLoginTime": "آخر وقت لتسجيل الدخول",
+        "detectedCountry": "الدولة المكتشفة",
+        "notAvailable": "غير متوفر"
+      },
+      "countrySetterModal": {
+        "title": "تعيين الدولة المكتشفة",
+        "close": "إلغاء",
+        "save": "حفظ",
+        "label": "الدولة المكتشفة",
+        "placeholder": "مثال: US, UK, EG, SA...",
+        "hint": "اتركه فارغاً لإزالة الدولة المكتشفة. هذا يتجاوز الاكتشاف التلقائي لعنوان IP."
+      },
+      "countryHistoryModal": {
+        "title": "سجل الدولة",
+        "close": "إغلاق",
+        "emptyMessage": "لم يتم العثور على سجل للدولة.",
+        "changeLabel": "تغيير الدولة",
+        "changedBy": "بواسطة",
+        "arrow": "->",
+        "none": "لا يوجد"
       }
     },
     "referrals": {

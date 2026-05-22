@@ -12,6 +12,7 @@ export interface OrderWhatsappData {
   remainingAmount?: number;
   items: OrderItem[];
   billingData: BillingData;
+  amount: number;
   reservationMap: Map<ReservationFieldKey, ReservationOrderField>;
   referralId?: string | null;
   source?: Order['source'];
@@ -225,7 +226,7 @@ export function buildOrderWhatsappMessage(data: OrderWhatsappData): string {
   const remainingLine =
     (data.remainingAmount ?? 0) > 0
       ? `✅ باقي ${(data.remainingAmount ?? 0).toLocaleString('ar-EG')} ${data.currency}`
-      : '✅ خالص';
+      : `✅ خالص (${data.amount} ${data.currency})`;
 
   const DIVIDER = '------------------';
   const genderEmoji =
@@ -286,6 +287,7 @@ export function buildOrderWhatsappMessageFromOrder(order: Order): string {
     currency: order.currency,
     remainingAmount: order.remainingAmount,
     items: order.items,
+    amount: order.totalAmount,
     billingData: order.billingData,
     reservationMap,
     referralId: order.referralId || null,

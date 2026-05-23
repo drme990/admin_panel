@@ -609,9 +609,11 @@ export default function CustomersPage() {
       {
         header: t('table.userId'),
         accessor: (customer: Customer) => (
-          <span className="text-secondary font-mono text-xs break-all">
-            {customer._id}
-          </span>
+          <div className="min-w-40">
+            <span className="text-secondary font-mono text-xs break-all">
+              {customer._id}
+            </span>
+          </div>
         ),
       },
       {

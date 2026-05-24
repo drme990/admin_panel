@@ -179,7 +179,7 @@ export default function AudioReviewsSection(props: AudioReviewsSectionProps) {
         const formData = new FormData();
 
         formData.append('file', file);
-        formData.append('folder', 'appearance');
+        formData.append('folder', 'customers');
 
         const res = await fetch('/api/upload/image', {
           method: 'POST',

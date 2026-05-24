@@ -306,7 +306,7 @@ export default function AppearancePage() {
       try {
         const formData = new FormData();
         formData.append('file', file);
-        formData.append('folder', 'appearance');
+        formData.append('folder', 'website');
 
         const res = await fetch('/api/upload/image', {
           method: 'POST',
@@ -374,7 +374,7 @@ export default function AppearancePage() {
       try {
         const formData = new FormData();
         formData.append('file', file);
-        formData.append('folder', 'appearance');
+        formData.append('folder', 'website');
 
         const res = await fetch('/api/upload/image', {
           method: 'POST',

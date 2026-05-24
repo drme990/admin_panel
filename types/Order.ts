@@ -130,6 +130,7 @@ export interface Order {
   remainingAmount?: number;
   isPartialPayment?: boolean;
   paymentType?: 'full' | 'half' | 'partial';
+  isWhatsappButtonClicked?: 'clicked' | 'not-clicked' | 'no-need-to-click';
   // Referral
   referralId?: string;
   // Terms

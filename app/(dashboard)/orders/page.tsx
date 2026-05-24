@@ -75,6 +75,11 @@ interface OrdersResponse {
 }
 
 type StatusTabValue = 'all' | OrderStatus;
+type WhatsappFilterValue =
+  | 'all'
+  | 'clicked'
+  | 'not-clicked'
+  | 'no-need-to-click';
 type DateQuickPreset = 'today' | 'yesterday' | 'last7Days' | 'all';
 
 const STATUS_TAB_VALUES: StatusTabValue[] = [
@@ -88,6 +93,15 @@ const STATUS_TAB_VALUES: StatusTabValue[] = [
   'refunded',
   'cancelled',
 ];
+
+const WHATSAPP_STATE_CLASSES: Record<
+  Exclude<WhatsappFilterValue, 'all'>,
+  string
+> = {
+  clicked: 'bg-green-500',
+  'not-clicked': 'bg-amber-500',
+  'no-need-to-click': 'bg-slate-400',
+};
 
 function isOrderGuest(order: Pick<Order, 'userId' | 'isGuest'>): boolean {
   if (typeof order.isGuest === 'boolean') {
@@ -208,6 +222,8 @@ export default function OrderHistoryPage() {
     : 'all';
   const initialReferral = searchParams.get('r') || '';
   const initialSource = searchParams.get('source') || '';
+  const initialWhatsappState =
+    (searchParams.get('whatsapp') as WhatsappFilterValue | null) || 'all';
   const initialSpecificDate = searchParams.get('date') || '';
   const initialFromDate =
     searchParams.get('fromDate') || initialSpecificDate || '';
@@ -231,6 +247,8 @@ export default function OrderHistoryPage() {
   );
   const [referralFilter, setReferralFilter] = useState<string>(initialReferral);
   const [sourceFilter, setSourceFilter] = useState<string>(initialSource);
+  const [whatsappFilter, setWhatsappFilter] =
+    useState<WhatsappFilterValue>(initialWhatsappState);
   const [referrals, setReferrals] = useState<Referral[]>([]);
   const [searchInput, setSearchInput] = useState(initialQuery);
   const [searchQuery, setSearchQuery] = useState(initialQuery);
@@ -291,6 +309,9 @@ export default function OrderHistoryPage() {
         if (statusFilter !== 'all') params.set('status', statusFilter);
         if (referralFilter) params.set('referralId', referralFilter);
         if (sourceFilter) params.set('source', sourceFilter);
+        if (whatsappFilter !== 'all') {
+          params.set('whatsappState', whatsappFilter);
+        }
         if (searchQuery) params.set('search', searchQuery);
 
         const normalizedRange = normalizeDateRange(
@@ -331,6 +352,7 @@ export default function OrderHistoryPage() {
       statusFilter,
       referralFilter,
       sourceFilter,
+      whatsappFilter,
       searchQuery,
       fromDateFilter,
       toDateFilter,
@@ -857,7 +879,19 @@ export default function OrderHistoryPage() {
     {
       header: t('table.orderNumber'),
       accessor: (row: Order) => (
-        <span className="font-mono text-sm">{row.orderNumber}</span>
+        <div className="flex items-center gap-2">
+          <span
+            className={`h-2.5 w-2.5 rounded-full ${WHATSAPP_STATE_CLASSES[row.isWhatsappButtonClicked || 'no-need-to-click']}`}
+            title={
+              row.isWhatsappButtonClicked === 'clicked'
+                ? t('filters.whatsappStateClicked')
+                : row.isWhatsappButtonClicked === 'not-clicked'
+                  ? t('filters.whatsappStateNotClicked')
+                  : t('filters.whatsappStateNoNeedToClick')
+            }
+          />
+          <span className="font-mono text-sm">{row.orderNumber}</span>
+        </div>
       ),
     },
     {
@@ -1035,6 +1069,28 @@ export default function OrderHistoryPage() {
           }}
           placeholder={t('filters.source')}
           className="w-full sm:w-40"
+        />
+
+        <Dropdown
+          value={whatsappFilter}
+          options={[
+            { label: t('filters.whatsappStateAll'), value: 'all' },
+            { label: t('filters.whatsappStateClicked'), value: 'clicked' },
+            {
+              label: t('filters.whatsappStateNotClicked'),
+              value: 'not-clicked',
+            },
+            {
+              label: t('filters.whatsappStateNoNeedToClick'),
+              value: 'no-need-to-click',
+            },
+          ]}
+          onChange={(val) => {
+            setWhatsappFilter(val as WhatsappFilterValue);
+            setPage(1);
+          }}
+          placeholder={t('filters.whatsappState')}
+          className="w-full sm:w-48"
         />
 
         <Button

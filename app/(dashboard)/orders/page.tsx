@@ -99,8 +99,8 @@ const WHATSAPP_STATE_CLASSES: Record<
   string
 > = {
   clicked: 'bg-green-500',
-  'not-clicked': 'bg-amber-500',
-  'no-need-to-click': 'bg-slate-400',
+  'not-clicked': 'bg-red-500',
+  'no-need-to-click': 'bg-transparent',
 };
 
 function isOrderGuest(order: Pick<Order, 'userId' | 'isGuest'>): boolean {
@@ -879,7 +879,7 @@ export default function OrderHistoryPage() {
     {
       header: t('table.orderNumber'),
       accessor: (row: Order) => (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 min-w-32">
           <span
             className={`h-2.5 w-2.5 rounded-full ${WHATSAPP_STATE_CLASSES[row.isWhatsappButtonClicked || 'no-need-to-click']}`}
             title={

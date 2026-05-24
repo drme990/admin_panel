@@ -821,6 +821,7 @@
         "title": "معلومات",
         "close": "إغلاق",
         "email": "البريد الإلكتروني",
+        "registeredDate": "تاريخ التسجيل",
         "registrationIp": "IP التسجيل",
         "lastLoginIp": "آخر IP لتسجيل الدخول",
         "lastLoginTime": "آخر وقت لتسجيل الدخول",

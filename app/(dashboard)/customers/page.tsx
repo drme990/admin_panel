@@ -79,6 +79,10 @@ function normalizeRefValue(value: string): string | null {
   return value;
 }
 
+function getDefaultRefForApp(appId: Customer['appId']): string {
+  return appId === 'ghadaq' ? 'default-GHD' : 'default-MNK';
+}
+
 export default function CustomersPage() {
   const t = useTranslations('admin.customers');
   const tCommon = useTranslations('admin.customers.common');
@@ -185,7 +189,7 @@ export default function CustomersPage() {
       value: r.referralId,
     }));
 
-    return [{ label: tCommon('clearReferral'), value: '__none__' }, ...options];
+    return options;
   }, [referrals, tCommon]);
 
   const fetchCustomers = useCallback(async () => {
@@ -309,7 +313,7 @@ export default function CustomersPage() {
 
   const updateCustomerRef = useCallback(
     async (customer: Customer, nextRefValue: string) => {
-      const nextRef = normalizeRefValue(nextRefValue);
+      const nextRef = nextRefValue || getDefaultRefForApp(customer.appId);
       setUpdatingId(customer._id);
 
       try {
@@ -510,7 +514,7 @@ export default function CustomersPage() {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ref: normalizeRefValue(bulkRefValue),
+          ref: bulkRefValue,
           customers: selected.map((customer) => ({
             id: customer._id,
             appId: customer.appId,
@@ -664,8 +668,14 @@ export default function CustomersPage() {
         header: t('table.ref'),
         accessor: (customer: Customer) => (
           <Dropdown
-            value={customer.ref || 'default'}
-            options={refActionOptions}
+            value={customer.ref || getDefaultRefForApp(customer.appId)}
+            options={[
+              {
+                label: getDefaultRefForApp(customer.appId),
+                value: getDefaultRefForApp(customer.appId),
+              },
+              ...refActionOptions,
+            ]}
             onChange={(value) => handleRefDropdownChange(customer, value)}
             placeholder={tCommon('selectReferral')}
             disabled={loading || bulkUpdating || updatingId === customer._id}
@@ -891,7 +901,11 @@ export default function CustomersPage() {
       <BulkAction
         selectedCount={selectedCustomerKeys.length}
         value={bulkRefValue}
-        options={refActionOptions}
+        options={[
+          { label: 'default-MNK', value: 'default-MNK' },
+          { label: 'default-GHD', value: 'default-GHD' },
+          ...refActionOptions,
+        ]}
         onValueChange={setBulkRefValue}
         onApply={handleBulkApplyRef}
         onClear={handleClearSelection}

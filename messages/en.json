@@ -822,6 +822,7 @@
         "title": "Info",
         "close": "Close",
         "email": "Email",
+        "registeredDate": "Registered Date",
         "registrationIp": "Registration IP",
         "lastLoginIp": "Last Login IP",
         "lastLoginTime": "Last Login Time",

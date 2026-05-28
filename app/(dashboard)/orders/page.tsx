@@ -941,7 +941,7 @@ export default function OrderHistoryPage() {
       header: t('table.date'),
       accessor: (row: Order) => (
         <span className="text-sm text-secondary">
-          {formatDate(row.updatedAt)}
+          {formatDate(row.statusUpdateTime)}
         </span>
       ),
     },
@@ -1248,7 +1248,7 @@ export default function OrderHistoryPage() {
                       {t(`status.${selectedOrder.status}`)}
                     </span>
                     <span className="text-sm text-secondary">
-                      {formatDate(selectedOrder.updatedAt)}
+                      {formatDate(selectedOrder.statusUpdateTime)}
                     </span>
                   </div>
 
@@ -1559,7 +1559,7 @@ export default function OrderHistoryPage() {
                       <InfoRow
                         icon={<Calendar size={14} />}
                         label={t('table.date')}
-                        value={formatDate(selectedOrder.updatedAt)}
+                        value={formatDate(selectedOrder.statusUpdateTime)}
                       />
                       <InfoRow
                         icon={<Hash size={14} />}
@@ -1578,7 +1578,7 @@ export default function OrderHistoryPage() {
                       <InfoRow
                         icon={<Hash size={14} />}
                         label={t('updatedAt')}
-                        value={formatDate(selectedOrder.updatedAt)}
+                        value={formatDate(selectedOrder.statusUpdateTime)}
                       />
                       {selectedOrder.referralId && (
                         <InfoRow

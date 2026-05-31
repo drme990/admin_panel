@@ -7,6 +7,8 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   helperText?: string;
   fullWidth?: boolean;
   suffix?: ReactNode;
+  required?: boolean;
+  requiredClassName?: string;
 }
 
 const Input = forwardRef<HTMLInputElement, InputProps>(
@@ -20,6 +22,8 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
       id,
       type = 'text',
       suffix,
+      required = false,
+      requiredClassName = 'text-error ml-1',
       ...props
     },
     ref,
@@ -34,6 +38,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
             className="block text-sm font-medium text-foreground"
           >
             {label}
+            {required && <span className={requiredClassName}>*</span>}
           </label>
         )}
         <div className="relative flex items-center">

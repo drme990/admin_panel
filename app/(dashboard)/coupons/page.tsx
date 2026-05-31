@@ -3,9 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Coupon } from '@/types/Coupon';
 import Table from '@/components/ui/table';
-import Modal from '@/components/ui/modal';
-import Input from '@/components/ui/input';
-import Dropdown from '@/components/ui/dropdown';
+import { type CurrencyPrice } from '@/components/admin/multi-currency-price-editor';
 import { useTranslations } from 'next-intl';
 import { toast } from 'react-toastify';
 import ConfirmModal, { useConfirmModal } from '@/components/ui/confirm-modal';
@@ -14,10 +12,19 @@ import Tooltip from '@/components/ui/tooltip';
 import Pagination from '@/components/ui/pagination';
 
 import { LuPlus, LuPencil, LuTrash2 } from 'react-icons/lu';
+import CouponModal from './components/coupon-modal';
+
+type CountryOption = {
+  _id: string;
+  code: string;
+  currencyCode: string;
+  name: { ar: string; en: string };
+};
 
 export default function CouponsPage() {
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [loading, setLoading] = useState(true);
+  const [countries, setCountries] = useState<CountryOption[]>([]);
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({
     currentPage: 1,
@@ -32,12 +39,18 @@ export default function CouponsPage() {
     code: '',
     type: 'percentage' as 'percentage' | 'fixed',
     value: 0,
+    fixedPrices: [] as CurrencyPrice[],
+    fixedMainCurrency: '',
+    fixedBasePrice: 0,
+    maxDiscountPrices: [] as CurrencyPrice[],
+    maxDiscountMainCurrency: '',
+    maxDiscountBasePrice: 0,
+    allowedCountries: [] as string[],
     maxUses: '' as string | number,
     validFrom: new Date().toISOString().split('T')[0],
     validUntil: '',
     status: 'active' as 'active' | 'expired' | 'disabled',
     minOrderAmount: '' as string | number,
-    maxDiscountAmount: '' as string | number,
     description_ar: '',
     description_en: '',
   });
@@ -64,22 +77,57 @@ export default function CouponsPage() {
     fetchCoupons(page);
   }, [page, fetchCoupons]);
 
+  useEffect(() => {
+    const fetchCountries = async () => {
+      try {
+        const res = await fetch('/api/countries?active=true');
+        const data = await res.json();
+        if (data.success) {
+          setCountries(data.data || []);
+        }
+      } catch (error) {
+        console.error('Error fetching countries:', error);
+      }
+    };
+
+    void fetchCountries();
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     const couponData = {
       code: formData.code.toUpperCase().trim(),
       type: formData.type,
-      value: formData.value,
+      value: formData.type === 'percentage' ? formData.value : undefined,
+      fixedPrices:
+        formData.type === 'fixed'
+          ? formData.fixedPrices
+              .map((price) => ({
+                currencyCode: price.currencyCode,
+                amount: Number(price.amount || 0),
+              }))
+              .filter((price) => price.currencyCode && price.amount >= 0)
+          : undefined,
+      maxDiscountPrices:
+        formData.maxDiscountPrices.length > 0
+          ? formData.maxDiscountPrices
+              .map((price) => ({
+                currencyCode: price.currencyCode,
+                amount: Number(price.amount || 0),
+              }))
+              .filter((price) => price.currencyCode && price.amount >= 0)
+          : undefined,
+      allowedCountries:
+        formData.allowedCountries.length > 0
+          ? formData.allowedCountries
+          : undefined,
       maxUses: formData.maxUses ? Number(formData.maxUses) : undefined,
       validFrom: formData.validFrom,
       validUntil: formData.validUntil || undefined,
       status: formData.status,
       minOrderAmount: formData.minOrderAmount
         ? Number(formData.minOrderAmount)
-        : undefined,
-      maxDiscountAmount: formData.maxDiscountAmount
-        ? Number(formData.maxDiscountAmount)
         : undefined,
       description_ar: formData.description_ar || undefined,
       description_en: formData.description_en || undefined,
@@ -147,6 +195,31 @@ export default function CouponsPage() {
         code: coupon.code,
         type: coupon.type,
         value: coupon.value,
+        fixedPrices: (coupon.fixedPrices || []).map((price) => ({
+          currencyCode: price.currencyCode,
+          amount: price.amount,
+          isManual: true,
+        })),
+        fixedMainCurrency:
+          coupon.fixedPrices?.[0]?.currencyCode ||
+          countries[0]?.currencyCode ||
+          'SAR',
+        fixedBasePrice: coupon.fixedPrices?.[0]?.amount || 0,
+        maxDiscountPrices: (coupon.maxDiscountPrices || []).map((price) => ({
+          currencyCode: price.currencyCode,
+          amount: price.amount,
+          isManual: true,
+        })),
+        maxDiscountMainCurrency:
+          coupon.maxDiscountPrices?.[0]?.currencyCode ||
+          coupon.fixedPrices?.[0]?.currencyCode ||
+          countries[0]?.currencyCode ||
+          'SAR',
+        maxDiscountBasePrice:
+          coupon.maxDiscountPrices?.[0]?.amount ??
+          coupon.maxDiscountAmount ??
+          0,
+        allowedCountries: coupon.allowedCountries || [],
         maxUses: coupon.maxUses || '',
         validFrom: coupon.validFrom
           ? new Date(coupon.validFrom).toISOString().split('T')[0]
@@ -156,7 +229,6 @@ export default function CouponsPage() {
           : '',
         status: coupon.status,
         minOrderAmount: coupon.minOrderAmount || '',
-        maxDiscountAmount: coupon.maxDiscountAmount || '',
         description_ar: coupon.description?.ar || '',
         description_en: coupon.description?.en || '',
       });
@@ -166,12 +238,18 @@ export default function CouponsPage() {
         code: '',
         type: 'percentage',
         value: 0,
+        fixedPrices: [],
+        fixedMainCurrency: countries[0]?.currencyCode || 'SAR',
+        fixedBasePrice: 0,
+        allowedCountries: [],
         maxUses: '',
         validFrom: new Date().toISOString().split('T')[0],
         validUntil: '',
         status: 'active',
         minOrderAmount: '',
-        maxDiscountAmount: '',
+        maxDiscountPrices: [],
+        maxDiscountMainCurrency: countries[0]?.currencyCode || 'SAR',
+        maxDiscountBasePrice: 0,
         description_ar: '',
         description_en: '',
       });
@@ -197,7 +275,7 @@ export default function CouponsPage() {
         <span>
           {coupon.type === 'percentage'
             ? `${coupon.value}%`
-            : `${coupon.value}`}
+            : t('table.fixedMultiCurrency')}
         </span>
       ),
     },
@@ -241,24 +319,18 @@ export default function CouponsPage() {
             <Button
               variant="icon-primary"
               size="custom"
-              onClick={(e) => {
-                e.stopPropagation();
-                openModal(coupon);
-              }}
+              onClick={() => openModal(coupon)}
               aria-label={t('editCoupon')}
             >
               <LuPencil size={16} />
             </Button>
           </Tooltip>
-          <Tooltip position="left" content={t('buttons.deleteCoupon')}>
+          <Tooltip position="left" content={t('deleteCoupon')}>
             <Button
               variant="icon-danger"
               size="custom"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleDelete(coupon._id);
-              }}
-              aria-label={t('buttons.deleteCoupon')}
+              onClick={() => handleDelete(coupon._id)}
+              aria-label={t('deleteCoupon')}
             >
               <LuTrash2 size={16} />
             </Button>
@@ -268,6 +340,8 @@ export default function CouponsPage() {
     },
   ];
 
+  const allCountryCodes = countries.map((country) => country.code);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -275,10 +349,10 @@ export default function CouponsPage() {
           <h1 className="text-3xl font-bold text-foreground mb-2">
             {t('title')}
           </h1>
-          <p className="text-secondary">{t('description')}</p>
+          <p className="max-w-2xl text-sm text-secondary">{t('description')}</p>
         </div>
-        <Button onClick={() => openModal()}>
-          <LuPlus size={20} />
+        <Button type="button" onClick={() => openModal()} className="shrink-0">
+          <LuPlus size={16} />
           {t('addCoupon')}
         </Button>
       </div>
@@ -291,180 +365,22 @@ export default function CouponsPage() {
       />
 
       <Pagination
-        currentPage={pagination.currentPage}
+        currentPage={page}
         totalPages={pagination.totalPages}
-        onPageChange={(p) => setPage(p)}
-        hasNextPage={pagination.hasNextPage}
-        hasPrevPage={pagination.hasPrevPage}
+        onPageChange={setPage}
       />
 
-      <Modal
-        isOpen={showModal}
-        onClose={closeModal}
-        title={editingCoupon ? t('editCoupon') : t('addCoupon')}
-        size="md"
-        footer={
-          <div className="flex items-center gap-3">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={closeModal}
-              className="flex-1"
-            >
-              {t('buttons.cancelButton')}
-            </Button>
-            <Button
-              type="submit"
-              variant="primary"
-              form="coupon-form"
-              className="flex-1"
-            >
-              {editingCoupon
-                ? t('buttons.updateCoupon')
-                : t('buttons.addCoupon')}
-            </Button>
-          </div>
-        }
-      >
-        <form id="coupon-form" onSubmit={handleSubmit} className="space-y-4">
-          <Input
-            label={t('form.code')}
-            type="text"
-            required
-            value={formData.code}
-            onChange={(e) =>
-              setFormData({
-                ...formData,
-                code: e.target.value.toUpperCase(),
-              })
-            }
-            placeholder="SUMMER2024"
-            disabled={!!editingCoupon}
-          />
-
-          <div className="grid grid-cols-2 gap-4">
-            <Dropdown
-              label={t('form.type')}
-              value={formData.type}
-              options={[
-                { label: t('form.typePercentage'), value: 'percentage' },
-                { label: t('form.typeFixed'), value: 'fixed' },
-              ]}
-              onChange={(value) =>
-                setFormData({
-                  ...formData,
-                  type: value as 'percentage' | 'fixed',
-                })
-              }
-            />
-            <Input
-              label={t('form.value')}
-              type="number"
-              required
-              min="0"
-              step="0.01"
-              value={formData.value || ''}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  value: parseFloat(e.target.value) || 0,
-                })
-              }
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <Input
-              label={t('form.validFrom')}
-              type="date"
-              required
-              value={formData.validFrom}
-              onChange={(e) =>
-                setFormData({ ...formData, validFrom: e.target.value })
-              }
-            />
-            <Input
-              label={t('form.validUntil')}
-              type="date"
-              value={formData.validUntil}
-              onChange={(e) =>
-                setFormData({ ...formData, validUntil: e.target.value })
-              }
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <Input
-              label={t('form.maxUses')}
-              type="number"
-              min="1"
-              value={formData.maxUses}
-              onChange={(e) =>
-                setFormData({ ...formData, maxUses: e.target.value })
-              }
-              placeholder={t('form.unlimited')}
-            />
-            <Input
-              label={t('form.minOrderAmount')}
-              type="number"
-              min="0"
-              step="0.01"
-              value={formData.minOrderAmount}
-              onChange={(e) =>
-                setFormData({ ...formData, minOrderAmount: e.target.value })
-              }
-            />
-          </div>
-
-          <Input
-            label={t('form.maxDiscountAmount')}
-            type="number"
-            min="0"
-            step="0.01"
-            value={formData.maxDiscountAmount}
-            onChange={(e) =>
-              setFormData({ ...formData, maxDiscountAmount: e.target.value })
-            }
-            placeholder={t('form.noLimit')}
-          />
-
-          <div className="grid grid-cols-2 gap-4">
-            <Input
-              label={t('form.descriptionAr')}
-              value={formData.description_ar}
-              onChange={(e) =>
-                setFormData({ ...formData, description_ar: e.target.value })
-              }
-            />
-            <Input
-              label={t('form.descriptionEn')}
-              value={formData.description_en}
-              onChange={(e) =>
-                setFormData({ ...formData, description_en: e.target.value })
-              }
-              dir="ltr"
-            />
-          </div>
-
-          {editingCoupon && (
-            <Dropdown
-              label={t('form.status')}
-              value={formData.status}
-              options={[
-                { label: t('status.active'), value: 'active' },
-                { label: t('status.disabled'), value: 'disabled' },
-                { label: t('status.expired'), value: 'expired' },
-              ]}
-              onChange={(value) =>
-                setFormData({
-                  ...formData,
-                  status: value as 'active' | 'expired' | 'disabled',
-                })
-              }
-            />
-          )}
-        </form>
-      </Modal>
+      <CouponModal
+        showModal={showModal}
+        closeModal={closeModal}
+        t={t}
+        editingCoupon={editingCoupon}
+        formData={formData}
+        setFormData={setFormData}
+        countries={countries}
+        handleSubmit={handleSubmit}
+        allCountryCodes={allCountryCodes}
+      />
 
       <ConfirmModal {...modalProps} />
     </div>

@@ -335,8 +335,8 @@
         "active": "نشط"
       },
       "form": {
-        "nameAr": "الاسم (عربي) *",
-        "nameEn": "الاسم (إنجليزي) *",
+        "nameAr": "الاسم (عربي)",
+        "nameEn": "الاسم (إنجليزي)",
         "slug": "الرابط المختصر (SEO)",
         "slugPlaceholder": "مثال: aqeeqa-sheep",
         "slugHelp": "إلزامي. يُستخدم في رابط صفحة المنتج. يُسمح فقط بالأحرف الإنجليزية الصغيرة والأرقام والشرطات.",
@@ -344,8 +344,8 @@
         "contentEn": "المحتوى (إنجليزي)",
         "contentHelp": "استخدم شريط الأدوات لتنسيق النص بالعناوين والقوائم والنص العريض والألوان والمزيد",
         "contentPlaceholder": "اكتب تفاصيل المنتج هنا...",
-        "price": "السعر *",
-        "currency": "العملة *",
+        "price": "السعر",
+        "currency": "العملة",
         "mainCurrency": "العملة الأساسية",
         "basePrice": "السعر الأساسي",
         "currencyPrices": "الأسعار حسب العملة",
@@ -617,6 +617,7 @@
       "table": {
         "code": "الكود",
         "type": "النوع",
+        "fixedMultiCurrency": "مبلغ ثابت (متعدد العملات)",
         "uses": "مرات الاستخدام",
         "status": "الحالة",
         "validUntil": "صالح حتى",
@@ -628,17 +629,25 @@
         "disabled": "معطل"
       },
       "form": {
-        "code": "كود الكوبون *",
-        "type": "نوع الخصم *",
+        "code": "كود الكوبون",
+        "type": "نوع الخصم",
         "typePercentage": "نسبة مئوية",
         "typeFixed": "مبلغ ثابت",
-        "value": "قيمة الخصم *",
-        "validFrom": "صالح من *",
+        "value": "قيمة الخصم (الحد الأقصى للنسبة هو 100)",
+        "fixedPricesHint": "حدد مبلغ خصم ثابت لكل عملة.",
+        "validFrom": "صالح من",
         "validUntil": "صالح حتى",
         "maxUses": "الحد الأقصى للاستخدام",
         "unlimited": "غير محدود",
         "minOrderAmount": "الحد الأدنى لمبلغ الطلب",
         "maxDiscountAmount": "الحد الأقصى لمبلغ الخصم",
+        "maxDiscountAmountHint": "حدد حد الخصم الأقصى لكل عملة.",
+        "fixedPrices": "الأسعار الثابتة",
+        "percentageDiscountHint": "استخدم حقل القيمة للكوبونات النسبية.",
+        "allowedCountries": "الدول المسموح بها حسب detectedCountry",
+        "allowedCountriesHint": "اتركها فارغة للسماح بكل الدول. عند الاختيار سيعمل الكوبون فقط إذا كانت detectedCountry للمستخدم ضمن الدول المحددة.",
+        "selectAllCountries": "تحديد الكل",
+        "clearCountries": "مسح",
         "noLimit": "بدون حد",
         "descriptionAr": "الوصف (عربي)",
         "descriptionEn": "الوصف (إنجليزي)",
@@ -684,13 +693,13 @@
         "super_admin": "مسؤول رئيسي"
       },
       "form": {
-        "name": "الاسم *",
-        "email": "البريد الإلكتروني *",
-        "password": "كلمة المرور *",
+        "name": "الاسم",
+        "email": "البريد الإلكتروني",
+        "password": "كلمة المرور",
         "passwordOptional": "كلمة المرور (اتركها فارغة للإبقاء على الحالية)",
         "passwordPlaceholder": "6 أحرف على الأقل",
         "passwordOptionalPlaceholder": "اتركها فارغة للإبقاء على كلمة المرور الحالية",
-        "role": "الدور *",
+        "role": "الدور",
         "allowedPages": "الصفحات المسموحة",
         "allowedPagesHelp": "حدد صفحات لوحة التحكم التي يمكن لهذا المستخدم الوصول إليها"
       },
@@ -865,11 +874,11 @@
         "actions": "الإجراءات"
       },
       "form": {
-        "name": "الاسم *",
+        "name": "الاسم",
         "namePlaceholder": "أدخل اسم الإحالة",
-        "referralId": "معرف الإحالة *",
+        "referralId": "معرف الإحالة",
         "referralIdPlaceholder": "أدخل معرف إحالة فريد",
-        "phone": "رقم الهاتف *",
+        "phone": "رقم الهاتف",
         "phonePlaceholder": "+966XXXXXXXXX"
       },
       "buttons": {

@@ -26,7 +26,7 @@ interface CustomerCountryHistoryModalProps {
   history: CountryHistoryEntry[];
 }
 
-function formatCountry(value: string | null, t: any) {
+function formatCountry(value: string | null, t: (key: 'none') => string) {
   return value || t('none');
 }
 

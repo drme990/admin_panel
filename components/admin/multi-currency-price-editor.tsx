@@ -331,7 +331,7 @@ export default function MultiCurrencyPriceEditor({
     return (
       <div className="p-4 bg-card-bg rounded-lg border border-stroke">
         <Dropdown
-          label={`${t('form.mainCurrency')} *`}
+          label={`${t('form.mainCurrency')}`}
           value={mainCurrency}
           options={availableCurrencies.map((code) => ({
             label: `${code} (${getCurrencySymbol(code)})`,
@@ -352,7 +352,7 @@ export default function MultiCurrencyPriceEditor({
       {!compact && (
         <div className="grid grid-cols-2 gap-4 p-4 bg-card-bg rounded-lg border border-stroke">
           <Dropdown
-            label={`${t('form.mainCurrency')} *`}
+            label={`${t('form.mainCurrency')}`}
             value={mainCurrency}
             options={availableCurrencies.map((code) => ({
               label: `${code} (${getCurrencySymbol(code)})`,
@@ -362,7 +362,7 @@ export default function MultiCurrencyPriceEditor({
           />
 
           <Input
-            label={`${t('form.basePrice')} *`}
+            label={`${t('form.basePrice')}`}
             type="number"
             step="0.01"
             min="0"

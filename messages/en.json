@@ -336,8 +336,8 @@
         "active": "Active"
       },
       "form": {
-        "nameAr": "Name (Arabic) *",
-        "nameEn": "Name (English) *",
+        "nameAr": "Name (Arabic)",
+        "nameEn": "Name (English)",
         "slug": "Slug (SEO URL)",
         "slugPlaceholder": "e.g. aqeeqa-sheep",
         "slugHelp": "Required. Used for product page URL. Only lowercase letters, numbers, and hyphens are allowed.",
@@ -345,8 +345,8 @@
         "contentEn": "Content (English)",
         "contentHelp": "Use the toolbar to format text with headings, lists, bold, colors, and more",
         "contentPlaceholder": "Write product details here...",
-        "price": "Price *",
-        "currency": "Currency *",
+        "price": "Price",
+        "currency": "Currency",
         "mainCurrency": "Main Currency",
         "basePrice": "Base Price",
         "currencyPrices": "Prices by Currency",
@@ -618,6 +618,7 @@
       "table": {
         "code": "Code",
         "type": "Type",
+        "fixedMultiCurrency": "Fixed (Multi-currency)",
         "uses": "Uses",
         "status": "Status",
         "validUntil": "Valid Until",
@@ -629,17 +630,24 @@
         "disabled": "Disabled"
       },
       "form": {
-        "code": "Coupon Code *",
-        "type": "Discount Type *",
+        "code": "Coupon Code",
+        "type": "Discount Type",
         "typePercentage": "Percentage",
         "typeFixed": "Fixed Amount",
-        "value": "Discount Value *",
-        "validFrom": "Valid From *",
+        "value": "Discount Value (Max percentage is 100)",
+        "validFrom": "Valid From",
         "validUntil": "Valid Until",
         "maxUses": "Maximum Uses",
         "unlimited": "Unlimited",
         "minOrderAmount": "Minimum Order Amount",
         "maxDiscountAmount": "Maximum Discount Amount",
+        "maxDiscountAmountHint": "Set one maximum discount cap per currency.",
+        "fixedPrices": "Fixed Prices",
+        "percentageDiscountHint": "Use the value field for percentage coupons.",
+        "allowedCountries": "Allowed Detected Countries",
+        "allowedCountriesHint": "Leave empty to allow all countries. Otherwise coupon works only when user detectedCountry matches one of the selected country codes.",
+        "selectAllCountries": "Select All",
+        "clearCountries": "Clear",
         "noLimit": "No limit",
         "descriptionAr": "Description (Arabic)",
         "descriptionEn": "Description (English)",
@@ -685,13 +693,13 @@
         "super_admin": "Super Admin"
       },
       "form": {
-        "name": "Name *",
-        "email": "Email *",
-        "password": "Password *",
+        "name": "Name",
+        "email": "Email",
+        "password": "Password",
         "passwordOptional": "Password (leave blank to keep current)",
         "passwordPlaceholder": "Minimum 6 characters",
         "passwordOptionalPlaceholder": "Leave blank to keep current password",
-        "role": "Role *",
+        "role": "Role",
         "allowedPages": "Allowed Pages",
         "allowedPagesHelp": "Select which admin pages this user can access"
       },
@@ -866,11 +874,11 @@
         "actions": "Actions"
       },
       "form": {
-        "name": "Name *",
+        "name": "Name",
         "namePlaceholder": "Enter referral name",
-        "referralId": "Referral ID *",
+        "referralId": "Referral ID",
         "referralIdPlaceholder": "Enter unique referral ID",
-        "phone": "Phone Number *",
+        "phone": "Phone Number",
         "phonePlaceholder": "+966XXXXXXXXX"
       },
       "buttons": {

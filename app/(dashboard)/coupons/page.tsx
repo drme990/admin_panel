@@ -315,22 +315,22 @@ export default function CouponsPage() {
       header: t('table.actions'),
       accessor: (coupon: Coupon) => (
         <div className="flex items-center gap-2">
-          <Tooltip position="left" content={t('editCoupon')}>
+          <Tooltip position="left" content={t('buttons.editCoupon')}>
             <Button
               variant="icon-primary"
               size="custom"
               onClick={() => openModal(coupon)}
-              aria-label={t('editCoupon')}
+              aria-label={t('buttons.editCoupon')}
             >
               <LuPencil size={16} />
             </Button>
           </Tooltip>
-          <Tooltip position="left" content={t('deleteCoupon')}>
+          <Tooltip position="left" content={t('buttons.deleteCoupon')}>
             <Button
               variant="icon-danger"
               size="custom"
               onClick={() => handleDelete(coupon._id)}
-              aria-label={t('deleteCoupon')}
+              aria-label={t('buttons.deleteCoupon')}
             >
               <LuTrash2 size={16} />
             </Button>
@@ -353,7 +353,7 @@ export default function CouponsPage() {
         </div>
         <Button type="button" onClick={() => openModal()} className="shrink-0">
           <LuPlus size={16} />
-          {t('addCoupon')}
+          {t('buttons.addCoupon')}
         </Button>
       </div>
 

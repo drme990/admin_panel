@@ -315,6 +315,10 @@ export default function CouponModal({
             }
           />
         )}
+
+        <Button type="submit" className="w-full">
+          {editingCoupon ? t('buttons.updateCoupon') : t('buttons.addCoupon')}
+        </Button>
       </form>
     </Modal>
   );

@@ -10,6 +10,7 @@ import {
   AudioReview,
   DocumentationAnswer,
   ProductBanner,
+  ProductBannerLanguage,
   ProductBannerTarget,
 } from '@/types/Appearance';
 import { PageLoading } from '@/components/ui/loading';
@@ -90,6 +91,7 @@ function normalizeProductsBanners(value: unknown): ProductBanner[] {
         id?: unknown;
         imageUrl?: unknown;
         target?: unknown;
+        language?: unknown;
         link?: unknown;
       };
 
@@ -101,6 +103,16 @@ function normalizeProductsBanners(value: unknown): ProductBanner[] {
         raw.target === 'both'
           ? raw.target
           : 'both';
+      const language =
+        raw.language === 'ar' ||
+        raw.language === 'en' ||
+        raw.language === 'shared'
+          ? raw.language
+          : raw.target === 'ghadaq'
+            ? 'ar'
+            : raw.target === 'manasik'
+              ? 'en'
+              : 'shared';
       const link = typeof raw.link === 'string' ? raw.link : '';
 
       if (!id || !imageUrl) return null;
@@ -109,6 +121,7 @@ function normalizeProductsBanners(value: unknown): ProductBanner[] {
         id,
         imageUrl,
         target,
+        language,
         link,
       } as ProductBanner;
     })
@@ -389,6 +402,7 @@ export default function AppearancePage() {
             id: generateId(),
             imageUrl: data.data.url,
             target: 'both',
+            language: 'shared',
             link: '',
           },
         ]);
@@ -441,6 +455,15 @@ export default function AppearancePage() {
     { value: 'ghadaq', label: t('productsBannerTargetGhadaq') },
     { value: 'manasik', label: t('productsBannerTargetManasik') },
     { value: 'both', label: t('productsBannerTargetBoth') },
+  ];
+
+  const productBannerLanguageOptions: Array<{
+    value: ProductBannerLanguage;
+    label: string;
+  }> = [
+    { value: 'ar', label: t('productsBannerLanguageAr') },
+    { value: 'en', label: t('productsBannerLanguageEn') },
+    { value: 'shared', label: t('productsBannerLanguageShared') },
   ];
 
   const handleMoveImage = (fromRow: 'row1' | 'row2', index: number) => {
@@ -528,30 +551,32 @@ export default function AppearancePage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground mb-2">
-            {t('title')}
-          </h1>
-          <p className="text-secondary">{t('description')}</p>
+      <div className="sticky top-0 bg-background z-50 py-4">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground mb-2">
+              {t('title')}
+            </h1>
+            <p className="text-secondary">{t('description')}</p>
+          </div>
+          <Button
+            variant="primary"
+            onClick={handleSave}
+            disabled={saving}
+            className="flex items-center gap-2 shrink-0"
+          >
+            <Save className="w-4 h-4" />
+            {saving ? t('saving') : t('saveChanges')}
+          </Button>
         </div>
-        <Button
-          variant="primary"
-          onClick={handleSave}
-          disabled={saving}
-          className="flex items-center gap-2 shrink-0"
-        >
-          <Save className="w-4 h-4" />
-          {saving ? t('saving') : t('saveChanges')}
-        </Button>
-      </div>
 
-      <div className="border-b border-stroke pb-3">
-        <Tabs
-          value={activeProject}
-          options={PROJECT_TAB_OPTIONS}
-          onChange={setActiveProject}
-        />
+        <div className="border-b border-stroke pb-3">
+          <Tabs
+            value={activeProject}
+            options={PROJECT_TAB_OPTIONS}
+            onChange={setActiveProject}
+          />
+        </div>
       </div>
 
       {!isSharedTab && (
@@ -614,12 +639,14 @@ export default function AppearancePage() {
             addLabel={t('productsBannerAddImage')}
             uploadingLabel={t('uploading')}
             targetLabel={t('productsBannerTargetLabel')}
+            languageLabel={t('productsBannerLanguageLabel')}
             linkLabel={t('productsBannerLinkLabel')}
             linkPlaceholder={t('productsBannerLinkPlaceholder')}
             moveEarlierLabel={t('moveEarlier')}
             moveLaterLabel={t('moveLater')}
             deleteLabel={t('productsBannerDelete')}
             targetOptions={productBannerTargetOptions}
+            languageOptions={productBannerLanguageOptions}
           />
 
           <DocumentationSection

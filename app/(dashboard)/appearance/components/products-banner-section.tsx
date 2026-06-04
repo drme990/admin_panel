@@ -13,7 +13,11 @@ import Button from '@/components/ui/button';
 import Dropdown from '@/components/ui/dropdown';
 import Input from '@/components/ui/input';
 import Tooltip from '@/components/ui/tooltip';
-import { ProductBanner, ProductBannerTarget } from '@/types/Appearance';
+import {
+  ProductBanner,
+  ProductBannerLanguage,
+  ProductBannerTarget,
+} from '@/types/Appearance';
 import { useLocale } from 'next-intl';
 
 interface ProductsBannerSectionProps {
@@ -29,12 +33,14 @@ interface ProductsBannerSectionProps {
   addLabel: string;
   uploadingLabel: string;
   targetLabel: string;
+  languageLabel: string;
   linkLabel: string;
   linkPlaceholder: string;
   moveEarlierLabel: string;
   moveLaterLabel: string;
   deleteLabel: string;
   targetOptions: Array<{ value: ProductBannerTarget; label: string }>;
+  languageOptions: Array<{ value: ProductBannerLanguage; label: string }>;
 }
 
 export default function ProductsBannerSection({
@@ -50,12 +56,14 @@ export default function ProductsBannerSection({
   addLabel,
   uploadingLabel,
   targetLabel,
+  languageLabel,
   linkLabel,
   linkPlaceholder,
   moveEarlierLabel,
   moveLaterLabel,
   deleteLabel,
   targetOptions,
+  languageOptions,
 }: ProductsBannerSectionProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const locale = useLocale();
@@ -63,7 +71,7 @@ export default function ProductsBannerSection({
   const tooltipPosition = isRtl ? 'left' : 'right';
 
   return (
-    <div className="space-y-5 border border-stroke rounded-xl p-5 bg-card-bg">
+    <section className="space-y-5 border border-stroke rounded-xl p-5 bg-card-bg">
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-lg font-semibold text-foreground">{title}</h2>
@@ -101,7 +109,7 @@ export default function ProductsBannerSection({
           <p className="text-sm text-secondary">{emptyText}</p>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-4 max-h-150 overflow-y-auto">
           {banners.map((banner, index) => (
             <div
               key={banner.id}
@@ -178,16 +186,29 @@ export default function ProductsBannerSection({
                 </div>
 
                 <div className="flex flex-col gap-4 w-7/12">
-                  <Dropdown
-                    label={targetLabel}
-                    options={targetOptions}
-                    value={banner.target}
-                    onChange={(value) =>
-                      onUpdate(banner.id, {
-                        target: value as ProductBannerTarget,
-                      })
-                    }
-                  />
+                  <div className="grid grid-cols-2">
+                    <Dropdown
+                      label={targetLabel}
+                      options={targetOptions}
+                      value={banner.target}
+                      onChange={(value) =>
+                        onUpdate(banner.id, {
+                          target: value as ProductBannerTarget,
+                        })
+                      }
+                    />
+
+                    <Dropdown
+                      label={languageLabel}
+                      options={languageOptions}
+                      value={banner.language}
+                      onChange={(value) =>
+                        onUpdate(banner.id, {
+                          language: value as ProductBannerLanguage,
+                        })
+                      }
+                    />
+                  </div>
 
                   <Input
                     label={linkLabel}
@@ -206,6 +227,6 @@ export default function ProductsBannerSection({
           ))}
         </div>
       )}
-    </div>
+    </section>
   );
 }

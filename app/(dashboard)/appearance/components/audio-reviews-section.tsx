@@ -204,7 +204,7 @@ export default function AudioReviewsSection(props: AudioReviewsSectionProps) {
   );
 
   return (
-    <div className="space-y-6 border border-stroke/60 rounded-2xl p-6 bg-card-bg shadow-sm">
+    <section className="space-y-6 border border-stroke/60 rounded-2xl p-6 bg-card-bg shadow-sm">
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-1">
           <h2 className="text-xl font-semibold tracking-tight">
@@ -242,7 +242,7 @@ export default function AudioReviewsSection(props: AudioReviewsSectionProps) {
           </p>
         </div>
       ) : (
-        <div className="grid gap-4">
+        <div className="grid gap-4 max-h-150 overflow-y-auto">
           {audioReviews.map((audio) => (
             <div
               key={audio.id}
@@ -442,6 +442,6 @@ export default function AudioReviewsSection(props: AudioReviewsSectionProps) {
           e.target.value = '';
         }}
       />
-    </div>
+    </section>
   );
 }

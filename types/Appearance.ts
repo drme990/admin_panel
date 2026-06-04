@@ -17,11 +17,13 @@ export interface DocumentationAnswer {
 }
 
 export type ProductBannerTarget = 'ghadaq' | 'manasik' | 'both';
+export type ProductBannerLanguage = 'ar' | 'en' | 'shared';
 
 export interface ProductBanner {
   id: string;
   imageUrl: string;
   target: ProductBannerTarget;
+  language: ProductBannerLanguage;
   link: string;
 }
 

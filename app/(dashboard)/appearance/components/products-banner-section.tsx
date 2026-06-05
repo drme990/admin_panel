@@ -16,7 +16,7 @@ import Tooltip from '@/components/ui/tooltip';
 import {
   ProductBanner,
   ProductBannerLanguage,
-  ProductBannerTarget,
+  ProductBannerPlatform,
 } from '@/types/Appearance';
 import { useLocale } from 'next-intl';
 
@@ -39,7 +39,7 @@ interface ProductsBannerSectionProps {
   moveEarlierLabel: string;
   moveLaterLabel: string;
   deleteLabel: string;
-  targetOptions: Array<{ value: ProductBannerTarget; label: string }>;
+  targetOptions: Array<{ value: ProductBannerPlatform; label: string }>;
   languageOptions: Array<{ value: ProductBannerLanguage; label: string }>;
 }
 
@@ -97,6 +97,8 @@ export default function ProductsBannerSection({
             variant="primary"
             onClick={() => inputRef.current?.click()}
             disabled={uploading}
+            size="sm"
+            className="flex items-center gap-2"
           >
             <LuUpload className="w-4 h-4" />
             {uploading ? uploadingLabel : addLabel}
@@ -190,10 +192,10 @@ export default function ProductsBannerSection({
                     <Dropdown
                       label={targetLabel}
                       options={targetOptions}
-                      value={banner.target}
+                      value={banner.platform}
                       onChange={(value) =>
                         onUpdate(banner.id, {
-                          target: value as ProductBannerTarget,
+                          platform: value as ProductBannerPlatform,
                         })
                       }
                     />

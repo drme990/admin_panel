@@ -24,7 +24,7 @@ export default function BannerTextEditor({
   placeholderEn,
 }: BannerTextEditorProps) {
   return (
-    <div className="space-y-3 border border-stroke rounded-xl p-5 bg-card-bg">
+    <section className="space-y-3 border border-stroke rounded-xl p-5 bg-card-bg">
       <div>
         <h2 className="text-lg font-semibold text-foreground">{title}</h2>
         <p className="text-sm text-secondary mt-0.5">{description}</p>
@@ -65,6 +65,6 @@ export default function BannerTextEditor({
           placeholder={placeholderEn}
         />
       </div>
-    </div>
+    </section>
   );
 }

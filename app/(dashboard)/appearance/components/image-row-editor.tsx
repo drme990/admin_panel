@@ -52,7 +52,7 @@ export default function ImageRowEditor({
   const local = useLocale();
 
   return (
-    <div className="border border-stroke rounded-xl p-5 space-y-4 bg-card-bg">
+    <section className="border border-stroke rounded-xl p-5 space-y-4 bg-card-bg">
       <div className="flex items-center justify-between">
         <h3 className="font-semibold text-foreground text-sm">{label}</h3>
         <span className="text-xs text-secondary bg-muted px-2.5 py-1 rounded-full">
@@ -167,6 +167,6 @@ export default function ImageRowEditor({
           {uploading ? uploadingLabel : addLabel}
         </Button>
       </div>
-    </div>
+    </section>
   );
 }

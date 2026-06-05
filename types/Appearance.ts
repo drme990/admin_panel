@@ -16,13 +16,13 @@ export interface DocumentationAnswer {
   en: string;
 }
 
-export type ProductBannerTarget = 'ghadaq' | 'manasik' | 'both';
+export type ProductBannerPlatform = 'ghadaq' | 'manasik' | 'shared';
 export type ProductBannerLanguage = 'ar' | 'en' | 'shared';
 
 export interface ProductBanner {
   id: string;
   imageUrl: string;
-  target: ProductBannerTarget;
+  platform: ProductBannerPlatform;
   language: ProductBannerLanguage;
   link: string;
 }
@@ -38,6 +38,14 @@ export interface AudioReview {
   isMain: boolean;
 }
 
+export interface FAQ {
+  id: string;
+  question: { ar: string; en: string };
+  answer: { ar: string; en: string };
+  platform: ProjectName;
+  showOnProductDetails: boolean;
+}
+
 export interface Appearance {
   _id: string;
   project: ProjectName;
@@ -47,6 +55,7 @@ export interface Appearance {
   bannerText?: BannerText;
   documentationAnswer?: DocumentationAnswer;
   productsBanners?: ProductBanner[];
+  faqs?: FAQ[];
   createdAt: string;
   updatedAt: string;
 }

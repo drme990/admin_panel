@@ -11,7 +11,8 @@ import {
   DocumentationAnswer,
   ProductBanner,
   ProductBannerLanguage,
-  ProductBannerTarget,
+  ProductBannerPlatform,
+  FAQ,
 } from '@/types/Appearance';
 import { PageLoading } from '@/components/ui/loading';
 import Button from '@/components/ui/button';
@@ -24,6 +25,7 @@ import WhatsAppMessageEditor from './components/whatsapp-message-editor';
 import WorksImagesSection from './components/works-images-section';
 import DocumentationSection from './components/documentation-section';
 import ProductsBannerSection from './components/products-banner-section';
+import FAQControlSection from './components/faq-control-section';
 import { useMultipleAudioUpload } from '@/hooks/use-multiple-audio-upload';
 
 import { toast } from 'react-toastify';
@@ -39,6 +41,7 @@ type AppearanceApiResponse = {
     audioReviews?: unknown;
     documentationAnswer?: unknown;
     productsBanners?: unknown;
+    faqs?: unknown;
   };
 };
 
@@ -90,42 +93,103 @@ function normalizeProductsBanners(value: unknown): ProductBanner[] {
       const raw = item as {
         id?: unknown;
         imageUrl?: unknown;
-        target?: unknown;
+        platform?: unknown;
         language?: unknown;
         link?: unknown;
       };
 
       const id = typeof raw.id === 'string' ? raw.id.trim() : '';
-      const imageUrl = typeof raw.imageUrl === 'string' ? raw.imageUrl : '';
-      const target =
-        raw.target === 'ghadaq' ||
-        raw.target === 'manasik' ||
-        raw.target === 'both'
-          ? raw.target
-          : 'both';
+      const imageUrl =
+        typeof raw.imageUrl === 'string' ? raw.imageUrl.trim() : '';
+
+      const platform =
+        raw.platform === 'ghadaq' ||
+        raw.platform === 'manasik' ||
+        raw.platform === 'shared'
+          ? raw.platform
+          : 'shared';
+
       const language =
         raw.language === 'ar' ||
         raw.language === 'en' ||
         raw.language === 'shared'
           ? raw.language
-          : raw.target === 'ghadaq'
-            ? 'ar'
-            : raw.target === 'manasik'
-              ? 'en'
-              : 'shared';
-      const link = typeof raw.link === 'string' ? raw.link : '';
+          : 'shared';
+
+      const link = typeof raw.link === 'string' ? raw.link.trim() : '';
 
       if (!id || !imageUrl) return null;
 
       return {
         id,
         imageUrl,
-        target,
+        platform,
         language,
         link,
-      } as ProductBanner;
+      };
     })
     .filter((item): item is ProductBanner => Boolean(item));
+}
+
+function normalizeFAQs(value: unknown): FAQ[] {
+  if (!Array.isArray(value)) return [];
+
+  return value
+    .map((item) => {
+      if (!item || typeof item !== 'object') return null;
+
+      const raw = item as {
+        id?: unknown;
+        question?: unknown;
+        answer?: unknown;
+        platform?: unknown;
+        showOnProductDetails?: unknown;
+      };
+
+      const id = typeof raw.id === 'string' ? raw.id.trim() : '';
+      const question =
+        typeof raw.question === 'object' && raw.question !== null
+          ? {
+              ar:
+                typeof (raw.question as { ar?: unknown }).ar === 'string'
+                  ? (raw.question as { ar: string }).ar.trim()
+                  : '',
+              en:
+                typeof (raw.question as { en?: unknown }).en === 'string'
+                  ? (raw.question as { en: string }).en.trim()
+                  : '',
+            }
+          : { ar: '', en: '' };
+      const answer =
+        typeof raw.answer === 'object' && raw.answer !== null
+          ? {
+              ar:
+                typeof (raw.answer as { ar?: unknown }).ar === 'string'
+                  ? (raw.answer as { ar: string }).ar.trim()
+                  : '',
+              en:
+                typeof (raw.answer as { en?: unknown }).en === 'string'
+                  ? (raw.answer as { en: string }).en.trim()
+                  : '',
+            }
+          : { ar: '', en: '' };
+      const platform =
+        raw.platform === 'ghadaq' ||
+        raw.platform === 'manasik' ||
+        raw.platform === 'shared'
+          ? raw.platform
+          : 'shared';
+      const showOnProductDetails =
+        typeof raw.showOnProductDetails === 'boolean'
+          ? raw.showOnProductDetails
+          : false;
+
+      if (!id || !question.ar || !question.en || !answer.ar || !answer.en)
+        return null;
+
+      return { id, question, answer, platform, showOnProductDetails };
+    })
+    .filter((item): item is FAQ => Boolean(item));
 }
 
 function generateId(): string {
@@ -166,6 +230,7 @@ export default function AppearancePage() {
     shared: EMPTY_DOCUMENTATION_ANSWER,
   });
   const [productsBanners, setProductsBanners] = useState<ProductBanner[]>([]);
+  const [faqs, setFaqs] = useState<FAQ[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploadingRow, setUploadingRow] = useState<'row1' | 'row2' | null>(
@@ -299,6 +364,12 @@ export default function AppearancePage() {
           ? normalizeProductsBanners(byProject.shared.data?.productsBanners)
           : [],
       );
+
+      setFaqs(
+        byProject.shared?.success
+          ? normalizeFAQs(byProject.shared.data?.faqs)
+          : [],
+      );
     } catch {
       toast.error(t('loadFailed'));
     } finally {
@@ -401,7 +472,7 @@ export default function AppearancePage() {
           {
             id: generateId(),
             imageUrl: data.data.url,
-            target: 'both',
+            platform: 'shared',
             language: 'shared',
             link: '',
           },
@@ -449,12 +520,12 @@ export default function AppearancePage() {
   );
 
   const productBannerTargetOptions: Array<{
-    value: ProductBannerTarget;
+    value: ProductBannerPlatform;
     label: string;
   }> = [
     { value: 'ghadaq', label: t('productsBannerTargetGhadaq') },
     { value: 'manasik', label: t('productsBannerTargetManasik') },
-    { value: 'both', label: t('productsBannerTargetBoth') },
+    { value: 'shared', label: t('productsBannerTargetBoth') },
   ];
 
   const productBannerLanguageOptions: Array<{
@@ -523,6 +594,7 @@ export default function AppearancePage() {
               bannerText: bannerTexts[key],
               documentationAnswer: documentationAnswers[key],
               productsBanners: isShared ? productsBanners : [],
+              faqs: isShared ? faqs : [],
             }),
           });
 
@@ -663,6 +735,24 @@ export default function AppearancePage() {
             labelEn={t('documentationLabelEn')}
             placeholderAr={t('documentationPlaceholderAr')}
             placeholderEn={t('documentationPlaceholderEn')}
+          />
+
+          <FAQControlSection
+            faqs={faqs}
+            onChange={setFaqs}
+            title={t('faqTitle')}
+            description={t('faqDescription')}
+            questionLabelAr={t('faqQuestionLabelAr')}
+            questionLabelEn={t('faqQuestionLabelEn')}
+            answerLabelAr={t('faqAnswerLabelAr')}
+            answerLabelEn={t('faqAnswerLabelEn')}
+            platformLabel={t('faqPlatformLabel')}
+            showOnProductDetailsLabel={t('faqShowOnProductDetailsLabel')}
+            addLabel={t('faqAddLabel')}
+            deleteLabel={t('faqDeleteLabel')}
+            moveUpLabel={t('moveEarlier')}
+            moveDownLabel={t('moveLater')}
+            emptyText={t('faqEmptyText')}
           />
         </>
       )}

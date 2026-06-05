@@ -55,7 +55,7 @@ export default function WorksImagesSection({
   uploadingLabel,
 }: WorksImagesSectionProps) {
   return (
-    <div className="space-y-5">
+    <section className="space-y-5">
       <div>
         <h2 className="text-lg font-semibold text-foreground">{title}</h2>
         <p className="text-sm text-secondary mt-0.5">{description}</p>
@@ -96,6 +96,6 @@ export default function WorksImagesSection({
         addLabel={addImageLabel}
         uploadingLabel={uploadingLabel}
       />
-    </div>
+    </section>
   );
 }

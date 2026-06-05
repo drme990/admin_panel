@@ -1,5 +1,6 @@
 'use client';
 
+import Textarea from '@/components/ui/textarea';
 import { DocumentationAnswer } from '@/types/Appearance';
 
 interface DocumentationSectionProps {
@@ -24,47 +25,39 @@ export default function DocumentationSection({
   placeholderEn,
 }: DocumentationSectionProps) {
   return (
-    <div className="space-y-3 border border-stroke rounded-xl p-5 bg-card-bg">
+    <section className="space-y-3 border border-stroke rounded-xl p-5 bg-card-bg">
       <div>
         <h2 className="text-lg font-semibold text-foreground">{title}</h2>
         <p className="text-sm text-secondary mt-0.5">{description}</p>
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-foreground mb-2">
-          {labelAr}
-        </label>
-        <textarea
+        <Textarea
           value={value.ar}
-          onChange={(e) =>
+          onChange={(newValue) =>
             onChange({
               ...value,
-              ar: e.target.value,
+              ar: newValue,
             })
           }
-          rows={4}
-          className="w-full px-3 py-2 text-sm border border-stroke rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-success"
-          placeholder={placeholderAr}
-        />
+           placeholder={placeholderAr}
+           label={labelAr}
+          />
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-foreground mb-2">
-          {labelEn}
-        </label>
-        <textarea
+        <Textarea
           value={value.en}
-          onChange={(e) =>
+          onChange={(newValue) =>
             onChange({
               ...value,
-              en: e.target.value,
+              en: newValue,
             })
           }
-          rows={4}
-          className="w-full px-3 py-2 text-sm border border-stroke rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-success"
-          placeholder={placeholderEn}
-        />
+           placeholder={placeholderEn}
+           label={labelEn}
+          />
       </div>
-    </div>
+    </section>
   );
 }

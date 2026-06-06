@@ -38,6 +38,7 @@ import {
   LuUserRoundPlus as UserRoundPlus,
   LuTag as Tag,
 } from 'react-icons/lu';
+import Image from 'next/image';
 
 const STATUS_COLORS: Record<OrderStatus, string> = {
   pending:
@@ -1598,6 +1599,35 @@ export default function OrderHistoryPage() {
                       <div className="flex flex-col gap-2">
                         {selectedOrder.reservationData.map((field, index) => {
                           const values = getReservationValues(field.value);
+
+                          if (field.key === 'photo') {
+                            return (
+                              <div
+                                key={`${field.key}-${index}`}
+                                className="flex flex-col items-center gap-3 p-4 rounded-lg bg-background border border-stroke"
+                              >
+                                <div className="overflow-hidden">
+                                  <Image
+                                    src={field.value}
+                                    alt={getReservationLabel(field.label)}
+                                    width={200}
+                                    height={200}
+                                    className="object-cover"
+                                  />
+                                </div>
+
+                                <a
+                                  href={field.value}
+                                  download
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center px-3 py-1 rounded-md text-sm font-medium bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                                >
+                                  Download Image
+                                </a>
+                              </div>
+                            );
+                          }
 
                           return (
                             <div

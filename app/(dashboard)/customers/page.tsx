@@ -74,11 +74,6 @@ function getCustomerKey(customer: Customer): string {
   return `${customer.appId}:${customer._id}`;
 }
 
-function normalizeRefValue(value: string): string | null {
-  if (!value || value === 'default') return null;
-  return value;
-}
-
 function getDefaultRefForApp(appId: Customer['appId']): string {
   return appId === 'ghadaq' ? 'default-GHD' : 'default-MNK';
 }
@@ -178,7 +173,8 @@ export default function CustomersPage() {
     }));
     return [
       { value: 'all' as const, label: tCommon('allReferences') },
-      { value: '__none__' as const, label: tCommon('defaultReferral') },
+      { value: 'default-MNK' as const, label: 'default-MNK' },
+      { value: 'default-GHD' as const, label: 'default-GHD' },
       ...options,
     ];
   }, [referrals, tCommon]);
@@ -190,7 +186,7 @@ export default function CustomersPage() {
     }));
 
     return options;
-  }, [referrals, tCommon]);
+  }, [referrals]);
 
   const fetchCustomers = useCallback(async () => {
     try {

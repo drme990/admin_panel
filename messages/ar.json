@@ -180,6 +180,7 @@
       "activityLogs": "سجل النشاطات",
       "appearance": "المظهر",
       "exchange": "أسعار الصرف",
+      "storageManager": "مدير التخزين",
       "payments": "المدفوعات"
     },
     "refTracker": {
@@ -234,6 +235,41 @@
         "productName": "المنتج",
         "buttonLabel": "الزر",
         "choice": "الخيار"
+      }
+    },
+    "storageManager": {
+      "title": "مدير التخزين",
+      "description": "إدارة تخزين Cloudflare R2",
+      "buttons": {
+        "refresh": "تحديث",
+        "back": "رجوع",
+        "download": "تحميل",
+        "delete": "حذف",
+        "preview": "معاينة"
+      },
+      "tabs": {
+        "all": "الكل",
+        "images": "الصور",
+        "audio": "الصوت",
+        "video": "الفيديو",
+        "documents": "المستندات"
+      },
+      "tooltips": {
+        "download": "تحميل الملف",
+        "delete": "حذف الملف",
+        "preview": "معاينة الملف"
+      },
+      "preview": {
+        "title": "معاينة",
+        "close": "إغلاق",
+        "unsupported": "المعاينة غير متاحة لنوع هذا الملف"
+      },
+      "table": {
+        "name": "الاسم",
+        "size": "الحجم",
+        "lastModified": "آخر تعديل",
+        "actions": "الإجراءات",
+        "empty": "هذا المجلد فارغ"
       }
     },
     "loading": "جاري التحميل...",
@@ -718,6 +754,7 @@
         "activityLogs": "سجل النشاطات",
         "appearance": "المظهر",
         "exchange": "أسعار الصرف",
+        "storage-manager": "مدير التخزين",
         "payments": "المدفوعات"
       },
       "buttons": {

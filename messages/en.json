@@ -180,6 +180,7 @@
       "activityLogs": "Activity Logs",
       "appearance": "Appearance",
       "exchange": "Exchange Rates",
+      "storageManager": "Storage Manager",
       "payments": "Payments"
     },
     "refTracker": {
@@ -234,6 +235,41 @@
         "productName": "Product",
         "buttonLabel": "Button",
         "choice": "Choice"
+      }
+    },
+    "storageManager": {
+      "title": "Storage Manager",
+      "description": "Manage Cloudflare R2 storage",
+      "buttons": {
+        "refresh": "Refresh",
+        "back": "Back",
+        "download": "Download",
+        "delete": "Delete",
+        "preview": "Preview"
+      },
+      "tabs": {
+        "all": "All",
+        "images": "Images",
+        "audio": "Audio",
+        "video": "Video",
+        "documents": "Documents"
+      },
+      "tooltips": {
+        "download": "Download file",
+        "delete": "Delete file",
+        "preview": "Preview file"
+      },
+      "preview": {
+        "title": "Preview",
+        "close": "Close",
+        "unsupported": "Preview not available for this file type"
+      },
+      "table": {
+        "name": "Name",
+        "size": "Size",
+        "lastModified": "Last Modified",
+        "actions": "Actions",
+        "empty": "This folder is empty"
       }
     },
     "loading": "Loading dashboard...",
@@ -718,6 +754,7 @@
         "activityLogs": "Activity Logs",
         "appearance": "Appearance",
         "exchange": "Exchange Rates",
+        "storage-manager": "Storage Manager",
         "payments": "Payments"
       },
       "buttons": {

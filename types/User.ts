@@ -9,9 +9,9 @@ export type AdminPage =
   | 'countries'
   | 'admins'
   | 'referrals'
-  | 'refTracker'
   | 'activityLogs'
   | 'appearance'
+  | 'storage-manager'
   | 'exchange'
   | 'payments';
 
@@ -26,11 +26,11 @@ export const ALL_ADMIN_PAGES: AdminPage[] = [
   'countries',
   'admins',
   'referrals',
-  'refTracker',
   'activityLogs',
   'appearance',
   'exchange',
   'payments',
+  'storage-manager',
 ];
 
 export interface User {

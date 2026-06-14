@@ -36,6 +36,7 @@ import {
   LuChartNoAxesCombined,
   LuBaggageClaim,
   LuRadar,
+  LuArchive,
 } from 'react-icons/lu';
 
 const navItems = [
@@ -143,6 +144,13 @@ const navItems = [
     icon: LuRefreshCw,
     superAdminOnly: false,
     permissionKey: 'exchange',
+  },
+  {
+    key: 'storageManager',
+    href: '/storage-manager',
+    icon: LuArchive,
+    superAdminOnly: false,
+    permissionKey: 'storageManager',
   },
   {
     key: 'activityLogs',

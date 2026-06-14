@@ -4,10 +4,25 @@ import { useState } from 'react';
 import { FAQ } from '@/types/Appearance';
 import Button from '@/components/ui/button';
 import Checkbox from '@/components/ui/checkbox';
+import Dropdown from '@/components/ui/dropdown';
 import Input from '@/components/ui/input';
 import Textarea from '@/components/ui/textarea';
 
 import { LuPlus, LuTrash2, LuChevronUp, LuChevronDown } from 'react-icons/lu';
+
+type FAQPlatform = 'ghadaq' | 'manasik' | 'shared';
+
+const PLATFORM_OPTIONS: Array<{ value: FAQPlatform; label: string }> = [
+  { value: 'shared', label: 'Shared' },
+  { value: 'ghadaq', label: 'Ghadaq' },
+  { value: 'manasik', label: 'Manasik' },
+];
+
+const PLATFORM_BADGE_COLORS: Record<FAQPlatform, string> = {
+  shared: 'bg-secondary/15 text-secondary',
+  ghadaq: 'bg-blue-500/10 text-blue-500',
+  manasik: 'bg-emerald-500/10 text-emerald-500',
+};
 
 interface FAQControlSectionProps {
   faqs: FAQ[];
@@ -105,7 +120,7 @@ export default function FAQControlSection({
           variant="primary"
           onClick={addFAQ}
           size="sm"
-          className="flex items-center gap-2"
+          className="flex items-center gap-2 shrink-0"
         >
           <LuPlus size={16} />
           {addLabel}
@@ -116,76 +131,95 @@ export default function FAQControlSection({
         <p className="text-sm text-secondary py-4 text-center">{emptyText}</p>
       ) : (
         <div className="space-y-3 max-h-150 overflow-y-scroll">
-          {faqs.map((faq, index) => (
-            <div
-              key={faq.id}
-              className="border border-stroke rounded-lg bg-background overflow-hidden"
-            >
-              <div className="flex items-center justify-between p-3 bg-muted/30">
-                <div className="flex items-center gap-2 flex-1">
-                  <button
-                    type="button"
-                    onClick={() => toggleExpanded(faq.id)}
-                    className="p-1 hover:bg-muted rounded transition-colors"
-                    aria-label={
-                      expandedItems.has(faq.id) ? 'Collapse' : 'Expand'
-                    }
-                  >
-                    {expandedItems.has(faq.id) ? (
-                      <LuChevronUp size={18} className="text-foreground" />
-                    ) : (
-                      <LuChevronDown size={18} className="text-foreground" />
-                    )}
-                  </button>
-                  <span className="text-sm font-medium text-foreground truncate">
-                    {faq.question.ar || faq.question.en || `FAQ ${index + 1}`}
-                  </span>
-                  {faq.showOnProductDetails && (
-                    <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">
-                      Product Details
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center gap-1">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="custom"
-                    className="p-1.5 hover:bg-muted rounded transition-colors"
-                    onClick={() => moveFAQ(index, 'up')}
-                    disabled={index === 0}
-                    title={moveUpLabel}
-                  >
-                    <LuChevronUp size={16} className="text-foreground" />
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="custom"
-                    className="p-1.5 hover:bg-muted rounded transition-colors"
-                    onClick={() => moveFAQ(index, 'down')}
-                    disabled={index === faqs.length - 1}
-                    title={moveDownLabel}
-                  >
-                    <LuChevronDown size={16} className="text-foreground" />
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="custom"
-                    className="p-1.5 hover:bg-error/10 hover:text-error rounded transition-colors"
-                    onClick={() => deleteFAQ(faq.id)}
-                    title={deleteLabel}
-                  >
-                    <LuTrash2 size={16} />
-                  </Button>
-                </div>
-              </div>
+          {faqs.map((faq, index) => {
+            const platform = (faq.platform ?? 'shared') as FAQPlatform;
+            const platformOption = PLATFORM_OPTIONS.find(
+              (o) => o.value === platform,
+            );
+            const badgeColor = PLATFORM_BADGE_COLORS[platform];
 
-              {expandedItems.has(faq.id) && (
-                <div className="p-4 space-y-4 border-t border-stroke">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
+            return (
+              <div
+                key={faq.id}
+                className="border border-stroke rounded-lg bg-background overflow-hidden"
+              >
+                {/* Item Header */}
+                <div className="flex items-center justify-between p-3 bg-muted/30">
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <button
+                      type="button"
+                      onClick={() => toggleExpanded(faq.id)}
+                      className="p-1 hover:bg-muted rounded transition-colors shrink-0"
+                      aria-label={
+                        expandedItems.has(faq.id) ? 'Collapse' : 'Expand'
+                      }
+                    >
+                      {expandedItems.has(faq.id) ? (
+                        <LuChevronUp size={18} className="text-foreground" />
+                      ) : (
+                        <LuChevronDown size={18} className="text-foreground" />
+                      )}
+                    </button>
+
+                    <span className="text-sm font-medium text-foreground truncate">
+                      {faq.question.ar || faq.question.en || `FAQ ${index + 1}`}
+                    </span>
+
+                    {/* Platform badge */}
+                    <span
+                      className={`text-xs px-2 py-0.5 rounded font-medium shrink-0 ${badgeColor}`}
+                    >
+                      {platformOption?.label ?? platform}
+                    </span>
+
+                    {faq.showOnProductDetails && (
+                      <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded shrink-0">
+                        Product Details
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-1 shrink-0">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="custom"
+                      className="p-1.5 hover:bg-muted rounded transition-colors"
+                      onClick={() => moveFAQ(index, 'up')}
+                      disabled={index === 0}
+                      title={moveUpLabel}
+                    >
+                      <LuChevronUp size={16} className="text-foreground" />
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="custom"
+                      className="p-1.5 hover:bg-muted rounded transition-colors"
+                      onClick={() => moveFAQ(index, 'down')}
+                      disabled={index === faqs.length - 1}
+                      title={moveDownLabel}
+                    >
+                      <LuChevronDown size={16} className="text-foreground" />
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="custom"
+                      className="p-1.5 hover:bg-error/10 hover:text-error rounded transition-colors"
+                      onClick={() => deleteFAQ(faq.id)}
+                      title={deleteLabel}
+                    >
+                      <LuTrash2 size={16} />
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Expanded content */}
+                {expandedItems.has(faq.id) && (
+                  <div className="p-4 space-y-4 border-t border-stroke">
+                    {/* Questions */}
+                    <div className="grid grid-cols-2 gap-4">
                       <Input
                         type="text"
                         value={faq.question.ar}
@@ -194,13 +228,10 @@ export default function FAQControlSection({
                             question: { ...faq.question, ar: e.target.value },
                           })
                         }
-                        className="w-full px-3 py-2 border border-stroke rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
                         placeholder="السؤال بالعربية"
                         dir="rtl"
                         label={questionLabelAr}
                       />
-                    </div>
-                    <div className="space-y-1.5">
                       <Input
                         type="text"
                         value={faq.question.en}
@@ -209,63 +240,62 @@ export default function FAQControlSection({
                             question: { ...faq.question, en: e.target.value },
                           })
                         }
-                        className="w-full px-3 py-2 border border-stroke rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
                         placeholder="Question in English"
                         label={questionLabelEn}
                       />
                     </div>
-                  </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <Textarea
-                      value={faq.answer.ar}
-                      onChange={(value) =>
-                        updateFAQ(faq.id, {
-                          answer: { ...faq.answer, ar: value },
-                        })
+                    {/* Answers */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <Textarea
+                        value={faq.answer.ar}
+                        onChange={(newValue) =>
+                          updateFAQ(faq.id, {
+                            answer: { ...faq.answer, ar: newValue },
+                          })
+                        }
+                        placeholder="الإجابة بالعربية"
+                        label={answerLabelAr}
+                        rows={3}
+                      />
+                      <Textarea
+                        value={faq.answer.en}
+                        onChange={(newValue) =>
+                          updateFAQ(faq.id, {
+                            answer: { ...faq.answer, en: newValue },
+                          })
+                        }
+                        placeholder="Answer in English"
+                        label={answerLabelEn}
+                        rows={3}
+                      />
+                    </div>
+
+                    <div className='h-52'>
+                      {/* Platform Dropdown */}
+                      <Dropdown<FAQPlatform>
+                        label={platformLabel}
+                        value={platform}
+                        options={PLATFORM_OPTIONS}
+                        onChange={(newPlatform) =>
+                          updateFAQ(faq.id, { platform: newPlatform })
+                        }
+                      />
+                    </div>
+
+                    {/* Show on product details checkbox */}
+                    <Checkbox
+                      label={showOnProductDetailsLabel}
+                      checked={faq.showOnProductDetails}
+                      onChange={(checked) =>
+                        updateFAQ(faq.id, { showOnProductDetails: checked })
                       }
-                      placeholder="الإجابة بالعربية"
-                      label={answerLabelAr}
-                      rows={3}
-                    />
-                    <Textarea
-                      value={faq.answer.en}
-                      onChange={(value) =>
-                        updateFAQ(faq.id, {
-                          answer: { ...faq.answer, en: value },
-                        })
-                      }
-                      placeholder="Answer in English"
-                      label={answerLabelEn}
-                      rows={3}
                     />
                   </div>
-
-                 <select
-                    value={faq.platform}
-                    onChange={(e) =>
-                      updateFAQ(faq.id, {
-                        platform: e.target.value as 'ghadaq' | 'manasik' | 'shared',
-                      })
-                    }
-                    className="w-full px-3 py-2 border border-stroke rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                  >
-                      <option value="shared">Shared</option>
-                      <option value="ghadaq">Ghadaq</option>
-                      <option value="manasik">Manasik</option>
-                  </select>
-
-                  <Checkbox
-                    label={showOnProductDetailsLabel}
-                    checked={faq.showOnProductDetails}
-                    onChange={(checked) =>
-                      updateFAQ(faq.id, { showOnProductDetails: checked })
-                    }
-                  />
-                </div>
-              )}
-            </div>
-          ))}
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
     </section>

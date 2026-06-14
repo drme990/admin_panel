@@ -1,5 +1,6 @@
 'use client';
 
+import Textarea from '@/components/ui/textarea';
 import { BannerText } from '@/types/Appearance';
 
 interface BannerTextEditorProps {
@@ -30,41 +31,31 @@ export default function BannerTextEditor({
         <p className="text-sm text-secondary mt-0.5">{description}</p>
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-foreground mb-2">
-          {labelAr}
-        </label>
-        <textarea
-          value={value.ar}
-          onChange={(e) =>
-            onChange({
-              ...value,
-              ar: e.target.value,
-            })
-          }
-          rows={3}
-          className="w-full px-3 py-2 text-sm border border-stroke rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-success"
-          placeholder={placeholderAr}
-        />
-      </div>
+      <Textarea
+        value={value.ar}
+        onChange={(newValue) =>
+          onChange({
+            ...value,
+            ar: newValue,
+          })
+        }
+        rows={3}
+        label={labelAr}
+        placeholder={placeholderAr}
+      />
 
-      <div>
-        <label className="block text-sm font-medium text-foreground mb-2">
-          {labelEn}
-        </label>
-        <textarea
-          value={value.en}
-          onChange={(e) =>
-            onChange({
-              ...value,
-              en: e.target.value,
-            })
-          }
-          rows={3}
-          className="w-full px-3 py-2 text-sm border border-stroke rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-success"
-          placeholder={placeholderEn}
-        />
-      </div>
+      <Textarea
+        value={value.en}
+        onChange={(newValue) =>
+          onChange({
+            ...value,
+            en: newValue,
+          })
+        }
+        rows={3}
+        label={labelEn}
+        placeholder={placeholderEn}
+      />
     </section>
   );
 }

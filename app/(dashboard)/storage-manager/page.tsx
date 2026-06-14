@@ -305,17 +305,15 @@ export default function StorageManager() {
           <p className="text-muted-foreground">{t('description')}</p>
         </div>
 
-        <Tooltip content={t('buttons.refresh')}>
-          <Button
-            onClick={handleRefresh}
-            variant="outline"
-            size="sm"
-            className="flex gap-2"
-          >
-            <LuRefreshCw />
-            {t('buttons.refresh')}
-          </Button>
-        </Tooltip>
+        <Button
+          onClick={handleRefresh}
+          variant="outline"
+          size="sm"
+          className="flex gap-2"
+        >
+          <LuRefreshCw />
+          {t('buttons.refresh')}
+        </Button>
       </div>
 
       {/* Breadcrumbs */}
@@ -349,17 +347,15 @@ export default function StorageManager() {
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           {currentPath && (
-            <Tooltip content={t('buttons.back')}>
-              <Button
-                onClick={navigateUp}
-                variant="outline"
-                size="sm"
-                className="flex gap-2"
-              >
-                <LuArrowLeft className={locale === 'ar' ? 'rotate-180' : ''} />
-                {t('buttons.back')}
-              </Button>
-            </Tooltip>
+            <Button
+              onClick={navigateUp}
+              variant="outline"
+              size="sm"
+              className="flex gap-2"
+            >
+              <LuArrowLeft className={locale === 'ar' ? 'rotate-180' : ''} />
+              {t('buttons.back')}
+            </Button>
           )}
 
           {!loading && folderStructure && folderStructure.files.length > 0 && (
@@ -528,7 +524,6 @@ export default function StorageManager() {
           onClose={() => setPreviewFile(null)}
           fileUrl={previewFile.url}
           fileName={previewFile.name}
-          fileType={previewFile.type}
         />
       )}
     </div>

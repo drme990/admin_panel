@@ -377,8 +377,16 @@ export default function StorageManager() {
                 size="sm"
                 disabled={downloading}
               >
-                <LuDownload className="mr-2" />
-                {t('buttons.download')} ({selectedItems.size})
+                {downloading ? (
+                  <>
+                    <Loading size="xs" inline className="mr-2" />
+                  </>
+                ) : (
+                  <>
+                    <LuDownload className="mr-2" />
+                    {t('buttons.download')} ({selectedItems.size})
+                  </>
+                )}
               </Button>
               <Button onClick={handleDelete} variant="danger" size="sm">
                 <LuTrash2 className="mr-2" />

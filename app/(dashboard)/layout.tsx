@@ -197,7 +197,6 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
       countries: 'countries',
       admins: 'admins',
       referrals: 'referrals',
-      'ref-tracker': 'refTracker',
       appearance: 'appearance',
       exchange: 'exchange',
       logs: 'activityLogs',

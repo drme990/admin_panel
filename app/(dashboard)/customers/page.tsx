@@ -75,7 +75,7 @@ function getCustomerKey(customer: Customer): string {
 }
 
 function getDefaultRefForApp(appId: Customer['appId']): string {
-  return appId === 'ghadaq' ? 'default-GHD' : 'default-MNK';
+  return appId === 'ghadaq' ? 'GHD-D' : 'MNK-D';
 }
 
 export default function CustomersPage() {
@@ -173,8 +173,8 @@ export default function CustomersPage() {
     }));
     return [
       { value: 'all' as const, label: tCommon('allReferences') },
-      { value: 'default-MNK' as const, label: 'default-MNK' },
-      { value: 'default-GHD' as const, label: 'default-GHD' },
+      { value: 'MNK-D' as const, label: 'MNK-D' },
+      { value: 'GHD-D' as const, label: 'GHD-D' },
       ...options,
     ];
   }, [referrals, tCommon]);
@@ -898,8 +898,8 @@ export default function CustomersPage() {
         selectedCount={selectedCustomerKeys.length}
         value={bulkRefValue}
         options={[
-          { label: 'default-MNK', value: 'default-MNK' },
-          { label: 'default-GHD', value: 'default-GHD' },
+          { label: 'MNK-D', value: 'MNK-D' },
+          { label: 'GHD-D', value: 'GHD-D' },
           ...refActionOptions,
         ]}
         onValueChange={setBulkRefValue}

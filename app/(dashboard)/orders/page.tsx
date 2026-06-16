@@ -1,68 +1,25 @@
 'use client';
 
-import { useState, useEffect, useCallback, type ReactNode } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { useSearchParams } from 'next/navigation';
+import { toast } from 'react-toastify';
 
 import Table from '@/components/ui/table';
 import Pagination from '@/components/ui/pagination';
-import Button from '@/components/ui/button';
 import BulkAction from '@/components/ui/bulk-action';
-import Modal from '@/components/ui/modal';
-import Dropdown from '@/components/ui/dropdown';
-import Tabs from '@/components/ui/tabs';
-import CustomDatePicker from '@/components/ui/custom-date-picker';
-import { toast } from 'react-toastify';
-import { Order, OrderPayment, OrderStatus } from '@/types/Order';
-import { FaWhatsapp as WhatsappIcon } from 'react-icons/fa6';
+
+import { Order, OrderStatus } from '@/types/Order';
 import { Referral } from '@/types/Referral';
-import Checkbox from '@/components/ui/checkbox';
-import Tooltip from '@/components/ui/tooltip';
 import {
   buildOrderWhatsappMessageFromOrder,
   buildProcessingOrderWhatsappFollowUpMessage,
 } from '@/lib/order-whatsapp';
 
-import {
-  LuSearch as Search,
-  LuCopy as Copy,
-  LuEye as Eye,
-  LuRefreshCw as RefreshCw,
-  LuPackage as Package,
-  LuMail as Mail,
-  LuPhone as Phone,
-  LuGlobe as Globe,
-  LuCalendar as Calendar,
-  LuHash as Hash,
-  LuCreditCard as CreditCard,
-  LuUserRoundPlus as UserRoundPlus,
-  LuTag as Tag,
-} from 'react-icons/lu';
-import Image from 'next/image';
-
-const STATUS_COLORS: Record<OrderStatus, string> = {
-  pending:
-    'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
-  processing:
-    'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
-  'partial-paid':
-    'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400',
-  paid: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
-  completed:
-    'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400',
-  failed: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
-  refunded:
-    'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400',
-  cancelled: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400',
-};
-
-const PAYMENT_STATUS_COLORS: Record<OrderPayment['status'], string> = {
-  pending:
-    'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
-  paid: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
-  failed: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
-  expired: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400',
-};
+import OrderFilters from './components/order-filters';
+import OrderDetailModal from './components/order-detail-modal';
+import ChangeStatusModal from './components/change-status-modal';
+import { useOrderColumns } from './components/order-table-columns';
 
 interface OrdersResponse {
   orders: Order[];
@@ -76,43 +33,13 @@ interface OrdersResponse {
 }
 
 type StatusTabValue = 'all' | OrderStatus;
-type WhatsappFilterValue =
-  | 'all'
-  | 'clicked'
-  | 'not-clicked'
-  | 'no-need-to-click';
+type WhatsappFilterValue = 'all' | 'clicked' | 'not-clicked' | 'no-need-to-click';
 type DateQuickPreset = 'today' | 'yesterday' | 'last7Days' | 'all';
 
 const STATUS_TAB_VALUES: StatusTabValue[] = [
-  'all',
-  'pending',
-  'processing',
-  'partial-paid',
-  'paid',
-  'completed',
-  'failed',
-  'refunded',
-  'cancelled',
+  'all', 'pending', 'processing', 'partial-paid',
+  'paid', 'completed', 'failed', 'refunded', 'cancelled',
 ];
-
-const WHATSAPP_STATE_CLASSES: Record<
-  Exclude<WhatsappFilterValue, 'all'>,
-  string
-> = {
-  clicked: 'bg-green-500',
-  'not-clicked': 'bg-red-500',
-  'no-need-to-click': 'bg-transparent',
-};
-
-function isOrderGuest(order: Pick<Order, 'userId' | 'isGuest'>): boolean {
-  if (typeof order.isGuest === 'boolean') {
-    return order.isGuest;
-  }
-
-  const hasUserId =
-    typeof order.userId === 'string' && order.userId.trim().length > 0;
-  return !hasUserId;
-}
 
 function toIsoDateInput(date: Date): string {
   const year = date.getFullYear();
@@ -129,84 +56,8 @@ function getRelativeIsoDate(daysOffset: number): string {
 }
 
 function normalizeDateRange(fromDate: string, toDate: string) {
-  if (fromDate && toDate && fromDate > toDate) {
-    return {
-      fromDate: toDate,
-      toDate: fromDate,
-    };
-  }
-
+  if (fromDate && toDate && fromDate > toDate) return { fromDate: toDate, toDate: fromDate };
   return { fromDate, toDate };
-}
-
-function getDefaultReferralCode(source?: Order['source']): string {
-  return source === 'ghadaq' ? 'default-GHD' : 'default-MNK';
-}
-
-const NUMERIC_ONLY_SIZE_VALUE = /^\d+$/;
-
-function normalizeSizeText(value: string | undefined): string | null {
-  const trimmed = value?.trim();
-  if (!trimmed) return null;
-  return NUMERIC_ONLY_SIZE_VALUE.test(trimmed) ? null : trimmed;
-}
-
-function resolveLocalizedSizeValue(
-  value: string | { ar?: string; en?: string } | undefined,
-  locale: string,
-): string | null {
-  if (typeof value === 'string') return normalizeSizeText(value);
-  if (!value) return null;
-
-  if (locale === 'ar') {
-    return normalizeSizeText(value.ar) ?? normalizeSizeText(value.en);
-  }
-
-  return normalizeSizeText(value.en) ?? normalizeSizeText(value.ar);
-}
-
-function resolveOrderItemSizeLabel(
-  item: Order['items'][number] | undefined,
-  locale: string,
-): string | null {
-  if (!item) return null;
-
-  const directSize =
-    resolveLocalizedSizeValue(item.sizeName, locale) ??
-    resolveLocalizedSizeValue(item.sizeLabel, locale) ??
-    resolveLocalizedSizeValue(item.size, locale);
-
-  if (directSize) {
-    return directSize;
-  }
-
-  const resolvedIndex = item.sizeIndex;
-
-  if (
-    typeof resolvedIndex !== 'number' ||
-    !Array.isArray(item.sizes) ||
-    resolvedIndex < 0 ||
-    resolvedIndex >= item.sizes.length
-  ) {
-    return null;
-  }
-
-  const sizeOption = item.sizes[resolvedIndex];
-  return (
-    resolveLocalizedSizeValue(sizeOption?.name, locale) ??
-    resolveLocalizedSizeValue(sizeOption?.label, locale) ??
-    resolveLocalizedSizeValue(sizeOption?.value, locale)
-  );
-}
-
-function getOrderItemDisplayName(
-  item: Order['items'][number],
-  locale: string,
-): string {
-  const productName =
-    locale === 'ar' ? item.productName.ar : item.productName.en;
-  const sizeLabel = resolveOrderItemSizeLabel(item, locale);
-  return sizeLabel ? `${productName} - ${sizeLabel}` : productName;
 }
 
 export default function OrderHistoryPage() {
@@ -256,7 +107,7 @@ export default function OrderHistoryPage() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loadingOrderDetails, setLoadingOrderDetails] = useState(false);
-  const [modalStatus, setModalStatus] = useState<OrderStatus>('pending');
+  const [isChangeStatusModalOpen, setIsChangeStatusModalOpen] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
   const [bulkStatus, setBulkStatus] = useState('');
@@ -455,14 +306,12 @@ export default function OrderHistoryPage() {
 
   const viewOrder = async (order: Order) => {
     setSelectedOrder(order);
-    setModalStatus(order.status);
     setIsModalOpen(true);
 
     setLoadingOrderDetails(true);
     const fullOrder = await fetchOrderDetails(order._id);
     if (fullOrder) {
       setSelectedOrder(fullOrder);
-      setModalStatus(fullOrder.status);
     }
     setLoadingOrderDetails(false);
   };
@@ -471,6 +320,15 @@ export default function OrderHistoryPage() {
     setIsModalOpen(false);
     setSelectedOrder(null);
     setLoadingOrderDetails(false);
+  };
+
+  const handleChangeStatus = (order: Order) => {
+    setSelectedOrder(order);
+    setIsChangeStatusModalOpen(true);
+  };
+
+  const closeChangeStatusModal = () => {
+    setIsChangeStatusModalOpen(false);
   };
 
   const startOrderWhatsappMessage = async (order: Order) => {
@@ -600,15 +458,22 @@ export default function OrderHistoryPage() {
     }
   };
 
-  const updateOrderStatus = async () => {
-    if (!selectedOrder || modalStatus === selectedOrder.status) return;
+  const updateOrderStatus = async (status: OrderStatus, cancellationReason?: string) => {
+    if (!selectedOrder || status === selectedOrder.status) {
+      closeChangeStatusModal();
+      return;
+    }
 
     try {
       setUpdatingStatus(true);
+      const payload: Record<string, unknown> = { status };
+      if (status === 'cancelled' && cancellationReason) {
+        payload.cancellationReason = cancellationReason;
+      }
       const res = await fetch(`/api/orders/${selectedOrder._id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: modalStatus }),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
 
@@ -616,16 +481,20 @@ export default function OrderHistoryPage() {
         throw new Error(data.error || 'Failed to update order status');
       }
 
-      setSelectedOrder(data.data as Order);
+      const updated = data.data as Order;
+      setSelectedOrder(updated);
       setOrders((prev) =>
         prev.map((order) =>
           order._id === selectedOrder._id
-            ? { ...order, status: modalStatus }
+            ? { ...order, status: updated.status, cancellationReason: updated.cancellationReason }
             : order,
         ),
       );
+      toast.success(t('statusUpdateSuccess'));
+      closeChangeStatusModal();
     } catch (error) {
       console.error('Error updating order status:', error);
+      toast.error(t('statusUpdateFailed'));
     } finally {
       setUpdatingStatus(false);
     }
@@ -644,170 +513,41 @@ export default function OrderHistoryPage() {
     );
   };
 
-  const getReservationLabel = (label: { ar: string; en: string }) =>
-    locale === 'ar' ? label.ar : label.en;
-
-  const getReservationValues = (value: string) =>
-    value
-      .split('\n')
-      .map((entry) => entry.trim())
-      .filter(Boolean);
-
-  const formatMoney = (amount: number | undefined, currency: string) =>
-    `${Number(amount ?? 0).toFixed(2)} ${currency}`;
-
-  const getPaymentTimeline = (order: Order): OrderPayment[] => {
-    const payments = Array.isArray(order.payments)
-      ? [...order.payments]
-      : ([] as OrderPayment[]);
-
-    return payments.sort(
-      (a, b) =>
-        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
-    );
-  };
-
-  const statusTabOptions = [
-    {
-      label: t('filters.all'),
-      value: 'all' as const,
-      className:
-        'border border-stroke text-foreground/80 hover:bg-background hover:text-foreground',
-      activeClassName: 'bg-foreground text-background shadow-sm',
-    },
-    {
-      label: t('status.paid'),
-      value: 'paid' as const,
-      className:
-        'border border-green-200 bg-green-50 text-green-800 dark:border-green-800/60 dark:bg-green-900/20 dark:text-green-300',
-      activeClassName: STATUS_COLORS.paid,
-    },
-    {
-      label: t('status.partial-paid'),
-      value: 'partial-paid' as const,
-      className:
-        'border border-orange-200 bg-orange-50 text-orange-800 dark:border-orange-800/60 dark:bg-orange-900/20 dark:text-orange-300',
-      activeClassName: STATUS_COLORS['partial-paid'],
-    },
-    {
-      label: t('status.completed'),
-      value: 'completed' as const,
-      className:
-        'border border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-800/60 dark:bg-emerald-900/20 dark:text-emerald-300',
-      activeClassName: STATUS_COLORS.completed,
-    },
-    {
-      label: t('status.failed'),
-      value: 'failed' as const,
-      className:
-        'border border-red-200 bg-red-50 text-red-800 dark:border-red-800/60 dark:bg-red-900/20 dark:text-red-300',
-      activeClassName: STATUS_COLORS.failed,
-    },
-    {
-      label: t('status.processing'),
-      value: 'processing' as const,
-      className:
-        'border border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-800/60 dark:bg-blue-900/20 dark:text-blue-300',
-      activeClassName: STATUS_COLORS.processing,
-    },
-    {
-      label: t('status.pending'),
-      value: 'pending' as const,
-      className:
-        'border border-yellow-200 bg-yellow-50 text-yellow-800 dark:border-yellow-800/60 dark:bg-yellow-900/20 dark:text-yellow-300',
-      activeClassName: STATUS_COLORS.pending,
-    },
-    {
-      label: t('status.refunded'),
-      value: 'refunded' as const,
-      className:
-        'border border-purple-200 bg-purple-50 text-purple-800 dark:border-purple-800/60 dark:bg-purple-900/20 dark:text-purple-300',
-      activeClassName: STATUS_COLORS.refunded,
-    },
-    {
-      label: t('status.cancelled'),
-      value: 'cancelled' as const,
-      className:
-        'border border-gray-200 bg-gray-50 text-gray-800 dark:border-gray-800/60 dark:bg-gray-900/20 dark:text-gray-300',
-      activeClassName: STATUS_COLORS.cancelled,
-    },
-  ];
 
   const today = getRelativeIsoDate(0);
   const yesterday = getRelativeIsoDate(-1);
   const lastSevenDaysStart = getRelativeIsoDate(-6);
-  const normalizedSelectedRange = normalizeDateRange(
-    fromDateFilter,
-    toDateFilter,
-  );
+  const normalizedSelectedRange = normalizeDateRange(fromDateFilter, toDateFilter);
 
   const activeDatePreset: DateQuickPreset | 'custom' =
     !normalizedSelectedRange.fromDate && !normalizedSelectedRange.toDate
       ? 'all'
-      : normalizedSelectedRange.fromDate === today &&
-          normalizedSelectedRange.toDate === today
+      : normalizedSelectedRange.fromDate === today && normalizedSelectedRange.toDate === today
         ? 'today'
-        : normalizedSelectedRange.fromDate === yesterday &&
-            normalizedSelectedRange.toDate === yesterday
+        : normalizedSelectedRange.fromDate === yesterday && normalizedSelectedRange.toDate === yesterday
           ? 'yesterday'
-          : normalizedSelectedRange.fromDate === lastSevenDaysStart &&
-              normalizedSelectedRange.toDate === today
+          : normalizedSelectedRange.fromDate === lastSevenDaysStart && normalizedSelectedRange.toDate === today
             ? 'last7Days'
             : 'custom';
 
-  const datePresetOptions: Array<{ label: string; value: DateQuickPreset }> = [
-    { label: t('filters.dateModeAll'), value: 'all' },
-    { label: t('filters.today'), value: 'today' },
-    { label: t('filters.yesterday'), value: 'yesterday' },
-    { label: t('filters.last7Days'), value: 'last7Days' },
-  ];
-
   const applyDatePreset = (preset: DateQuickPreset) => {
-    if (preset === 'all') {
-      setFromDateFilter('');
-      setToDateFilter('');
-      setPage(1);
-      return;
-    }
-
-    if (preset === 'today') {
-      setFromDateFilter(today);
-      setToDateFilter(today);
-      setPage(1);
-      return;
-    }
-
-    if (preset === 'yesterday') {
-      setFromDateFilter(yesterday);
-      setToDateFilter(yesterday);
-      setPage(1);
-      return;
-    }
-
+    if (preset === 'all') { setFromDateFilter(''); setToDateFilter(''); setPage(1); return; }
+    if (preset === 'today') { setFromDateFilter(today); setToDateFilter(today); setPage(1); return; }
+    if (preset === 'yesterday') { setFromDateFilter(yesterday); setToDateFilter(yesterday); setPage(1); return; }
     setFromDateFilter(lastSevenDaysStart);
     setToDateFilter(today);
     setPage(1);
   };
 
   const handleFromDateChange = (value: string) => {
-    const normalizedRange = normalizeDateRange(value, toDateFilter);
-    setFromDateFilter(normalizedRange.fromDate);
-    setToDateFilter(normalizedRange.toDate);
-    setPage(1);
+    const r = normalizeDateRange(value, toDateFilter);
+    setFromDateFilter(r.fromDate); setToDateFilter(r.toDate); setPage(1);
   };
 
   const handleToDateChange = (value: string) => {
-    const normalizedRange = normalizeDateRange(fromDateFilter, value);
-    setFromDateFilter(normalizedRange.fromDate);
-    setToDateFilter(normalizedRange.toDate);
-    setPage(1);
+    const r = normalizeDateRange(fromDateFilter, value);
+    setFromDateFilter(r.fromDate); setToDateFilter(r.toDate); setPage(1);
   };
-
-  const modalStatusOptions = [
-    { label: t('status.completed'), value: 'completed' },
-    { label: t('status.refunded'), value: 'refunded' },
-    { label: t('status.cancelled'), value: 'cancelled' },
-  ];
 
   const bulkStatusOptions = [
     { label: t('status.completed'), value: 'completed' },
@@ -815,228 +555,25 @@ export default function OrderHistoryPage() {
     { label: t('status.refunded'), value: 'refunded' },
   ];
 
-  const sourceOptions = [
-    { label: t('filters.allSources'), value: '' },
-    { label: t('filters.manasikSource'), value: 'manasik' },
-    { label: t('filters.ghadaqSource'), value: 'ghadaq' },
-  ];
-
-  const referralTabOptions = [
-    {
-      label: t('filters.allReferrals'),
-      value: '',
-      className:
-        'border border-stroke text-foreground/80 hover:bg-background hover:text-foreground',
-      activeClassName: 'bg-foreground text-background shadow-sm',
-    },
-    {
-      label: 'default-MNK',
-      value: 'default-MNK',
-      className:
-        'border border-stroke text-foreground/80 hover:bg-background hover:text-foreground',
-      activeClassName: 'bg-foreground text-background shadow-sm',
-    },
-    {
-      label: 'default-GHD',
-      value: 'default-GHD',
-      className:
-        'border border-stroke text-foreground/80 hover:bg-background hover:text-foreground',
-      activeClassName: 'bg-foreground text-background shadow-sm',
-    },
-    ...referrals.map((referral) => ({
-      label: `${referral.name} (${referral.referralId})`,
-      value: referral.referralId,
-      className:
-        'border border-stroke text-foreground/80 hover:bg-background hover:text-foreground',
-      activeClassName: 'bg-foreground text-background shadow-sm',
-    })),
-  ];
-
   const allVisibleSelected =
-    orders.length > 0 &&
-    orders.every((order) => selectedOrderIds.includes(order._id));
+    orders.length > 0 && orders.every((order) => selectedOrderIds.includes(order._id));
 
-  const columns = [
-    {
-      header: (
-        <Checkbox
-          checked={allVisibleSelected}
-          onChange={toggleSelectAllVisible}
-          aria-label="Select all visible orders"
-        />
-      ),
-      accessor: (row: Order) => (
-        <Checkbox
-          checked={selectedOrderIds.includes(row._id)}
-          onChange={() => {
-            toggleOrderSelection(row._id);
-          }}
-          onClick={(e) => e?.stopPropagation()}
-          aria-label={`Select ${row.orderNumber}`}
-        />
-      ),
-      className: 'w-12',
-    },
-    {
-      header: t('table.orderNumber'),
-      accessor: (row: Order) => (
-        <div className="flex items-center gap-2 min-w-32">
-          <span
-            className={`h-2.5 w-2.5 rounded-full ${WHATSAPP_STATE_CLASSES[row.isWhatsappButtonClicked || 'no-need-to-click']}`}
-            title={
-              row.isWhatsappButtonClicked === 'clicked'
-                ? t('filters.whatsappStateClicked')
-                : row.isWhatsappButtonClicked === 'not-clicked'
-                  ? t('filters.whatsappStateNotClicked')
-                  : t('filters.whatsappStateNoNeedToClick')
-            }
-          />
-          <span className="font-mono text-sm">{row.orderNumber}</span>
-        </div>
-      ),
-    },
-    {
-      header: t('table.customer'),
-      accessor: (row: Order) => (
-        <div className="flex flex-col">
-          <span className="text-sm font-medium">
-            {row.billingData.fullName}
-          </span>
-          <span className="text-xs text-secondary">
-            {row.billingData.email}
-          </span>
-        </div>
-      ),
-    },
-    {
-      header: t('table.amount'),
-      accessor: (row: Order) => {
-        const displayedAmount =
-          typeof row.paidAmount === 'number' ? row.paidAmount : row.totalAmount;
-
-        return (
-          <span className="font-bold text-success">
-            {displayedAmount.toFixed(2)} {row.currency}
-          </span>
-        );
-      },
-    },
-    {
-      header: t('table.status'),
-      accessor: (row: Order) => (
-        <div className="flex flex-col gap-1">
-          <span
-            className={`inline-block w-fit px-2 py-0.5 text-xs font-medium rounded-full ${STATUS_COLORS[row.status] || ''}`}
-          >
-            {t(`status.${row.status}`)}
-          </span>
-          <span
-            className={`inline-block w-fit px-2 py-0.5 text-[11px] rounded-full ${STATUS_COLORS[row.status] || ''}`}
-          >
-            {row.referralId || getDefaultReferralCode(row.source)}
-          </span>
-        </div>
-      ),
-    },
-    {
-      header: t('table.date'),
-      accessor: (row: Order) => (
-        <span className="text-sm text-secondary">
-          {formatDate(row.statusUpdateTime)}
-        </span>
-      ),
-    },
-    {
-      header: t('table.actions'),
-      accessor: (row: Order) => (
-        <div className="flex flex-col gap-2">
-          <div className="flex flex-row gap-2">
-            <Tooltip position={ToolTipPositions} content={t('viewDetails')}>
-              <Button
-                variant="icon-primary"
-                size="custom"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  viewOrder(row);
-                }}
-                aria-label={t('viewDetails')}
-              >
-                <Eye size={16} />
-              </Button>
-            </Tooltip>
-
-            <Tooltip
-              position={ToolTipPositions}
-              content={t('copyWhatsapp.button')}
-            >
-              <Button
-                variant="icon-primary"
-                size="custom"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  startOrderWhatsappMessage(row);
-                }}
-                disabled={whatsappOrderId === row._id}
-                aria-label={t('copyWhatsapp.button')}
-              >
-                {whatsappOrderId === row._id ? (
-                  <RefreshCw size={16} className="animate-spin" />
-                ) : (
-                  <WhatsappIcon size={16} />
-                )}
-              </Button>
-            </Tooltip>
-          </div>
-
-          <div className="flex flex-row gap-2">
-            <Tooltip
-              position={ToolTipPositions}
-              content={t('copyWhatsapp.copyNumber')}
-            >
-              <Button
-                variant="icon-primary"
-                size="custom"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  void copyOrderWhatsappNumber(row);
-                }}
-                disabled={copyingPhoneOrderId === row._id}
-                aria-label={t('copyWhatsapp.copyNumber')}
-              >
-                {copyingPhoneOrderId === row._id ? (
-                  <RefreshCw size={16} className="animate-spin" />
-                ) : (
-                  <Phone size={16} />
-                )}
-              </Button>
-            </Tooltip>
-
-            <Tooltip
-              position={ToolTipPositions}
-              content={t('copyWhatsapp.copyMessage')}
-            >
-              <Button
-                variant="icon-primary"
-                size="custom"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  void copyOrderWhatsappMessage(row);
-                }}
-                disabled={copyingMessageOrderId === row._id}
-                aria-label={t('copyWhatsapp.copyMessage')}
-              >
-                {copyingMessageOrderId === row._id ? (
-                  <RefreshCw size={16} className="animate-spin" />
-                ) : (
-                  <Copy size={16} />
-                )}
-              </Button>
-            </Tooltip>
-          </div>
-        </div>
-      ),
-    },
-  ];
+  const columns = useOrderColumns({
+    onView: viewOrder,
+    onWhatsapp: startOrderWhatsappMessage,
+    onCopyPhone: copyOrderWhatsappNumber,
+    onCopyMessage: copyOrderWhatsappMessage,
+    onChangeStatus: handleChangeStatus,
+    onToggleSelect: toggleOrderSelection,
+    onToggleSelectAll: toggleSelectAllVisible,
+    selectedOrderIds,
+    allVisibleSelected,
+    whatsappOrderId,
+    copyingPhoneOrderId,
+    copyingMessageOrderId,
+    tooltipPos: ToolTipPositions as 'left' | 'right',
+    formatDate,
+  });
 
   return (
     <div className="space-y-6">
@@ -1044,140 +581,28 @@ export default function OrderHistoryPage() {
         <h1 className="text-2xl font-bold text-foreground">{t('pageTitle')}</h1>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
-          <Search
-            size={16}
-            className="absolute top-1/2 -translate-y-1/2 inset-s-3 text-secondary"
-          />
-          <input
-            type="text"
-            placeholder={t('filters.search')}
-            value={searchInput}
-            onChange={(e) => {
-              setSearchInput(e.target.value);
-            }}
-            className="w-full ps-9 pe-4 py-2 rounded-lg border border-stroke bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors text-sm"
-          />
-        </div>
-
-        <Dropdown
-          value={sourceFilter}
-          options={sourceOptions}
-          onChange={(val) => {
-            setSourceFilter(val);
-            setPage(1);
-          }}
-          placeholder={t('filters.source')}
-          className="w-full sm:w-40"
-        />
-
-        <Dropdown
-          value={whatsappFilter}
-          options={[
-            { label: t('filters.whatsappStateAll'), value: 'all' },
-            { label: t('filters.whatsappStateClicked'), value: 'clicked' },
-            {
-              label: t('filters.whatsappStateNotClicked'),
-              value: 'not-clicked',
-            },
-            {
-              label: t('filters.whatsappStateNoNeedToClick'),
-              value: 'no-need-to-click',
-            },
-          ]}
-          onChange={(val) => {
-            setWhatsappFilter(val as WhatsappFilterValue);
-            setPage(1);
-          }}
-          placeholder={t('filters.whatsappState')}
-          className="w-full sm:w-48"
-        />
-
-        <Button
-          variant="icon-primary"
-          size="custom"
-          onClick={() => {
-            void fetchOrders();
-          }}
-          className="shrink-0"
-        >
-          <RefreshCw size={18} />
-        </Button>
-      </div>
-
-      <div className="rounded-site border border-stroke bg-card-bg p-4 space-y-4">
-        <div className="flex flex-wrap items-center gap-2">
-          {datePresetOptions.map((preset) => {
-            const isActive = activeDatePreset === preset.value;
-
-            return (
-              <Button
-                key={preset.value}
-                variant="custom"
-                type="button"
-                size="custom"
-                onClick={() => applyDatePreset(preset.value)}
-                className={`rounded-md border px-3 py-2 text-sm font-medium transition-colors ${
-                  isActive
-                    ? 'bg-foreground border-foreground text-background shadow-sm'
-                    : 'bg-background border-stroke text-foreground hover:bg-foreground/5'
-                }`}
-              >
-                {preset.label}
-              </Button>
-            );
-          })}
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <CustomDatePicker
-            value={fromDateFilter}
-            onChange={handleFromDateChange}
-            locale={locale}
-            label={t('filters.fromDate')}
-            placeholder={t('filters.fromDate')}
-          />
-
-          <CustomDatePicker
-            value={toDateFilter}
-            onChange={handleToDateChange}
-            locale={locale}
-            label={t('filters.toDate')}
-            placeholder={t('filters.toDate')}
-          />
-        </div>
-      </div>
-
-      <div className="overflow-x-auto pb-1">
-        <Tabs<string>
-          value={referralFilter}
-          options={referralTabOptions}
-          onChange={(value) => {
-            setReferralFilter(value);
-            setPage(1);
-          }}
-          className="min-w-max"
-        />
-      </div>
-
-      <div className="overflow-x-auto pb-1">
-        <Tabs<StatusTabValue>
-          value={statusFilter}
-          options={statusTabOptions}
-          onChange={(value) => {
-            setStatusFilter(value);
-            setPage(1);
-          }}
-          className="min-w-max"
-        />
-      </div>
-
-      <div className="flex items-center gap-2 text-sm text-secondary">
-        <span>
-          {t('total')}: {totalOrders}
-        </span>
-      </div>
+      <OrderFilters
+        searchInput={searchInput}
+        onSearchChange={setSearchInput}
+        sourceFilter={sourceFilter}
+        onSourceChange={(val) => { setSourceFilter(val); setPage(1); }}
+        whatsappFilter={whatsappFilter}
+        onWhatsappChange={(val) => { setWhatsappFilter(val); setPage(1); }}
+        onRefresh={() => void fetchOrders()}
+        fromDateFilter={fromDateFilter}
+        toDateFilter={toDateFilter}
+        onFromDateChange={handleFromDateChange}
+        onToDateChange={handleToDateChange}
+        activeDatePreset={activeDatePreset}
+        onDatePreset={applyDatePreset}
+        locale={locale}
+        referralFilter={referralFilter}
+        onReferralChange={(val) => { setReferralFilter(val); setPage(1); }}
+        referrals={referrals}
+        statusFilter={statusFilter}
+        onStatusChange={(val) => { setStatusFilter(val); setPage(1); }}
+        totalOrders={totalOrders}
+      />
 
       <BulkAction
         selectedCount={selectedOrderIds.length}
@@ -1185,16 +610,11 @@ export default function OrderHistoryPage() {
         options={bulkStatusOptions}
         onValueChange={setBulkStatus}
         onApply={applyBulkStatus}
-        onClear={() => {
-          setSelectedOrderIds([]);
-          setBulkStatus('');
-        }}
+        onClear={() => { setSelectedOrderIds([]); setBulkStatus(''); }}
         applyLabel={t('bulkAction.apply')}
         applyingLabel={t('bulkAction.applying')}
         clearLabel={t('bulkAction.clear')}
-        selectionLabel={t('bulkAction.selectedCount', {
-          count: selectedOrderIds.length,
-        })}
+        selectionLabel={t('bulkAction.selectedCount', { count: selectedOrderIds.length })}
         dropdownLabel={t('bulkAction.statusLabel')}
         disabled={!bulkStatus}
         loading={bulkUpdating}
@@ -1214,477 +634,22 @@ export default function OrderHistoryPage() {
         onPageChange={setPage}
       />
 
-      <Modal
+      <OrderDetailModal
         isOpen={isModalOpen}
         onClose={closeModal}
-        title={
-          selectedOrder
-            ? `${t('orderDetails')} - ${selectedOrder.orderNumber}`
-            : t('orderDetails')
-        }
-        size="lg"
-      >
-        {selectedOrder && loadingOrderDetails ? (
-          <div className="py-8 text-center text-sm text-secondary">
-            {t('loadingOrderDetails')}
-          </div>
-        ) : selectedOrder ? (
-          <div className="flex flex-col gap-6">
-            {(() => {
-              const paymentTimeline = getPaymentTimeline(selectedOrder);
-              const latestPaidPayment = [...paymentTimeline]
-                .reverse()
-                .find((payment) => payment.status === 'paid');
-              const currentTransactionAmount =
-                latestPaidPayment?.orderAmount ??
-                latestPaidPayment?.amount ??
-                selectedOrder.totalAmount;
+        order={selectedOrder}
+        loadingDetails={loadingOrderDetails}
+        formatDate={formatDate}
+        locale={locale}
+      />
 
-              return (
-                <>
-                  <div className="flex items-center justify-between">
-                    <span
-                      className={`px-3 py-1 text-sm font-medium rounded-full ${STATUS_COLORS[selectedOrder.status] || ''}`}
-                    >
-                      {t(`status.${selectedOrder.status}`)}
-                    </span>
-                    <span className="text-sm text-secondary">
-                      {formatDate(selectedOrder.statusUpdateTime)}
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3 items-end">
-                    <Dropdown
-                      label={t('statusEditor.label')}
-                      value={modalStatus}
-                      options={modalStatusOptions}
-                      onChange={(value) => setModalStatus(value as OrderStatus)}
-                    />
-                    <Button
-                      type="button"
-                      variant="primary"
-                      onClick={updateOrderStatus}
-                      disabled={
-                        updatingStatus ||
-                        !selectedOrder ||
-                        modalStatus === selectedOrder.status
-                      }
-                    >
-                      {updatingStatus
-                        ? t('statusEditor.saving')
-                        : t('statusEditor.save')}
-                    </Button>
-                  </div>
-
-                  <div className="bg-background rounded-site p-4 border border-stroke text-center">
-                    <p className="text-3xl font-bold text-success">
-                      {selectedOrder.totalAmount.toFixed(2)}{' '}
-                      {selectedOrder.currency}
-                    </p>
-                  </div>
-
-                  <div>
-                    <h3 className="font-semibold mb-3">{t('amountDetails')}</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      <InfoRow
-                        icon={<CreditCard size={14} />}
-                        label={t('totals.totalPaidNow')}
-                        value={formatMoney(
-                          currentTransactionAmount,
-                          selectedOrder.currency,
-                        )}
-                      />
-                      <InfoRow
-                        icon={<CreditCard size={14} />}
-                        label={t('totals.fullAmount')}
-                        value={formatMoney(
-                          selectedOrder.fullAmount ?? selectedOrder.totalAmount,
-                          selectedOrder.currency,
-                        )}
-                      />
-                      <InfoRow
-                        icon={<CreditCard size={14} />}
-                        label={t('totals.paidAmount')}
-                        value={formatMoney(
-                          selectedOrder.paidAmount ?? selectedOrder.totalAmount,
-                          selectedOrder.currency,
-                        )}
-                      />
-                      <InfoRow
-                        icon={<CreditCard size={14} />}
-                        label={t('totals.remainingAmount')}
-                        value={formatMoney(
-                          selectedOrder.remainingAmount ?? 0,
-                          selectedOrder.currency,
-                        )}
-                      />
-                      <InfoRow
-                        icon={<Tag size={14} />}
-                        label={t('totals.couponCode')}
-                        value={selectedOrder.couponCode || 'N/A'}
-                      />
-                      <InfoRow
-                        icon={<Tag size={14} />}
-                        label={t('totals.couponDiscount')}
-                        value={`${(selectedOrder.couponDiscount ?? 0).toFixed(2)} ${selectedOrder.currency}`}
-                      />
-                      {/* Upgrade Discount Info */}
-                      {selectedOrder.isUpgrade && (
-                        <>
-                          <InfoRow
-                            icon={<Tag size={14} />}
-                            label={t('totals.isUpgrade')}
-                            value={t('yes')}
-                          />
-                          <InfoRow
-                            icon={<Tag size={14} />}
-                            label={t('totals.upgradeDiscount')}
-                            value={`${(selectedOrder.upgradeDiscount ?? 0).toFixed(0)}%`}
-                          />
-                          {selectedOrder.fromProductId && (
-                            <InfoRow
-                              icon={<Package size={14} />}
-                              label={t('totals.originalProduct')}
-                              value={selectedOrder.fromProductId}
-                            />
-                          )}
-                        </>
-                      )}
-                    </div>
-                  </div>
-
-                  <div>
-                    <h3 className="font-semibold mb-3">
-                      {t('paymentTimeline.title')}
-                    </h3>
-                    {paymentTimeline.length > 0 ? (
-                      <div className="flex flex-col gap-2">
-                        {paymentTimeline.map((payment, index) => {
-                          const paymentStatus = payment.status || 'pending';
-                          const customerReference =
-                            typeof payment.easykashResponse
-                              ?.customerReference === 'string'
-                              ? payment.easykashResponse.customerReference
-                              : undefined;
-
-                          return (
-                            <div
-                              key={`${payment.paymentId || 'payment'}-${index}`}
-                              className="rounded-lg bg-background border border-stroke p-3"
-                            >
-                              <div className="flex items-center justify-between mb-2">
-                                <span className="text-sm font-semibold text-foreground">
-                                  {t('paymentTimeline.paymentLabel', {
-                                    index: index + 1,
-                                  })}
-                                </span>
-                                <span
-                                  className={`inline-block px-2 py-0.5 text-xs font-medium rounded-full ${PAYMENT_STATUS_COLORS[paymentStatus] || ''}`}
-                                >
-                                  {t(
-                                    `paymentTimeline.statuses.${paymentStatus}`,
-                                  )}
-                                </span>
-                              </div>
-
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                <InfoRow
-                                  icon={<CreditCard size={14} />}
-                                  label={t('paymentTimeline.orderAmount')}
-                                  value={formatMoney(
-                                    payment.orderAmount ?? payment.amount,
-                                    payment.currency || selectedOrder.currency,
-                                  )}
-                                />
-                                {typeof payment.gatewayAmount === 'number' ? (
-                                  <InfoRow
-                                    icon={<CreditCard size={14} />}
-                                    label={t('paymentTimeline.gatewayAmount')}
-                                    value={formatMoney(
-                                      payment.gatewayAmount,
-                                      payment.gatewayCurrency ||
-                                        payment.currency,
-                                    )}
-                                  />
-                                ) : null}
-                                <InfoRow
-                                  icon={<CreditCard size={14} />}
-                                  label={t('paymentTimeline.method')}
-                                  value={payment.paymentMethod || 'N/A'}
-                                />
-                                <InfoRow
-                                  icon={<Calendar size={14} />}
-                                  label={t('paymentTimeline.createdAt')}
-                                  value={formatDate(payment.createdAt)}
-                                />
-                                {payment.paidAt ? (
-                                  <InfoRow
-                                    icon={<Calendar size={14} />}
-                                    label={t('paymentTimeline.paidAt')}
-                                    value={formatDate(payment.paidAt)}
-                                  />
-                                ) : null}
-                                {payment.easykashRef ? (
-                                  <InfoRow
-                                    icon={<Hash size={14} />}
-                                    label={t('paymentTimeline.reference')}
-                                    value={payment.easykashRef}
-                                  />
-                                ) : null}
-                                {payment.easykashProductCode ? (
-                                  <InfoRow
-                                    icon={<Hash size={14} />}
-                                    label={t('paymentTimeline.productCode')}
-                                    value={payment.easykashProductCode}
-                                  />
-                                ) : null}
-                                {customerReference ? (
-                                  <InfoRow
-                                    icon={<Hash size={14} />}
-                                    label={t(
-                                      'paymentTimeline.customerReference',
-                                    )}
-                                    value={customerReference}
-                                  />
-                                ) : null}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      <div className="rounded-lg bg-background border border-stroke p-3 text-sm text-secondary">
-                        {t('paymentTimeline.empty')}
-                      </div>
-                    )}
-                  </div>
-
-                  <div>
-                    <h3 className="font-semibold mb-3 flex items-center gap-2">
-                      <Package size={16} /> {t('items')}
-                    </h3>
-                    <div className="mb-3 text-xs text-secondary">
-                      {t('table.itemCount', {
-                        count: selectedOrder.items.length,
-                      })}{' '}
-                      •{' '}
-                      {t('table.quantityTotal', {
-                        count: selectedOrder.items.reduce(
-                          (sum, item) => sum + Number(item.quantity || 0),
-                          0,
-                        ),
-                      })}
-                    </div>
-                    <div className="flex flex-col gap-2">
-                      {selectedOrder.items.map((item, i) => (
-                        <div
-                          key={i}
-                          className="flex items-start justify-between gap-3 py-3 px-3 rounded-lg bg-background border border-stroke"
-                        >
-                          <div className="space-y-1 min-w-0">
-                            <p className="font-medium text-sm truncate">
-                              {getOrderItemDisplayName(item, locale)}
-                            </p>
-                            <div className="flex items-center gap-2 text-xs text-secondary">
-                              <span>
-                                {t('table.quantityTotal', {
-                                  count: item.quantity,
-                                })}
-                              </span>
-                              <span>
-                                {item.price.toFixed(2)} {item.currency}
-                              </span>
-                            </div>
-                            <div className="text-[11px] text-secondary font-mono">
-                              <span>
-                                {t('productId')}: {item.productId}
-                              </span>
-                              {item.productSlug ? (
-                                <span className="ms-2">
-                                  {t('productSlug')}: {item.productSlug}
-                                </span>
-                              ) : null}
-                            </div>
-                          </div>
-                          <div className="text-end shrink-0">
-                            <p className="font-bold text-sm text-success">
-                              {(item.price * item.quantity).toFixed(2)}{' '}
-                              {item.currency}
-                            </p>
-                            <p className="text-[11px] text-secondary">
-                              {item.quantity} x {item.price.toFixed(2)}
-                            </p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div>
-                    <h3 className="font-semibold mb-3">{t('customerInfo')}</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      <InfoRow
-                        icon={<Hash size={14} />}
-                        label={t('table.orderNumber')}
-                        value={selectedOrder.orderNumber}
-                      />
-                      <InfoRow
-                        icon={<Package size={14} />}
-                        label={t('source')}
-                        value={selectedOrder.source || 'manasik'}
-                      />
-                      <InfoRow
-                        icon={<Hash size={14} />}
-                        label={t('customerType.label')}
-                        value={
-                          isOrderGuest(selectedOrder)
-                            ? t('customerType.guest')
-                            : t('customerType.registered')
-                        }
-                      />
-                      <InfoRow
-                        icon={<Mail size={14} />}
-                        label={t('email')}
-                        value={selectedOrder.billingData.email}
-                      />
-                      <InfoRow
-                        icon={<Phone size={14} />}
-                        label={t('phone')}
-                        value={selectedOrder.billingData.phone}
-                      />
-                      <InfoRow
-                        icon={<Globe size={14} />}
-                        label={t('country')}
-                        value={selectedOrder.billingData.country}
-                      />
-                      <InfoRow
-                        icon={<Calendar size={14} />}
-                        label={t('table.date')}
-                        value={formatDate(selectedOrder.statusUpdateTime)}
-                      />
-                      <InfoRow
-                        icon={<Hash size={14} />}
-                        label={t('locale')}
-                        value={selectedOrder.locale || 'N/A'}
-                      />
-                      <InfoRow
-                        icon={<Hash size={14} />}
-                        label={t('termsAgreedAt')}
-                        value={
-                          selectedOrder.termsAgreedAt
-                            ? formatDate(selectedOrder.termsAgreedAt)
-                            : 'N/A'
-                        }
-                      />
-                      <InfoRow
-                        icon={<Hash size={14} />}
-                        label={t('updatedAt')}
-                        value={formatDate(selectedOrder.statusUpdateTime)}
-                      />
-                      {selectedOrder.referralId && (
-                        <InfoRow
-                          icon={<UserRoundPlus size={14} />}
-                          label={t('referral')}
-                          value={selectedOrder.referralId}
-                        />
-                      )}
-                    </div>
-                  </div>
-
-                  {selectedOrder.reservationData?.length ? (
-                    <div>
-                      <h3 className="font-semibold mb-3">
-                        {t('reservationData.title')}
-                      </h3>
-                      <div className="flex flex-col gap-2">
-                        {selectedOrder.reservationData.map((field, index) => {
-                          const values = getReservationValues(field.value);
-
-                          if (field.key === 'photo') {
-                            return (
-                              <div
-                                key={`${field.key}-${index}`}
-                                className="flex flex-col items-center gap-3 p-4 rounded-lg bg-background border border-stroke"
-                              >
-                                <div className="overflow-hidden">
-                                  <Image
-                                    src={field.value}
-                                    alt={getReservationLabel(field.label)}
-                                    width={200}
-                                    height={200}
-                                    className="object-cover"
-                                  />
-                                </div>
-
-                                <a
-                                  href={field.value}
-                                  download
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="inline-flex items-center px-3 py-1 rounded-md text-sm font-medium bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
-                                >
-                                  Download Image
-                                </a>
-                              </div>
-                            );
-                          }
-
-                          return (
-                            <div
-                              key={`${field.key}-${index}`}
-                              className="py-2 px-3 rounded-lg bg-background border border-stroke"
-                            >
-                              <p className="text-xs text-secondary mb-1">
-                                {getReservationLabel(field.label)}
-                              </p>
-                              <div className="flex flex-wrap gap-1">
-                                {values.length > 0 ? (
-                                  values.map((entry, valueIndex) => (
-                                    <span
-                                      key={`${field.key}-${index}-${valueIndex}`}
-                                      className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-primary/10 text-primary"
-                                    >
-                                      {entry}
-                                    </span>
-                                  ))
-                                ) : (
-                                  <span className="text-sm text-secondary">
-                                    -
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ) : null}
-                </>
-              );
-            })()}
-          </div>
-        ) : null}
-      </Modal>
-    </div>
-  );
-}
-
-function InfoRow({
-  icon,
-  label,
-  value,
-}: {
-  icon: ReactNode;
-  label: string;
-  value: ReactNode;
-}) {
-  return (
-    <div className="flex items-center gap-2 py-2 px-3 rounded-lg bg-background border border-stroke">
-      <span className="text-secondary">{icon}</span>
-      <div className="flex flex-col">
-        <span className="text-xs text-secondary">{label}</span>
-        <span className="text-sm font-medium">{value}</span>
-      </div>
+      <ChangeStatusModal
+        isOpen={isChangeStatusModalOpen}
+        onClose={closeChangeStatusModal}
+        currentStatus={selectedOrder?.status ?? 'pending'}
+        onUpdateStatus={updateOrderStatus}
+        updating={updatingStatus}
+      />
     </div>
   );
 }

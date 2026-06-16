@@ -19,7 +19,7 @@ export interface OrderWhatsappData {
 }
 
 function getDefaultReferralCode(source?: Order['source']): string {
-  return source === 'ghadaq' ? 'default-GHD' : 'default-MNK';
+  return source === 'ghadaq' ? 'GHD-D' : 'MNK-D';
 }
 
 const NUMERIC_ONLY_SIZE_VALUE = /^\d+$/;

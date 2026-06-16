@@ -37,6 +37,7 @@ import {
   LuBaggageClaim,
   LuRadar,
   LuArchive,
+  LuFolderTree,
 } from 'react-icons/lu';
 
 const navItems = [
@@ -48,6 +49,13 @@ const navItems = [
     permissionKey: null,
   },
   {
+    key: 'orders',
+    href: '/orders',
+    icon: LuShoppingCart,
+    superAdminOnly: false,
+    permissionKey: 'orders',
+  },
+    {
     key: 'products',
     href: '/products',
     icon: LuPackage,
@@ -55,18 +63,18 @@ const navItems = [
     permissionKey: 'products',
   },
   {
+    key: 'categories',
+    href: '/categories',
+    icon: LuFolderTree,
+    superAdminOnly: false,
+    permissionKey: 'categories',
+  },
+  {
     key: 'products-discovery',
     href: '/products-discovery',
     icon: LuBaggageClaim,
     superAdminOnly: false,
     permissionKey: 'products-discovery',
-  },
-  {
-    key: 'orders',
-    href: '/orders',
-    icon: LuShoppingCart,
-    superAdminOnly: false,
-    permissionKey: 'orders',
   },
   {
     key: 'customers',

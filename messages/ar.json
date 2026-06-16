@@ -137,11 +137,23 @@
       "refunded": "مسترد",
       "cancelled": "ملغي"
     },
+    "changeStatus": "تغيير الحالة",
+    "changeStatusModal": {
+      "title": "تغيير حالة الطلب",
+      "cancel": "إلغاء",
+      "save": "حفظ",
+      "saving": "جارٍ الحفظ...",
+      "cancellationReasonLabel": "سبب الإلغاء",
+      "cancellationReasonPlaceholder": "أدخل سبب الإلغاء...",
+      "cancellationReasonRequired": "سبب الإلغاء مطلوب"
+    },
     "statusEditor": {
       "label": "حالة الطلب",
       "save": "تحديث الحالة",
       "saving": "جارٍ التحديث..."
     },
+    "statusUpdateSuccess": "تم تحديث حالة الطلب بنجاح",
+    "statusUpdateFailed": "فشل تحديث حالة الطلب",
     "bulkAction": {
       "selectedCount": "تم تحديد {count} طلبات",
       "statusLabel": "حالة جماعية",
@@ -156,6 +168,7 @@
       "itemCount": "{count} منتج",
       "quantityTotal": "الكمية {count}",
       "amount": "المبلغ",
+      "remainingAmount": "المتبقي",
       "paidOfFull": "المدفوع {paid} / {full} {currency}",
       "remaining": "المتبقي {remaining} {currency}",
       "status": "الحالة",
@@ -169,6 +182,7 @@
       "products": "المنتجات",
       "products-discovery": "اسعار المنتجات",
       "orders": "الطلبات",
+      "categories": "الفئات",
       "booking": "الحجز",
       "coupons": "الكوبونات",
       "countries": "البلدان",
@@ -641,6 +655,57 @@
         "visibilitySelectAllSkippedConflicts": "تم تخطي بعض البلدان لأنها محددة مسبقًا في وضع السعر الآخر."
       }
     },
+    "categories": {
+      "title": "الفئات",
+      "description": "إدارة فئات المنتجات",
+      "addCategory": "إضافة فئة",
+      "editCategory": "تعديل فئة",
+      "deleteCategory": "حذف فئة",
+      "deleteConfirmTitle": "حذف فئة",
+      "deleteConfirm": "هل أنت متأكد من حذف هذه الفئة؟ لن يتم حذف المنتجات المرتبطة بها.",
+      "emptyMessage": "لا توجد فئات. أنشئ فئتك الأولى!",
+      "table": {
+        "name": "الاسم",
+        "categoryNumber": "رقم الفئة",
+        "color": "اللون",
+        "products": "المنتجات",
+        "actions": "الإجراءات"
+      },
+      "form": {
+        "name": "اسم الفئة",
+        "namePlaceholder": "مثال: تضحية",
+        "categoryNumber": "رقم الفئة",
+        "categoryNumberPlaceholder": "مثال: 1",
+        "color": "اللون",
+        "colorPlaceholder": "#3B82F6"
+      },
+      "productsModal": {
+        "title": "إدارة المنتجات",
+        "description": "أضف أو أزل منتجات من هذه الفئة.",
+        "available": "المنتجات المتاحة",
+        "assigned": "المنتجات المضافة",
+        "noAvailable": "جميع المنتجات مضافة بالفعل.",
+        "noAssigned": "لم تتم إضافة أي منتجات بعد.",
+        "save": "حفظ",
+        "cancel": "إلغاء",
+        "saving": "جارٍ الحفظ..."
+      },
+      "buttons": {
+        "manageProducts": "إدارة المنتجات",
+        "cancel": "إلغاء",
+        "save": "حفظ",
+        "saving": "جارٍ الحفظ..."
+      },
+      "messages": {
+        "createSuccess": "تم إنشاء الفئة بنجاح",
+        "createFailed": "فشل إنشاء الفئة",
+        "updateSuccess": "تم تحديث الفئة بنجاح",
+        "updateFailed": "فشل تحديث الفئة",
+        "deleteSuccess": "تم حذف الفئة بنجاح",
+        "deleteFailed": "فشل حذف الفئة",
+        "numberExists": "رقم الفئة موجود بالفعل"
+      }
+    },
     "coupons": {
       "title": "الكوبونات",
       "description": "إدارة كوبونات الخصم",
@@ -749,6 +814,7 @@
         "booking": "الحجز",
         "coupons": "الكوبونات",
         "countries": "البلدان",
+        "categories": "الفئات",
         "admins": "المشرفين",
         "referrals": "الإحالات",
         "activityLogs": "سجل النشاطات",

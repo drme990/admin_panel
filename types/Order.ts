@@ -133,6 +133,7 @@ export interface Order {
   isWhatsappButtonClicked?: 'clicked' | 'not-clicked' | 'no-need-to-click';
   // Referral
   referralId?: string;
+  cancellationReason?: string;
   statusUpdateTime: string;
   // Terms
   termsAgreedAt?: string;

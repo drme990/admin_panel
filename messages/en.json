@@ -137,11 +137,23 @@
       "refunded": "Refunded",
       "cancelled": "Cancelled"
     },
+    "changeStatus": "Change Status",
+    "changeStatusModal": {
+      "title": "Change Order Status",
+      "cancel": "Cancel",
+      "save": "Save",
+      "saving": "Saving...",
+      "cancellationReasonLabel": "Cancellation Reason",
+      "cancellationReasonPlaceholder": "Enter the reason for cancellation...",
+      "cancellationReasonRequired": "Cancellation reason is required"
+    },
     "statusEditor": {
       "label": "Order Status",
       "save": "Update Status",
       "saving": "Updating..."
     },
+    "statusUpdateSuccess": "Order status updated successfully",
+    "statusUpdateFailed": "Failed to update order status",
     "bulkAction": {
       "selectedCount": "{count} orders selected",
       "statusLabel": "Bulk status",
@@ -156,6 +168,7 @@
       "itemCount": "{count} item(s)",
       "quantityTotal": "Qty {count}",
       "amount": "Amount",
+      "remainingAmount": "Remaining Amount",
       "paidOfFull": "Paid {paid} / {full} {currency}",
       "remaining": "Remaining {remaining} {currency}",
       "status": "Status",
@@ -169,6 +182,7 @@
       "products": "Products",
       "products-discovery": "Products Pricing",
       "orders": "Orders",
+      "categories": "Categories",
       "booking": "Booking",
       "coupons": "Coupons",
       "countries": "Countries",
@@ -642,6 +656,57 @@
         "visibilitySelectAllSkippedConflicts": "Some countries were skipped because they are already selected in the other price mode."
       }
     },
+    "categories": {
+      "title": "Categories",
+      "description": "Manage product categories",
+      "addCategory": "Add Category",
+      "editCategory": "Edit Category",
+      "deleteCategory": "Delete Category",
+      "deleteConfirmTitle": "Delete Category",
+      "deleteConfirm": "Are you sure you want to delete this category? This will not delete its products.",
+      "emptyMessage": "No categories found. Create your first category!",
+      "table": {
+        "name": "Name",
+        "categoryNumber": "Category #",
+        "color": "Color",
+        "products": "Products",
+        "actions": "Actions"
+      },
+      "form": {
+        "name": "Category Name",
+        "namePlaceholder": "e.g. Sacrifice",
+        "categoryNumber": "Category Number",
+        "categoryNumberPlaceholder": "e.g. 1",
+        "color": "Color",
+        "colorPlaceholder": "#3B82F6"
+      },
+      "productsModal": {
+        "title": "Manage Products",
+        "description": "Add or remove products from this category.",
+        "available": "Available Products",
+        "assigned": "Assigned Products",
+        "noAvailable": "All products are already assigned.",
+        "noAssigned": "No products assigned yet.",
+        "save": "Save",
+        "cancel": "Cancel",
+        "saving": "Saving..."
+      },
+      "buttons": {
+        "manageProducts": "Manage Products",
+        "cancel": "Cancel",
+        "save": "Save",
+        "saving": "Saving..."
+      },
+      "messages": {
+        "createSuccess": "Category created successfully",
+        "createFailed": "Failed to create category",
+        "updateSuccess": "Category updated successfully",
+        "updateFailed": "Failed to update category",
+        "deleteSuccess": "Category deleted successfully",
+        "deleteFailed": "Failed to delete category",
+        "numberExists": "Category number already exists"
+      }
+    },
     "coupons": {
       "title": "Coupons",
       "description": "Manage discount coupons",
@@ -749,6 +814,7 @@
         "booking": "Booking",
         "coupons": "Coupons",
         "countries": "Countries",
+        "categories": "Categories",
         "admins": "Admins",
         "referrals": "Referrals",
         "activityLogs": "Activity Logs",

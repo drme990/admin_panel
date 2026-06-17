@@ -161,6 +161,10 @@
       "applying": "جارٍ التطبيق...",
       "clear": "مسح التحديد"
     },
+    "pagination": {
+      "show": "عرض",
+      "pageInfo": "صفحة {page} من {totalPages}"
+    },
     "table": {
       "orderNumber": "رقم الطلب",
       "customer": "العميل",

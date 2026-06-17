@@ -5,13 +5,13 @@ import Button from '@/components/ui/button';
 import Checkbox from '@/components/ui/checkbox';
 import Tooltip from '@/components/ui/tooltip';
 import { Order, OrderPayment, OrderStatus } from '@/types/Order';
-import { FaWhatsapp as WhatsappIcon } from 'react-icons/fa6';
+import { FaWhatsapp } from 'react-icons/fa6';
 import {
-  LuEye as Eye,
-  LuRefreshCw as RefreshCw,
-  LuCopy as Copy,
-  LuPhone as Phone,
-  LuPenLine as PenLine,
+  LuEye,
+  LuRefreshCw,
+  LuCopy,
+  LuPhone ,
+  LuPenLine,
 } from 'react-icons/lu';
 
 export const STATUS_COLORS: Record<OrderStatus, string> = {
@@ -198,8 +198,8 @@ export function useOrderColumns(callbacks: ColumnCallbacks) {
                 aria-label={t('copyWhatsapp.copyNumber')}
               >
                 {copyingPhoneOrderId === row._id
-                  ? <RefreshCw size={16} className="animate-spin" />
-                  : <Phone size={16} />}
+                  ? <LuRefreshCw size={16} className="animate-spin" />
+                  : <LuPhone size={16} />}
               </Button>
             </Tooltip>
 
@@ -212,8 +212,8 @@ export function useOrderColumns(callbacks: ColumnCallbacks) {
                 aria-label={t('copyWhatsapp.copyMessage')}
               >
                 {copyingMessageOrderId === row._id
-                  ? <RefreshCw size={16} className="animate-spin" />
-                  : <Copy size={16} />}
+                  ? <LuRefreshCw size={16} className="animate-spin" />
+                  : <LuCopy size={16} />}
               </Button>
             </Tooltip>
 
@@ -226,8 +226,8 @@ export function useOrderColumns(callbacks: ColumnCallbacks) {
                 aria-label={t('copyWhatsapp.button')}
               >
                 {whatsappOrderId === row._id
-                  ? <RefreshCw size={16} className="animate-spin" />
-                  : <WhatsappIcon size={16} />}
+                  ? <LuRefreshCw size={16} className="animate-spin" />
+                  : <FaWhatsapp size={16} />}
               </Button>
             </Tooltip>
           </div>
@@ -240,7 +240,7 @@ export function useOrderColumns(callbacks: ColumnCallbacks) {
                 onClick={(e) => { e.stopPropagation(); onView(row); }}
                 aria-label={t('viewDetails')}
               >
-                <Eye size={16} />
+                <LuEye size={16} />
               </Button>
             </Tooltip>
 
@@ -251,7 +251,7 @@ export function useOrderColumns(callbacks: ColumnCallbacks) {
                 onClick={(e) => { e.stopPropagation(); onChangeStatus(row); }}
                 aria-label={t('changeStatus')}
               >
-                <PenLine size={16} />
+                <LuPenLine size={16} />
               </Button>
             </Tooltip>
           </div>

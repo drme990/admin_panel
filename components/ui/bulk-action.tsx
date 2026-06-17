@@ -46,53 +46,59 @@ export default function BulkAction({
   return (
     <div
       className={cn(
-        'flex flex-col gap-4 rounded-xl border border-stroke',
-        'bg-card-bg/90 backdrop-blur-sm',
-        'p-4 shadow-sm',
+        'relative rounded-xl border border-stroke',
+        'bg-card-bg shadow-sm',
         'animate-in fade-in slide-in-from-top-2 duration-200',
-        'md:flex-row md:items-center md:justify-between',
       )}
     >
-      {/* LEFT SIDE */}
-      <div className="flex items-center gap-3 flex-wrap">
-        {/* Selection Badge */}
-        <div className="flex items-center gap-2 rounded-lg bg-success/10 px-3 py-2 text-sm font-medium text-success">
-          <LuSquareCheck size={16} />
-          {selectionLabel.replace('{count}', String(selectedCount))}
+      <div className="flex flex-col gap-5 p-5 lg:flex-row lg:items-center lg:justify-between">
+        {/* Left Section */}
+        <div className="flex items-center gap-4">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-success/10 text-success">
+            <LuSquareCheck size={22} />
+          </div>
+
+          <div>
+            <p className="text-sm font-semibold text-foreground">
+              {selectionLabel.replace('{count}', String(selectedCount))}
+            </p>
+          </div>
         </div>
 
-        {/* Status Dropdown */}
-        <div className="min-w-50">
-          <Dropdown
-            label={dropdownLabel}
-            value={value}
-            options={options}
-            onChange={onValueChange}
-          />
+        {/* Right Section */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+          <div className="min-w-55 sm:min-w-65">
+            <Dropdown
+              label={dropdownLabel}
+              value={value}
+              options={options}
+              onChange={onValueChange}
+            />
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={onClear}
+              className="flex items-center gap-2"
+            >
+              <LuX size={14} />
+              {clearLabel}
+            </Button>
+
+            <Button
+              type="button"
+              variant="primary"
+              onClick={onApply}
+              disabled={disabled || loading || !value}
+              className="min-w-32 flex items-center justify-center gap-2"
+            >
+              <LuSquareCheck size={16} />
+              {loading ? applyingLabel : applyLabel}
+            </Button>
+          </div>
         </div>
-      </div>
-
-      {/* RIGHT SIDE */}
-      <div className="flex items-center gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={onClear}
-          className="flex items-center gap-2"
-        >
-          <LuX size={14} />
-          {clearLabel}
-        </Button>
-
-        <Button
-          type="button"
-          variant="primary"
-          onClick={onApply}
-          disabled={disabled || loading || !value}
-          className="min-w-27.5"
-        >
-          {loading ? applyingLabel : applyLabel}
-        </Button>
       </div>
     </div>
   );

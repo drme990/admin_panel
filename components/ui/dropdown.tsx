@@ -28,7 +28,9 @@ export default function Dropdown<T = string>({
   className = '',
 }: DropdownProps<T>) {
   const [isOpen, setIsOpen] = useState(false);
+  const [direction, setDirection] = useState<'down' | 'up'>('down');
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   const selectedOption = options.find((opt) => opt.value === value);
 
@@ -49,6 +51,22 @@ export default function Dropdown<T = string>({
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen || !dropdownRef.current || !menuRef.current) return;
+
+    const rect = dropdownRef.current.getBoundingClientRect();
+    const menuHeight = menuRef.current.offsetHeight;
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const spaceAbove = rect.top;
+    const margin = 8;
+
+    if (spaceBelow < menuHeight + margin && spaceAbove > spaceBelow) {
+      setDirection('up');
+    } else {
+      setDirection('down');
+    }
   }, [isOpen]);
 
   const handleSelect = (optionValue: T) => {
@@ -76,14 +94,19 @@ export default function Dropdown<T = string>({
         </span>
         <LuChevronDown
           size={16}
-          className={`transition-transform duration-200 ${
-            isOpen ? 'rotate-180' : ''
-          }`}
+          className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''
+            }`}
         />
       </Button>
 
       {isOpen && (
-        <div className="absolute top-full left-0 right-0 mt-1 bg-card-bg border border-stroke rounded-lg shadow-lg z-50 min-h-30 max-h-60 overflow-y-auto">
+        <div
+          ref={menuRef}
+          className={`absolute left-0 right-0 bg-card-bg border border-stroke rounded-lg shadow-lg z-50 min-h-30 max-h-60 overflow-y-auto ${direction === 'up'
+              ? 'bottom-full mb-1'
+              : 'top-full mt-1'
+            }`}
+        >
           {options.map((option, index) => (
             <Button
               variant="custom"
@@ -91,9 +114,8 @@ export default function Dropdown<T = string>({
               key={index}
               type="button"
               onClick={() => handleSelect(option.value)}
-              className={`w-full px-4 py-2 text-right hover:bg-background transition-colors flex items-center gap-2 ${
-                option.value === value ? 'bg-primary/10 text-primary' : ''
-              }`}
+              className={`w-full px-4 py-2 text-right hover:bg-background transition-colors flex items-center gap-2 ${option.value === value ? 'bg-primary/10 text-primary' : ''
+                }`}
             >
               {option.icon}
               {option.label}

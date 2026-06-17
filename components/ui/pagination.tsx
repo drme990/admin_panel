@@ -1,6 +1,7 @@
-import { useLocale } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { LuChevronLeft, LuChevronRight } from 'react-icons/lu';
 import Button from './button';
+import Dropdown from './dropdown';
 
 interface PaginationProps {
   currentPage: number;
@@ -9,7 +10,11 @@ interface PaginationProps {
   hasNextPage?: boolean;
   hasPrevPage?: boolean;
   disabled?: boolean;
+  pageSize?: number;
+  onPageSizeChange?: (size: number) => void;
 }
+
+const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
 
 export default function Pagination({
   currentPage,
@@ -18,10 +23,18 @@ export default function Pagination({
   hasNextPage,
   hasPrevPage,
   disabled = false,
+  pageSize = 20,
+  onPageSizeChange,
 }: PaginationProps) {
   const canGoPrev = hasPrevPage ?? currentPage > 1;
   const canGoNext = hasNextPage ?? currentPage < totalPages;
   const locale = useLocale();
+  const t = useTranslations('orders.pagination');
+
+  const pageSizeOptions = PAGE_SIZE_OPTIONS.map((size) => ({
+    label: String(size),
+    value: size,
+  }));
 
   if (totalPages <= 1) return null;
 
@@ -57,9 +70,23 @@ export default function Pagination({
   };
 
   return (
-    <div className="flex items-center justify-between px-4 py-3 bg-card-bg border border-stroke rounded-site mt-4">
-      <div className="text-sm text-secondary">
-        Page {currentPage} of {totalPages}
+    <div className="flex items-center justify-between px-4 py-3 bg-card-bg border border-stroke rounded-site mt-4 flex-wrap gap-3">
+      <div className="flex items-center gap-3">
+        {onPageSizeChange && (
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-secondary">{t('show')}</span>
+            <Dropdown
+              value={pageSize}
+              options={pageSizeOptions}
+              onChange={(val) => onPageSizeChange(val)}
+              disabled={disabled}
+              className="w-20"
+            />
+          </div>
+        )}
+        <div className="text-sm text-secondary">
+          {t('pageInfo', { page: currentPage, totalPages })}
+        </div>
       </div>
 
       <div className="flex items-center gap-1">
@@ -90,11 +117,10 @@ export default function Pagination({
               key={page}
               onClick={() => onPageChange(page as number)}
               disabled={disabled}
-              className={`px-3 py-1 rounded-lg transition-colors ${
-                currentPage === page
-                  ? 'bg-success text-white'
-                  : 'hover:bg-background text-foreground'
-              }`}
+              className={`px-3 py-1 rounded-lg transition-colors ${currentPage === page
+                ? 'bg-success text-white'
+                : 'hover:bg-background text-foreground'
+                }`}
             >
               {page}
             </Button>

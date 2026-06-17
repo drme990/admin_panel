@@ -87,6 +87,7 @@ export default function OrderHistoryPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
   const [totalPages, setTotalPages] = useState(1);
   const [totalOrders, setTotalOrders] = useState(0);
   const [statusFilter, setStatusFilter] =
@@ -154,7 +155,7 @@ export default function OrderHistoryPage() {
       try {
         const params = new URLSearchParams({
           page: String(page),
-          limit: '20',
+          limit: String(pageSize),
           view: 'table',
           tzOffsetMinutes: String(new Date().getTimezoneOffset()),
         });
@@ -201,6 +202,7 @@ export default function OrderHistoryPage() {
     },
     [
       page,
+      pageSize,
       statusFilter,
       referralFilter,
       sourceFilter,
@@ -628,10 +630,13 @@ export default function OrderHistoryPage() {
         onRowClick={viewOrder}
       />
 
+
       <Pagination
         currentPage={page}
         totalPages={totalPages}
         onPageChange={setPage}
+        pageSize={pageSize}
+        onPageSizeChange={(size) => { setPageSize(size); setPage(1); }}
       />
 
       <OrderDetailModal

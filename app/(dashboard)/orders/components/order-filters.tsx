@@ -6,7 +6,7 @@ import Button from '@/components/ui/button';
 import CustomDatePicker from '@/components/ui/custom-date-picker';
 import { Referral } from '@/types/Referral';
 import { OrderStatus } from '@/types/Order';
-import { LuSearch as Search, LuRefreshCw as RefreshCw } from 'react-icons/lu';
+import { LuSearch, LuRefreshCw } from 'react-icons/lu';
 
 type StatusTabValue = 'all' | OrderStatus;
 type WhatsappFilterValue = 'all' | 'clicked' | 'not-clicked' | 'no-need-to-click';
@@ -172,7 +172,7 @@ export default function OrderFilters({
       {/* Search + source + whatsapp + refresh */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
-          <Search size={16} className="absolute top-1/2 -translate-y-1/2 inset-s-3 text-secondary" />
+          <LuSearch size={16} className="absolute top-1/2 -translate-y-1/2 inset-s-3 text-secondary" />
           <input
             type="text"
             placeholder={t('filters.search')}
@@ -196,7 +196,6 @@ export default function OrderFilters({
             { label: t('filters.whatsappStateAll'), value: 'all' },
             { label: t('filters.whatsappStateClicked'), value: 'clicked' },
             { label: t('filters.whatsappStateNotClicked'), value: 'not-clicked' },
-            { label: t('filters.whatsappStateNoNeedToClick'), value: 'no-need-to-click' },
           ]}
           onChange={(val) => onWhatsappChange(val as WhatsappFilterValue)}
           placeholder={t('filters.whatsappState')}
@@ -204,7 +203,7 @@ export default function OrderFilters({
         />
 
         <Button variant="icon-primary" size="custom" onClick={onRefresh} className="shrink-0">
-          <RefreshCw size={18} />
+          <LuRefreshCw size={18} />
         </Button>
       </div>
 
@@ -236,8 +235,8 @@ export default function OrderFilters({
               size="custom"
               onClick={() => onDatePreset(preset.value)}
               className={`rounded-md border px-3 py-2 text-sm font-medium transition-colors ${activeDatePreset === preset.value
-                  ? 'bg-foreground border-foreground text-background shadow-sm'
-                  : 'bg-background border-stroke text-foreground hover:bg-foreground/5'
+                ? 'bg-foreground border-foreground text-background shadow-sm'
+                : 'bg-background border-stroke text-foreground hover:bg-foreground/5'
                 }`}
             >
               {preset.label}

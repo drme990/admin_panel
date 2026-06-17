@@ -161,6 +161,10 @@
       "applying": "Applying...",
       "clear": "Clear selection"
     },
+    "pagination": {
+      "show": "Show",
+      "pageInfo": "Page {page} of {totalPages}"
+    },
     "table": {
       "orderNumber": "Order Number",
       "customer": "Customer",

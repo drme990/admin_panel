@@ -25,7 +25,6 @@ import { toast } from 'react-toastify';
 
 import {
   LuBan,
-  LuShieldCheck,
   LuSearch,
   LuShoppingCart,
   LuHistory,
@@ -395,8 +394,8 @@ export default function CustomersPage() {
 
         setSelectedCustomer((current) =>
           current &&
-          current._id === customer._id &&
-          current.appId === customer.appId
+            current._id === customer._id &&
+            current.appId === customer.appId
             ? { ...current, detectedCountry: nextCountry || null }
             : current,
         );
@@ -683,11 +682,10 @@ export default function CustomersPage() {
         header: t('table.status'),
         accessor: (customer: Customer) => (
           <span
-            className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
-              customer.isBanned
-                ? 'bg-red-500/10 text-red-500'
-                : 'bg-emerald-500/10 text-emerald-500'
-            }`}
+            className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${customer.isBanned
+              ? 'bg-red-500/10 text-red-500'
+              : 'bg-emerald-500/10 text-emerald-500'
+              }`}
           >
             {customer.isBanned ? t('status.banned') : t('status.active')}
           </span>
@@ -758,19 +756,19 @@ export default function CustomersPage() {
             {customer.isBanned ? (
               <Tooltip content={t('unban')} position={ToolTipPositions}>
                 <Button
-                  variant="icon-primary"
+                  variant="icon-danger"
                   size="custom"
                   onClick={() => handleToggleBan(customer)}
                   disabled={updatingId === customer._id}
                   aria-label={t('unban')}
                 >
-                  <LuShieldCheck size={16} />
+                  <LuBan size={16} />
                 </Button>
               </Tooltip>
             ) : (
               <Tooltip content={t('ban')} position={ToolTipPositions}>
                 <Button
-                  variant="icon-danger"
+                  variant="icon-primary"
                   size="custom"
                   onClick={() => handleToggleBan(customer)}
                   disabled={updatingId === customer._id}

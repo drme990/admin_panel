@@ -1,3 +1,5 @@
+import { useMemo } from 'react';
+
 import Button from '@/components/ui/button';
 import Loading from '@/components/ui/loading';
 import Modal from '@/components/ui/modal';
@@ -67,6 +69,16 @@ export default function CustomerOrdersModal({
 }: CustomerOrdersModalProps) {
   const t = useTranslations('admin.customers.ordersModal');
 
+  const { lifetimeSpending, totalOrders, currency } = useMemo(() => {
+    const total = customerOrders.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
+    const firstCurrency = customerOrders[0]?.currency ?? '';
+    return {
+      lifetimeSpending: total,
+      totalOrders: customerOrders.length,
+      currency: firstCurrency,
+    };
+  }, [customerOrders]);
+
   return (
     <Modal
       isOpen={isOrdersModalOpen}
@@ -89,132 +101,147 @@ export default function CustomerOrdersModal({
             <p className="text-secondary">{t('emptyMessage')}</p>
           </div>
         ) : (
-          customerOrders.map((order) => (
-            <div
-              key={order._id}
-              className="border border-stroke rounded-lg p-4 bg-card-bg hover:border-primary/50 transition-colors"
-            >
-              {/* Header */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
-                <div>
-                  <p className="text-xs uppercase text-secondary">
-                    {t('orderNumber')}
-                  </p>
-
-                  <p className="font-mono text-sm text-foreground">
-                    {order.orderNumber}
-                  </p>
-                </div>
-
-                <div>
-                  <p className="text-xs uppercase text-secondary">
-                    {t('totalAmount')}
-                  </p>
-
-                  <p className="font-medium text-foreground">
-                    {order.totalAmount.toFixed(2)} {order.currency}
-                  </p>
-                </div>
-
-                <div>
-                  <p className="text-xs uppercase text-secondary">
-                    {t('status')}
-                  </p>
-
-                  <span
-                    className={`inline-block px-2 py-1 rounded text-xs font-medium ${
-                      ORDER_STATUS_COLORS[order.status]
-                    }`}
-                  >
-                    {formatStatus(order.status)}
-                  </span>
-                </div>
-
-                <div>
-                  <p className="text-xs uppercase text-secondary">
-                    {t('created')}
-                  </p>
-
-                  <p className="text-sm text-foreground">
-                    {new Date(order.createdAt).toLocaleDateString()}
-                  </p>
-                </div>
+          <>
+            {/* Lifetime spending summary */}
+            <div className="grid grid-cols-2 gap-4 mb-2">
+              <div className="border border-stroke rounded-lg p-4 bg-card-bg">
+                <p className="text-xs uppercase text-secondary">{t('totalOrders')}</p>
+                <p className="text-2xl font-bold text-foreground">{totalOrders}</p>
               </div>
+              <div className="border border-stroke rounded-lg p-4 bg-card-bg">
+                <p className="text-xs uppercase text-secondary">{t('lifetimeSpending')}</p>
+                <p className="text-2xl font-bold text-foreground">
+                  {lifetimeSpending.toFixed(2)} {currency}
+                </p>
+              </div>
+            </div>
 
-              {/* Payment section */}
-              {(order.paidAmount !== undefined ||
-                order.remainingAmount !== undefined) && (
-                <div className="grid grid-cols-2 gap-4 py-3 mb-4 border-y border-stroke">
-                  {order.paidAmount !== undefined && (
-                    <div>
-                      <p className="text-xs text-secondary">
-                        {t('paidAmount')}
-                      </p>
+            {customerOrders.map((order) => (
+              <div
+                key={order._id}
+                className="border border-stroke rounded-lg p-4 bg-card-bg hover:border-primary/50 transition-colors"
+              >
+                {/* Header */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
+                  <div>
+                    <p className="text-xs uppercase text-secondary">
+                      {t('orderNumber')}
+                    </p>
 
-                      <p className="font-medium text-green-600">
-                        {order.paidAmount.toFixed(2)} {order.currency}
-                      </p>
-                    </div>
-                  )}
+                    <p className="font-mono text-sm text-foreground">
+                      {order.orderNumber}
+                    </p>
+                  </div>
 
-                  {order.remainingAmount !== undefined && (
-                    <div>
-                      <p className="text-xs text-secondary">
-                        {t('remainingAmount')}
-                      </p>
+                  <div>
+                    <p className="text-xs uppercase text-secondary">
+                      {t('totalAmount')}
+                    </p>
 
-                      <p className="font-medium text-orange-600">
-                        {order.remainingAmount.toFixed(2)} {order.currency}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              )}
+                    <p className="font-medium text-foreground">
+                      {order.totalAmount.toFixed(2)} {order.currency}
+                    </p>
+                  </div>
 
-              {/* Items */}
-              {order.items.length > 0 && (
-                <div>
-                  <p className="text-xs uppercase font-medium text-secondary mb-2">
-                    {t('itemsLabel', { count: order.items.length })}
-                  </p>
+                  <div>
+                    <p className="text-xs uppercase text-secondary">
+                      {t('status')}
+                    </p>
 
-                  <div className="space-y-2">
-                    {order.items.map((item, index) => {
-                      const sizeLabel = getSizeLabel(item.size);
+                    <span
+                      className={`inline-block px-2 py-1 rounded text-xs font-medium ${ORDER_STATUS_COLORS[order.status]
+                        }`}
+                    >
+                      {formatStatus(order.status)}
+                    </span>
+                  </div>
 
-                      return (
-                        <div
-                          key={`${item.productId}-${index}`}
-                          className="flex justify-between items-start bg-stroke/30 rounded p-3 text-sm"
-                        >
-                          <div className="flex-1">
-                            <p className="font-medium text-foreground">
-                              {item.productName.en || item.productName.ar}
-                            </p>
+                  <div>
+                    <p className="text-xs uppercase text-secondary">
+                      {t('created')}
+                    </p>
 
-                            <div className="flex flex-wrap gap-3 mt-1 text-xs text-secondary">
-                              <span>
-                                Price: {item.price.toFixed(2)} {item.currency}
-                              </span>
-
-                              <span>Qty: {item.quantity}</span>
-
-                              {sizeLabel && <span>Size: {sizeLabel}</span>}
-                            </div>
-                          </div>
-
-                          <p className="font-medium text-foreground whitespace-nowrap ml-3">
-                            {(item.price * item.quantity).toFixed(2)}{' '}
-                            {item.currency}
-                          </p>
-                        </div>
-                      );
-                    })}
+                    <p className="text-sm text-foreground">
+                      {new Date(order.createdAt).toLocaleDateString()}
+                    </p>
                   </div>
                 </div>
-              )}
-            </div>
-          ))
+
+                {/* Payment section */}
+                {(order.paidAmount !== undefined ||
+                  order.remainingAmount !== undefined) && (
+                    <div className="grid grid-cols-2 gap-4 py-3 mb-4 border-y border-stroke">
+                      {order.paidAmount !== undefined && (
+                        <div>
+                          <p className="text-xs text-secondary">
+                            {t('paidAmount')}
+                          </p>
+
+                          <p className="font-medium text-green-600">
+                            {order.paidAmount.toFixed(2)} {order.currency}
+                          </p>
+                        </div>
+                      )}
+
+                      {order.remainingAmount !== undefined && (
+                        <div>
+                          <p className="text-xs text-secondary">
+                            {t('remainingAmount')}
+                          </p>
+
+                          <p className="font-medium text-orange-600">
+                            {order.remainingAmount.toFixed(2)} {order.currency}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                {/* Items */}
+                {order.items.length > 0 && (
+                  <div>
+                    <p className="text-xs uppercase font-medium text-secondary mb-2">
+                      {t('itemsLabel', { count: order.items.length })}
+                    </p>
+
+                    <div className="space-y-2">
+                      {order.items.map((item, index) => {
+                        const sizeLabel = getSizeLabel(item.size);
+
+                        return (
+                          <div
+                            key={`${item.productId}-${index}`}
+                            className="flex justify-between items-start bg-stroke/30 rounded p-3 text-sm"
+                          >
+                            <div className="flex-1">
+                              <p className="font-medium text-foreground">
+                                {item.productName.en || item.productName.ar}
+                              </p>
+
+                              <div className="flex flex-wrap gap-3 mt-1 text-xs text-secondary">
+                                <span>
+                                  Price: {item.price.toFixed(2)} {item.currency}
+                                </span>
+
+                                <span>Qty: {item.quantity}</span>
+
+                                {sizeLabel && <span>Size: {sizeLabel}</span>}
+                              </div>
+                            </div>
+
+                            <p className="font-medium text-foreground whitespace-nowrap ml-3">
+                              {(item.price * item.quantity).toFixed(2)}{' '}
+                              {item.currency}
+                            </p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </>
         )}
       </div>
     </Modal>

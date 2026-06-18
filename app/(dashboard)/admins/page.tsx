@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { User, AdminPage, ALL_ADMIN_PAGES } from '@/types/User';
+import { Referral } from '@/types/Referral';
 import Table from '@/components/ui/table';
 import Modal from '@/components/ui/modal';
 import Dropdown from '@/components/ui/dropdown';
@@ -36,11 +37,23 @@ export default function UsersPage() {
     password: '',
     role: 'admin' as 'admin' | 'super_admin',
     allowedPages: [] as AdminPage[],
+    ref: '',
   });
+  const [referrals, setReferrals] = useState<Referral[]>([]);
   const t = useTranslations('admin.users');
   const { confirm, modalProps } = useConfirmModal();
   const { user: currentUser } = useAuth();
   const ToolTipPositions = useLocale() === 'ar' ? 'right' : 'left';
+
+  const refOptions = useMemo(() => {
+    const options = referrals.map((r) => ({ value: r.referralId, label: `${r.name} (${r.referralId})` }));
+    return [
+      { value: '', label: t('form.refNone') },
+      { value: 'MNK-D', label: 'MNK-D' },
+      { value: 'GHD-D', label: 'GHD-D' },
+      ...options,
+    ];
+  }, [referrals, t]);
 
   const roleOptions = [
     { value: 'admin', label: t('roles.admin') },
@@ -70,9 +83,20 @@ export default function UsersPage() {
     }
   }, []);
 
+  const fetchReferrals = useCallback(async () => {
+    try {
+      const res = await fetch('/api/referrals?limit=200');
+      const data = await res.json();
+      if (data.success) setReferrals(data.data.referrals || []);
+    } catch (error) {
+      console.error('Error fetching referrals:', error);
+    }
+  }, []);
+
   useEffect(() => {
     fetchUsers();
-  }, [fetchUsers]);
+    fetchReferrals();
+  }, [fetchUsers, fetchReferrals]);
 
   const openAddModal = () => {
     setModalMode('add');
@@ -83,6 +107,7 @@ export default function UsersPage() {
       password: '',
       role: 'admin',
       allowedPages: [],
+      ref: '',
     });
     setShowModal(true);
   };
@@ -96,6 +121,7 @@ export default function UsersPage() {
       password: '',
       role: user.role,
       allowedPages: user.allowedPages ?? [],
+      ref: user.ref ?? '',
     });
     setShowModal(true);
   };
@@ -160,15 +186,20 @@ export default function UsersPage() {
         ),
       },
       {
+        header: t('table.ref'),
+        accessor: (user: User) => (
+          <span className="font-mono text-xs text-secondary">{user.ref || '-'}</span>
+        ),
+      },
+      {
         header: t('table.role'),
         accessor: (user: User) => (
           <div className="flex flex-col gap-1">
             <span
-              className={`inline-block w-fit px-2 py-1 rounded-full text-xs font-medium ${
-                user.role === 'super_admin'
-                  ? 'bg-purple-500/10 text-purple-500'
-                  : 'bg-blue-500/10 text-blue-500'
-              }`}
+              className={`inline-block w-fit px-2 py-1 rounded-full text-xs font-medium ${user.role === 'super_admin'
+                ? 'bg-purple-500/10 text-purple-500'
+                : 'bg-blue-500/10 text-blue-500'
+                }`}
             >
               {user.role === 'super_admin'
                 ? t('roles.super_admin')
@@ -257,6 +288,7 @@ export default function UsersPage() {
         email: formData.email,
         role: formData.role,
         allowedPages: formData.allowedPages,
+        ref: formData.ref.trim() || undefined,
       };
       if (formData.password.trim().length >= 6)
         payload.password = formData.password;
@@ -348,6 +380,16 @@ export default function UsersPage() {
             onChange={(e) =>
               setFormData({ ...formData, email: e.target.value })
             }
+          />
+
+          <Dropdown
+            label={t('form.ref')}
+            value={formData.ref}
+            options={refOptions}
+            onChange={(value) =>
+              setFormData({ ...formData, ref: value as string })
+            }
+            placeholder={t('form.refPlaceholder')}
           />
 
           <Input

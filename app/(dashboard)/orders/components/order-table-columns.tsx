@@ -10,8 +10,9 @@ import {
   LuEye,
   LuRefreshCw,
   LuCopy,
-  LuPhone ,
+  LuPhone,
   LuPenLine,
+  LuBan,
 } from 'react-icons/lu';
 
 export const STATUS_COLORS: Record<OrderStatus, string> = {
@@ -48,6 +49,7 @@ interface ColumnCallbacks {
   onCopyPhone: (order: Order) => void;
   onCopyMessage: (order: Order) => void;
   onChangeStatus: (order: Order) => void;
+  onBlock: (order: Order) => void;
   onToggleSelect: (orderId: string) => void;
   onToggleSelectAll: () => void;
   selectedOrderIds: string[];
@@ -55,6 +57,8 @@ interface ColumnCallbacks {
   whatsappOrderId: string | null;
   copyingPhoneOrderId: string | null;
   copyingMessageOrderId: string | null;
+  blockingOrderId: string | null;
+  blockedUserIds: Set<string>;
   tooltipPos: 'left' | 'right';
   formatDate: (date: string) => string;
 }
@@ -62,10 +66,10 @@ interface ColumnCallbacks {
 export function useOrderColumns(callbacks: ColumnCallbacks) {
   const t = useTranslations('orders');
   const {
-    onView, onWhatsapp, onCopyPhone, onCopyMessage, onChangeStatus,
+    onView, onWhatsapp, onCopyPhone, onCopyMessage, onChangeStatus, onBlock,
     onToggleSelect, onToggleSelectAll,
     selectedOrderIds, allVisibleSelected,
-    whatsappOrderId, copyingPhoneOrderId, copyingMessageOrderId,
+    whatsappOrderId, copyingPhoneOrderId, copyingMessageOrderId, blockingOrderId, blockedUserIds,
     tooltipPos, formatDate,
   } = callbacks;
 
@@ -254,6 +258,36 @@ export function useOrderColumns(callbacks: ColumnCallbacks) {
                 <LuPenLine size={16} />
               </Button>
             </Tooltip>
+
+            {row.userId && blockedUserIds.has(row.userId) ? (
+              <Tooltip position={tooltipPos} content={t('unblockCustomer')}>
+                <Button
+                  variant="icon-danger"
+                  size="custom"
+                  onClick={(e) => { e.stopPropagation(); onBlock(row); }}
+                  disabled={blockingOrderId === row._id}
+                  aria-label={t('unblockCustomer')}
+                >
+                  {blockingOrderId === row._id
+                    ? <LuRefreshCw size={16} className="animate-spin" />
+                    : <LuBan size={16} />}
+                </Button>
+              </Tooltip>
+            ) : (
+              <Tooltip position={tooltipPos} content={t('blockCustomer')}>
+                <Button
+                  variant="icon-primary"
+                  size="custom"
+                  onClick={(e) => { e.stopPropagation(); onBlock(row); }}
+                  disabled={blockingOrderId === row._id || row.isGuest || !row.userId}
+                  aria-label={t('blockCustomer')}
+                >
+                  {blockingOrderId === row._id
+                    ? <LuRefreshCw size={16} className="animate-spin" />
+                    : <LuBan size={16} />}
+                </Button>
+              </Tooltip>
+            )}
           </div>
         </div>
       ),

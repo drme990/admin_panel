@@ -141,12 +141,7 @@ export default function StorageManager() {
     if (!folderStructure) return;
 
     const filteredFiles = filterFilesByType(folderStructure.files, activeTab);
-    const allKeys = [
-      ...folderStructure.folders.map(
-        (f) => `${currentPath ? currentPath + '/' : ''}${f}/`,
-      ),
-      ...filteredFiles.map((f) => f.key),
-    ];
+    const allKeys = filteredFiles.map((f) => f.key);
 
     if (selectedItems.size === allKeys.length) {
       setSelectedItems(new Set());
@@ -202,7 +197,23 @@ export default function StorageManager() {
       const data = await response.json();
 
       if (data.success) {
-        window.open(data.downloadUrl, '_blank');
+        const fileName = key.split('/').pop() || key;
+
+        const fileResponse = await fetch(data.downloadUrl);
+        if (!fileResponse.ok) throw new Error('Failed to fetch file');
+
+        const blob = await fileResponse.blob();
+        const objectUrl = URL.createObjectURL(blob);
+
+        const a = document.createElement('a');
+        a.href = objectUrl;
+        a.download = fileName;
+        a.style.display = 'none';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+
+        setTimeout(() => URL.revokeObjectURL(objectUrl), 10000);
       } else {
         toast.error(data.error || 'Failed to generate download URL');
       }
@@ -249,29 +260,47 @@ export default function StorageManager() {
     setDownloading(true);
     try {
       const keys = Array.from(selectedItems);
+      const folderName = currentPath ? currentPath.split('/').pop()! : 'root';
+
       const response = await fetch('/api/storage/bulk-download', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ keys }),
+        body: JSON.stringify({ keys, folderName }),
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        toast.error(error.error || 'Failed to create bulk download');
+        const contentType = response.headers.get('Content-Type') || '';
+        if (contentType.includes('application/json')) {
+          const error = await response.json();
+          toast.error(error.error || 'Failed to create bulk download');
+        } else {
+          toast.error(`Server error (${response.status})`);
+        }
         return;
       }
 
       const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
+      const objectUrl = URL.createObjectURL(blob);
+
+      const dateTime = new Date()
+        .toISOString()
+        .replace('T', '_')
+        .replace(/:/g, '-')
+        .split('.')[0];
+      const safeFolderName = folderName.replace(/[^a-zA-Z0-9-_]/g, '_');
+      const filename = `${safeFolderName}-${dateTime}.zip`;
+
       const a = document.createElement('a');
-      a.href = url;
-      a.download = `download-${Date.now()}.zip`;
+      a.href = objectUrl;
+      a.download = filename;
+      a.style.display = 'none';
       document.body.appendChild(a);
       a.click();
-      window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
 
-      toast.success('Download started');
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 10000);
+
+      toast.success(`Downloading ${keys.length} file${keys.length !== 1 ? 's' : ''} as ${filename}`);
     } catch (error) {
       console.error('Error creating bulk download:', error);
       toast.error('Failed to create bulk download');
@@ -331,11 +360,10 @@ export default function StorageManager() {
               onClick={() =>
                 setCurrentPath(breadcrumbs.slice(0, index + 1).join('/'))
               }
-              className={`hover:text-primary ${
-                index === breadcrumbs.length - 1
-                  ? 'text-primary font-semibold'
-                  : ''
-              }`}
+              className={`hover:text-primary ${index === breadcrumbs.length - 1
+                ? 'text-primary font-semibold'
+                : ''
+                }`}
             >
               {crumb}
             </button>
@@ -408,9 +436,8 @@ export default function StorageManager() {
             <div className="col-span-6 flex items-center gap-2">
               <Checkbox
                 checked={
-                  folderStructure.folders.length + filteredFiles.length > 0 &&
-                  selectedItems.size ===
-                    folderStructure.folders.length + filteredFiles.length
+                  filteredFiles.length > 0 &&
+                  selectedItems.size === filteredFiles.length
                 }
                 onChange={toggleSelectAll}
               />

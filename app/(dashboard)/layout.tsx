@@ -38,6 +38,10 @@ import {
   LuRadar,
   LuArchive,
   LuFolderTree,
+  LuTruck,
+  LuUserSearch,
+  LuUnlink,
+  LuWalletCards,
 } from 'react-icons/lu';
 
 const navItems = [
@@ -55,7 +59,7 @@ const navItems = [
     superAdminOnly: false,
     permissionKey: 'orders',
   },
-    {
+  {
     key: 'products',
     href: '/products',
     icon: LuPackage,
@@ -84,9 +88,30 @@ const navItems = [
     permissionKey: 'customers',
   },
   {
+    key: 'crm',
+    href: '/crm',
+    icon: LuUserSearch,
+    superAdminOnly: false,
+    permissionKey: 'crm',
+  },
+  {
+    key: 'suppliers',
+    href: '/suppliers',
+    icon: LuTruck,
+    superAdminOnly: false,
+    permissionKey: 'suppliers',
+  },
+  {
+    key: 'accounts',
+    href: '/accounts',
+    icon: LuWalletCards,
+    superAdminOnly: false,
+    permissionKey: 'accounts',
+  },
+  {
     key: 'payments',
     href: '/payments',
-    icon: LuWallet,
+    icon: LuUnlink,
     superAdminOnly: false,
     permissionKey: 'payments',
   },
@@ -209,6 +234,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
       exchange: 'exchange',
       logs: 'activityLogs',
       payments: 'payments',
+      suppliers: 'suppliers',
     };
     return pageMap[page] ?? null;
   })();

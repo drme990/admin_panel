@@ -13,7 +13,10 @@ export type AdminPage =
   | 'appearance'
   | 'storage-manager'
   | 'exchange'
-  | 'payments';
+  | 'payments'
+  | 'crm'
+  | 'accounts'
+  | 'suppliers';
 
 export const ALL_ADMIN_PAGES: AdminPage[] = [
   'products',
@@ -31,6 +34,8 @@ export const ALL_ADMIN_PAGES: AdminPage[] = [
   'exchange',
   'payments',
   'storage-manager',
+  'crm',
+  'accounts'
 ];
 
 export interface User {
@@ -40,6 +45,7 @@ export interface User {
   password?: string;
   role: 'admin' | 'super_admin';
   allowedPages?: AdminPage[];
+  ref?: string;
   createdAt: Date;
   updatedAt: Date;
 }

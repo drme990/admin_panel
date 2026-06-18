@@ -137,6 +137,16 @@
       "refunded": "مسترد",
       "cancelled": "ملغي"
     },
+    "blockCustomer": "حظر العميل",
+    "unblockCustomer": "إلغاء حظر العميل",
+    "customerBanned": "العميل محظور",
+    "blockCustomerConfirm": "هل أنت متأكد من حظر هذا العميل؟ سيتم منعه من تقديم طلبات جديدة.",
+    "unblockCustomerConfirm": "هل أنت متأكد من إلغاء حظر هذا العميل؟",
+    "blockCustomerSuccess": "تم حظر العميل بنجاح",
+    "unblockCustomerSuccess": "تم إلغاء حظر العميل بنجاح",
+    "blockCustomerFailed": "فشل حظر العميل",
+    "unblockCustomerFailed": "فشل إلغاء حظر العميل",
+    "blockCustomerGuest": "لا يمكن حظر طلبات الزوار",
     "changeStatus": "تغيير الحالة",
     "changeStatusModal": {
       "title": "تغيير حالة الطلب",
@@ -189,6 +199,9 @@
       "categories": "الفئات",
       "booking": "الحجز",
       "coupons": "الكوبونات",
+      "crm": "إدارة العلاقات",
+      "suppliers": "الموردين",
+      "accounts": "الحسابات",
       "countries": "البلدان",
       "admins": "المشرفين",
       "customers": "العملاء",
@@ -288,6 +301,101 @@
         "lastModified": "آخر تعديل",
         "actions": "الإجراءات",
         "empty": "هذا المجلد فارغ"
+      }
+    },
+    "suppliers": {
+      "title": "الموردين",
+      "description": "إدارة الموردين وتتبع أوامر الشراء وتسجيل المدفوعات.",
+      "addSupplier": "إضافة مورد",
+      "editSupplier": "تعديل مورد",
+      "deleteSupplier": "حذف مورد",
+      "supplierDetails": "تفاصيل المورد",
+      "search": "البحث في الموردين...",
+      "noSuppliers": "لا يوجد موردين",
+      "tabs": {
+        "info": "المعلومات",
+        "orders": "الطلبات",
+        "payouts": "المدفوعات"
+      },
+      "fields": {
+        "name": "الاسم",
+        "phone": "الهاتف",
+        "email": "البريد الإلكتروني",
+        "address": "العنوان",
+        "notes": "ملاحظات",
+        "status": "الحالة",
+        "balance": "الرصيد",
+        "totalOrders": "إجمالي الطلبات",
+        "totalPayouts": "إجمالي المدفوعات"
+      },
+      "status": {
+        "active": "نشط",
+        "inactive": "غير نشط",
+        "all": "جميع الحالات"
+      },
+      "orders": {
+        "title": "أوامر الشراء",
+        "addOrder": "إضافة طلب",
+        "editOrder": "تعديل طلب",
+        "deleteOrder": "حذف طلب",
+        "noOrders": "لا توجد طلبات",
+        "itemName": "اسم الصنف",
+        "quantity": "الكمية",
+        "unitPrice": "سعر الوحدة",
+        "total": "الإجمالي",
+        "orderDate": "تاريخ الطلب",
+        "notes": "ملاحظات",
+        "status": {
+          "pending": "معلق",
+          "received": "مستلم",
+          "cancelled": "ملغى"
+        },
+        "statusLabel": "الحالة",
+        "addItem": "إضافة صنف",
+        "removeItem": "إزالة صنف",
+        "items": "الأصناف"
+      },
+      "payouts": {
+        "title": "المدفوعات",
+        "addPayout": "إضافة دفعة",
+        "editPayout": "تعديل دفعة",
+        "deletePayout": "حذف دفعة",
+        "noPayouts": "لا توجد مدفوعات",
+        "amount": "المبلغ",
+        "account": "الحساب",
+        "selectAccount": "اختر حساباً",
+        "date": "التاريخ",
+        "notes": "ملاحظات"
+      },
+      "actions": "إجراءات",
+      "common": {
+        "cancel": "إلغاء",
+        "save": "حفظ",
+        "saving": "جارٍ الحفظ...",
+        "create": "إنشاء",
+        "update": "تحديث",
+        "total": "الإجمالي",
+        "loading": "جارٍ التحميل...",
+        "failedSave": "فشل الحفظ",
+        "failedUpdate": "فشل التحديث",
+        "failedDelete": "فشل الحذف",
+        "itemNameRequired": "يجب أن يكون لجميع الأصناف اسم",
+        "amountRequired": "يجب أن يكون المبلغ أكبر من صفر",
+        "requiredField": "هذا الحقل مطلوب"
+      },
+      "messages": {
+        "createSuccess": "تم إنشاء المورد بنجاح",
+        "updateSuccess": "تم تحديث المورد بنجاح",
+        "deleteSuccess": "تم حذف المورد بنجاح",
+        "deleteConfirm": "هل أنت متأكد من حذف هذا المورد؟ سيتم حذف جميع الطلبات والمدفوعات المرتبطة به أيضاً.",
+        "orderCreateSuccess": "تم إنشاء الطلب بنجاح",
+        "orderUpdateSuccess": "تم تحديث الطلب بنجاح",
+        "orderDeleteSuccess": "تم حذف الطلب بنجاح",
+        "orderDeleteConfirm": "هل أنت متأكد من حذف هذا الطلب؟",
+        "payoutCreateSuccess": "تم تسجيل الدفعة بنجاح",
+        "payoutUpdateSuccess": "تم تحديث الدفعة بنجاح",
+        "payoutDeleteSuccess": "تم حذف الدفعة بنجاح",
+        "payoutDeleteConfirm": "هل أنت متأكد من حذف هذه الدفعة؟"
       }
     },
     "loading": "جاري التحميل...",
@@ -790,6 +898,7 @@
       "table": {
         "name": "الاسم",
         "email": "البريد الإلكتروني",
+        "ref": "المرجع",
         "role": "الدور",
         "createdAt": "تاريخ الإنشاء",
         "actions": "إجراءات"
@@ -801,6 +910,9 @@
       "form": {
         "name": "الاسم",
         "email": "البريد الإلكتروني",
+        "ref": "المرجع",
+        "refPlaceholder": "اختر مرجعاً",
+        "refNone": "لا يوجد",
         "password": "كلمة المرور",
         "passwordOptional": "كلمة المرور (اتركها فارغة للإبقاء على الحالية)",
         "passwordPlaceholder": "6 أحرف على الأقل",
@@ -825,7 +937,10 @@
         "appearance": "المظهر",
         "exchange": "أسعار الصرف",
         "storage-manager": "مدير التخزين",
-        "payments": "المدفوعات"
+        "payments": "المدفوعات",
+        "suppliers": "الموردين",
+        "accounts": "الحسابات",
+        "crm": "إدارة العلاقات"
       },
       "buttons": {
         "cancel": "إلغاء",
@@ -917,7 +1032,9 @@
         "created": "تاريخ الإنشاء",
         "paidAmount": "المبلغ المدفوع",
         "remainingAmount": "المبلغ المتبقي",
-        "itemsLabel": "العناصر ({count})"
+        "itemsLabel": "العناصر ({count})",
+        "lifetimeSpending": "إجمالي الإنفاق",
+        "totalOrders": "إجمالي الطلبات"
       },
       "historyModal": {
         "title": "سجل الإحالة",
@@ -1323,6 +1440,76 @@
         "manual": "يدوي"
       },
       "manualNote": "لن يتم تغيير الأسعار اليدوية"
+    },
+    "accounts": {
+      "title": "الحسابات",
+      "description": "إدارة حساباتك المالية بما في ذلك الحسابات البنكية والمحافظ والنقد.",
+      "addAccount": "إضافة حساب",
+      "editAccount": "تعديل الحساب",
+      "inactive": "غير نشط",
+      "emptyMessage": "لا توجد حسابات. أضف حسابك الأول للبدء.",
+      "deleteConfirmTitle": "حذف الحساب",
+      "deleteConfirmMessage": "هل أنت متأكد أنك تريد حذف هذا الحساب؟ لا يمكن التراجع عن هذا الإجراء.",
+      "types": {
+        "bank_account": "حساب بنكي",
+        "digital_wallet": "محفظة رقمية",
+        "online_bank": "بنك إلكتروني",
+        "cash": "نقد",
+        "credit_card": "بطاقة ائتمانية",
+        "other": "أخرى"
+      },
+      "stats": {
+        "totalAccounts": "إجمالي الحسابات",
+        "activeAccounts": "الحسابات النشطة",
+        "combinedBalance": "الرصيد الإجمالي",
+        "combinedBalanceNote": "مجموع كل الحسابات النشطة (عملات مختلطة)"
+      },
+      "table": {
+        "name": "اسم الحساب",
+        "type": "النوع",
+        "currency": "العملة",
+        "balance": "الرصيد",
+        "notes": "ملاحظات",
+        "actions": "الإجراءات"
+      },
+      "form": {
+        "name": "اسم الحساب",
+        "namePlaceholder": "مثال: الحساب البنكي الرئيسي",
+        "type": "نوع الحساب",
+        "currency": "العملة",
+        "balance": "الرصيد الحالي",
+        "notes": "ملاحظات",
+        "notesPlaceholder": "ملاحظات اختيارية حول هذا الحساب",
+        "isActive": "حساب نشط"
+      },
+      "buttons": {
+        "addAccount": "إضافة حساب",
+        "updateAccount": "تحديث الحساب",
+        "delete": "حذف",
+        "cancel": "إلغاء",
+        "saving": "جارٍ الحفظ...",
+        "close": "إغلاق"
+      },
+      "transactions": {
+        "title": "المعاملات",
+        "supplier": "المورد",
+        "amount": "المبلغ",
+        "date": "التاريخ",
+        "notes": "ملاحظات",
+        "totalTransactions": "إجمالي المعاملات",
+        "totalAmount": "إجمالي المبلغ",
+        "emptyMessage": "لا توجد معاملات لهذا الحساب."
+      },
+      "showTransactions": "عرض المعاملات",
+      "messages": {
+        "loadFailed": "فشل تحميل الحسابات",
+        "createSuccess": "تم إنشاء الحساب بنجاح",
+        "createFailed": "فشل إنشاء الحساب",
+        "updateSuccess": "تم تحديث الحساب بنجاح",
+        "updateFailed": "فشل تحديث الحساب",
+        "deleteSuccess": "تم حذف الحساب بنجاح",
+        "deleteFailed": "فشل حذف الحساب"
+      }
     },
     "notFound": {
       "title": "الصفحة غير موجودة",

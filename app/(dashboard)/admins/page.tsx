@@ -8,6 +8,7 @@ import Table from '@/components/ui/table';
 import Modal from '@/components/ui/modal';
 import Dropdown from '@/components/ui/dropdown';
 import Input from '@/components/ui/input';
+import Checkbox from '@/components/ui/checkbox';
 import ConfirmModal, { useConfirmModal } from '@/components/ui/confirm-modal';
 import Button from '@/components/ui/button';
 import Tooltip from '@/components/ui/tooltip';
@@ -439,23 +440,22 @@ export default function UsersPage() {
               </p>
               <div className="grid grid-cols-2 gap-2">
                 {ALL_ADMIN_PAGES.map((page) => (
-                  <label
+                  <div
                     key={page}
-                    className="flex items-center gap-2 p-2 rounded-lg border border-stroke hover:bg-muted/50 cursor-pointer transition-colors"
+                    className="flex items-center gap-2 p-2 rounded-lg border border-stroke hover:bg-muted/50 transition-colors"
                   >
-                    <input
-                      type="checkbox"
+                    <Checkbox
                       checked={formData.allowedPages.includes(page)}
-                      onChange={(e) => {
-                        const pages = e.target.checked
+                      onChange={(checked) => {
+                        const pages = checked
                           ? [...formData.allowedPages, page]
                           : formData.allowedPages.filter((p) => p !== page);
                         setFormData({ ...formData, allowedPages: pages });
                       }}
-                      className="rounded accent-primary"
+                      label={t(`pageLabels.${page}`)}
+                      size="sm"
                     />
-                    <span className="text-sm">{t(`pageLabels.${page}`)}</span>
-                  </label>
+                  </div>
                 ))}
               </div>
             </div>

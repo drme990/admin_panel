@@ -1539,6 +1539,7 @@
         "editTitle": "Edit Tier",
         "emptyMessage": "No tiers created yet. Add your first tier to get started.",
         "minimumLabel": "Minimum spending",
+        "minimumOrdersLabel": "Min orders",
         "baseCurrencyLabel": "Base currency",
         "baseAmountLabel": "Base amount",
         "currenciesLabel": "currencies",
@@ -1551,7 +1552,9 @@
           "namePlaceholder": "e.g. Gold, Platinum, VIP",
           "color": "Tier Color",
           "minimumSpending": "Minimum Lifetime Spending",
-          "minimumSpendingHelp": "Set the minimum cumulative spending a user must reach in each currency to qualify for this tier. Use auto-calculate to convert from the base amount."
+          "minimumSpendingHelp": "Set the minimum cumulative spending a user must reach in each currency to qualify for this tier. Use auto-calculate to convert from the base amount.",
+          "minimumOrders": "Minimum Paid Orders",
+          "minimumOrdersHelp": "Set the minimum number of paid orders a user must have to qualify for this tier. Leave 0 to use spending only."
         },
         "buttons": {
           "addTier": "Add Tier",
@@ -1564,7 +1567,8 @@
         },
         "validation": {
           "nameRequired": "Tier name is required.",
-          "amountsRequired": "At least one currency minimum amount is required."
+          "amountsRequired": "At least one currency minimum amount is required.",
+          "amountsOrOrdersRequired": "Set either minimum spending amounts or a minimum order count."
         },
         "messages": {
           "loadFailed": "Failed to load tiers.",
@@ -1579,10 +1583,10 @@
       },
       "howItWorks": {
         "title": "How it works",
-        "step1": "Create tiers with a name and minimum spending amount per currency.",
+        "step1": "Create tiers with a name, minimum spending per currency, and/or a minimum paid order count.",
         "step2": "Click \"Apply to All Users\" to evaluate and assign tiers to every existing user.",
         "step3": "Every time a user completes a payment, their tier is automatically re-evaluated.",
-        "step4": "Users are assigned the first (highest) tier their lifetime spending qualifies for."
+        "step4": "Users are assigned the first (highest) tier they qualify for. A user qualifies if they meet EITHER the spending OR the order count threshold."
       }
     },
     "notFound": {

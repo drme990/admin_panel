@@ -17,6 +17,7 @@ export interface UserTier {
   mainCurrency: string;
   baseAmount: number;
   minimumAmounts: CurrencyPrice[];
+  minimumOrders: number;
 }
 
 interface TierFormData {
@@ -25,6 +26,7 @@ interface TierFormData {
   mainCurrency: string;
   baseAmount: number;
   minimumAmounts: CurrencyPrice[];
+  minimumOrders: number;
 }
 
 interface TierFormModalProps {
@@ -40,6 +42,7 @@ const EMPTY_FORM: TierFormData = {
   mainCurrency: 'USD',
   baseAmount: 0,
   minimumAmounts: [],
+  minimumOrders: 0,
 };
 
 export default function TierFormModal({
@@ -61,6 +64,7 @@ export default function TierFormModal({
           mainCurrency: editingTier.mainCurrency,
           baseAmount: editingTier.baseAmount,
           minimumAmounts: editingTier.minimumAmounts,
+          minimumOrders: editingTier.minimumOrders || 0,
         });
       } else {
         setForm(EMPTY_FORM);
@@ -73,8 +77,8 @@ export default function TierFormModal({
       toast.error(t('tiers.validation.nameRequired'));
       return;
     }
-    if (form.minimumAmounts.length === 0) {
-      toast.error(t('tiers.validation.amountsRequired'));
+    if (form.minimumAmounts.length === 0 && form.minimumOrders <= 0) {
+      toast.error(t('tiers.validation.amountsOrOrdersRequired'));
       return;
     }
 
@@ -129,27 +133,26 @@ export default function TierFormModal({
       }
     >
       <div className="space-y-6">
-        <div className="grid grid-cols-2 gap-4">
-          <Input
-            label={t('tiers.form.name')}
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-            placeholder={t('tiers.form.namePlaceholder')}
-            required
-          />
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-2">
-              {t('tiers.form.color')}
-            </label>
-            <div className="flex items-center gap-3">
-              <input
-                type="color"
-                value={form.color}
-                onChange={(e) => setForm({ ...form, color: e.target.value })}
-                className="w-10 h-10 p-0 border-0 rounded-lg cursor-pointer"
-              />
-              <span className="text-xs text-secondary font-mono">{form.color}</span>
-            </div>
+        <Input
+          label={t('tiers.form.name')}
+          value={form.name}
+          onChange={(e) => setForm({ ...form, name: e.target.value })}
+          placeholder={t('tiers.form.namePlaceholder')}
+          required
+        />
+
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-2">
+            {t('tiers.form.color')}
+          </label>
+          <div className="flex items-center gap-3">
+            <input
+              type="color"
+              value={form.color}
+              onChange={(e) => setForm({ ...form, color: e.target.value })}
+              className="w-10 h-10 p-0 border-0 rounded-lg cursor-pointer"
+            />
+            <span className="text-xs text-secondary font-mono">{form.color}</span>
           </div>
         </div>
 
@@ -173,6 +176,21 @@ export default function TierFormModal({
             }
           />
         </div>
+
+        <Input
+          label={t('tiers.form.minimumOrders')}
+          type="number"
+          min={0}
+          value={String(form.minimumOrders)}
+          onChange={(e) => {
+            const val = Number.parseInt(e.target.value || '0', 10);
+            setForm({ ...form, minimumOrders: Number.isNaN(val) ? 0 : Math.max(0, val) });
+          }}
+          placeholder="0"
+        />
+        <p className="text-xs text-secondary -mt-3">
+          {t('tiers.form.minimumOrdersHelp')}
+        </p>
       </div>
     </Modal>
   );

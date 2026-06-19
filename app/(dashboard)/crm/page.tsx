@@ -200,29 +200,32 @@ export default function CrmPage() {
                                 key={tier._id}
                                 className="flex items-center gap-4 px-6 py-4 hover:bg-background/50 transition-colors"
                             >
-                                {/* Color + Rank */}
-                                <div className="flex items-center gap-3 flex-shrink-0">
-                                    <div
-                                        className="w-4 h-4 rounded-full border-2 border-white shadow-sm"
-                                        style={{ backgroundColor: tier.color || '#6366f1' }}
-                                    />
-                                    <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-bold">
-                                        {index + 1}
-                                    </div>
+                                {/* Rank */}
+                                <div
+                                    className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold text-white flex-shrink-0"
+                                    style={{ backgroundColor: tier.color || '#6366f1' }}
+                                >
+                                    {index + 1}
                                 </div>
 
                                 {/* Info */}
                                 <div className="flex-1 min-w-0">
-                                    <p className="font-semibold text-foreground">{tier.name}</p>
+                                    <p className="font-semibold text-foreground">
+                                        {tier.name}
+                                    </p>
                                     <p className="text-xs text-secondary mt-0.5">
-                                        {t('tiers.minimumLabel')}:{' '}
+                                        {t('tiers.baseAmountLabel')}:{' '}
                                         <span className="font-medium text-foreground">
-                                            {formatAmounts(tier.minimumAmounts)}
+                                            {tier.baseAmount.toLocaleString()} {tier.mainCurrency}
                                         </span>
+                                        {tier.minimumOrders > 0 && (
+                                            <span className="font-medium text-foreground">
+                                                {' '}| {t('tiers.minimumOrdersLabel')}: {tier.minimumOrders}
+                                            </span>
+                                        )}
                                     </p>
                                     <p className="text-xs text-secondary">
-                                        {t('tiers.baseCurrencyLabel')}: {tier.mainCurrency} ·{' '}
-                                        {t('tiers.baseAmountLabel')}: {tier.baseAmount.toLocaleString()}
+                                        {formatAmounts(tier.minimumAmounts)}
                                     </p>
                                 </div>
 
@@ -237,17 +240,16 @@ export default function CrmPage() {
                                 {/* Actions */}
                                 <div className="flex-shrink-0 flex items-center gap-2">
                                     <Button
-                                        variant="outline"
-                                        size="sm"
+                                        variant="icon-primary"
+                                        size="custom"
                                         onClick={() => handleEdit(tier)}
                                     >
                                         <LuPencil className="w-4 h-4" />
                                     </Button>
                                     <Button
-                                        variant="outline"
-                                        size="sm"
+                                        variant="icon-danger"
+                                        size="custom"
                                         onClick={() => handleDelete(tier)}
-                                        className="text-error border-error/30 hover:bg-error/10"
                                     >
                                         <LuTrash2 className="w-4 h-4" />
                                     </Button>

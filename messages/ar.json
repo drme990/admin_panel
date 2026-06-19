@@ -171,6 +171,11 @@
       "applying": "جارٍ التطبيق...",
       "clear": "مسح التحديد"
     },
+    "stats": {
+      "totalItems": "إجمالي العناصر",
+      "uncategorized": "غير مصنف",
+      "itemsLabel": "عنصر"
+    },
     "pagination": {
       "show": "عرض",
       "pageInfo": "صفحة {page} من {totalPages}"

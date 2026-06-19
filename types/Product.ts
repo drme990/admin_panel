@@ -55,21 +55,21 @@ export interface ReservationFieldOption {
 
 export interface ReservationField {
   key:
-    | 'intention'
-    | 'sacrificeFor'
-    | 'gender'
-    | 'isAlive'
-    | 'shortDuaa'
-    | 'photo'
-    | 'executionDate';
+  | 'intention'
+  | 'sacrificeFor'
+  | 'gender'
+  | 'isAlive'
+  | 'shortDuaa'
+  | 'photo'
+  | 'executionDate';
   type:
-    | 'text'
-    | 'textarea'
-    | 'number'
-    | 'date'
-    | 'select'
-    | 'radio'
-    | 'picture';
+  | 'text'
+  | 'textarea'
+  | 'number'
+  | 'date'
+  | 'select'
+  | 'radio'
+  | 'picture';
   label: { ar: string; en: string };
   required: boolean;
   maxLength?: number;
@@ -139,6 +139,8 @@ export interface Product {
   sacrificeCount?: number;
   reservationFields?: ReservationField[];
   displayOrder?: number;
+  categoryId?: string | null;
+  categoryName?: string | null;
   createdAt?: string;
   updatedAt?: string;
 }

@@ -171,6 +171,11 @@
       "applying": "Applying...",
       "clear": "Clear selection"
     },
+    "stats": {
+      "totalItems": "Total Items",
+      "uncategorized": "Uncategorized",
+      "itemsLabel": "items"
+    },
     "pagination": {
       "show": "Show",
       "pageInfo": "Page {page} of {totalPages}"

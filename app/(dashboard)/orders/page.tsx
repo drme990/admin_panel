@@ -20,6 +20,7 @@ import {
 import OrderFilters from './components/order-filters';
 import OrderDetailModal from './components/order-detail-modal';
 import ChangeStatusModal from './components/change-status-modal';
+import OrderStats from './components/order-stats';
 import { useOrderColumns } from './components/order-table-columns';
 
 interface OrdersResponse {
@@ -114,6 +115,8 @@ export default function OrderHistoryPage() {
   const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
   const [bulkStatus, setBulkStatus] = useState('');
   const [bulkUpdating, setBulkUpdating] = useState(false);
+  const [orderStats, setOrderStats] = useState<{ totalItems: number; byCategory: Array<{ categoryId: string; categoryName: string; color: string; totalItems: number; percentage: number }> } | null>(null);
+  const [loadingStats, setLoadingStats] = useState(false);
   const [whatsappOrderId, setWhatsappOrderId] = useState<string | null>(null);
   const [blockingOrderId, setBlockingOrderId] = useState<string | null>(null);
   const [blockedUserIds, setBlockedUserIds] = useState<Set<string>>(new Set());
@@ -225,6 +228,70 @@ export default function OrderHistoryPage() {
       controller.abort();
     };
   }, [fetchOrders]);
+
+  const fetchStats = useCallback(
+    async (signal?: AbortSignal) => {
+      setLoadingStats(true);
+      try {
+        const params = new URLSearchParams({
+          tzOffsetMinutes: String(new Date().getTimezoneOffset()),
+        });
+        if (statusFilter !== 'all') params.set('status', statusFilter);
+        if (referralFilter) params.set('referralId', referralFilter);
+        if (sourceFilter) params.set('source', sourceFilter);
+        if (whatsappFilter !== 'all') {
+          params.set('whatsappState', whatsappFilter);
+        }
+        if (searchQuery) params.set('search', searchQuery);
+
+        const normalizedRange = normalizeDateRange(
+          fromDateFilter,
+          toDateFilter,
+        );
+        if (normalizedRange.fromDate)
+          params.set('fromDate', normalizedRange.fromDate);
+        if (normalizedRange.toDate)
+          params.set('toDate', normalizedRange.toDate);
+
+        const res = await fetch(`/api/orders/stats?${params.toString()}`, {
+          cache: 'no-store',
+          signal,
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          setOrderStats(data.data);
+        }
+      } catch (error) {
+        if ((error as { name?: string })?.name === 'AbortError') {
+          return;
+        }
+        console.error('Error fetching order stats:', error);
+      } finally {
+        if (!signal?.aborted) {
+          setLoadingStats(false);
+        }
+      }
+    },
+    [
+      statusFilter,
+      referralFilter,
+      sourceFilter,
+      whatsappFilter,
+      searchQuery,
+      fromDateFilter,
+      toDateFilter,
+    ],
+  );
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void fetchStats(controller.signal);
+
+    return () => {
+      controller.abort();
+    };
+  }, [fetchStats]);
 
   const fetchOrderDetails = useCallback(
     async (orderId: string, showError = true): Promise<Order | null> => {
@@ -699,6 +766,8 @@ export default function OrderHistoryPage() {
         pageSize={pageSize}
         onPageSizeChange={(size) => { setPageSize(size); setPage(1); }}
       />
+
+      <OrderStats stats={orderStats} loading={loadingStats} />
 
       <OrderDetailModal
         isOpen={isModalOpen}

@@ -5,6 +5,36 @@
     "noCountriesFound": "لا توجد دول مطابقة لبحثك.",
     "clearCountry": "مسح اختيار الدولة"
   },
+  "execution": {
+    "title": "التنفيذ",
+    "description": "عرض جميع الطلبات المجدولة للتنفيذ في تاريخ محدد. الطلبات بدون تاريخ تنفيذ تُعتبر في اليوم التالي لإنشائها.",
+    "todayLabel": "اليوم",
+    "todayButton": "اليوم",
+    "ordersTitle": "طلبات للتنفيذ",
+    "ordersCount": "طلب",
+    "emptyMessage": "لا توجد طلبات مجدولة للتنفيذ في هذا اليوم.",
+    "filters": {
+      "allSources": "جميع المصادر",
+      "manasik": "مناسك",
+      "ghadaq": "غداق"
+    },
+    "stats": {
+      "totalOrders": "إجمالي الطلبات",
+      "totalItems": "إجمالي العناصر"
+    },
+    "table": {
+      "orderNumber": "رقم الطلب",
+      "customer": "العميل",
+      "items": "العناصر",
+      "itemsCount": "عناصر",
+      "total": "الإجمالي",
+      "status": "الحالة",
+      "source": "المصدر"
+    },
+    "messages": {
+      "loadFailed": "فشل تحميل بيانات التنفيذ."
+    }
+  },
   "orders": {
     "pageTitle": "سجل الطلبات",
     "orderDetails": "تفاصيل الطلب",
@@ -201,6 +231,7 @@
       "products": "المنتجات",
       "products-discovery": "اسعار المنتجات",
       "orders": "الطلبات",
+      "execution": "التنفيذ",
       "categories": "الفئات",
       "booking": "الحجز",
       "coupons": "الكوبونات",
@@ -932,6 +963,7 @@
         "products": "المنتجات",
         "products-discovery": "اسعار المنتجات",
         "orders": "الطلبات",
+        "execution": "التنفيذ",
         "customers": "العملاء",
         "analytics": "التحليلات",
         "booking": "الحجز",

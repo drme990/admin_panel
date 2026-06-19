@@ -5,6 +5,36 @@
     "noCountriesFound": "No countries found matching your search.",
     "clearCountry": "Clear country selection"
   },
+  "execution": {
+    "title": "Execution",
+    "description": "View all orders scheduled for execution on a specific date. Orders without an execution date default to the next day after creation.",
+    "todayLabel": "Today",
+    "todayButton": "Today",
+    "ordersTitle": "Orders to Execute",
+    "ordersCount": "orders",
+    "emptyMessage": "No orders scheduled for execution on this day.",
+    "filters": {
+      "allSources": "All Sources",
+      "manasik": "Manasik",
+      "ghadaq": "Ghadaq"
+    },
+    "stats": {
+      "totalOrders": "Total Orders",
+      "totalItems": "Total Items"
+    },
+    "table": {
+      "orderNumber": "Order #",
+      "customer": "Customer",
+      "items": "Items",
+      "itemsCount": "items",
+      "total": "Total",
+      "status": "Status",
+      "source": "Source"
+    },
+    "messages": {
+      "loadFailed": "Failed to load execution data."
+    }
+  },
   "orders": {
     "pageTitle": "Order History",
     "orderDetails": "Order Details",
@@ -201,6 +231,7 @@
       "products": "Products",
       "products-discovery": "Products Pricing",
       "orders": "Orders",
+      "execution": "Execution",
       "categories": "Categories",
       "booking": "Booking",
       "coupons": "Coupons",
@@ -932,6 +963,7 @@
         "products": "Products",
         "products-discovery": "Products Pricing",
         "orders": "Orders",
+        "execution": "Execution",
         "customers": "Customers",
         "analytics": "Analytics",
         "booking": "Booking",

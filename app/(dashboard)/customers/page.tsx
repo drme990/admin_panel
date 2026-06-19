@@ -655,17 +655,19 @@ export default function CustomersPage() {
         accessor: (customer: Customer) => {
           const tier = customer.tier ? tiers.find((t) => t._id === customer.tier) : null;
           return (
-            <div className="flex items-center gap-2 min-w-40">
-              <p className="font-medium text-foreground">{customer.name}</p>
+            <div className="flex flex-col gap-1 min-w-50">
+              <div className="flex items-center gap-2">
+                <CopyIdButton id={customer._id} />
+                <p className="font-medium text-foreground">{customer.name}</p>
+              </div>
               {tier && (
                 <span
-                  className="inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold text-white"
+                  className="self-start inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold text-white"
                   style={{ backgroundColor: tier.color }}
                 >
                   {tier.name}
                 </span>
               )}
-              <CopyIdButton id={customer._id} />
             </div>
           );
         },

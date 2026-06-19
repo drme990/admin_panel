@@ -2,6 +2,7 @@ export type AdminPage =
   | 'products'
   | 'products-discovery'
   | 'orders'
+  | 'execution'
   | 'customers'
   | 'analytics'
   | 'booking'
@@ -22,6 +23,7 @@ export const ALL_ADMIN_PAGES: AdminPage[] = [
   'products',
   'products-discovery',
   'orders',
+  'execution',
   'customers',
   'analytics',
   'booking',

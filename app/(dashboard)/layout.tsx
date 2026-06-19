@@ -42,6 +42,7 @@ import {
   LuUserSearch,
   LuUnlink,
   LuWalletCards,
+  LuClipboardCheck,
 } from 'react-icons/lu';
 
 const navItems = [
@@ -56,6 +57,13 @@ const navItems = [
     key: 'orders',
     href: '/orders',
     icon: LuShoppingCart,
+    superAdminOnly: false,
+    permissionKey: 'orders',
+  },
+  {
+    key: 'execution',
+    href: '/execution',
+    icon: LuClipboardCheck,
     superAdminOnly: false,
     permissionKey: 'orders',
   },
@@ -223,6 +231,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
       products: 'products',
       'products-discovery': 'products-discovery',
       orders: 'orders',
+      execution: 'orders',
       customers: 'customers',
       analytics: 'analytics',
       booking: 'booking',

@@ -365,6 +365,8 @@
         "account": "Account",
         "selectAccount": "Select an account",
         "date": "Date",
+        "paymentMethod": "Payment Method",
+        "referenceNumber": "Reference Number",
         "notes": "Notes"
       },
       "actions": "Actions",
@@ -1468,6 +1470,7 @@
         "name": "Account Name",
         "type": "Type",
         "currency": "Currency",
+        "openingBalance": "Opening Balance",
         "balance": "Balance",
         "notes": "Notes",
         "actions": "Actions"
@@ -1477,6 +1480,7 @@
         "namePlaceholder": "e.g. Main Bank Account",
         "type": "Account Type",
         "currency": "Currency",
+        "openingBalance": "Opening Balance",
         "balance": "Current Balance",
         "notes": "Notes",
         "notesPlaceholder": "Optional notes about this account",
@@ -1509,6 +1513,62 @@
         "updateFailed": "Failed to update account",
         "deleteSuccess": "Account deleted successfully",
         "deleteFailed": "Failed to delete account"
+      }
+    },
+    "crm": {
+      "title": "CRM",
+      "description": "Manage customer tiers and reward rules based on lifetime spending.",
+      "tiers": {
+        "sectionTitle": "User Tiers",
+        "sectionDescription": "Tiers are evaluated from highest threshold to lowest. Users are assigned the first tier they qualify for (the highest one).",
+        "addTitle": "Add Tier",
+        "editTitle": "Edit Tier",
+        "emptyMessage": "No tiers created yet. Add your first tier to get started.",
+        "minimumLabel": "Minimum spending",
+        "baseCurrencyLabel": "Base currency",
+        "baseAmountLabel": "Base amount",
+        "currenciesLabel": "currencies",
+        "deleteConfirmTitle": "Delete Tier",
+        "deleteConfirmMessage": "Are you sure you want to delete this tier? Users currently assigned to it will lose their tier on next evaluation.",
+        "applyConfirmTitle": "Apply Tiers to All Users",
+        "applyConfirmMessage": "This will re-evaluate and update the tier for every user across all sources based on their lifetime spending. This may take a moment.",
+        "form": {
+          "name": "Tier Name",
+          "namePlaceholder": "e.g. Gold, Platinum, VIP",
+          "color": "Tier Color",
+          "minimumSpending": "Minimum Lifetime Spending",
+          "minimumSpendingHelp": "Set the minimum cumulative spending a user must reach in each currency to qualify for this tier. Use auto-calculate to convert from the base amount."
+        },
+        "buttons": {
+          "addTier": "Add Tier",
+          "save": "Save Tier",
+          "saving": "Saving...",
+          "cancel": "Cancel",
+          "delete": "Delete",
+          "applyAll": "Apply to All Users",
+          "applying": "Applying..."
+        },
+        "validation": {
+          "nameRequired": "Tier name is required.",
+          "amountsRequired": "At least one currency minimum amount is required."
+        },
+        "messages": {
+          "loadFailed": "Failed to load tiers.",
+          "createSuccess": "Tier created successfully.",
+          "updateSuccess": "Tier updated successfully.",
+          "saveFailed": "Failed to save tier.",
+          "deleteSuccess": "Tier deleted successfully.",
+          "deleteFailed": "Failed to delete tier.",
+          "applySuccess": "Tiers applied: {processed} users processed, {errors} errors.",
+          "applyFailed": "Failed to apply tiers."
+        }
+      },
+      "howItWorks": {
+        "title": "How it works",
+        "step1": "Create tiers with a name and minimum spending amount per currency.",
+        "step2": "Click \"Apply to All Users\" to evaluate and assign tiers to every existing user.",
+        "step3": "Every time a user completes a payment, their tier is automatically re-evaluated.",
+        "step4": "Users are assigned the first (highest) tier their lifetime spending qualifies for."
       }
     },
     "notFound": {

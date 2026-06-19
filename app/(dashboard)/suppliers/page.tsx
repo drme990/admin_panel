@@ -120,11 +120,15 @@ export default function SuppliersPage() {
         },
         {
             header: t('fields.balance'),
-            accessor: (row: Supplier) => (
-                <span className={`font-mono ${(row.balance || 0) > 0 ? 'text-error' : 'text-success'}`}>
-                    {(row.balance || 0).toLocaleString()}
-                </span>
-            ),
+            accessor: (row: Supplier) => {
+                const b = row.balance || 0;
+                const color = b > 0 ? 'text-success' : b < 0 ? 'text-error' : 'text-success';
+                return (
+                    <span className={`font-mono ${color}`}>
+                        {b.toLocaleString()}
+                    </span>
+                );
+            },
         },
         {
             header: t('fields.totalOrders'),

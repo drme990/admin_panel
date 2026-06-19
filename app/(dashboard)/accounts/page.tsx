@@ -46,7 +46,7 @@ interface AccountFormData {
     name: string;
     type: AccountType;
     currency: string;
-    balance: string;
+    openingBalance: string;
     notes: string;
     isActive: boolean;
 }
@@ -116,17 +116,21 @@ export default function AccountsPage() {
 
     const handleSubmit = async (formData: AccountFormData) => {
         setIsSubmitting(true);
-        const payload = {
+        const openingBalance = parseFloat(formData.openingBalance) || 0;
+        const isEdit = !!editingAccount;
+        const payload: Record<string, unknown> = {
             name: formData.name.trim(),
             type: formData.type,
             currency: formData.currency.trim().toUpperCase(),
-            balance: parseFloat(formData.balance) || 0,
+            openingBalance,
             notes: formData.notes.trim() || undefined,
             isActive: formData.isActive,
         };
+        if (!isEdit) {
+            payload.balance = openingBalance;
+        }
 
         try {
-            const isEdit = !!editingAccount;
             const url = isEdit
                 ? `/api/accounts/${editingAccount!._id}`
                 : '/api/accounts';
@@ -229,6 +233,18 @@ export default function AccountsPage() {
                 ),
             },
             {
+                header: t('table.openingBalance'),
+                accessor: (account: Account) => (
+                    <span className="font-mono text-sm text-secondary">
+                        {(account.openingBalance ?? account.balance ?? 0).toLocaleString(undefined, {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                        })}{' '}
+                        {account.currency}
+                    </span>
+                ),
+            },
+            {
                 header: t('table.balance'),
                 accessor: (account: Account) => (
                     <span
@@ -307,7 +323,7 @@ export default function AccountsPage() {
             </div>
 
             {/* Summary cards */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 gap-4">
                 <div className="border border-stroke rounded-lg p-4 bg-card-bg">
                     <p className="text-xs uppercase text-secondary mb-1">
                         {t('stats.totalAccounts')}
@@ -322,20 +338,6 @@ export default function AccountsPage() {
                     </p>
                     <p className="text-2xl font-bold text-green-600">
                         {accounts.filter((a) => a.isActive).length}
-                    </p>
-                </div>
-                <div className="border border-stroke rounded-lg p-4 bg-card-bg col-span-2">
-                    <p className="text-xs uppercase text-secondary mb-1">
-                        {t('stats.combinedBalance')}
-                    </p>
-                    <p className="text-2xl font-bold text-foreground">
-                        {totalBalance.toLocaleString(undefined, {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                        })}
-                    </p>
-                    <p className="text-xs text-secondary mt-0.5">
-                        {t('stats.combinedBalanceNote')}
                     </p>
                 </div>
             </div>

@@ -6,13 +6,14 @@ import Modal from '@/components/ui/modal';
 import Input from '@/components/ui/input';
 import Dropdown from '@/components/ui/dropdown';
 import Button from '@/components/ui/button';
+import Checkbox from '@/components/ui/checkbox';
 import { Account, AccountType, ACCOUNT_TYPES } from '@/types/Account';
 
 interface AccountFormData {
   name: string;
   type: AccountType;
   currency: string;
-  balance: string;
+  openingBalance: string;
   notes: string;
   isActive: boolean;
 }
@@ -21,7 +22,7 @@ const DEFAULT_FORM: AccountFormData = {
   name: '',
   type: 'bank_account',
   currency: '',
-  balance: '0',
+  openingBalance: '0',
   notes: '',
   isActive: true,
 };
@@ -50,7 +51,7 @@ export default function AccountFormModal({
         name: account.name,
         type: account.type,
         currency: account.currency,
-        balance: String(account.balance),
+        openingBalance: String(account.openingBalance),
         notes: account.notes ?? '',
         isActive: account.isActive,
       });
@@ -140,13 +141,13 @@ export default function AccountFormModal({
           />
 
           <Input
-            label={t('form.balance')}
+            label={t('form.openingBalance')}
             type="number"
             step="0.01"
             required
-            value={formData.balance}
+            value={formData.openingBalance}
             onChange={(e) =>
-              setFormData({ ...formData, balance: e.target.value })
+              setFormData({ ...formData, openingBalance: e.target.value })
             }
             placeholder="0.00"
           />
@@ -160,17 +161,13 @@ export default function AccountFormModal({
           placeholder={t('form.notesPlaceholder')}
         />
 
-        <label className="flex items-center gap-2 cursor-pointer select-none">
-          <input
-            type="checkbox"
-            checked={formData.isActive}
-            onChange={(e) =>
-              setFormData({ ...formData, isActive: e.target.checked })
-            }
-            className="rounded accent-primary w-4 h-4"
-          />
-          <span className="text-sm text-foreground">{t('form.isActive')}</span>
-        </label>
+        <Checkbox
+          checked={formData.isActive}
+          onChange={(checked) =>
+            setFormData({ ...formData, isActive: checked })
+          }
+          label={t('form.isActive')}
+        />
       </form>
     </Modal>
   );

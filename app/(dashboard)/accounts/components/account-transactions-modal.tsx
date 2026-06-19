@@ -7,12 +7,12 @@ import Button from '@/components/ui/button';
 import Table from '@/components/ui/table';
 import { LuCalendar } from 'react-icons/lu';
 
-interface SupplierPayoutTransaction {
+interface AccountTransaction {
   _id: string;
   amount: number;
   date: string;
   notes?: string;
-  supplier?: { _id: string; name: string };
+  sourceEntity?: { _id: string; name: string };
   createdAt: string;
 }
 
@@ -30,18 +30,18 @@ export default function AccountTransactionsModal({
   accountName,
 }: AccountTransactionsModalProps) {
   const t = useTranslations('admin.accounts');
-  const [payouts, setPayouts] = useState<SupplierPayoutTransaction[]>([]);
+  const [transactions, setTransactions] = useState<AccountTransaction[]>([]);
   const [loading, setLoading] = useState(false);
   const [totalCount, setTotalCount] = useState(0);
 
-  const fetchPayouts = useCallback(async () => {
+  const fetchTransactions = useCallback(async () => {
     if (!accountId) return;
     setLoading(true);
     try {
       const res = await fetch(`/api/accounts/${accountId}/payouts?limit=200`);
       const data = await res.json();
       if (data.success) {
-        setPayouts(data.data.payouts);
+        setTransactions(data.data.transactions);
         setTotalCount(data.data.pagination.total);
       } else {
         console.error(data.error);
@@ -54,23 +54,23 @@ export default function AccountTransactionsModal({
   }, [accountId]);
 
   useEffect(() => {
-    if (isOpen && accountId) fetchPayouts();
-  }, [isOpen, accountId, fetchPayouts]);
+    if (isOpen && accountId) fetchTransactions();
+  }, [isOpen, accountId, fetchTransactions]);
 
-  const totalAmount = payouts.reduce((sum, p) => sum + p.amount, 0);
+  const totalAmount = transactions.reduce((sum, tx) => sum + tx.amount, 0);
 
   const columns = [
     {
       header: t('transactions.supplier'),
-      accessor: (row: SupplierPayoutTransaction) => (
+      accessor: (row: AccountTransaction) => (
         <span className="text-sm font-medium text-foreground">
-          {row.supplier?.name || '—'}
+          {row.sourceEntity?.name || '—'}
         </span>
       ),
     },
     {
       header: t('transactions.amount'),
-      accessor: (row: SupplierPayoutTransaction) => (
+      accessor: (row: AccountTransaction) => (
         <span className="font-mono font-semibold text-sm text-foreground">
           {row.amount.toLocaleString(undefined, {
             minimumFractionDigits: 2,
@@ -81,7 +81,7 @@ export default function AccountTransactionsModal({
     },
     {
       header: t('transactions.date'),
-      accessor: (row: SupplierPayoutTransaction) => (
+      accessor: (row: AccountTransaction) => (
         <span className="text-sm text-secondary flex items-center gap-1">
           <LuCalendar size={12} />
           {new Date(row.date).toLocaleDateString()}
@@ -90,7 +90,7 @@ export default function AccountTransactionsModal({
     },
     {
       header: t('transactions.notes'),
-      accessor: (row: SupplierPayoutTransaction) => (
+      accessor: (row: AccountTransaction) => (
         <span className="text-sm text-secondary truncate max-w-[200px]">
           {row.notes || '—'}
         </span>
@@ -126,9 +126,9 @@ export default function AccountTransactionsModal({
           </div>
         </div>
 
-        <Table<SupplierPayoutTransaction>
+        <Table<AccountTransaction>
           columns={columns}
-          data={payouts}
+          data={transactions}
           loading={loading}
           emptyMessage={t('transactions.emptyMessage')}
         />

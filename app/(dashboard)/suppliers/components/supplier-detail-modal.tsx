@@ -7,13 +7,14 @@ import Button from '@/components/ui/button';
 import Input from '@/components/ui/input';
 import Table from '@/components/ui/table';
 import ConfirmModal, { useConfirmModal } from '@/components/ui/confirm-modal';
-import { Supplier, SupplierOrder, SupplierPayout } from '@/types/Supplier';
+import { Supplier, SupplierOrder } from '@/types/Supplier';
+import { Transaction } from '@/types/Transaction';
 import { toast } from 'react-toastify';
 import {
   LuPencil, LuTrash2, LuPlus, LuPackage, LuWallet, LuUser, LuCalendar,
 } from 'react-icons/lu';
 import OrderFormModal from './supplier-order-form-modal';
-import PayoutFormModal from './supplier-payout-form-modal';
+import TransactionFormModal from './supplier-transaction-form-modal';
 
 type TabKey = 'info' | 'orders' | 'payouts';
 
@@ -32,9 +33,9 @@ export default function SupplierDetailModal({
   const [activeTab, setActiveTab] = useState<TabKey>('info');
 
   const [orders, setOrders] = useState<SupplierOrder[]>([]);
-  const [payouts, setPayouts] = useState<SupplierPayout[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
-  const [loadingPayouts, setLoadingPayouts] = useState(false);
+  const [loadingTransactions, setLoadingTransactions] = useState(false);
 
   const [isEditingInfo, setIsEditingInfo] = useState(false);
   const [editName, setEditName] = useState('');
@@ -47,8 +48,8 @@ export default function SupplierDetailModal({
 
   const [orderFormOpen, setOrderFormOpen] = useState(false);
   const [editingOrder, setEditingOrder] = useState<SupplierOrder | null>(null);
-  const [payoutFormOpen, setPayoutFormOpen] = useState(false);
-  const [editingPayout, setEditingPayout] = useState<SupplierPayout | null>(null);
+  const [transactionFormOpen, setTransactionFormOpen] = useState(false);
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
 
   const fetchOrders = useCallback(async () => {
     if (!supplier) return;
@@ -61,15 +62,15 @@ export default function SupplierDetailModal({
     finally { setLoadingOrders(false); }
   }, [supplier]);
 
-  const fetchPayouts = useCallback(async () => {
+  const fetchTransactions = useCallback(async () => {
     if (!supplier) return;
-    setLoadingPayouts(true);
+    setLoadingTransactions(true);
     try {
       const res = await fetch(`/api/suppliers/${supplier._id}/payouts`);
       const data = await res.json();
-      if (data.success) setPayouts(data.data.payouts || []);
-    } catch { toast.error('Failed to load payouts'); }
-    finally { setLoadingPayouts(false); }
+      if (data.success) setTransactions(data.data.transactions || []);
+    } catch { toast.error('Failed to load transactions'); }
+    finally { setLoadingTransactions(false); }
   }, [supplier]);
 
   useEffect(() => {
@@ -86,7 +87,7 @@ export default function SupplierDetailModal({
   }, [isOpen, supplier]);
 
   useEffect(() => { if (activeTab === 'orders' && supplier) fetchOrders(); }, [activeTab, supplier, fetchOrders]);
-  useEffect(() => { if (activeTab === 'payouts' && supplier) fetchPayouts(); }, [activeTab, supplier, fetchPayouts]);
+  useEffect(() => { if (activeTab === 'payouts' && supplier) fetchTransactions(); }, [activeTab, supplier, fetchTransactions]);
 
   const handleSaveInfo = async () => {
     if (!supplier) return;
@@ -123,16 +124,16 @@ export default function SupplierDetailModal({
     } catch { toast.error(t('common.failedDelete')); }
   };
 
-  const handleDeletePayout = async (payout: SupplierPayout) => {
+  const handleDeleteTransaction = async (tx: Transaction) => {
     if (!supplier) return;
     const confirmed = await confirm({ title: t('payouts.deletePayout'), message: t('messages.payoutDeleteConfirm') });
     if (!confirmed) return;
     try {
-      const res = await fetch(`/api/suppliers/${supplier._id}/payouts/${payout._id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/suppliers/${supplier._id}/payouts/${tx._id}`, { method: 'DELETE' });
       const data = await res.json();
       if (!res.ok || !data.success) { toast.error(data.error || t('common.failedDelete')); return; }
       toast.success(t('messages.payoutDeleteSuccess'));
-      fetchPayouts(); onSupplierUpdated();
+      fetchTransactions(); onSupplierUpdated();
     } catch { toast.error(t('common.failedDelete')); }
   };
 
@@ -256,19 +257,19 @@ export default function SupplierDetailModal({
               <div className="grid grid-cols-3 gap-4 bg-background border border-stroke rounded-site p-4">
                 <div><p className="text-xs text-secondary uppercase">{t('fields.totalOrders')}</p><p className="text-lg font-bold text-foreground">{totalOrdersAmount.toLocaleString()}</p></div>
                 <div><p className="text-xs text-secondary uppercase">{t('fields.totalPayouts')}</p><p className="text-lg font-bold text-foreground">{totalPayoutsAmount.toLocaleString()}</p></div>
-                <div><p className="text-xs text-secondary uppercase">{t('fields.balance')}</p><p className={`text-lg font-bold ${balance > 0 ? 'text-error' : 'text-success'}`}>{balance.toLocaleString()}</p></div>
+                <div><p className="text-xs text-secondary uppercase">{t('fields.balance')}</p><p className={`text-lg font-bold ${balance > 0 ? 'text-success' : balance < 0 ? 'text-error' : 'text-success'}`}>{balance.toLocaleString()}</p></div>
               </div>
               <div className="flex justify-between items-center">
                 <h3 className="font-semibold text-foreground">{t('payouts.title')}</h3>
-                <Button size="sm" onClick={() => { setEditingPayout(null); setPayoutFormOpen(true); }} className="flex items-center gap-1">
+                <Button size="sm" onClick={() => { setEditingTransaction(null); setTransactionFormOpen(true); }} className="flex items-center gap-1">
                   <LuPlus size={14} />{t('payouts.addPayout')}
                 </Button>
               </div>
               <Table
                 columns={[
-                  { header: t('payouts.amount'), accessor: (row: SupplierPayout) => <span className="font-mono font-medium">{row.amount.toLocaleString()}</span> },
+                  { header: t('payouts.amount'), accessor: (row: Transaction) => <span className="font-mono font-medium">{row.amount.toLocaleString()}</span> },
                   {
-                    header: t('payouts.account'), accessor: (row: SupplierPayout) => {
+                    header: t('payouts.account'), accessor: (row: Transaction) => {
                       if (row.account) {
                         return (
                           <span className="text-sm text-foreground">
@@ -280,21 +281,21 @@ export default function SupplierDetailModal({
                     }
                   },
                   {
-                    header: t('payouts.date'), accessor: (row: SupplierPayout) => (
+                    header: t('payouts.date'), accessor: (row: Transaction) => (
                       <span className="text-sm text-secondary flex items-center gap-1"><LuCalendar size={12} />{new Date(row.date).toLocaleDateString()}</span>
                     )
                   },
-                  { header: t('payouts.notes'), accessor: (row: SupplierPayout) => row.notes || '-', className: 'max-w-[200px] truncate' },
+                  { header: t('payouts.notes'), accessor: (row: Transaction) => row.notes || '-', className: 'max-w-[200px] truncate' },
                   {
-                    header: t('actions'), accessor: (row: SupplierPayout) => (
+                    header: t('actions'), accessor: (row: Transaction) => (
                       <div className="flex items-center gap-1">
-                        <Button variant="ghost" size="sm" onClick={() => { setEditingPayout(row); setPayoutFormOpen(true); }} className="p-1.5" title={t('payouts.editPayout')}><LuPencil size={14} /></Button>
-                        <Button variant="ghost" size="sm" onClick={() => handleDeletePayout(row)} className="p-1.5 text-error hover:text-error" title={t('payouts.deletePayout')}><LuTrash2 size={14} /></Button>
+                        <Button variant="ghost" size="sm" onClick={() => { setEditingTransaction(row); setTransactionFormOpen(true); }} className="p-1.5" title={t('payouts.editPayout')}><LuPencil size={14} /></Button>
+                        <Button variant="ghost" size="sm" onClick={() => handleDeleteTransaction(row)} className="p-1.5 text-error hover:text-error" title={t('payouts.deletePayout')}><LuTrash2 size={14} /></Button>
                       </div>
                     ), className: 'w-24'
                   },
                 ]}
-                data={payouts} loading={loadingPayouts} emptyMessage={t('payouts.noPayouts')}
+                data={transactions} loading={loadingTransactions} emptyMessage={t('payouts.noPayouts')}
               />
             </div>
           )}
@@ -307,9 +308,9 @@ export default function SupplierDetailModal({
         <OrderFormModal isOpen={orderFormOpen} onClose={() => { setOrderFormOpen(false); setEditingOrder(null); }}
           supplierId={supplier._id} order={editingOrder} onSuccess={() => { fetchOrders(); onSupplierUpdated(); }} />
       )}
-      {payoutFormOpen && (
-        <PayoutFormModal isOpen={payoutFormOpen} onClose={() => { setPayoutFormOpen(false); setEditingPayout(null); }}
-          supplierId={supplier._id} payout={editingPayout} onSuccess={() => { fetchPayouts(); onSupplierUpdated(); }} />
+      {transactionFormOpen && (
+        <TransactionFormModal isOpen={transactionFormOpen} onClose={() => { setTransactionFormOpen(false); setEditingTransaction(null); }}
+          supplierId={supplier._id} transaction={editingTransaction} onSuccess={() => { fetchTransactions(); onSupplierUpdated(); }} />
       )}
     </>
   );

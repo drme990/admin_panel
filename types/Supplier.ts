@@ -32,14 +32,7 @@ export interface SupplierOrder {
   updatedAt: string;
 }
 
-export interface SupplierPayout {
-  _id: string;
-  supplierId: string;
-  amount: number;
-  accountId?: string;
-  account?: { name: string; currency: string; type: string };
-  date: string;
-  notes?: string;
-  createdAt: string;
-  updatedAt: string;
-}
+export { type Transaction } from './Transaction';
+
+/** @deprecated Use Transaction from './Transaction' instead */
+export type SupplierPayout = import('./Transaction').Transaction;

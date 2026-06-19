@@ -11,6 +11,7 @@ export interface Account {
   name: string;
   type: AccountType;
   currency: string;
+  openingBalance: number;
   balance: number;
   notes?: string;
   isActive: boolean;

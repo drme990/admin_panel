@@ -16,6 +16,7 @@ interface DropdownProps<T = string> {
   placeholder?: string;
   disabled?: boolean;
   className?: string;
+  required?: boolean;
 }
 
 export default function Dropdown<T = string>({
@@ -26,6 +27,7 @@ export default function Dropdown<T = string>({
   placeholder = 'Select an option',
   disabled = false,
   className = '',
+  required = false,
 }: DropdownProps<T>) {
   const [isOpen, setIsOpen] = useState(false);
   const [direction, setDirection] = useState<'down' | 'up'>('down');
@@ -77,7 +79,7 @@ export default function Dropdown<T = string>({
   return (
     <div className={`relative ${className}`} ref={dropdownRef}>
       {label && (
-        <label className="block text-sm font-medium mb-2">{label}</label>
+        <label className="block text-sm font-medium mb-2">{label}{required && <span className="text-error ml-1">*</span>}</label>
       )}
 
       <Button
@@ -103,8 +105,8 @@ export default function Dropdown<T = string>({
         <div
           ref={menuRef}
           className={`absolute left-0 right-0 bg-card-bg border border-stroke rounded-lg shadow-lg z-50 min-h-30 max-h-60 overflow-y-auto ${direction === 'up'
-              ? 'bottom-full mb-1'
-              : 'top-full mt-1'
+            ? 'bottom-full mb-1'
+            : 'top-full mt-1'
             }`}
         >
           {options.map((option, index) => (

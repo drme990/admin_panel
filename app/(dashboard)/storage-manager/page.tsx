@@ -19,6 +19,13 @@ import {
   LuRefreshCw,
   LuArrowLeft,
   LuEye,
+  LuReceipt,
+  LuImage,
+  LuPackage,
+  LuFileImage,
+  LuFileVideo,
+  LuFileAudio,
+  LuFileText,
 } from 'react-icons/lu';
 
 interface R2Object {
@@ -58,8 +65,39 @@ function getFileType(fileName: string): string {
   if (['mp4', 'webm', 'mov', 'avi', 'mkv'].includes(extension)) {
     return 'video';
   }
+  if (['pdf', 'doc', 'docx', 'txt'].includes(extension)) {
+    return 'document';
+  }
 
   return 'document';
+}
+
+const SPECIAL_FOLDERS: Record<string, { label: string; icon: React.ReactNode }> = {
+  invoice: { label: 'Invoices', icon: <LuReceipt size={18} /> },
+  products: { label: 'Products', icon: <LuPackage size={18} /> },
+  images: { label: 'Website Images', icon: <LuImage size={18} /> },
+};
+
+function getFolderIcon(folderName: string): React.ReactNode {
+  const special = SPECIAL_FOLDERS[folderName.toLowerCase()];
+  if (special) return special.icon;
+  return <LuFolder size={18} />;
+}
+
+function getFileIcon(fileName: string): { icon: React.ReactNode; colorClass: string } {
+  const type = getFileType(fileName);
+  switch (type) {
+    case 'image':
+      return { icon: <LuFileImage size={18} />, colorClass: 'text-green-500' };
+    case 'video':
+      return { icon: <LuFileVideo size={18} />, colorClass: 'text-purple-500' };
+    case 'audio':
+      return { icon: <LuFileAudio size={18} />, colorClass: 'text-orange-500' };
+    case 'document':
+      return { icon: <LuFileText size={18} />, colorClass: 'text-blue-500' };
+    default:
+      return { icon: <LuFile size={18} />, colorClass: 'text-muted-foreground' };
+  }
 }
 
 function filterFilesByType(files: R2Object[], filterType: string): R2Object[] {
@@ -365,7 +403,7 @@ export default function StorageManager() {
                 : ''
                 }`}
             >
-              {crumb}
+              {SPECIAL_FOLDERS[crumb.toLowerCase()]?.label || crumb}
             </button>
           </div>
         ))}
@@ -456,12 +494,14 @@ export default function StorageManager() {
                 className="grid grid-cols-12 gap-4 px-4 py-3 border-b border-stroke hover:bg-muted/50 items-center"
               >
                 <div className="col-span-6 flex items-center gap-3">
-                  <LuFolder className="text-blue-500" />
+                  <span className="text-primary">
+                    {getFolderIcon(folder)}
+                  </span>
                   <button
                     onClick={() => navigateToFolder(folder)}
                     className="text-foreground hover:text-primary font-medium"
                   >
-                    {folder}
+                    {SPECIAL_FOLDERS[folder.toLowerCase()]?.label || folder}
                   </button>
                 </div>
                 <div className="col-span-2 text-muted-foreground">-</div>
@@ -482,7 +522,10 @@ export default function StorageManager() {
                   checked={selectedItems.has(file.key)}
                   onChange={() => toggleSelection(file.key)}
                 />
-                <LuFile className="text-muted-foreground" />
+                {(() => {
+                  const { icon, colorClass } = getFileIcon(file.key.split('/').pop() || '');
+                  return <span className={colorClass}>{icon}</span>;
+                })()}
                 <span className="text-foreground">
                   {file.key.split('/').pop()}
                 </span>

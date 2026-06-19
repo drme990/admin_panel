@@ -10,8 +10,10 @@ import {
     LuPlay,
     LuTrophy,
     LuLoader,
+    LuCircleHelp,
 } from 'react-icons/lu';
 import Button from '@/components/ui/button';
+import Modal from '@/components/ui/modal';
 import ConfirmModal, { useConfirmModal } from '@/components/ui/confirm-modal';
 import TierFormModal, { UserTier } from './components/tier-form-modal';
 import { CurrencyPrice } from '@/components/admin/multi-currency-price-editor';
@@ -22,6 +24,7 @@ export default function CrmPage() {
     const [loading, setLoading] = useState(true);
     const [applying, setApplying] = useState(false);
     const [showModal, setShowModal] = useState(false);
+    const [showInfoModal, setShowInfoModal] = useState(false);
     const [editingTier, setEditingTier] = useState<UserTier | null>(null);
     const { confirm, modalProps } = useConfirmModal();
 
@@ -129,43 +132,52 @@ export default function CrmPage() {
     return (
         <div className="space-y-6">
             {/* Header */}
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-                        <LuTrophy className="w-6 h-6 text-primary" />
-                        {t('title')}
-                    </h1>
-                    <p className="text-sm text-secondary mt-1">{t('description')}</p>
-                </div>
-                <div className="flex items-center gap-3">
-                    <Button
-                        variant="outline"
-                        onClick={handleApplyAll}
-                        disabled={applying || tiers.length === 0}
-                    >
-                        {applying ? (
-                            <LuLoader className="w-4 h-4 animate-spin" />
-                        ) : (
-                            <LuPlay className="w-4 h-4" />
-                        )}
-                        {applying ? t('tiers.buttons.applying') : t('tiers.buttons.applyAll')}
-                    </Button>
-                    <Button onClick={handleAdd}>
-                        <LuPlus className="w-4 h-4" />
-                        {t('tiers.buttons.addTier')}
-                    </Button>
-                </div>
+            <div>
+                <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+                    <LuTrophy className="w-6 h-6 text-primary" />
+                    {t('title')}
+                </h1>
+                <p className="text-sm text-secondary mt-1">{t('description')}</p>
             </div>
 
             {/* Tiers Section */}
             <div className="bg-card-bg rounded-site border border-stroke overflow-hidden">
-                <div className="px-6 py-4 border-b border-stroke">
-                    <h2 className="text-lg font-semibold text-foreground">
-                        {t('tiers.sectionTitle')}
-                    </h2>
-                    <p className="text-xs text-secondary mt-1">
-                        {t('tiers.sectionDescription')}
-                    </p>
+                <div className="px-6 py-4 border-b border-stroke flex items-center justify-between">
+                    <div>
+                        <h2 className="text-lg font-semibold text-foreground">
+                            {t('tiers.sectionTitle')}
+                        </h2>
+                        <p className="text-xs text-secondary mt-1">
+                            {t('tiers.sectionDescription')}
+                        </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <Button
+                            variant="outline"
+                            onClick={handleApplyAll}
+                            disabled={applying || tiers.length === 0}
+                            size="sm"
+                        >
+                            {applying ? (
+                                <LuLoader className="w-4 h-4 animate-spin" />
+                            ) : (
+                                <LuPlay className="w-4 h-4" />
+                            )}
+                            {applying ? t('tiers.buttons.applying') : t('tiers.buttons.applyAll')}
+                        </Button>
+                        <Button onClick={handleAdd} size="sm">
+                            <LuPlus className="w-4 h-4" />
+                            {t('tiers.buttons.addTier')}
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setShowInfoModal(true)}
+                            title={t('howItWorks.title')}
+                        >
+                            <LuCircleHelp className="w-5 h-5" />
+                        </Button>
+                    </div>
                 </div>
 
                 {loading ? (
@@ -246,18 +258,19 @@ export default function CrmPage() {
                 )}
             </div>
 
-            {/* Info card */}
-            <div className="rounded-site border border-stroke bg-card-bg p-5 space-y-2">
-                <h3 className="text-sm font-semibold text-foreground">
-                    {t('howItWorks.title')}
-                </h3>
-                <ul className="text-xs text-secondary space-y-1.5 list-disc list-inside">
+            <Modal
+                isOpen={showInfoModal}
+                onClose={() => setShowInfoModal(false)}
+                title={t('howItWorks.title')}
+                size="lg"
+            >
+                <ul className="text-sm text-secondary space-y-3 list-disc list-inside">
                     <li>{t('howItWorks.step1')}</li>
                     <li>{t('howItWorks.step2')}</li>
                     <li>{t('howItWorks.step3')}</li>
                     <li>{t('howItWorks.step4')}</li>
                 </ul>
-            </div>
+            </Modal>
 
             <TierFormModal
                 isOpen={showModal}

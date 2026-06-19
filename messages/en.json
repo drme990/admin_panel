@@ -995,7 +995,14 @@
         "selectReferral": "Select referral",
         "infoIcon": "Info",
         "countrySetterIcon": "Set Detected Country",
-        "countryHistoryIcon": "Country History"
+        "countryHistoryIcon": "Country History",
+        "loadingTiers": "Loading tiers...",
+        "allTiers": "All Tiers",
+        "noTier": "No Tier",
+        "filterApp": "App",
+        "filterStatus": "Status",
+        "filterRef": "Referral",
+        "filterTier": "Tier"
       },
       "status": {
         "active": "Active",
@@ -1009,7 +1016,8 @@
         "banned": "Banned"
       },
       "table": {
-        "name": "Customer",
+        "name": "Name",
+        "email": "Email",
         "userId": "User ID",
         "phone": "Phone",
         "app": "App",
@@ -1040,6 +1048,7 @@
       },
       "historyModal": {
         "title": "Referral History",
+        "history": "History",
         "close": "Close",
         "emptyMessage": "No referral history found.",
         "changeLabel": "Referral Change",

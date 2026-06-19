@@ -995,7 +995,14 @@
         "selectReferral": "اختر الإحالة",
         "infoIcon": "معلومات",
         "countrySetterIcon": "تعيين الدولة المكتشفة",
-        "countryHistoryIcon": "سجل الدولة"
+        "countryHistoryIcon": "سجل الدولة",
+        "loadingTiers": "جارٍ تحميل الفئات...",
+        "allTiers": "جميع الفئات",
+        "noTier": "بدون فئة",
+        "filterApp": "التطبيق",
+        "filterStatus": "الحالة",
+        "filterRef": "الإحالة",
+        "filterTier": "الفئة"
       },
       "status": {
         "active": "نشط",
@@ -1009,7 +1016,8 @@
         "banned": "محظور"
       },
       "table": {
-        "name": "العميل",
+        "name": "الاسم",
+        "email": "البريد الإلكتروني",
         "userId": "معرف المستخدم",
         "phone": "الهاتف",
         "app": "التطبيق",
@@ -1040,6 +1048,7 @@
       },
       "historyModal": {
         "title": "سجل الإحالة",
+        "history": "السجل",
         "close": "إغلاق",
         "emptyMessage": "لا يوجد سجل إحالة.",
         "changeLabel": "تغيير الإحالة",

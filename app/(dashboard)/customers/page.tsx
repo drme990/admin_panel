@@ -14,10 +14,9 @@ import Tooltip from '@/components/ui/tooltip';
 import Dropdown from '@/components/ui/dropdown';
 import CountrySelector from '@/components/shared/country-selector';
 import CustomerOrdersModal from './components/customer-orders-modal';
-import CustomerRefHistoryModal from './components/customer-ref-history-modal';
-import CustomerCountryHistoryModal, {
+import CustomerHistoryModal, {
   CountryHistoryEntry,
-} from './components/customer-country-history-modal';
+} from './components/customer-history-modal';
 import CustomerInfoModal from './components/customer-info-modal';
 import { Order } from '@/types/Order';
 
@@ -29,7 +28,8 @@ import {
   LuShoppingCart,
   LuHistory,
   LuInfo,
-  LuGlobe,
+  LuCopy,
+  LuCheck,
 } from 'react-icons/lu';
 
 type Customer = {
@@ -45,7 +45,14 @@ type Customer = {
   appId: 'ghadaq' | 'manasik';
   isBanned: boolean;
   ref: string | null;
+  tier?: string | null;
   createdAt: string;
+};
+
+type UserTier = {
+  _id: string;
+  name: string;
+  color: string;
 };
 
 type Referral = {
@@ -58,6 +65,7 @@ type Referral = {
 type AppFilter = 'all' | 'ghadaq' | 'manasik';
 type BanFilter = 'all' | 'banned' | 'active';
 type RefFilter = 'all' | 'default' | string;
+type TierFilter = 'all' | 'none' | string;
 
 type CustomerRefHistory = {
   _id: string;
@@ -77,6 +85,31 @@ function getDefaultRefForApp(appId: Customer['appId']): string {
   return appId === 'ghadaq' ? 'GHD-D' : 'MNK-D';
 }
 
+function CopyIdButton({ id }: { id: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(id);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // ignore
+    }
+  };
+
+  return (
+    <button
+      onClick={handleCopy}
+      className="text-secondary hover:text-primary transition-colors"
+      title="Copy ID"
+      type="button"
+    >
+      {copied ? <LuCheck size={14} /> : <LuCopy size={14} />}
+    </button>
+  );
+}
+
 export default function CustomersPage() {
   const t = useTranslations('admin.customers');
   const tCommon = useTranslations('admin.customers.common');
@@ -90,6 +123,7 @@ export default function CustomersPage() {
   const [appFilter, setAppFilter] = useState<AppFilter>('all');
   const [banFilter, setBanFilter] = useState<BanFilter>('all');
   const [refFilter, setRefFilter] = useState<RefFilter>('all');
+  const [tierFilter, setTierFilter] = useState<TierFilter>('all');
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
     null,
@@ -99,6 +133,8 @@ export default function CustomersPage() {
   );
   const [referrals, setReferrals] = useState<Referral[]>([]);
   const [fetchingRefs, setFetchingRefs] = useState(false);
+  const [tiers, setTiers] = useState<UserTier[]>([]);
+  const [fetchingTiers, setFetchingTiers] = useState(false);
   const ToolTipPositions = locale === 'ar' ? 'right' : 'left';
 
   const [bulkRefValue, setBulkRefValue] = useState('');
@@ -109,24 +145,19 @@ export default function CustomersPage() {
   const [customerOrders, setCustomerOrders] = useState<Order[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
 
-  // Ref history modal state
+  // History modal state (merged ref + country)
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
-  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [loadingRefHistory, setLoadingRefHistory] = useState(false);
+  const [loadingCountryHistory, setLoadingCountryHistory] = useState(false);
   const [selectedHistoryCustomer, setSelectedHistoryCustomer] = useState<{
     _id: string;
     name: string;
     ref: string | null;
     appId: Customer['appId'];
+    detectedCountry?: string | null;
   } | null>(null);
   const [refHistory, setRefHistory] = useState<CustomerRefHistory[]>([]);
-
-  // Country state
-  const [isCountryHistoryModalOpen, setIsCountryHistoryModalOpen] =
-    useState(false);
-  const [loadingCountryHistory, setLoadingCountryHistory] = useState(false);
-  const [countryHistory, setCountryHistory] = useState<CountryHistoryEntry[]>(
-    [],
-  );
+  const [countryHistory, setCountryHistory] = useState<CountryHistoryEntry[]>([]);
 
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
   const [updatingCountryId, setUpdatingCountryId] = useState<string | null>(
@@ -196,6 +227,7 @@ export default function CustomersPage() {
       if (banFilter === 'banned') params.set('isBanned', 'true');
       if (banFilter === 'active') params.set('isBanned', 'false');
       if (refFilter !== 'all') params.set('ref', refFilter);
+      if (tierFilter !== 'all') params.set('tier', tierFilter === 'none' ? '__none__' : tierFilter);
       if (search.trim()) params.set('search', search.trim());
       params.set('page', page.toString());
       params.set('limit', limit.toString());
@@ -225,19 +257,38 @@ export default function CustomersPage() {
     } finally {
       setLoading(false);
     }
-  }, [appFilter, banFilter, refFilter, search, page, limit, t]);
+  }, [appFilter, banFilter, refFilter, tierFilter, search, page, limit, t]);
 
   useEffect(() => {
     setPage(1);
-  }, [appFilter, banFilter, refFilter, search]);
+  }, [appFilter, banFilter, refFilter, tierFilter, search]);
 
   useEffect(() => {
     setSelectedCustomerKeys([]);
-  }, [page, appFilter, banFilter, refFilter, search, limit]);
+  }, [page, appFilter, banFilter, refFilter, tierFilter, search, limit]);
 
   useEffect(() => {
     fetchCustomers();
   }, [fetchCustomers]);
+
+  const fetchTiers = useCallback(async () => {
+    try {
+      setFetchingTiers(true);
+      const res = await fetch('/api/crm/tiers');
+      const data = await res.json();
+      if (data.success) {
+        setTiers(data.data || []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch tiers:', error);
+    } finally {
+      setFetchingTiers(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchTiers();
+  }, [fetchTiers]);
 
   const fetchReferrals = useCallback(async () => {
     try {
@@ -285,7 +336,7 @@ export default function CustomersPage() {
   const fetchCustomerRefHistory = useCallback(
     async (customer: Customer) => {
       try {
-        setLoadingHistory(true);
+        setLoadingRefHistory(true);
         const response = await fetch(
           `/api/customers/${customer.appId}/${customer._id}/ref-history`,
         );
@@ -300,7 +351,7 @@ export default function CustomersPage() {
         console.error('Error fetching customer ref history:', error);
         toast.error(tCommon('historyLoadFailed'));
       } finally {
-        setLoadingHistory(false);
+        setLoadingRefHistory(false);
       }
     },
     [tCommon],
@@ -544,10 +595,14 @@ export default function CustomersPage() {
     async (customer: Customer) => {
       setSelectedHistoryCustomer(customer);
       setRefHistory([]);
+      setCountryHistory([]);
       setIsHistoryModalOpen(true);
-      await fetchCustomerRefHistory(customer);
+      await Promise.all([
+        fetchCustomerRefHistory(customer),
+        fetchCustomerCountryHistory(customer),
+      ]);
     },
-    [fetchCustomerRefHistory],
+    [fetchCustomerRefHistory, fetchCustomerCountryHistory],
   );
 
   const handleViewOrders = useCallback(
@@ -563,16 +618,6 @@ export default function CustomersPage() {
     setSelectedCustomer(customer);
     setIsInfoModalOpen(true);
   }, []);
-
-  const handleOpenCountryHistory = useCallback(
-    async (customer: Customer) => {
-      setSelectedCustomer(customer);
-      setCountryHistory([]);
-      setIsCountryHistoryModalOpen(true);
-      await fetchCustomerCountryHistory(customer);
-    },
-    [fetchCustomerCountryHistory],
-  );
 
   const handleCountryChange = useCallback(
     async (customer: Customer, nextCountry: string) => {
@@ -606,22 +651,29 @@ export default function CustomersPage() {
         className: 'w-12',
       },
       {
-        header: t('table.userId'),
-        accessor: (customer: Customer) => (
-          <div className="min-w-40">
-            <span className="text-secondary font-mono text-xs break-all">
-              {customer._id}
-            </span>
-          </div>
-        ),
+        header: t('table.name'),
+        accessor: (customer: Customer) => {
+          const tier = customer.tier ? tiers.find((t) => t._id === customer.tier) : null;
+          return (
+            <div className="flex items-center gap-2 min-w-40">
+              <p className="font-medium text-foreground">{customer.name}</p>
+              {tier && (
+                <span
+                  className="inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold text-white"
+                  style={{ backgroundColor: tier.color }}
+                >
+                  {tier.name}
+                </span>
+              )}
+              <CopyIdButton id={customer._id} />
+            </div>
+          );
+        },
       },
       {
-        header: t('table.name'),
+        header: t('table.email'),
         accessor: (customer: Customer) => (
-          <div className="min-w-45">
-            <p className="font-medium text-foreground">{customer.name}</p>
-            <p className="text-xs text-secondary">{customer.email}</p>
-          </div>
+          <span className="text-secondary text-sm">{customer.email}</span>
         ),
       },
       {
@@ -739,20 +791,6 @@ export default function CustomersPage() {
               </Button>
             </Tooltip>
 
-            <Tooltip
-              content={tCommon('countryHistoryIcon')}
-              position={ToolTipPositions}
-            >
-              <Button
-                variant="icon-primary"
-                size="custom"
-                onClick={() => handleOpenCountryHistory(customer)}
-                aria-label={tCommon('countryHistoryIcon')}
-              >
-                <LuGlobe size={16} />
-              </Button>
-            </Tooltip>
-
             {customer.isBanned ? (
               <Tooltip content={t('unban')} position={ToolTipPositions}>
                 <Button
@@ -792,7 +830,6 @@ export default function CustomersPage() {
       handleRefDropdownChange,
       handleCountryChange,
       handleOpenInfo,
-      handleOpenCountryHistory,
       loading,
       bulkUpdating,
       tCommon,
@@ -804,6 +841,7 @@ export default function CustomersPage() {
       updatingId,
       updatingCountryId,
       locale,
+      tiers,
     ],
   );
 
@@ -849,15 +887,18 @@ export default function CustomersPage() {
       </div>
 
       <div className="bg-card-bg border border-stroke rounded-site p-4 space-y-4">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-3">
-          <Input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder={t('searchPlaceholder')}
-            suffix={<LuSearch className="text-secondary" size={18} />}
-          />
+        <Input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder={t('searchPlaceholder')}
+          suffix={<LuSearch className="text-secondary" size={18} />}
+        />
 
-          <div className="flex items-center gap-2 flex-wrap">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="space-y-1">
+            <p className="text-[10px] uppercase text-secondary font-medium tracking-wide">
+              {tCommon('filterApp')}
+            </p>
             <Tabs
               value={appFilter}
               options={appFilterOptions}
@@ -866,7 +907,10 @@ export default function CustomersPage() {
             />
           </div>
 
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="space-y-1">
+            <p className="text-[10px] uppercase text-secondary font-medium tracking-wide">
+              {tCommon('filterStatus')}
+            </p>
             <Tabs
               value={banFilter}
               options={banFilterOptions}
@@ -875,7 +919,10 @@ export default function CustomersPage() {
             />
           </div>
 
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="space-y-1">
+            <p className="text-[10px] uppercase text-secondary font-medium tracking-wide">
+              {tCommon('filterRef')}
+            </p>
             {fetchingRefs ? (
               <span className="text-sm text-secondary">
                 {tCommon('loadingRefs')}
@@ -885,6 +932,31 @@ export default function CustomersPage() {
                 value={refFilter}
                 options={refFilterOptions}
                 onChange={setRefFilter}
+                size="sm"
+              />
+            )}
+          </div>
+
+          <div className="space-y-1">
+            <p className="text-[10px] uppercase text-secondary font-medium tracking-wide">
+              {tCommon('filterTier')}
+            </p>
+            {fetchingTiers ? (
+              <span className="text-sm text-secondary">
+                {tCommon('loadingTiers')}
+              </span>
+            ) : (
+              <Tabs
+                value={tierFilter}
+                options={[
+                  { value: 'all', label: tCommon('allTiers') },
+                  { value: 'none', label: tCommon('noTier') },
+                  ...tiers.map((tier) => ({
+                    value: tier._id,
+                    label: tier.name,
+                  })),
+                ]}
+                onChange={setTierFilter}
                 size="sm"
               />
             )}
@@ -943,26 +1015,20 @@ export default function CustomersPage() {
         loadingOrders={loadingOrders}
       />
 
-      <CustomerRefHistoryModal
+      <CustomerHistoryModal
         isOpen={isHistoryModalOpen}
         onClose={() => setIsHistoryModalOpen(false)}
-        loading={loadingHistory}
+        loadingRef={loadingRefHistory}
+        loadingCountry={loadingCountryHistory}
         customer={selectedHistoryCustomer}
-        history={refHistory}
+        refHistory={refHistory}
+        countryHistory={countryHistory}
       />
 
       <CustomerInfoModal
         isOpen={isInfoModalOpen}
         onClose={() => setIsInfoModalOpen(false)}
         customer={selectedCustomer}
-      />
-
-      <CustomerCountryHistoryModal
-        isOpen={isCountryHistoryModalOpen}
-        onClose={() => setIsCountryHistoryModalOpen(false)}
-        loading={loadingCountryHistory}
-        customer={selectedCustomer}
-        history={countryHistory}
       />
     </div>
   );

@@ -87,7 +87,8 @@
       "tomorrow": "Tomorrow",
       "yesterday": "Yesterday",
       "prevDay": "Previous Day",
-      "nextDay": "Next Day"
+      "nextDay": "Next Day",
+      "todayDate": "Today's Date"
     },
     "messages": {
       "loadFailed": "Failed to load execution data."

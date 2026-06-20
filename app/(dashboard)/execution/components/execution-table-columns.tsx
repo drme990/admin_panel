@@ -119,23 +119,19 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
       className: 'w-12',
     },
     {
-      header: t('table.orderNumber'),
-      accessor: (order: Order) => (
-        <span className={`font-semibold whitespace-nowrap ${order.status === 'partial-paid' ? 'text-orange-600 dark:text-orange-400' : 'text-foreground'}`}>
-          {order.orderNumber}
-        </span>
-      ),
-      className: 'min-w-32',
-    },
-    {
       header: t('table.sacrificeFor'),
       accessor: (order: Order) => {
         const names = getNameLines(getReservationValue(order, 'sacrificeFor'));
         if (names.length === 0) return <span className={order.status === 'partial-paid' ? 'text-orange-600 dark:text-orange-400' : 'text-secondary'}>-</span>;
         return (
-          <span className={`font-medium leading-snug min-w-48 ${order.status === 'partial-paid' ? 'text-orange-600 dark:text-orange-400' : 'text-foreground'}`}>
-            {names[0]}
-          </span>
+          <div className='flex flex-col'>
+            <span className={`font-medium leading-snug min-w-48 ${order.status === 'partial-paid' ? 'text-orange-600 dark:text-orange-400' : 'text-foreground'}`}>
+              {names[0]}
+            </span>
+            <span className={`font-semibold whitespace-nowrap ${order.status === 'partial-paid' ? 'text-orange-600 dark:text-orange-400' : 'text-foreground'}`}>
+              {order.orderNumber}
+            </span>
+          </div>
         );
       },
       className: 'min-w-48',
@@ -162,33 +158,6 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
           </div>
         );
       },
-    },
-    {
-      header: t('table.intention'),
-      accessor: (order: Order) => (
-        <span className={`text-sm ${order.status === 'partial-paid' ? 'text-orange-600 dark:text-orange-400' : 'text-foreground'}`}>
-          {getReservationValue(order, 'intention') || '-'}
-        </span>
-      ),
-      className: 'min-w-28',
-    },
-    {
-      header: t('table.gender'),
-      accessor: (order: Order) => (
-        <span className={`text-sm ${order.status === 'partial-paid' ? 'text-orange-600 dark:text-orange-400' : 'text-foreground'}`}>
-          {getReservationValue(order, 'gender') || '-'}
-        </span>
-      ),
-      className: 'min-w-20',
-    },
-    {
-      header: t('table.isAlive'),
-      accessor: (order: Order) => (
-        <span className={`text-sm ${order.status === 'partial-paid' ? 'text-orange-600 dark:text-orange-400' : 'text-foreground'}`}>
-          {getReservationValue(order, 'isAlive') || '-'}
-        </span>
-      ),
-      className: 'min-w-20',
     },
     {
       header: t('table.shortDuaa'),
@@ -233,15 +202,6 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
         );
       },
       className: 'min-w-16',
-    },
-    {
-      header: t('table.total'),
-      accessor: (order: Order) => (
-        <span className={`font-semibold whitespace-nowrap ${order.status === 'partial-paid' ? 'text-orange-600 dark:text-orange-400' : 'text-foreground'}`}>
-          {order.totalAmount?.toLocaleString()} {order.currency}
-        </span>
-      ),
-      className: 'min-w-24',
     },
     {
       header: t('table.actions'),

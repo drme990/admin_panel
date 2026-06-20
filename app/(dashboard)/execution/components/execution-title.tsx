@@ -45,50 +45,60 @@ export default function ExecutionTitle({ date, locale, onPrevDay, onNextDay }: P
     else if (date === tomorrowStr) relativeLabel = t('header.tomorrow');
     else if (date === yesterdayStr) relativeLabel = t('header.yesterday');
 
+    const today = new Date();
+    const todayDayName = today.toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-US', { weekday: 'long' });
+    const todayFormatted = `${todayDayName} - ${Number(today.getDate())}-${Number(today.getMonth() + 1)}-${today.getFullYear()}`;
+
     return (
-        <div className="flex items-center justify-center gap-3">
-            <Button
-                type="button"
-                variant="ghost"
-                size="custom"
-                onClick={onPrevDay}
-                className="flex h-9 w-9 items-center justify-center rounded-full border border-stroke hover:bg-background transition-colors"
-                aria-label={t('header.prevDay')}
-            >
-                <LuChevronLeft
-                    size={18}
-                    className={locale === 'ar' ? 'rotate-180' : undefined}
-                />
-            </Button>
+        <div className="flex flex-col items-center gap-2">
+            <div className="flex items-center justify-center gap-3">
+                <Button
+                    type="button"
+                    variant="ghost"
+                    size="custom"
+                    onClick={onPrevDay}
+                    className="flex h-9 w-9 items-center justify-center rounded-full border border-stroke hover:bg-background transition-colors"
+                    aria-label={t('header.prevDay')}
+                >
+                    <LuChevronLeft
+                        size={18}
+                        className={locale === 'ar' ? 'rotate-180' : undefined}
+                    />
+                </Button>
 
-            <h2 className="text-lg font-semibold text-foreground rounded-site border border-stroke p-2">
-                {relativeLabel ? (
-                    <>
-                        <span className="text-success">
-                            {t('header.executions')} {relativeLabel}:
-                        </span>
-                        {' '}{dayName} - {formattedDate}
-                    </>
-                ) : (
-                    <>
-                        {t('header.executions')} {dayName} - {formattedDate}
-                    </>
-                )}
-            </h2>
+                <h2 className="text-lg font-semibold text-foreground rounded-site border border-stroke py-2 px-4">
+                    {relativeLabel ? (
+                        <>
+                            <span className="text-success">
+                                {t('header.executions')} {relativeLabel}:
+                            </span>
+                            {' '}{dayName} - {formattedDate}
+                        </>
+                    ) : (
+                        <>
+                            {t('header.executions')} {dayName} - {formattedDate}
+                        </>
+                    )}
+                </h2>
 
-            <Button
-                type="button"
-                variant="ghost"
-                size="custom"
-                onClick={onNextDay}
-                className="flex h-9 w-9 items-center justify-center rounded-full border border-stroke hover:bg-background transition-colors"
-                aria-label={t('header.nextDay')}
-            >
-                <LuChevronRight
-                    size={18}
-                    className={locale === 'ar' ? 'rotate-180' : undefined}
-                />
-            </Button>
+                <Button
+                    type="button"
+                    variant="ghost"
+                    size="custom"
+                    onClick={onNextDay}
+                    className="flex h-9 w-9 items-center justify-center rounded-full border border-stroke hover:bg-background transition-colors"
+                    aria-label={t('header.nextDay')}
+                >
+                    <LuChevronRight
+                        size={18}
+                        className={locale === 'ar' ? 'rotate-180' : undefined}
+                    />
+                </Button>
+            </div>
+
+            <span className="text-sm text-secondary">
+                {t('header.todayDate')}: {todayFormatted}
+            </span>
         </div>
     );
 }

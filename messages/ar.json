@@ -87,7 +87,8 @@
       "tomorrow": "غدا",
       "yesterday": "أمس",
       "prevDay": "اليوم السابق",
-      "nextDay": "اليوم التالي"
+      "nextDay": "اليوم التالي",
+      "todayDate": "تاريخ اليوم"
     },
     "messages": {
       "loadFailed": "فشل تحميل بيانات التنفيذ."

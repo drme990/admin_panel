@@ -2,6 +2,7 @@
 
 import Button from '@/components/ui/button';
 import Dropdown from '@/components/ui/dropdown';
+import CustomDatePicker from '@/components/ui/custom-date-picker';
 import { LuSquareCheck, LuX } from 'react-icons/lu';
 import { cn } from '@/lib/utils';
 
@@ -22,6 +23,7 @@ interface BulkActionProps {
   clearLabel: string;
   selectionLabel: string;
   dropdownLabel: string;
+  locale?: string;
   disabled?: boolean;
   loading?: boolean;
 }
@@ -38,6 +40,7 @@ export default function BulkAction({
   clearLabel,
   selectionLabel,
   dropdownLabel,
+  locale = 'en',
   disabled = false,
   loading = false,
 }: BulkActionProps) {
@@ -68,12 +71,22 @@ export default function BulkAction({
         {/* Right Section */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
           <div className="min-w-55 sm:min-w-65">
-            <Dropdown
-              label={dropdownLabel}
-              value={value}
-              options={options}
-              onChange={onValueChange}
-            />
+            {options.length === 0 ? (
+              <CustomDatePicker
+                value={value}
+                onChange={onValueChange}
+                locale={locale}
+                label={dropdownLabel}
+                placeholder={dropdownLabel}
+              />
+            ) : (
+              <Dropdown
+                label={dropdownLabel}
+                value={value}
+                options={options}
+                onChange={onValueChange}
+              />
+            )}
           </div>
 
           <div className="flex items-center gap-2">

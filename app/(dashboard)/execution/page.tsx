@@ -1,43 +1,42 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { toast } from 'react-toastify';
-import {
-  LuChevronLeft,
-  LuChevronRight,
-  LuCalendarDays,
-  LuShoppingCart,
-  LuClipboardCheck,
-} from 'react-icons/lu';
 
 import Table from '@/components/ui/table';
-import Button from '@/components/ui/button';
-import Input from '@/components/ui/input';
-import ExecutionStats from './components/execution-stats';
+import Pagination from '@/components/ui/pagination';
+import BulkAction from '@/components/ui/bulk-action';
+import ConfirmModal, { useConfirmModal } from '@/components/ui/confirm-modal';
 
 import { Order } from '@/types/Order';
+import { Category } from '@/types/Category';
+import { Referral } from '@/types/Referral';
 
-interface ExecutionStatsData {
-  totalOrders: number;
-  totalItems: number;
-  byProduct: Array<{
-    productName: string;
-    productNameAr: string;
-    quantity: number;
-    percentage: number;
-  }>;
-}
+import ExecutionFilters from './components/execution-filters';
+import { useExecutionColumns } from './components/execution-table-columns';
+import ExecutionTitle from './components/execution-title';
+import OrderDetailModal from '../orders/components/order-detail-modal';
+import ChangeExecutionDateModal from './components/change-execution-date-modal';
 
 interface ExecutionResponse {
   success: boolean;
   data?: {
     orders: Order[];
-    stats: ExecutionStatsData;
-    date: string;
+    pagination: {
+      page: number;
+      limit: number;
+      totalOrders: number;
+      totalPages: number;
+    };
+    date?: string;
+    fromDate?: string;
+    toDate?: string;
   };
   error?: string;
 }
+
+type DateQuickPreset = 'today' | 'tomorrow' | 'yesterday' | 'last7Days' | 'all';
 
 function toIsoDateInput(date: Date): string {
   const year = date.getFullYear();
@@ -46,170 +45,450 @@ function toIsoDateInput(date: Date): string {
   return `${year}-${month}-${day}`;
 }
 
-function formatDateForDisplay(dateStr: string, locale: string): string {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
-  const [year, month, day] = dateStr.split('-');
-  if (locale === 'ar') {
-    return `${day}/${month}/${year}`;
-  }
-  return `${month}/${day}/${year}`;
+function getRelativeIsoDate(daysOffset: number): string {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() + daysOffset);
+  return toIsoDateInput(d);
+}
+
+function normalizeDateRange(fromDate: string, toDate: string) {
+  if (fromDate && toDate && fromDate > toDate) return { fromDate: toDate, toDate: fromDate };
+  return { fromDate, toDate };
+}
+
+function addDaysToIsoDate(isoDate: string, days: number): string {
+  const date = new Date(isoDate + 'T00:00:00');
+  date.setDate(date.getDate() + days);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function formatHeaderDate(isoDate: string): string {
+  const [year, month, day] = isoDate.split('-');
+  return `${Number(day)}-${Number(month)}-${year}`;
 }
 
 export default function ExecutionPage() {
   const t = useTranslations('execution');
   const locale = useLocale();
 
-  const [selectedDate, setSelectedDate] = useState<string>(toIsoDateInput(new Date()));
-  const [sourceFilter, setSourceFilter] = useState<'all' | 'manasik' | 'ghadaq'>('all');
+  const tomorrow = getRelativeIsoDate(1);
+
+  const [fromDateFilter, setFromDateFilter] = useState(tomorrow);
+  const [toDateFilter, setToDateFilter] = useState(tomorrow);
+  const [sourceFilter, setSourceFilter] = useState('all');
+  const [referralFilter, setReferralFilter] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [referrals, setReferrals] = useState<Referral[]>([]);
+  const [searchInput, setSearchInput] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [orders, setOrders] = useState<Order[]>([]);
-  const [stats, setStats] = useState<ExecutionStatsData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalOrders, setTotalOrders] = useState(0);
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [loadingOrderDetails, setLoadingOrderDetails] = useState(false);
+  const [isChangeExecutionDateModalOpen, setIsChangeExecutionDateModalOpen] = useState(false);
+  const [changingExecutionDateId, setChangingExecutionDateId] = useState<string | null>(null);
+  const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
+  const [bulkExecutionDate, setBulkExecutionDate] = useState('');
+  const [bulkUpdating, setBulkUpdating] = useState(false);
+  const [whatsappOrderId, setWhatsappOrderId] = useState<string | null>(null);
+  const [copyingPhoneOrderId, setCopyingPhoneOrderId] = useState<string | null>(null);
+  const [copyingMessageOrderId, setCopyingMessageOrderId] = useState<string | null>(null);
+  const { confirm, modalProps } = useConfirmModal();
+
+  // Fetch categories once
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const res = await fetch('/api/categories');
+        const data = await res.json();
+        if (data.success) {
+          setCategories(data.data.categories);
+        }
+      } catch (err) {
+        console.error('Error fetching categories:', err);
+      }
+    };
+    fetchCategories();
+  }, []);
+
+  // Fetch referrals once
+  useEffect(() => {
+    const fetchReferrals = async () => {
+      try {
+        const res = await fetch('/api/referrals?limit=100', { cache: 'no-store' });
+        const data = await res.json();
+        if (data.success) {
+          setReferrals(data.data.referrals);
+        }
+      } catch (err) {
+        console.error('Error fetching referrals:', err);
+      }
+    };
+    fetchReferrals();
+  }, []);
+
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearchQuery(searchInput.trim());
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
 
   const fetchExecution = useCallback(
-    async (date: string, source: string) => {
+    async (signal?: AbortSignal) => {
       setLoading(true);
       try {
         const params = new URLSearchParams();
-        params.set('date', date);
-        if (source !== 'all') params.set('source', source);
+        params.set('page', String(page));
+        params.set('limit', String(pageSize));
+        if (sourceFilter !== 'all') params.set('source', sourceFilter);
+        if (referralFilter) params.set('referralId', referralFilter);
+        if (categoryFilter !== 'all') params.set('category', categoryFilter);
+        if (statusFilter !== 'all') params.set('status', statusFilter);
+        if (searchQuery) params.set('search', searchQuery);
 
-        const res = await fetch(`/api/execution?${params.toString()}`);
+        const normalizedRange = normalizeDateRange(fromDateFilter, toDateFilter);
+        if (normalizedRange.fromDate) params.set('fromDate', normalizedRange.fromDate);
+        if (normalizedRange.toDate) params.set('toDate', normalizedRange.toDate);
+
+        const res = await fetch(`/api/execution?${params.toString()}`, {
+          cache: 'no-store',
+          signal,
+        });
         const data: ExecutionResponse = await res.json();
 
         if (!data.success || !data.data) {
           toast.error(data.error || t('messages.loadFailed'));
           setOrders([]);
-          setStats(null);
+          setTotalOrders(0);
+          setTotalPages(1);
           return;
         }
 
         setOrders(data.data.orders);
-        setStats(data.data.stats);
-      } catch {
+        setTotalOrders(data.data.pagination.totalOrders);
+        setTotalPages(data.data.pagination.totalPages);
+      } catch (err) {
+        if ((err as { name?: string }).name === 'AbortError') return;
         toast.error(t('messages.loadFailed'));
         setOrders([]);
-        setStats(null);
+        setTotalOrders(0);
+        setTotalPages(1);
       } finally {
         setLoading(false);
       }
     },
-    [t],
+    [fromDateFilter, toDateFilter, sourceFilter, referralFilter, categoryFilter, statusFilter, searchQuery, page, pageSize, t],
   );
 
   useEffect(() => {
-    void fetchExecution(selectedDate, sourceFilter);
-  }, [selectedDate, sourceFilter, fetchExecution]);
+    const controller = new AbortController();
+    void fetchExecution(controller.signal);
+    return () => controller.abort();
+  }, [fetchExecution]);
 
-  const handlePrevDay = () => {
-    const d = new Date(`${selectedDate}T00:00:00`);
-    d.setDate(d.getDate() - 1);
-    setSelectedDate(toIsoDateInput(d));
+  const handleRefresh = () => {
+    void fetchExecution();
   };
 
-  const handleNextDay = () => {
-    const d = new Date(`${selectedDate}T00:00:00`);
-    d.setDate(d.getDate() + 1);
-    setSelectedDate(toIsoDateInput(d));
+  const formatDate = (date: string | Date | undefined) => {
+    if (!date) return '-';
+    return new Date(date).toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
   };
 
-  const handleToday = () => {
-    setSelectedDate(toIsoDateInput(new Date()));
-  };
-
-  const isToday = selectedDate === toIsoDateInput(new Date());
-
-  const columns = useMemo(
-    () => [
-      {
-        header: t('table.orderNumber'),
-        accessor: (order: Order) => (
-          <span className="font-semibold text-foreground">{order.orderNumber}</span>
-        ),
-        className: 'min-w-32',
-      },
-      {
-        header: t('table.customer'),
-        accessor: (order: Order) => (
-          <div className="flex flex-col gap-0.5 min-w-44">
-            <span className="font-medium text-foreground">
-              {order.billingData?.fullName || '-'}
-            </span>
-            <span className="text-xs text-secondary">{order.billingData?.phone || '-'}</span>
-          </div>
-        ),
-      },
-      {
-        header: t('table.items'),
-        accessor: (order: Order) => {
-          const items = order.items || [];
-          const totalQty = items.reduce((sum, item) => sum + (item.quantity || 0), 0);
-          return (
-            <div className="flex flex-col gap-0.5 min-w-56">
-              <span className="text-sm text-secondary">
-                {totalQty} {t('table.itemsCount')}
-              </span>
-              <div className="flex flex-wrap gap-1">
-                {items.slice(0, 3).map((item, i) => (
-                  <span
-                    key={i}
-                    className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-background text-secondary border border-stroke"
-                  >
-                    {locale === 'ar' ? item.productName?.ar : item.productName?.en}
-                    {item.quantity > 1 ? ` x${item.quantity}` : ''}
-                  </span>
-                ))}
-                {items.length > 3 && (
-                  <span className="text-[10px] text-secondary">+{items.length - 3}</span>
-                )}
-              </div>
-            </div>
-          );
-        },
-      },
-      {
-        header: t('table.total'),
-        accessor: (order: Order) => (
-          <span className="font-semibold text-foreground whitespace-nowrap">
-            {order.totalAmount?.toLocaleString()} {order.currency}
-          </span>
-        ),
-        className: 'min-w-28',
-      },
-      {
-        header: t('table.status'),
-        accessor: (order: Order) => {
-          const statusColors: Record<string, string> = {
-            pending: 'bg-yellow-500/10 text-yellow-500',
-            processing: 'bg-blue-500/10 text-blue-500',
-            'partial-paid': 'bg-purple-500/10 text-purple-500',
-            paid: 'bg-emerald-500/10 text-emerald-500',
-            completed: 'bg-emerald-500/10 text-emerald-600',
-            failed: 'bg-red-500/10 text-red-500',
-            refunded: 'bg-gray-500/10 text-gray-500',
-            cancelled: 'bg-red-500/10 text-red-400',
-          };
-          return (
-            <span
-              className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${statusColors[order.status] || 'bg-gray-500/10 text-gray-500'}`}
-            >
-              {order.status}
-            </span>
-          );
-        },
-        className: 'min-w-28',
-      },
-      {
-        header: t('table.source'),
-        accessor: (order: Order) => (
-          <span className="inline-block px-2 py-1 rounded-full text-xs font-medium bg-blue-500/10 text-blue-500 uppercase">
-            {order.source || '-'}
-          </span>
-        ),
-        className: 'min-w-20',
-      },
-    ],
+  const fetchOrderDetails = useCallback(
+    async (orderId: string, showError = true): Promise<Order | null> => {
+      try {
+        const res = await fetch(`/api/orders/${orderId}`);
+        const data = await res.json();
+        if (!data.success) {
+          throw new Error(data.error || 'Failed to fetch order details');
+        }
+        return data.data as Order;
+      } catch (error) {
+        console.error('Error fetching order details:', error);
+        if (showError) {
+          toast.error(t('messages.loadFailed'));
+        }
+        return null;
+      }
+    },
     [t, locale],
   );
+
+  const normalizeWhatsappPhone = (rawPhone?: string) => {
+    if (!rawPhone) return null;
+    let normalized = rawPhone.trim();
+    if (!normalized) return null;
+    normalized = normalized.replace(/[\s().-]/g, '');
+    if (normalized.startsWith('00')) {
+      normalized = `+${normalized.slice(2)}`;
+    }
+    if (normalized.startsWith('+')) {
+      const digits = normalized.slice(1).replace(/\D/g, '');
+      if (!digits) return null;
+      return digits;
+    }
+    const digitsOnly = normalized.replace(/\D/g, '');
+    if (!digitsOnly) return null;
+    return digitsOnly;
+  };
+
+  const buildWhatsappMessage = (order: Order) => {
+    const name = order.billingData?.fullName || '';
+    const orderNumber = order.orderNumber;
+    const total = order.totalAmount?.toFixed(2);
+    const currency = order.currency;
+    return `Hello ${name}, regarding your order ${orderNumber} (${total} ${currency})`;
+  };
+
+  const viewOrder = async (order: Order) => {
+    setSelectedOrder(order);
+    setIsModalOpen(true);
+    setLoadingOrderDetails(true);
+    const fullOrder = await fetchOrderDetails(order._id);
+    if (fullOrder) {
+      setSelectedOrder(fullOrder);
+    }
+    setLoadingOrderDetails(false);
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setSelectedOrder(null);
+    setLoadingOrderDetails(false);
+  };
+
+  const handleChangeExecutionDate = (order: Order) => {
+    setSelectedOrder(order);
+    setIsChangeExecutionDateModalOpen(true);
+  };
+
+  const closeChangeExecutionDateModal = () => {
+    setIsChangeExecutionDateModalOpen(false);
+  };
+
+  const startWhatsappMessage = async (order: Order) => {
+    try {
+      setWhatsappOrderId(order._id);
+      const phone = normalizeWhatsappPhone(order.billingData?.phone);
+      if (!phone) {
+        toast.error('No phone number found');
+        return;
+      }
+      const message = buildWhatsappMessage(order);
+      const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+      const popup = window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+      if (!popup) {
+        toast.error('Failed to open WhatsApp');
+        return;
+      }
+      toast.success('WhatsApp opened');
+    } catch (error) {
+      console.error('Error starting WhatsApp message:', error);
+      toast.error('Failed to open WhatsApp');
+    } finally {
+      setWhatsappOrderId(null);
+    }
+  };
+
+  const copyPhone = async (order: Order) => {
+    try {
+      setCopyingPhoneOrderId(order._id);
+      const phone = normalizeWhatsappPhone(order.billingData?.phone);
+      if (!phone) {
+        toast.error('No phone number found');
+        return;
+      }
+      await navigator.clipboard.writeText(phone);
+      toast.success('Phone number copied');
+    } catch (error) {
+      console.error('Error copying phone:', error);
+      toast.error('Failed to copy phone number');
+    } finally {
+      setCopyingPhoneOrderId(null);
+    }
+  };
+
+  const copyMessage = async (order: Order) => {
+    try {
+      setCopyingMessageOrderId(order._id);
+      const message = buildWhatsappMessage(order);
+      await navigator.clipboard.writeText(message);
+      toast.success('Message copied');
+    } catch (error) {
+      console.error('Error copying message:', error);
+      toast.error('Failed to copy message');
+    } finally {
+      setCopyingMessageOrderId(null);
+    }
+  };
+
+  const updateExecutionDate = async (date: string) => {
+    if (!selectedOrder || !date) {
+      closeChangeExecutionDateModal();
+      return;
+    }
+    try {
+      setChangingExecutionDateId(selectedOrder._id);
+      const res = await fetch(`/api/orders/${selectedOrder._id}/execution-date`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ executionDate: date }),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to update execution date');
+      }
+      toast.success(t('changeExecutionDate.success'));
+      setOrders((prev) =>
+        prev.map((order) =>
+          order._id === selectedOrder._id
+            ? { ...order, reservationData: order.reservationData?.map((f) => f.key === 'executionDate' ? { ...f, value: date } : f) ?? [] }
+            : order,
+        ),
+      );
+      closeChangeExecutionDateModal();
+    } catch (error) {
+      console.error('Error updating execution date:', error);
+      toast.error(t('changeExecutionDate.failed'));
+    } finally {
+      setChangingExecutionDateId(null);
+    }
+  };
+
+  const toggleOrderSelection = (orderId: string) => {
+    setSelectedOrderIds((prev) =>
+      prev.includes(orderId)
+        ? prev.filter((id) => id !== orderId)
+        : [...prev, orderId],
+    );
+  };
+
+  const toggleSelectAllVisible = () => {
+    const allSelected = orders.length > 0 && orders.every((o) => selectedOrderIds.includes(o._id));
+    if (allSelected) {
+      setSelectedOrderIds([]);
+    } else {
+      setSelectedOrderIds(orders.map((o) => o._id));
+    }
+  };
+
+  const applyBulkExecutionDate = async () => {
+    if (selectedOrderIds.length === 0 || !bulkExecutionDate) return;
+    try {
+      setBulkUpdating(true);
+      const res = await fetch('/api/execution/bulk-date', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orderIds: selectedOrderIds,
+          executionDate: bulkExecutionDate,
+        }),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to bulk update execution dates');
+      }
+      toast.success(`Updated ${data.data.updatedCount} orders`);
+      setOrders((prev) =>
+        prev.map((order) =>
+          selectedOrderIds.includes(order._id)
+            ? { ...order, reservationData: order.reservationData?.map((f) => f.key === 'executionDate' ? { ...f, value: bulkExecutionDate } : f) ?? [] }
+            : order,
+        ),
+      );
+      setSelectedOrderIds([]);
+      setBulkExecutionDate('');
+    } catch (error) {
+      console.error('Error bulk updating execution dates:', error);
+      toast.error('Failed to bulk update execution dates');
+    } finally {
+      setBulkUpdating(false);
+    }
+  };
+
+  const allVisibleSelected = orders.length > 0 && orders.every((order) => selectedOrderIds.includes(order._id));
+  const ToolTipPositions = locale === 'ar' ? 'right' : 'left';
+
+  const today = getRelativeIsoDate(0);
+  const yesterday = getRelativeIsoDate(-1);
+  const lastSevenDaysStart = getRelativeIsoDate(-6);
+  const normalizedSelectedRange = normalizeDateRange(fromDateFilter, toDateFilter);
+
+  const activeDatePreset: DateQuickPreset | 'custom' =
+    !normalizedSelectedRange.fromDate && !normalizedSelectedRange.toDate
+      ? 'all'
+      : normalizedSelectedRange.fromDate === today && normalizedSelectedRange.toDate === today
+        ? 'today'
+        : normalizedSelectedRange.fromDate === tomorrow && normalizedSelectedRange.toDate === tomorrow
+          ? 'tomorrow'
+          : normalizedSelectedRange.fromDate === yesterday && normalizedSelectedRange.toDate === yesterday
+            ? 'yesterday'
+            : normalizedSelectedRange.fromDate === lastSevenDaysStart && normalizedSelectedRange.toDate === today
+              ? 'last7Days'
+              : 'custom';
+
+  const applyDatePreset = (preset: DateQuickPreset) => {
+    if (preset === 'all') { setFromDateFilter(''); setToDateFilter(''); setPage(1); return; }
+    if (preset === 'today') { setFromDateFilter(today); setToDateFilter(today); setPage(1); return; }
+    if (preset === 'tomorrow') { setFromDateFilter(tomorrow); setToDateFilter(tomorrow); setPage(1); return; }
+    if (preset === 'yesterday') { setFromDateFilter(yesterday); setToDateFilter(yesterday); setPage(1); return; }
+    setFromDateFilter(lastSevenDaysStart);
+    setToDateFilter(today);
+    setPage(1);
+  };
+
+  const handleFromDateChange = (value: string) => {
+    const r = normalizeDateRange(value, toDateFilter);
+    setFromDateFilter(r.fromDate);
+    setToDateFilter(r.toDate);
+    setPage(1);
+  };
+
+  const handleToDateChange = (value: string) => {
+    const r = normalizeDateRange(fromDateFilter, value);
+    setFromDateFilter(r.fromDate);
+    setToDateFilter(r.toDate);
+    setPage(1);
+  };
+
+  const columns = useExecutionColumns({
+    onView: viewOrder,
+    onWhatsapp: startWhatsappMessage,
+    onCopyPhone: copyPhone,
+    onCopyMessage: copyMessage,
+    onChangeExecutionDate: handleChangeExecutionDate,
+    onToggleSelect: toggleOrderSelection,
+    onToggleSelectAll: toggleSelectAllVisible,
+    selectedOrderIds,
+    allVisibleSelected,
+    tooltipPos: ToolTipPositions as 'left' | 'right',
+    whatsappOrderId,
+    copyingPhoneOrderId,
+    copyingMessageOrderId,
+  });
+
+  const getCurrentExecutionDate = () => {
+    const val = selectedOrder?.reservationData?.find((f) => f.key === 'executionDate')?.value;
+    return val || '';
+  };
 
   return (
     <div className="space-y-6">
@@ -221,86 +500,109 @@ export default function ExecutionPage() {
         </div>
       </div>
 
-      {/* Date navigation + filters */}
-      <div className="bg-card-bg border border-stroke rounded-site p-4">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          {/* Day navigation */}
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={handlePrevDay}>
-              <LuChevronLeft className="w-4 h-4" />
-            </Button>
+      {/* Filters */}
+      <ExecutionFilters
+        searchInput={searchInput}
+        onSearchChange={setSearchInput}
+        sourceFilter={sourceFilter}
+        onSourceChange={setSourceFilter}
+        onRefresh={handleRefresh}
+        fromDateFilter={fromDateFilter}
+        toDateFilter={toDateFilter}
+        onFromDateChange={handleFromDateChange}
+        onToDateChange={handleToDateChange}
+        activeDatePreset={activeDatePreset}
+        onDatePreset={applyDatePreset}
+        locale={locale}
+        referralFilter={referralFilter}
+        onReferralChange={setReferralFilter}
+        referrals={referrals}
+        categoryFilter={categoryFilter}
+        onCategoryChange={setCategoryFilter}
+        categories={categories}
+        totalOrders={totalOrders}
+        statusFilter={statusFilter}
+        onStatusChange={(val) => { setStatusFilter(val); setPage(1); }}
+      />
 
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-background rounded-lg border border-stroke">
-              <LuCalendarDays className="w-4 h-4 text-secondary" />
-              <span className="text-sm font-medium text-foreground min-w-[100px] text-center">
-                {formatDateForDisplay(selectedDate, locale)}
-                {isToday && (
-                  <span className="ml-1.5 text-xs text-primary">
-                    {t('todayLabel')}
-                  </span>
-                )}
-              </span>
-            </div>
+      {fromDateFilter && (
+        <ExecutionTitle
+          date={fromDateFilter}
+          locale={locale}
+          onPrevDay={() => {
+            if (!fromDateFilter) return;
+            const prev = addDaysToIsoDate(fromDateFilter, -1);
+            setFromDateFilter(prev);
+            setToDateFilter(prev);
+            setPage(1);
+          }}
+          onNextDay={() => {
+            if (!fromDateFilter) return;
+            const next = addDaysToIsoDate(fromDateFilter, 1);
+            setFromDateFilter(next);
+            setToDateFilter(next);
+            setPage(1);
+          }}
+        />
+      )}
 
-            <Button variant="outline" size="sm" onClick={handleNextDay}>
-              <LuChevronRight className="w-4 h-4" />
-            </Button>
-
-            <Button
-              variant={isToday ? 'primary' : 'outline'}
-              size="sm"
-              onClick={handleToday}
-              className="ml-1"
-            >
-              {t('todayButton')}
-            </Button>
-          </div>
-
-          {/* Filters */}
-          <div className="flex items-center gap-3">
-            <Input
-              type="date"
-              value={selectedDate}
-              onChange={(e) => {
-                if (e.target.value) setSelectedDate(e.target.value);
-              }}
-              className="w-40"
-            />
-            <select
-              value={sourceFilter}
-              onChange={(e) => setSourceFilter(e.target.value as 'all' | 'manasik' | 'ghadaq')}
-              className="h-9 px-3 rounded-lg border border-stroke bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
-            >
-              <option value="all">{t('filters.allSources')}</option>
-              <option value="manasik">{t('filters.manasik')}</option>
-              <option value="ghadaq">{t('filters.ghadaq')}</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      {/* Stats */}
-      <ExecutionStats stats={stats} loading={loading} />
+      {selectedOrderIds.length > 0 && (
+        <BulkAction
+          selectedCount={selectedOrderIds.length}
+          value={bulkExecutionDate}
+          options={[]}
+          onValueChange={setBulkExecutionDate}
+          onApply={applyBulkExecutionDate}
+          onClear={() => { setSelectedOrderIds([]); setBulkExecutionDate(''); }}
+          applyLabel={t('bulkAction.apply')}
+          applyingLabel={t('bulkAction.applying')}
+          clearLabel={t('bulkAction.clear')}
+          selectionLabel={t('bulkAction.selectedCount', { count: selectedOrderIds.length })}
+          dropdownLabel={t('bulkAction.executionDateLabel')}
+          locale={locale}
+          disabled={!bulkExecutionDate}
+          loading={bulkUpdating}
+        />
+      )}
 
       {/* Orders table */}
       <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
-            <LuClipboardCheck className="w-5 h-5 text-primary" />
-            {t('ordersTitle')}
-          </h2>
-          <span className="text-sm text-secondary">
-            {orders.length} {t('ordersCount')}
-          </span>
-        </div>
-
         <Table<Order>
           columns={columns}
           data={orders}
           loading={loading}
           emptyMessage={t('emptyMessage')}
+          onRowClick={viewOrder}
         />
       </div>
+
+      <Pagination
+        currentPage={page}
+        totalPages={totalPages}
+        onPageChange={setPage}
+        pageSize={pageSize}
+        onPageSizeChange={(size) => { setPageSize(size); setPage(1); }}
+      />
+
+      <OrderDetailModal
+        isOpen={isModalOpen}
+        onClose={closeModal}
+        order={selectedOrder}
+        loadingDetails={loadingOrderDetails}
+        formatDate={formatDate}
+        locale={locale}
+      />
+
+      <ChangeExecutionDateModal
+        isOpen={isChangeExecutionDateModalOpen}
+        onClose={closeChangeExecutionDateModal}
+        currentDate={getCurrentExecutionDate()}
+        onUpdateDate={updateExecutionDate}
+        updating={changingExecutionDateId !== null}
+        locale={locale}
+      />
+
+      <ConfirmModal {...modalProps} />
     </div>
   );
 }

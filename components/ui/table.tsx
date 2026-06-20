@@ -13,6 +13,7 @@ interface TableProps<T> {
   loading?: boolean;
   emptyMessage?: string;
   onRowClick?: (row: T) => void;
+  getRowClassName?: (row: T) => string;
 }
 
 export default function Table<T extends { _id?: string }>({
@@ -21,6 +22,7 @@ export default function Table<T extends { _id?: string }>({
   loading,
   emptyMessage = 'No data found',
   onRowClick,
+  getRowClassName,
 }: TableProps<T>) {
   if (loading) {
     return (
@@ -39,9 +41,8 @@ export default function Table<T extends { _id?: string }>({
               {columns.map((column, index) => (
                 <th
                   key={index}
-                  className={`text-start px-4 py-3 text-sm font-semibold ${
-                    column.className || ''
-                  }`}
+                  className={`text-start px-4 py-3 text-sm font-semibold ${column.className || ''
+                    }`}
                 >
                   {column.header}
                 </th>
@@ -59,9 +60,8 @@ export default function Table<T extends { _id?: string }>({
               data.map((row, rowIndex) => (
                 <tr
                   key={row._id || rowIndex}
-                  className={`hover:bg-background transition-colors ${
-                    onRowClick ? 'cursor-pointer' : ''
-                  }`}
+                  className={`hover:bg-background transition-colors ${onRowClick ? 'cursor-pointer' : ''
+                    } ${getRowClassName ? getRowClassName(row) : ''}`}
                   onClick={() => onRowClick?.(row)}
                 >
                   {columns.map((column, colIndex) => (

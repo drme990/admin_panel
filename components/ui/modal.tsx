@@ -1,6 +1,7 @@
 import { ReactNode, useEffect, useRef } from 'react';
 import { LuX } from 'react-icons/lu';
 import Button from './button';
+import { cn } from '@/lib/utils';
 
 interface ModalProps {
   isOpen: boolean;
@@ -9,6 +10,8 @@ interface ModalProps {
   children: ReactNode;
   footer?: ReactNode;
   size?: 'sm' | 'md' | 'lg' | 'xl';
+  className?: string;
+  contentClassName?: string;
 }
 
 const sizeClasses = {
@@ -25,6 +28,8 @@ export default function Modal({
   children,
   footer,
   size = 'md',
+  className,
+  contentClassName,
 }: ModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
@@ -121,7 +126,12 @@ export default function Modal({
     >
       <div
         ref={modalRef}
-        className={`bg-card-bg rounded-site border border-stroke ${sizeClasses[size]} w-full max-h-[90vh] flex flex-col overflow-hidden`}
+        className={cn(
+          'bg-card-bg rounded-site border border-stroke',
+          sizeClasses[size],
+          'w-full max-h-[90vh] flex flex-col overflow-hidden',
+          className,
+        )}
         tabIndex={-1}
         role="dialog"
         aria-modal="true"
@@ -145,7 +155,9 @@ export default function Modal({
         </div>
 
         {/* Content - Scrollable */}
-        <div className="flex-1 overflow-y-auto px-6 py-6">{children}</div>
+        <div className={cn('flex-1 overflow-y-auto px-6 py-6', contentClassName)}>
+          {children}
+        </div>
 
         {/* Footer - Always Visible (if provided) */}
         {footer && (

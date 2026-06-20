@@ -9,14 +9,34 @@
     "title": "التنفيذ",
     "description": "عرض جميع الطلبات المجدولة للتنفيذ في تاريخ محدد. الطلبات بدون تاريخ تنفيذ تُعتبر في اليوم التالي لإنشائها.",
     "todayLabel": "اليوم",
+    "tomorrowLabel": "غداً",
     "todayButton": "اليوم",
+    "tomorrowButton": "غداً",
     "ordersTitle": "طلبات للتنفيذ",
     "ordersCount": "طلب",
     "emptyMessage": "لا توجد طلبات مجدولة للتنفيذ في هذا اليوم.",
     "filters": {
-      "allSources": "جميع المصادر",
+      "allSources": "كل المصادر",
       "manasik": "مناسك",
-      "ghadaq": "غداق"
+      "ghadaq": "غدق",
+      "allCategories": "جميع الفئات",
+      "searchPlaceholder": "البحث في الطلبات...",
+      "refresh": "تحديث",
+      "dateModeAll": "كل الأوقات",
+      "today": "اليوم",
+      "tomorrow": "غداً",
+      "yesterday": "أمس",
+      "last7Days": "آخر 7 أيام",
+      "fromDate": "من تاريخ",
+      "toDate": "إلى تاريخ",
+      "allReferrals": "كل الإحالات",
+      "source": "المصدر"
+    },
+    "total": "الإجمالي",
+    "status": {
+      "all": "الكل",
+      "paid": "خالص",
+      "partial-paid": "باقي حساب"
     },
     "stats": {
       "totalOrders": "إجمالي الطلبات",
@@ -25,11 +45,49 @@
     "table": {
       "orderNumber": "رقم الطلب",
       "customer": "العميل",
+      "sacrificeFor": "الأسم",
+      "intention": "النية",
+      "gender": "الجنس",
+      "isAlive": "الحالة",
+      "shortDuaa": "الدعاء",
+      "photo": "الصورة",
       "items": "العناصر",
       "itemsCount": "عناصر",
       "total": "الإجمالي",
       "status": "الحالة",
-      "source": "المصدر"
+      "source": "المصدر",
+      "actions": "الإجراءات",
+      "copyDuaa": "نسخ الدعاء",
+      "copyPhone": "نسخ الرقم",
+      "copyMessage": "نسخ الرسالة",
+      "whatsapp": "واتساب",
+      "viewDetails": "عرض التفاصيل",
+      "changeExecutionDate": "تغيير التاريخ",
+      "copied": "تم النسخ!"
+    },
+    "bulkAction": {
+      "selectedCount": "تم تحديد {count} طلبات",
+      "executionDateLabel": "تاريخ التنفيذ",
+      "apply": "تطبيق",
+      "applying": "جارٍ التطبيق...",
+      "clear": "مسح"
+    },
+    "changeExecutionDate": {
+      "title": "تغيير تاريخ التنفيذ",
+      "dateLabel": "تاريخ التنفيذ",
+      "save": "حفظ",
+      "close": "إغلاق",
+      "saving": "جارٍ الحفظ...",
+      "success": "تم تحديث تاريخ التنفيذ",
+      "failed": "فشل تحديث تاريخ التنفيذ"
+    },
+    "header": {
+      "executions": "تنفيذات",
+      "today": "اليوم",
+      "tomorrow": "غدا",
+      "yesterday": "أمس",
+      "prevDay": "اليوم السابق",
+      "nextDay": "اليوم التالي"
     },
     "messages": {
       "loadFailed": "فشل تحميل بيانات التنفيذ."

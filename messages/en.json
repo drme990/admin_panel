@@ -9,14 +9,34 @@
     "title": "Execution",
     "description": "View all orders scheduled for execution on a specific date. Orders without an execution date default to the next day after creation.",
     "todayLabel": "Today",
+    "tomorrowLabel": "Tomorrow",
     "todayButton": "Today",
+    "tomorrowButton": "Tomorrow",
     "ordersTitle": "Orders to Execute",
     "ordersCount": "orders",
     "emptyMessage": "No orders scheduled for execution on this day.",
     "filters": {
       "allSources": "All Sources",
       "manasik": "Manasik",
-      "ghadaq": "Ghadaq"
+      "ghadaq": "Ghadaq",
+      "allCategories": "All Categories",
+      "searchPlaceholder": "Search orders...",
+      "refresh": "Refresh",
+      "dateModeAll": "All Time",
+      "today": "Today",
+      "tomorrow": "Tomorrow",
+      "yesterday": "Yesterday",
+      "last7Days": "Last 7 Days",
+      "fromDate": "From Date",
+      "toDate": "To Date",
+      "allReferrals": "All Referrals",
+      "source": "Source"
+    },
+    "total": "Total",
+    "status": {
+      "all": "All",
+      "paid": "Paid",
+      "partial-paid": "Partially Paid"
     },
     "stats": {
       "totalOrders": "Total Orders",
@@ -25,11 +45,49 @@
     "table": {
       "orderNumber": "Order #",
       "customer": "Customer",
+      "sacrificeFor": "For",
+      "intention": "Intention",
+      "gender": "Gender",
+      "isAlive": "Status",
+      "shortDuaa": "Duaa",
+      "photo": "Photo",
       "items": "Items",
       "itemsCount": "items",
       "total": "Total",
       "status": "Status",
-      "source": "Source"
+      "source": "Source",
+      "actions": "Actions",
+      "copyDuaa": "Copy Duaa",
+      "copyPhone": "Copy Phone",
+      "copyMessage": "Copy Message",
+      "whatsapp": "WhatsApp",
+      "viewDetails": "View Details",
+      "changeExecutionDate": "Change Date",
+      "copied": "Copied!"
+    },
+    "bulkAction": {
+      "selectedCount": "Selected {count} orders",
+      "executionDateLabel": "Execution Date",
+      "apply": "Apply",
+      "applying": "Applying...",
+      "clear": "Clear"
+    },
+    "changeExecutionDate": {
+      "title": "Change Execution Date",
+      "dateLabel": "Execution Date",
+      "save": "Save",
+      "close": "Close",
+      "saving": "Saving...",
+      "success": "Execution date updated",
+      "failed": "Failed to update execution date"
+    },
+    "header": {
+      "executions": "Executions",
+      "today": "Today",
+      "tomorrow": "Tomorrow",
+      "yesterday": "Yesterday",
+      "prevDay": "Previous Day",
+      "nextDay": "Next Day"
     },
     "messages": {
       "loadFailed": "Failed to load execution data."

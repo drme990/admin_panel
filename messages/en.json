@@ -63,6 +63,18 @@
       "whatsapp": "WhatsApp",
       "viewDetails": "View Details",
       "changeExecutionDate": "Change Date",
+      "copyName": "Copy Name",
+      "copyOrderNumber": "Copy Order Number",
+      "copyItems": "Copy Items",
+      "duaa": "Duaa",
+      "design": "Design",
+      "uploadDesign": "Upload Design",
+      "downloadDesign": "Download Design",
+      "editDesign": "Edit Design",
+      "viewPhoto": "View Photo",
+      "uploadPhoto": "Upload Photo",
+      "downloadPhoto": "Download Photo",
+      "editPhoto": "Edit Photo",
       "copied": "Copied!"
     },
     "bulkAction": {
@@ -89,6 +101,18 @@
       "prevDay": "Previous Day",
       "nextDay": "Next Day",
       "todayDate": "Today's Date"
+    },
+    "copyWhatsapp": {
+      "button": "Start WhatsApp message",
+      "success": "WhatsApp conversation opened",
+      "failed": "Failed to start WhatsApp message",
+      "invalidPhone": "Customer phone number is invalid for WhatsApp",
+      "copyNumber": "Copy WhatsApp number",
+      "copyNumberSuccess": "WhatsApp number copied",
+      "copyNumberFailed": "Failed to copy WhatsApp number",
+      "copyMessage": "Copy WhatsApp message",
+      "copyMessageSuccess": "WhatsApp message copied",
+      "copyMessageFailed": "Failed to copy WhatsApp message"
     },
     "messages": {
       "loadFailed": "Failed to load execution data."

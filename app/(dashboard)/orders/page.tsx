@@ -115,7 +115,7 @@ export default function OrderHistoryPage() {
   const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
   const [bulkStatus, setBulkStatus] = useState('');
   const [bulkUpdating, setBulkUpdating] = useState(false);
-  const [orderStats, setOrderStats] = useState<{ totalItems: number; byCategory: Array<{ categoryId: string; categoryName: string; color: string; totalItems: number; percentage: number }> } | null>(null);
+  const [orderStats, setOrderStats] = useState<{ totalItems: number; byCategory: Array<{ categoryId: string; categoryName: string; categoryNumber: number; color: string; totalItems: number; percentage: number; products: Array<{ productId: string; productName: { ar: string; en: string }; quantity: number }> }> } | null>(null);
   const [loadingStats, setLoadingStats] = useState(false);
   const [whatsappOrderId, setWhatsappOrderId] = useState<string | null>(null);
   const [blockingOrderId, setBlockingOrderId] = useState<string | null>(null);
@@ -767,7 +767,7 @@ export default function OrderHistoryPage() {
         onPageSizeChange={(size) => { setPageSize(size); setPage(1); }}
       />
 
-      <OrderStats stats={orderStats} loading={loadingStats} />
+      <OrderStats stats={orderStats} loading={loadingStats} locale={locale} />
 
       <OrderDetailModal
         isOpen={isModalOpen}

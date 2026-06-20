@@ -63,6 +63,18 @@
       "whatsapp": "واتساب",
       "viewDetails": "عرض التفاصيل",
       "changeExecutionDate": "تغيير التاريخ",
+      "copyName": "نسخ الأسم",
+      "copyOrderNumber": "نسخ رقم الطلب",
+      "copyItems": "نسخ العناصر",
+      "duaa": "الدعاء",
+      "design": "التصميم",
+      "uploadDesign": "رفع التصميم",
+      "downloadDesign": "تحميل التصميم",
+      "editDesign": "تعديل التصميم",
+      "viewPhoto": "عرض الصورة",
+      "uploadPhoto": "رفع الصورة",
+      "downloadPhoto": "تحميل الصورة",
+      "editPhoto": "تعديل الصورة",
       "copied": "تم النسخ!"
     },
     "bulkAction": {
@@ -89,6 +101,18 @@
       "prevDay": "اليوم السابق",
       "nextDay": "اليوم التالي",
       "todayDate": "تاريخ اليوم"
+    },
+    "copyWhatsapp": {
+      "button": "بدء رسالة واتساب",
+      "success": "تم فتح محادثة واتساب",
+      "failed": "فشل بدء رسالة واتساب",
+      "invalidPhone": "رقم هاتف العميل غير صالح لواتساب",
+      "copyNumber": "نسخ رقم واتساب",
+      "copyNumberSuccess": "تم نسخ رقم واتساب",
+      "copyNumberFailed": "فشل نسخ رقم واتساب",
+      "copyMessage": "نسخ رسالة واتساب",
+      "copyMessageSuccess": "تم نسخ رسالة واتساب",
+      "copyMessageFailed": "فشل نسخ رسالة واتساب"
     },
     "messages": {
       "loadFailed": "فشل تحميل بيانات التنفيذ."

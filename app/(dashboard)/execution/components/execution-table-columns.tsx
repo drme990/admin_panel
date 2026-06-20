@@ -11,6 +11,9 @@ import {
   LuCalendar,
   LuRefreshCw,
   LuDownload,
+  LuPalette,
+  LuUpload,
+  LuPencil,
 } from 'react-icons/lu';
 import { FaWhatsapp } from 'react-icons/fa6';
 
@@ -124,13 +127,45 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
         const names = getNameLines(getReservationValue(order, 'sacrificeFor'));
         if (names.length === 0) return <span className={order.status === 'partial-paid' ? 'text-orange-600 dark:text-orange-400' : 'text-secondary'}>-</span>;
         return (
-          <div className='flex flex-col'>
-            <span className={`font-medium leading-snug min-w-48 ${order.status === 'partial-paid' ? 'text-orange-600 dark:text-orange-400' : 'text-foreground'}`}>
-              {names[0]}
-            </span>
-            <span className={`font-semibold whitespace-nowrap ${order.status === 'partial-paid' ? 'text-orange-600 dark:text-orange-400' : 'text-foreground'}`}>
-              {order.orderNumber}
-            </span>
+          <div className='flex flex-col gap-1 min-w-48'>
+            <div className="flex items-center gap-1.5">
+              <span className={`font-medium leading-snug ${order.status === 'partial-paid' ? 'text-orange-600 dark:text-orange-400' : 'text-foreground'}`}>
+                {names[0]}
+              </span>
+              <Tooltip position={tooltipPos} content={t('table.copyName')}>
+                <Button
+                  variant="ghost"
+                  size="custom"
+                  className="h-5 w-5 p-0 text-secondary hover:text-foreground"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void copyToClipboard(names.join(', ')).then(() => toast.success(t('table.copied'))).catch(() => toast.error('Copy failed'));
+                  }}
+                  aria-label={t('table.copyName')}
+                >
+                  <LuCopy size={12} />
+                </Button>
+              </Tooltip>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className={`font-semibold whitespace-nowrap text-sm ${order.status === 'partial-paid' ? 'text-orange-600 dark:text-orange-400' : 'text-foreground'}`}>
+                {order.orderNumber}
+              </span>
+              <Tooltip position={tooltipPos} content={t('table.copyOrderNumber')}>
+                <Button
+                  variant="ghost"
+                  size="custom"
+                  className="h-5 w-5 p-0 text-secondary hover:text-foreground"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void copyToClipboard(order.orderNumber).then(() => toast.success(t('table.copied'))).catch(() => toast.error('Copy failed'));
+                  }}
+                  aria-label={t('table.copyOrderNumber')}
+                >
+                  <LuCopy size={12} />
+                </Button>
+              </Tooltip>
+            </div>
           </div>
         );
       },
@@ -141,8 +176,13 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
       accessor: (order: Order) => {
         const items = order.items || [];
         if (items.length === 0) return <span className={order.status === 'partial-paid' ? 'text-orange-600 dark:text-orange-400' : 'text-secondary'}>-</span>;
+        const itemTexts = items.map((item) => {
+          const qty = item.quantity || 1;
+          const name = locale === 'ar' ? item.productName?.ar : item.productName?.en;
+          return qty > 1 ? `${qty} ${name}` : (name || '');
+        });
         return (
-          <div className="flex flex-col gap-1 min-w-64">
+          <div className="flex flex-col gap-1 min-w-52">
             {items.map((item, i) => {
               const qty = item.quantity || 1;
               const name = locale === 'ar' ? item.productName?.ar : item.productName?.en;
@@ -155,6 +195,20 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
                 </span>
               );
             })}
+            <Tooltip position={tooltipPos} content={t('table.copyItems')}>
+              <Button
+                variant="ghost"
+                size="custom"
+                className="h-5 w-5 p-0 text-secondary hover:text-foreground self-start"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  void copyToClipboard(itemTexts.join('\n')).then(() => toast.success(t('table.copied'))).catch(() => toast.error('Copy failed'));
+                }}
+                aria-label={t('table.copyItems')}
+              >
+                <LuCopy size={12} />
+              </Button>
+            </Tooltip>
           </div>
         );
       },
@@ -165,19 +219,25 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
         const duaa = getReservationValue(order, 'shortDuaa');
         if (!duaa) return <span className={order.status === 'partial-paid' ? 'text-orange-600 dark:text-orange-400' : 'text-secondary'}>-</span>;
         return (
-          <Tooltip position={tooltipPos} content={t('table.copyDuaa')}>
-            <Button
-              variant="icon-primary"
-              size="custom"
-              onClick={(e) => {
-                e.stopPropagation();
-                void copyToClipboard(duaa).then(() => toast.success(t('table.copied'))).catch(() => toast.error('Copy failed'));
-              }}
-              aria-label={t('table.copyDuaa')}
-            >
-              <LuHandHelping size={16} />
-            </Button>
-          </Tooltip>
+          <div className="flex flex-col items-center gap-1">
+            <span className="inline-flex items-center justify-center p-2 text-primary">
+              <LuHandHelping size={24} />
+            </span>
+            <Tooltip position={tooltipPos} content={t('table.copyDuaa')}>
+              <Button
+                variant="ghost"
+                size="custom"
+                className="h-5 w-5 p-0 text-secondary hover:text-foreground"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  void copyToClipboard(duaa).then(() => toast.success(t('table.copied'))).catch(() => toast.error('Copy failed'));
+                }}
+                aria-label={t('table.copyDuaa')}
+              >
+                <LuCopy size={12} />
+              </Button>
+            </Tooltip>
+          </div>
         );
       },
       className: 'min-w-16',
@@ -188,19 +248,102 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
         const photoUrl = getReservationValue(order, 'photo');
         if (!photoUrl) return <span className={order.status === 'partial-paid' ? 'text-orange-600 dark:text-orange-400' : 'text-secondary'}>-</span>;
         return (
-          <Tooltip position={tooltipPos} content="View Photo">
-            <a
-              href={photoUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()}
-              className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 transition-colors ${order.status === 'partial-paid' ? 'text-orange-600 dark:text-orange-400' : 'text-blue-500'}`}
-            >
-              <LuImage size={16} />
-            </a>
-          </Tooltip>
+          <div className="flex flex-col items-center gap-1">
+            <Tooltip position={tooltipPos} content={t('table.viewPhoto')}>
+              <a
+                href={photoUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className={`inline-flex items-center justify-center p-2 text-primary ${order.status === 'partial-paid' ? 'text-orange-600 dark:text-orange-400' : ''}`}
+              >
+                <LuImage size={24} />
+              </a>
+            </Tooltip>
+            <div className="flex flex-row gap-1">
+              <Tooltip position={tooltipPos} content={t('table.uploadPhoto')}>
+                <Button
+                  variant="ghost"
+                  size="custom"
+                  className="h-5 w-5 p-0 text-secondary hover:text-foreground"
+                  disabled
+                  aria-label={t('table.uploadPhoto')}
+                >
+                  <LuUpload size={12} />
+                </Button>
+              </Tooltip>
+              <Tooltip position={tooltipPos} content={t('table.downloadPhoto')}>
+                <Button
+                  variant="ghost"
+                  size="custom"
+                  className="h-5 w-5 p-0 text-secondary hover:text-foreground"
+                  disabled
+                  aria-label={t('table.downloadPhoto')}
+                >
+                  <LuDownload size={12} />
+                </Button>
+              </Tooltip>
+              <Tooltip position={tooltipPos} content={t('table.editPhoto')}>
+                <Button
+                  variant="ghost"
+                  size="custom"
+                  className="h-5 w-5 p-0 text-secondary hover:text-foreground"
+                  disabled
+                  aria-label={t('table.editPhoto')}
+                >
+                  <LuPencil size={12} />
+                </Button>
+              </Tooltip>
+            </div>
+          </div>
         );
       },
+      className: 'min-w-16',
+    },
+    {
+      header: t('table.design'),
+      accessor: () => (
+        <div className="flex flex-col items-center gap-1">
+          <span className="inline-flex items-center justify-center p-2 text-primary">
+            <LuPalette size={24} />
+          </span>
+          <div className="flex flex-row gap-1">
+            <Tooltip position={tooltipPos} content={t('table.uploadDesign')}>
+              <Button
+                variant="ghost"
+                size="custom"
+                className="h-5 w-5 p-0 text-secondary hover:text-foreground"
+                disabled
+                aria-label={t('table.uploadDesign')}
+              >
+                <LuUpload size={12} />
+              </Button>
+            </Tooltip>
+            <Tooltip position={tooltipPos} content={t('table.downloadDesign')}>
+              <Button
+                variant="ghost"
+                size="custom"
+                className="h-5 w-5 p-0 text-secondary hover:text-foreground"
+                disabled
+                aria-label={t('table.downloadDesign')}
+              >
+                <LuDownload size={12} />
+              </Button>
+            </Tooltip>
+            <Tooltip position={tooltipPos} content={t('table.editDesign')}>
+              <Button
+                variant="ghost"
+                size="custom"
+                className="h-5 w-5 p-0 text-secondary hover:text-foreground"
+                disabled
+                aria-label={t('table.editDesign')}
+              >
+                <LuPencil size={12} />
+              </Button>
+            </Tooltip>
+          </div>
+        </div>
+      ),
       className: 'min-w-16',
     },
     {
@@ -274,16 +417,6 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
               </Button>
             </Tooltip>
 
-            <Tooltip position={tooltipPos} content="Download Design (Coming Soon)">
-              <Button
-                variant="icon-primary"
-                size="custom"
-                disabled
-                aria-label="Download Design"
-              >
-                <LuDownload size={16} />
-              </Button>
-            </Tooltip>
           </div>
         </div>
       ),

@@ -12,6 +12,10 @@ import ConfirmModal, { useConfirmModal } from '@/components/ui/confirm-modal';
 import { Order } from '@/types/Order';
 import { Category } from '@/types/Category';
 import { Referral } from '@/types/Referral';
+import {
+  buildOrderWhatsappMessageFromOrder,
+  buildProcessingOrderWhatsappFollowUpMessage,
+} from '@/lib/order-whatsapp';
 
 import ExecutionFilters from './components/execution-filters';
 import { useExecutionColumns } from './components/execution-table-columns';
@@ -232,30 +236,66 @@ export default function ExecutionPage() {
     [t, locale],
   );
 
-  const normalizeWhatsappPhone = (rawPhone?: string) => {
+  const normalizeWhatsappPhone = (rawPhone?: string, withPlus = false) => {
     if (!rawPhone) return null;
+
     let normalized = rawPhone.trim();
     if (!normalized) return null;
+
     normalized = normalized.replace(/[\s().-]/g, '');
     if (normalized.startsWith('00')) {
       normalized = `+${normalized.slice(2)}`;
     }
+
     if (normalized.startsWith('+')) {
       const digits = normalized.slice(1).replace(/\D/g, '');
       if (!digits) return null;
-      return digits;
+      return withPlus ? `+${digits}` : digits;
     }
+
     const digitsOnly = normalized.replace(/\D/g, '');
     if (!digitsOnly) return null;
-    return digitsOnly;
+    return withPlus ? `+${digitsOnly}` : digitsOnly;
   };
 
-  const buildWhatsappMessage = (order: Order) => {
-    const name = order.billingData?.fullName || '';
-    const orderNumber = order.orderNumber;
-    const total = order.totalAmount?.toFixed(2);
-    const currency = order.currency;
-    return `Hello ${name}, regarding your order ${orderNumber} (${total} ${currency})`;
+  const copyToClipboard = async (value: string) => {
+    if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(value);
+      return;
+    }
+
+    if (typeof document === 'undefined') {
+      throw new Error('Clipboard is not available');
+    }
+
+    const textArea = document.createElement('textarea');
+    textArea.value = value;
+    textArea.setAttribute('readonly', '');
+    textArea.style.position = 'fixed';
+    textArea.style.left = '-9999px';
+    document.body.appendChild(textArea);
+    textArea.select();
+
+    const copied = document.execCommand('copy');
+    document.body.removeChild(textArea);
+
+    if (!copied) {
+      throw new Error('Copy command failed');
+    }
+  };
+
+  const resolveOrderWhatsappPayload = async (order: Order) => {
+    const fullOrder = await fetchOrderDetails(order._id, false);
+    const resolvedOrder = fullOrder || order;
+    const message =
+      resolvedOrder.status === 'processing'
+        ? buildProcessingOrderWhatsappFollowUpMessage(resolvedOrder)
+        : buildOrderWhatsappMessageFromOrder(resolvedOrder);
+
+    return {
+      message,
+      whatsappPhone: normalizeWhatsappPhone(resolvedOrder.billingData?.phone),
+    };
   };
 
   const viewOrder = async (order: Order) => {
@@ -284,57 +324,65 @@ export default function ExecutionPage() {
     setIsChangeExecutionDateModalOpen(false);
   };
 
-  const startWhatsappMessage = async (order: Order) => {
+  const startOrderWhatsappMessage = async (order: Order) => {
     try {
       setWhatsappOrderId(order._id);
-      const phone = normalizeWhatsappPhone(order.billingData?.phone);
-      if (!phone) {
-        toast.error('No phone number found');
+      const { message, whatsappPhone } =
+        await resolveOrderWhatsappPayload(order);
+
+      if (!whatsappPhone) {
+        toast.error(t('copyWhatsapp.invalidPhone'));
         return;
       }
-      const message = buildWhatsappMessage(order);
-      const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+
+      const whatsappUrl = `https://wa.me/${whatsappPhone}?text=${encodeURIComponent(message)}`;
       const popup = window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
       if (!popup) {
-        toast.error('Failed to open WhatsApp');
+        toast.error(t('copyWhatsapp.failed'));
         return;
       }
-      toast.success('WhatsApp opened');
+
+      toast.success(t('copyWhatsapp.success'));
     } catch (error) {
-      console.error('Error starting WhatsApp message:', error);
-      toast.error('Failed to open WhatsApp');
+      console.error('Error starting WhatsApp order message:', error);
+      toast.error(t('copyWhatsapp.failed'));
     } finally {
       setWhatsappOrderId(null);
     }
   };
 
-  const copyPhone = async (order: Order) => {
+  const copyOrderWhatsappNumber = async (order: Order) => {
     try {
       setCopyingPhoneOrderId(order._id);
-      const phone = normalizeWhatsappPhone(order.billingData?.phone);
-      if (!phone) {
-        toast.error('No phone number found');
+      const whatsappPhone = normalizeWhatsappPhone(
+        order.billingData?.phone,
+        true,
+      );
+
+      if (!whatsappPhone) {
+        toast.error(t('copyWhatsapp.invalidPhone'));
         return;
       }
-      await navigator.clipboard.writeText(phone);
-      toast.success('Phone number copied');
+
+      await copyToClipboard(whatsappPhone);
+      toast.success(t('copyWhatsapp.copyNumberSuccess'));
     } catch (error) {
-      console.error('Error copying phone:', error);
-      toast.error('Failed to copy phone number');
+      console.error('Error copying WhatsApp number:', error);
+      toast.error(t('copyWhatsapp.copyNumberFailed'));
     } finally {
       setCopyingPhoneOrderId(null);
     }
   };
 
-  const copyMessage = async (order: Order) => {
+  const copyOrderWhatsappMessage = async (order: Order) => {
     try {
       setCopyingMessageOrderId(order._id);
-      const message = buildWhatsappMessage(order);
-      await navigator.clipboard.writeText(message);
-      toast.success('Message copied');
+      const { message } = await resolveOrderWhatsappPayload(order);
+      await copyToClipboard(message);
+      toast.success(t('copyWhatsapp.copyMessageSuccess'));
     } catch (error) {
-      console.error('Error copying message:', error);
-      toast.error('Failed to copy message');
+      console.error('Error copying WhatsApp message:', error);
+      toast.error(t('copyWhatsapp.copyMessageFailed'));
     } finally {
       setCopyingMessageOrderId(null);
     }
@@ -471,9 +519,9 @@ export default function ExecutionPage() {
 
   const columns = useExecutionColumns({
     onView: viewOrder,
-    onWhatsapp: startWhatsappMessage,
-    onCopyPhone: copyPhone,
-    onCopyMessage: copyMessage,
+    onWhatsapp: startOrderWhatsappMessage,
+    onCopyPhone: copyOrderWhatsappNumber,
+    onCopyMessage: copyOrderWhatsappMessage,
     onChangeExecutionDate: handleChangeExecutionDate,
     onToggleSelect: toggleOrderSelection,
     onToggleSelectAll: toggleSelectAllVisible,

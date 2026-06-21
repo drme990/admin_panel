@@ -14,6 +14,9 @@ import {
   LuPalette,
   LuUpload,
   LuPencil,
+  LuHistory,
+  LuShare2,
+  LuPenLine,
 } from 'react-icons/lu';
 import { FaWhatsapp } from 'react-icons/fa6';
 
@@ -73,6 +76,11 @@ interface ColumnCallbacks {
   onCopyPhone: (order: Order) => void;
   onCopyMessage: (order: Order) => void;
   onChangeExecutionDate: (order: Order) => void;
+  onEditField: (order: Order, field: 'name' | 'items' | 'duaa' | 'photo') => void;
+  onUploadPhoto: (order: Order) => void;
+  onCopyPhotoUrl: (order: Order) => void;
+  onChangeStatus: (order: Order) => void;
+  onViewHistory: (order: Order) => void;
   onToggleSelect: (orderId: string) => void;
   onToggleSelectAll: () => void;
   selectedOrderIds: string[];
@@ -92,6 +100,11 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
     onCopyPhone,
     onCopyMessage,
     onChangeExecutionDate,
+    onEditField,
+    onUploadPhoto,
+    onCopyPhotoUrl,
+    onChangeStatus,
+    onViewHistory,
     onToggleSelect,
     onToggleSelectAll,
     selectedOrderIds,
@@ -146,6 +159,17 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
                   <LuCopy size={12} />
                 </Button>
               </Tooltip>
+              <Tooltip position={tooltipPos} content={t('table.editName')}>
+                <Button
+                  variant="ghost"
+                  size="custom"
+                  className="h-5 w-5 p-0 text-secondary hover:text-foreground"
+                  onClick={(e) => { e.stopPropagation(); onEditField(order, 'name'); }}
+                  aria-label={t('table.editName')}
+                >
+                  <LuPencil size={12} />
+                </Button>
+              </Tooltip>
             </div>
             <div className="flex items-center gap-1.5">
               <span className={`font-semibold whitespace-nowrap text-sm ${order.status === 'partial-paid' ? 'text-orange-600 dark:text-orange-400' : 'text-foreground'}`}>
@@ -195,20 +219,33 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
                 </span>
               );
             })}
-            <Tooltip position={tooltipPos} content={t('table.copyItems')}>
-              <Button
-                variant="ghost"
-                size="custom"
-                className="h-5 w-5 p-0 text-secondary hover:text-foreground self-start"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  void copyToClipboard(itemTexts.join('\n')).then(() => toast.success(t('table.copied'))).catch(() => toast.error('Copy failed'));
-                }}
-                aria-label={t('table.copyItems')}
-              >
-                <LuCopy size={12} />
-              </Button>
-            </Tooltip>
+            <div className="flex flex-row gap-1 self-start">
+              <Tooltip position={tooltipPos} content={t('table.copyItems')}>
+                <Button
+                  variant="ghost"
+                  size="custom"
+                  className="h-5 w-5 p-0 text-secondary hover:text-foreground"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void copyToClipboard(itemTexts.join('\n')).then(() => toast.success(t('table.copied'))).catch(() => toast.error('Copy failed'));
+                  }}
+                  aria-label={t('table.copyItems')}
+                >
+                  <LuCopy size={12} />
+                </Button>
+              </Tooltip>
+              <Tooltip position={tooltipPos} content={t('table.editItems')}>
+                <Button
+                  variant="ghost"
+                  size="custom"
+                  className="h-5 w-5 p-0 text-secondary hover:text-foreground"
+                  onClick={(e) => { e.stopPropagation(); onEditField(order, 'items'); }}
+                  aria-label={t('table.editItems')}
+                >
+                  <LuPencil size={12} />
+                </Button>
+              </Tooltip>
+            </div>
           </div>
         );
       },
@@ -223,20 +260,33 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
             <span className="inline-flex items-center justify-center p-2 text-primary">
               <LuHandHelping size={24} />
             </span>
-            <Tooltip position={tooltipPos} content={t('table.copyDuaa')}>
-              <Button
-                variant="ghost"
-                size="custom"
-                className="h-5 w-5 p-0 text-secondary hover:text-foreground"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  void copyToClipboard(duaa).then(() => toast.success(t('table.copied'))).catch(() => toast.error('Copy failed'));
-                }}
-                aria-label={t('table.copyDuaa')}
-              >
-                <LuCopy size={12} />
-              </Button>
-            </Tooltip>
+            <div className="flex flex-row gap-1">
+              <Tooltip position={tooltipPos} content={t('table.copyDuaa')}>
+                <Button
+                  variant="ghost"
+                  size="custom"
+                  className="h-5 w-5 p-0 text-secondary hover:text-foreground"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void copyToClipboard(duaa).then(() => toast.success(t('table.copied'))).catch(() => toast.error('Copy failed'));
+                  }}
+                  aria-label={t('table.copyDuaa')}
+                >
+                  <LuCopy size={12} />
+                </Button>
+              </Tooltip>
+              <Tooltip position={tooltipPos} content={t('table.editDuaa')}>
+                <Button
+                  variant="ghost"
+                  size="custom"
+                  className="h-5 w-5 p-0 text-secondary hover:text-foreground"
+                  onClick={(e) => { e.stopPropagation(); onEditField(order, 'duaa'); }}
+                  aria-label={t('table.editDuaa')}
+                >
+                  <LuPencil size={12} />
+                </Button>
+              </Tooltip>
+            </div>
           </div>
         );
       },
@@ -266,7 +316,7 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
                   variant="ghost"
                   size="custom"
                   className="h-5 w-5 p-0 text-secondary hover:text-foreground"
-                  disabled
+                  onClick={(e) => { e.stopPropagation(); onUploadPhoto(order); }}
                   aria-label={t('table.uploadPhoto')}
                 >
                   <LuUpload size={12} />
@@ -277,21 +327,31 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
                   variant="ghost"
                   size="custom"
                   className="h-5 w-5 p-0 text-secondary hover:text-foreground"
-                  disabled
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (photoUrl) {
+                      const a = document.createElement('a');
+                      a.href = photoUrl;
+                      a.download = `photo-${order.orderNumber}`;
+                      a.target = '_blank';
+                      a.rel = 'noopener noreferrer';
+                      a.click();
+                    }
+                  }}
                   aria-label={t('table.downloadPhoto')}
                 >
                   <LuDownload size={12} />
                 </Button>
               </Tooltip>
-              <Tooltip position={tooltipPos} content={t('table.editPhoto')}>
+              <Tooltip position={tooltipPos} content={t('table.sharePhoto')}>
                 <Button
                   variant="ghost"
                   size="custom"
                   className="h-5 w-5 p-0 text-secondary hover:text-foreground"
-                  disabled
-                  aria-label={t('table.editPhoto')}
+                  onClick={(e) => { e.stopPropagation(); onCopyPhotoUrl(order); }}
+                  aria-label={t('table.sharePhoto')}
                 >
-                  <LuPencil size={12} />
+                  <LuShare2 size={12} />
                 </Button>
               </Tooltip>
             </div>
@@ -345,6 +405,58 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
         </div>
       ),
       className: 'min-w-16',
+    },
+    {
+      header: t('table.paidAmount'),
+      accessor: (order: Order) => {
+        const displayedAmount =
+          typeof order.paidAmount === 'number' ? order.paidAmount : order.totalAmount;
+        return (
+          <span
+            className={`font-bold ${order.status === 'partial-paid' ? 'text-orange-600 dark:text-orange-400' : 'text-success'}`}
+          >
+            {displayedAmount.toFixed(2)} {order.currency}
+          </span>
+        );
+      },
+      className: 'min-w-24',
+    },
+    {
+      header: t('table.remainingAmount'),
+      accessor: (order: Order) => {
+        const remaining = order.remainingAmount ?? 0;
+
+        if (order.status === 'processing') {
+          return (
+            <span className={`inline-block px-2 py-0.5 text-xs font-medium rounded-full ${STATUS_COLORS[order.status]}`}>
+              {t('status.processing')}
+            </span>
+          );
+        }
+
+        if (order.status === 'partial-paid' || order.isPartialPayment) {
+          return (
+            <span className="font-bold text-orange-600 dark:text-orange-400">
+              {remaining.toFixed(2)} {order.currency}
+            </span>
+          );
+        }
+
+        if (remaining <= 0) {
+          return (
+            <span className="inline-block px-2 py-0.5 text-xs font-medium rounded-full bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+              {t('status.paid')}
+            </span>
+          );
+        }
+
+        return (
+          <span className="font-bold text-orange-600 dark:text-orange-400">
+            {remaining.toFixed(2)} {order.currency}
+          </span>
+        );
+      },
+      className: 'min-w-24',
     },
     {
       header: t('table.actions'),
@@ -417,6 +529,27 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
               </Button>
             </Tooltip>
 
+            <Tooltip position={tooltipPos} content={t('table.changeStatus')}>
+              <Button
+                variant="icon-primary"
+                size="custom"
+                onClick={(e) => { e.stopPropagation(); onChangeStatus(order); }}
+                aria-label={t('table.changeStatus')}
+              >
+                <LuPenLine size={16} />
+              </Button>
+            </Tooltip>
+
+            <Tooltip position={tooltipPos} content={t('table.orderHistory')}>
+              <Button
+                variant="icon-primary"
+                size="custom"
+                onClick={(e) => { e.stopPropagation(); onViewHistory(order); }}
+                aria-label={t('table.orderHistory')}
+              >
+                <LuHistory size={16} />
+              </Button>
+            </Tooltip>
           </div>
         </div>
       ),

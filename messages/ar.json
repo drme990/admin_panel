@@ -36,7 +36,8 @@
     "status": {
       "all": "الكل",
       "paid": "خالص",
-      "partial-paid": "باقي حساب"
+      "partial-paid": "باقي حساب",
+      "processing": "قيد المعالجة"
     },
     "stats": {
       "totalOrders": "إجمالي الطلبات",
@@ -63,6 +64,7 @@
       "whatsapp": "واتساب",
       "viewDetails": "عرض التفاصيل",
       "changeExecutionDate": "تغيير التاريخ",
+      "changeStatus": "تغيير الحالة",
       "copyName": "نسخ الأسم",
       "copyOrderNumber": "نسخ رقم الطلب",
       "copyItems": "نسخ العناصر",
@@ -75,6 +77,14 @@
       "uploadPhoto": "رفع الصورة",
       "downloadPhoto": "تحميل الصورة",
       "editPhoto": "تعديل الصورة",
+      "sharePhoto": "مشاركة الصورة",
+      "editName": "تعديل الاسم",
+      "editItems": "تعديل العناصر",
+      "editDuaa": "تعديل الدعاء",
+      "editOrder": "تعديل الطلب",
+      "paidAmount": "تم الدفع",
+      "remainingAmount": "المتبقي",
+      "orderHistory": "تاريخ التغييرات",
       "copied": "تم النسخ!"
     },
     "bulkAction": {
@@ -92,6 +102,51 @@
       "saving": "جارٍ الحفظ...",
       "success": "تم تحديث تاريخ التنفيذ",
       "failed": "فشل تحديث تاريخ التنفيذ"
+    },
+    "changeStatusModal": {
+      "success": "تم تحديث الحالة بنجاح",
+      "failed": "فشل تحديث الحالة"
+    },
+    "editOrder": {
+      "title": "تعديل الطلب",
+      "sacrificeFor": "الذبيحة لأجل",
+      "sacrificeForPlaceholder": "أدخل الأسماء...",
+      "shortDuaa": "الدعاء المختصر",
+      "shortDuaaPlaceholder": "أدخل الدعاء...",
+      "photo": "الصورة",
+      "photoPlaceholder": "رابط الصورة",
+      "uploadPhoto": "رفع الصورة",
+      "downloadPhoto": "تحميل الصورة",
+      "sharePhoto": "مشاركة الصورة",
+      "items": "العناصر",
+      "save": "حفظ",
+      "saving": "جارٍ الحفظ...",
+      "close": "إغلاق",
+      "success": "تم تحديث الطلب بنجاح",
+      "failed": "فشل تحديث الطلب",
+      "invalidImage": "الرجاء اختيار ملف صورة صالح",
+      "noPhotoToShare": "لا توجد صورة للمشاركة",
+      "photoUrlCopied": "تم نسخ رابط الصورة",
+      "addName": "إضافة اسم",
+      "loadingProducts": "جارٍ تحميل المنتجات...",
+      "selectProduct": "اختر منتجاً",
+      "addItem": "إضافة عنصر"
+    },
+    "orderHistory": {
+      "title": "تاريخ تغييرات الطلب",
+      "close": "إغلاق",
+      "empty": "لم يتم العثور على سجلات",
+      "loadFailed": "فشل تحميل سجل التغييرات",
+      "typeName": "الاسم",
+      "typeItems": "العناصر",
+      "typeDuaa": "الدعاء",
+      "typePhoto": "الصورة",
+      "typeExecutionDate": "تاريخ التنفيذ",
+      "typeBulkExecutionDate": "تاريخ التنفيذ بالجملة",
+      "typeUnknown": "غير معروف",
+      "previous": "السابق",
+      "new": "الجديد",
+      "by": "بواسطة"
     },
     "header": {
       "executions": "تنفيذات",

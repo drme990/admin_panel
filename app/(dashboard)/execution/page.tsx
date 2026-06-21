@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { toast } from 'react-toastify';
 
@@ -9,7 +9,7 @@ import Pagination from '@/components/ui/pagination';
 import BulkAction from '@/components/ui/bulk-action';
 import ConfirmModal, { useConfirmModal } from '@/components/ui/confirm-modal';
 
-import { Order } from '@/types/Order';
+import { Order, OrderItem, OrderStatus } from '@/types/Order';
 import { Category } from '@/types/Category';
 import { Referral } from '@/types/Referral';
 import {
@@ -21,7 +21,10 @@ import ExecutionFilters from './components/execution-filters';
 import { useExecutionColumns } from './components/execution-table-columns';
 import ExecutionTitle from './components/execution-title';
 import OrderDetailModal from '../orders/components/order-detail-modal';
+import ChangeStatusModal from '../orders/components/change-status-modal';
 import ChangeExecutionDateModal from './components/change-execution-date-modal';
+import EditOrderModal from './components/edit-order-modal';
+import OrderHistoryModal, { OrderHistoryEntry } from './components/order-history-modal';
 
 interface ExecutionResponse {
   success: boolean;
@@ -108,6 +111,17 @@ export default function ExecutionPage() {
   const [whatsappOrderId, setWhatsappOrderId] = useState<string | null>(null);
   const [copyingPhoneOrderId, setCopyingPhoneOrderId] = useState<string | null>(null);
   const [copyingMessageOrderId, setCopyingMessageOrderId] = useState<string | null>(null);
+  const [isEditOrderModalOpen, setIsEditOrderModalOpen] = useState(false);
+  const [editingField, setEditingField] = useState<'name' | 'items' | 'duaa' | 'photo' | null>(null);
+  const [savingOrderId, setSavingOrderId] = useState<string | null>(null);
+  const [uploadingPhotoOrderId, setUploadingPhotoOrderId] = useState<string | null>(null);
+  const photoUploadOrderRef = useRef<Order | null>(null);
+  const photoInputRef = useRef<HTMLInputElement | null>(null);
+  const [isChangeStatusModalOpen, setIsChangeStatusModalOpen] = useState(false);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [isOrderHistoryModalOpen, setIsOrderHistoryModalOpen] = useState(false);
+  const [orderHistory, setOrderHistory] = useState<OrderHistoryEntry[]>([]);
+  const [loadingOrderHistory, setLoadingOrderHistory] = useState(false);
   const { confirm, modalProps } = useConfirmModal();
 
   // Fetch categories once
@@ -324,6 +338,199 @@ export default function ExecutionPage() {
     setIsChangeExecutionDateModalOpen(false);
   };
 
+  const handleEditField = (order: Order, field: 'name' | 'items' | 'duaa' | 'photo') => {
+    setSelectedOrder(order);
+    setEditingField(field);
+    setIsEditOrderModalOpen(true);
+  };
+
+  const closeEditOrderModal = () => {
+    setIsEditOrderModalOpen(false);
+    setEditingField(null);
+  };
+
+  const handleViewHistory = async (order: Order) => {
+    setSelectedOrder(order);
+    setIsOrderHistoryModalOpen(true);
+    setLoadingOrderHistory(true);
+    setOrderHistory([]);
+    try {
+      const res = await fetch(`/api/orders/${order._id}/history`);
+      const data = await res.json();
+      if (data.success) {
+        setOrderHistory(data.data || []);
+      } else {
+        toast.error(data.error || t('orderHistory.loadFailed'));
+      }
+    } catch (error) {
+      console.error('Error fetching order history:', error);
+      toast.error(t('orderHistory.loadFailed'));
+    } finally {
+      setLoadingOrderHistory(false);
+    }
+  };
+
+  const closeOrderHistoryModal = () => {
+    setIsOrderHistoryModalOpen(false);
+    setOrderHistory([]);
+  };
+
+  const handleUploadPhoto = (order: Order) => {
+    photoUploadOrderRef.current = order;
+    photoInputRef.current?.click();
+  };
+
+  const handlePhotoFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const order = photoUploadOrderRef.current;
+    if (!order) return;
+    if (!file.type.startsWith('image/')) {
+      toast.error(t('editOrder.invalidImage'));
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const photoUrl = reader.result as string;
+      await updateOrder(order._id, { photo: photoUrl });
+      photoUploadOrderRef.current = null;
+      if (photoInputRef.current) photoInputRef.current.value = '';
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleCopyPhotoUrl = async (order: Order) => {
+    const photoUrl = order.reservationData?.find((f) => f.key === 'photo')?.value;
+    if (!photoUrl) {
+      toast.error(t('editOrder.noPhotoToShare'));
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(photoUrl);
+      toast.success(t('editOrder.photoUrlCopied'));
+    } catch {
+      toast.error(t('editOrder.failed'));
+    }
+  };
+
+  const handleChangeStatus = (order: Order) => {
+    setSelectedOrder(order);
+    setIsChangeStatusModalOpen(true);
+  };
+
+  const closeChangeStatusModal = () => {
+    setIsChangeStatusModalOpen(false);
+  };
+
+  const updateOrderStatus = async (status: OrderStatus, cancellationReason?: string) => {
+    if (!selectedOrder || status === selectedOrder.status) {
+      closeChangeStatusModal();
+      return;
+    }
+
+    try {
+      setUpdatingStatus(true);
+      const payload: Record<string, unknown> = { status };
+      if (status === 'cancelled' && cancellationReason) {
+        payload.cancellationReason = cancellationReason;
+      }
+      const res = await fetch(`/api/orders/${selectedOrder._id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to update order status');
+      }
+
+      const updated = data.data as Order;
+
+      setOrders((prev) =>
+        prev.map((order) =>
+          order._id === selectedOrder._id
+            ? { ...order, status: updated.status, cancellationReason: updated.cancellationReason }
+            : order,
+        ),
+      );
+      toast.success(t('changeStatusModal.success'));
+      closeChangeStatusModal();
+    } catch (error) {
+      console.error('Error updating order status:', error);
+      toast.error(t('changeStatusModal.failed'));
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
+
+  const updateOrder = async (
+    orderId: string,
+    fields: {
+      sacrificeFor?: string;
+      shortDuaa?: string;
+      photo?: string;
+      items?: OrderItem[];
+    },
+  ) => {
+    try {
+      setSavingOrderId(orderId);
+      const body: Record<string, unknown> = {};
+      if ('sacrificeFor' in fields) body.sacrificeFor = fields.sacrificeFor;
+      if ('shortDuaa' in fields) body.shortDuaa = fields.shortDuaa;
+      if ('photo' in fields) body.photo = fields.photo;
+      if ('items' in fields) body.items = fields.items;
+
+      const res = await fetch(`/api/orders/${orderId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to update order');
+      }
+
+      toast.success(t('editOrder.success'));
+      setOrders((prev) =>
+        prev.map((o) => {
+          if (o._id !== orderId) return o;
+          const next = { ...o };
+          if (fields.sacrificeFor !== undefined || fields.shortDuaa !== undefined || fields.photo !== undefined) {
+            next.reservationData = [...(o.reservationData || [])];
+            if (fields.sacrificeFor !== undefined) {
+              const idx = next.reservationData.findIndex((f) => f.key === 'sacrificeFor');
+              if (idx >= 0) next.reservationData[idx] = { ...next.reservationData[idx], value: fields.sacrificeFor };
+              else next.reservationData.push({ key: 'sacrificeFor', label: { ar: 'الذبيحة لأجل', en: 'Sacrifice For' }, type: 'text', value: fields.sacrificeFor });
+            }
+            if (fields.shortDuaa !== undefined) {
+              const idx = next.reservationData.findIndex((f) => f.key === 'shortDuaa');
+              if (idx >= 0) next.reservationData[idx] = { ...next.reservationData[idx], value: fields.shortDuaa };
+              else next.reservationData.push({ key: 'shortDuaa', label: { ar: 'الدعاء المختصر', en: 'Short Duaa' }, type: 'textarea', value: fields.shortDuaa });
+            }
+            if (fields.photo !== undefined) {
+              const idx = next.reservationData.findIndex((f) => f.key === 'photo');
+              if (idx >= 0) next.reservationData[idx] = { ...next.reservationData[idx], value: fields.photo };
+              else next.reservationData.push({ key: 'photo', label: { ar: 'الصورة', en: 'Photo' }, type: 'picture', value: fields.photo });
+            }
+          }
+          if (fields.items !== undefined) {
+            next.items = fields.items;
+          }
+          return next;
+        }),
+      );
+      return true;
+    } catch (error) {
+      console.error('Error updating order:', error);
+      toast.error(t('editOrder.failed'));
+      return false;
+    } finally {
+      setSavingOrderId(null);
+    }
+  };
+
   const startOrderWhatsappMessage = async (order: Order) => {
     try {
       setWhatsappOrderId(order._id);
@@ -523,6 +730,11 @@ export default function ExecutionPage() {
     onCopyPhone: copyOrderWhatsappNumber,
     onCopyMessage: copyOrderWhatsappMessage,
     onChangeExecutionDate: handleChangeExecutionDate,
+    onEditField: handleEditField,
+    onUploadPhoto: handleUploadPhoto,
+    onCopyPhotoUrl: handleCopyPhotoUrl,
+    onChangeStatus: handleChangeStatus,
+    onViewHistory: handleViewHistory,
     onToggleSelect: toggleOrderSelection,
     onToggleSelectAll: toggleSelectAllVisible,
     selectedOrderIds,
@@ -650,7 +862,40 @@ export default function ExecutionPage() {
         locale={locale}
       />
 
+      <EditOrderModal
+        isOpen={isEditOrderModalOpen}
+        onClose={closeEditOrderModal}
+        order={selectedOrder}
+        field={editingField}
+        onUpdate={updateOrder}
+        updating={savingOrderId !== null}
+      />
+
+      <ChangeStatusModal
+        isOpen={isChangeStatusModalOpen}
+        onClose={closeChangeStatusModal}
+        currentStatus={selectedOrder?.status || 'paid'}
+        onUpdateStatus={updateOrderStatus}
+        updating={updatingStatus}
+      />
+
+      <OrderHistoryModal
+        isOpen={isOrderHistoryModalOpen}
+        onClose={closeOrderHistoryModal}
+        orderNumber={selectedOrder?.orderNumber || ''}
+        history={orderHistory}
+        loading={loadingOrderHistory}
+      />
+
       <ConfirmModal {...modalProps} />
+
+      <input
+        ref={photoInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handlePhotoFileChange}
+      />
     </div>
   );
 }

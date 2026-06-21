@@ -8,8 +8,10 @@ export type AdminPage =
   | 'booking'
   | 'coupons'
   | 'countries'
+  | 'categories'
   | 'admins'
   | 'referrals'
+  | 'refTracker'
   | 'activityLogs'
   | 'appearance'
   | 'storage-manager'
@@ -23,12 +25,12 @@ export const ALL_ADMIN_PAGES: AdminPage[] = [
   'products',
   'products-discovery',
   'orders',
-  'execution',
   'customers',
   'analytics',
   'booking',
   'coupons',
   'countries',
+  'categories',
   'admins',
   'referrals',
   'activityLogs',
@@ -37,7 +39,8 @@ export const ALL_ADMIN_PAGES: AdminPage[] = [
   'payments',
   'storage-manager',
   'crm',
-  'accounts'
+  'accounts',
+  'suppliers',
 ];
 
 export interface User {

@@ -169,7 +169,7 @@ const navItems = [
     key: 'refTracker',
     href: '/ref-tracker',
     icon: LuRadar,
-    superAdminOnly: false,
+    superAdminOnly: true,
     permissionKey: 'refTracker',
   },
   {

@@ -36,7 +36,8 @@
     "status": {
       "all": "All",
       "paid": "Paid",
-      "partial-paid": "Partially Paid"
+      "partial-paid": "Partially Paid",
+      "processing": "Processing"
     },
     "stats": {
       "totalOrders": "Total Orders",
@@ -63,6 +64,7 @@
       "whatsapp": "WhatsApp",
       "viewDetails": "View Details",
       "changeExecutionDate": "Change Date",
+      "changeStatus": "Change Status",
       "copyName": "Copy Name",
       "copyOrderNumber": "Copy Order Number",
       "copyItems": "Copy Items",
@@ -75,6 +77,14 @@
       "uploadPhoto": "Upload Photo",
       "downloadPhoto": "Download Photo",
       "editPhoto": "Edit Photo",
+      "sharePhoto": "Share Photo",
+      "editName": "Edit Name",
+      "editItems": "Edit Items",
+      "editDuaa": "Edit Duaa",
+      "editOrder": "Edit Order",
+      "paidAmount": "Paid",
+      "remainingAmount": "Remaining",
+      "orderHistory": "Order History",
       "copied": "Copied!"
     },
     "bulkAction": {
@@ -92,6 +102,51 @@
       "saving": "Saving...",
       "success": "Execution date updated",
       "failed": "Failed to update execution date"
+    },
+    "changeStatusModal": {
+      "success": "Status updated successfully",
+      "failed": "Failed to update status"
+    },
+    "editOrder": {
+      "title": "Edit Order",
+      "sacrificeFor": "Sacrifice For",
+      "sacrificeForPlaceholder": "Enter names...",
+      "shortDuaa": "Short Duaa",
+      "shortDuaaPlaceholder": "Enter duaa...",
+      "photo": "Photo",
+      "photoPlaceholder": "Photo URL",
+      "uploadPhoto": "Upload Photo",
+      "downloadPhoto": "Download Photo",
+      "sharePhoto": "Share Photo",
+      "items": "Items",
+      "save": "Save",
+      "saving": "Saving...",
+      "close": "Close",
+      "success": "Order updated successfully",
+      "failed": "Failed to update order",
+      "invalidImage": "Please select a valid image file",
+      "noPhotoToShare": "No photo to share",
+      "photoUrlCopied": "Photo URL copied",
+      "addName": "Add Name",
+      "loadingProducts": "Loading products...",
+      "selectProduct": "Select a product",
+      "addItem": "Add Item"
+    },
+    "orderHistory": {
+      "title": "Order Change History",
+      "close": "Close",
+      "empty": "No history entries found",
+      "loadFailed": "Failed to load order history",
+      "typeName": "Name",
+      "typeItems": "Items",
+      "typeDuaa": "Duaa",
+      "typePhoto": "Photo",
+      "typeExecutionDate": "Execution Date",
+      "typeBulkExecutionDate": "Bulk Execution Date",
+      "typeUnknown": "Unknown",
+      "previous": "Previous",
+      "new": "New",
+      "by": "By"
     },
     "header": {
       "executions": "Executions",

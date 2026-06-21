@@ -22,7 +22,6 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
       id,
       type = 'text',
       suffix,
-      required = false,
       requiredClassName = 'text-error ml-1',
       ...props
     },
@@ -38,7 +37,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
             className="block text-sm font-medium text-foreground"
           >
             {label}
-            {required && <span className={requiredClassName}>*</span>}
+            {props.required && <span className={requiredClassName}>*</span>}
           </label>
         )}
         <div className="relative flex items-center">

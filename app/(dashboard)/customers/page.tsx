@@ -333,42 +333,61 @@ export default function CustomersPage() {
     [tOrders],
   );
 
-  const fetchCustomerRefHistory = useCallback(
+  const fetchCustomerHistory = useCallback(
     async (customer: Customer) => {
       try {
         setLoadingRefHistory(true);
+        setLoadingCountryHistory(true);
         const response = await fetch(
-          `/api/customers/${customer.appId}/${customer._id}/ref-history`,
+          `/api/customers/${customer.appId}/${customer._id}/history`,
         );
         const data = await response.json();
 
         if (data.success) {
-          setRefHistory(data.data.history || []);
+          setRefHistory(data.data.refHistory || []);
+          setCountryHistory(data.data.countryHistory || []);
         } else {
           toast.error(data.error || tCommon('historyLoadFailed'));
         }
       } catch (error) {
-        console.error('Error fetching customer ref history:', error);
+        console.error('Error fetching customer history:', error);
         toast.error(tCommon('historyLoadFailed'));
       } finally {
         setLoadingRefHistory(false);
+        setLoadingCountryHistory(false);
       }
     },
     [tCommon],
   );
 
-  const updateCustomerRef = useCallback(
-    async (customer: Customer, nextRefValue: string) => {
-      const nextRef = nextRefValue || getDefaultRefForApp(customer.appId);
-      setUpdatingId(customer._id);
+  const updateCustomer = useCallback(
+    async (
+      customer: Customer,
+      fields: { ref?: string; detectedCountry?: string | null },
+    ) => {
+      const hasRef = 'ref' in fields;
+      const hasCountry = 'detectedCountry' in fields;
+
+      if (!hasRef && !hasCountry) return false;
+
+      if (hasRef) setUpdatingId(customer._id);
+      if (hasCountry) setUpdatingCountryId(getCustomerKey(customer));
 
       try {
+        const body: Record<string, unknown> = {};
+        if (hasRef) {
+          body.ref = fields.ref || getDefaultRefForApp(customer.appId);
+        }
+        if (hasCountry) {
+          body.detectedCountry = fields.detectedCountry || null;
+        }
+
         const response = await fetch(
-          `/api/customers/${customer.appId}/${customer._id}/ref`,
+          `/api/customers/${customer.appId}/${customer._id}`,
           {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ref: nextRef }),
+            body: JSON.stringify(body),
           },
         );
 
@@ -378,89 +397,37 @@ export default function CustomersPage() {
           return false;
         }
 
-        await fetchCustomers();
+        if (hasRef) {
+          await fetchCustomers();
+        }
+        if (hasCountry) {
+          setCustomers((prev) =>
+            prev.map((item) =>
+              item._id === customer._id && item.appId === customer.appId
+                ? { ...item, detectedCountry: fields.detectedCountry || null }
+                : item,
+            ),
+          );
+          setSelectedCustomer((current) =>
+            current &&
+              current._id === customer._id &&
+              current.appId === customer.appId
+              ? { ...current, detectedCountry: fields.detectedCountry || null }
+              : current,
+          );
+        }
+
         toast.success(t('messages.updateSuccess'));
         return true;
       } catch {
         toast.error(t('messages.updateFailed'));
         return false;
       } finally {
-        setUpdatingId(null);
+        if (hasRef) setUpdatingId(null);
+        if (hasCountry) setUpdatingCountryId(null);
       }
     },
     [fetchCustomers, t],
-  );
-
-  const fetchCustomerCountryHistory = useCallback(
-    async (customer: Customer) => {
-      try {
-        setLoadingCountryHistory(true);
-        const response = await fetch(
-          `/api/customers/${customer.appId}/${customer._id}/detected-country-history`,
-        );
-        const data = await response.json();
-
-        if (data.success) {
-          setCountryHistory(data.data || []);
-        } else {
-          toast.error(data.error || 'Failed to load country history');
-        }
-      } catch (error) {
-        console.error('Error fetching customer country history:', error);
-        toast.error('Failed to load country history');
-      } finally {
-        setLoadingCountryHistory(false);
-      }
-    },
-    [],
-  );
-
-  const updateCustomerCountry = useCallback(
-    async (customer: Customer, nextCountry: string) => {
-      setUpdatingCountryId(getCustomerKey(customer));
-
-      try {
-        const response = await fetch(
-          `/api/customers/${customer.appId}/${customer._id}/detected-country`,
-          {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ detectedCountry: nextCountry || null }),
-          },
-        );
-
-        const data = await response.json();
-        if (!data.success) {
-          toast.error(data.error || t('messages.updateFailed'));
-          return false;
-        }
-
-        setCustomers((prev) =>
-          prev.map((item) =>
-            item._id === customer._id && item.appId === customer.appId
-              ? { ...item, detectedCountry: nextCountry || null }
-              : item,
-          ),
-        );
-
-        setSelectedCustomer((current) =>
-          current &&
-            current._id === customer._id &&
-            current.appId === customer.appId
-            ? { ...current, detectedCountry: nextCountry || null }
-            : current,
-        );
-
-        toast.success(t('messages.updateSuccess'));
-        return true;
-      } catch {
-        toast.error(t('messages.updateFailed'));
-        return false;
-      } finally {
-        setUpdatingCountryId(null);
-      }
-    },
-    [t],
   );
 
   const handleToggleBan = useCallback(
@@ -514,9 +481,9 @@ export default function CustomersPage() {
 
   const handleRefDropdownChange = useCallback(
     async (customer: Customer, nextRefValue: string) => {
-      await updateCustomerRef(customer, nextRefValue);
+      await updateCustomer(customer, { ref: nextRefValue });
     },
-    [updateCustomerRef],
+    [updateCustomer],
   );
 
   const handleToggleCustomerSelection = useCallback((customer: Customer) => {
@@ -597,12 +564,9 @@ export default function CustomersPage() {
       setRefHistory([]);
       setCountryHistory([]);
       setIsHistoryModalOpen(true);
-      await Promise.all([
-        fetchCustomerRefHistory(customer),
-        fetchCustomerCountryHistory(customer),
-      ]);
+      await fetchCustomerHistory(customer);
     },
-    [fetchCustomerRefHistory, fetchCustomerCountryHistory],
+    [fetchCustomerHistory],
   );
 
   const handleViewOrders = useCallback(
@@ -621,9 +585,9 @@ export default function CustomersPage() {
 
   const handleCountryChange = useCallback(
     async (customer: Customer, nextCountry: string) => {
-      await updateCustomerCountry(customer, nextCountry);
+      await updateCustomer(customer, { detectedCountry: nextCountry });
     },
-    [updateCustomerCountry],
+    [updateCustomer],
   );
 
   const columns = useMemo(

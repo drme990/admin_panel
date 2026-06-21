@@ -105,6 +105,7 @@ interface ColumnCallbacks {
   whatsappOrderId: string | null;
   copyingPhoneOrderId: string | null;
   copyingMessageOrderId: string | null;
+  uploadingPhotoOrderId: string | null;
 }
 
 export function useExecutionColumns(callbacks: ColumnCallbacks) {
@@ -129,6 +130,7 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
     whatsappOrderId,
     copyingPhoneOrderId,
     copyingMessageOrderId,
+    uploadingPhotoOrderId,
   } = callbacks;
 
   const columns = [
@@ -291,9 +293,14 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
                   size="custom"
                   className="h-5 w-5 p-0 text-secondary hover:text-foreground"
                   onClick={(e) => { e.stopPropagation(); onUploadPhoto(order); }}
+                  disabled={uploadingPhotoOrderId === order._id}
                   aria-label={t('table.uploadPhoto')}
                 >
-                  <LuUpload size={12} />
+                  {uploadingPhotoOrderId === order._id ? (
+                    <LuRefreshCw size={12} className="animate-spin" />
+                  ) : (
+                    <LuUpload size={12} />
+                  )}
                 </Button>
               </Tooltip>
               <Tooltip position={tooltipPos} content={t('table.downloadPhoto')}>

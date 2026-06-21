@@ -3,10 +3,12 @@
 import { useEffect, useCallback, useRef, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { toast } from 'react-toastify';
+import { LuDownload } from 'react-icons/lu';
 
 import Table from '@/components/ui/table';
 import Pagination from '@/components/ui/pagination';
 import BulkAction from '@/components/ui/bulk-action';
+import Button from '@/components/ui/button';
 import ConfirmModal, { useConfirmModal } from '@/components/ui/confirm-modal';
 
 import { Order } from '@/types/Order';
@@ -19,6 +21,7 @@ import ExecutionTitle from './components/execution-title';
 import ChangeExecutionDateModal from './components/change-execution-date-modal';
 import EditOrderModal from './components/edit-order-modal';
 import OrderHistoryModal, { OrderHistoryEntry } from './components/order-history-modal';
+import ExportModal from './components/export-modal';
 import OrderDetailModal from '../components/order-detail-modal';
 import ChangeStatusModal from '../components/change-status-modal';
 import OrderStats from '../components/order-stats';
@@ -49,6 +52,36 @@ interface ExecutionResponse {
 
 type DateQuickPreset = 'today' | 'tomorrow' | 'yesterday' | 'last7Days' | 'all';
 
+async function uploadImageToR2(file: File): Promise<string> {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('folder', 'customers');
+
+  const res = await fetch('/api/upload/image', {
+    method: 'POST',
+    credentials: 'include',
+    body: formData,
+  });
+
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data.success || !data.data?.url) {
+    throw new Error(data.error || 'Failed to upload image to R2');
+  }
+  return data.data.url as string;
+}
+
+async function deleteOldImage(url: string): Promise<void> {
+  if (!url || url.startsWith('data:')) return;
+  const res = await fetch(`/api/upload/image?url=${encodeURIComponent(url)}`, {
+    method: 'DELETE',
+    credentials: 'include',
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || 'Failed to delete old image');
+  }
+}
+
 export default function ExecutionPage() {
   const t = useTranslations('execution');
   const locale = useLocale();
@@ -57,6 +90,8 @@ export default function ExecutionPage() {
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [referrals, setReferrals] = useState<Referral[]>([]);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [uploadingPhotoOrderId, setUploadingPhotoOrderId] = useState<string | null>(null);
   const { confirm, modalProps } = useConfirmModal();
 
   const {
@@ -380,19 +415,39 @@ export default function ExecutionPage() {
     if (!file) return;
     const order = photoUploadOrderRef.current;
     if (!order) return;
-    if (!file.type.startsWith('image/')) {
+
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
+    if (!allowedTypes.includes(file.type)) {
       toast.error(t('editOrder.invalidImage'));
+      if (photoInputRef.current) photoInputRef.current.value = '';
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error(t('editOrder.imageTooLarge'));
+      if (photoInputRef.current) photoInputRef.current.value = '';
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = async () => {
-      const photoUrl = reader.result as string;
+    try {
+      setUploadingPhotoOrderId(order._id);
+      const oldPhotoUrl = order.reservationData?.find((f) => f.key === 'photo')?.value;
+      const photoUrl = await uploadImageToR2(file);
       await updateOrder(order._id, { photo: photoUrl });
+
+      if (oldPhotoUrl) {
+        deleteOldImage(oldPhotoUrl).catch((error: unknown) => {
+          console.warn('Failed to delete old customer image:', error);
+        });
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : t('editOrder.uploadFailed');
+      toast.error(message);
+      console.error('Photo upload failed:', error);
+    } finally {
       photoUploadOrderRef.current = null;
+      setUploadingPhotoOrderId(null);
       if (photoInputRef.current) photoInputRef.current.value = '';
-    };
-    reader.readAsDataURL(file);
+    }
   };
 
   const handleCopyPhotoUrl = async (order: Order) => {
@@ -538,6 +593,7 @@ export default function ExecutionPage() {
     whatsappOrderId,
     copyingPhoneOrderId,
     copyingMessageOrderId,
+    uploadingPhotoOrderId,
   });
 
   return (
@@ -547,6 +603,15 @@ export default function ExecutionPage() {
           <h1 className="text-2xl font-bold text-foreground">{t('title')}</h1>
           <p className="text-secondary mt-1">{t('description')}</p>
         </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setIsExportModalOpen(true)}
+          className="shrink-0"
+        >
+          <LuDownload size={16} className="me-2" />
+          {t('export.button')}
+        </Button>
       </div>
 
       <ExecutionFilters
@@ -672,6 +737,13 @@ export default function ExecutionPage() {
         orderNumber={selectedOrder?.orderNumber || ''}
         history={orderHistory as OrderHistoryEntry[]}
         loading={loadingOrderHistory}
+      />
+
+      <ExportModal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+        orders={orders}
+        date={fromDateFilter || ''}
       />
 
       <ConfirmModal {...modalProps} />

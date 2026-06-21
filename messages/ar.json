@@ -35,13 +35,19 @@
     "total": "الإجمالي",
     "status": {
       "all": "الكل",
-      "paid": "خالص",
+      "pending": "معلق",
+      "processing": "قيد المعالجة",
       "partial-paid": "باقي حساب",
-      "processing": "قيد المعالجة"
+      "paid": "خالص",
+      "completed": "مكتمل",
+      "failed": "فاشل",
+      "refunded": "مسترد",
+      "cancelled": "ملغي"
     },
     "stats": {
       "totalOrders": "إجمالي الطلبات",
-      "totalItems": "إجمالي العناصر"
+      "totalItems": "إجمالي العناصر",
+      "uncategorized": "غير مصنف"
     },
     "table": {
       "orderNumber": "رقم الطلب",
@@ -54,8 +60,11 @@
       "photo": "الصورة",
       "items": "العناصر",
       "itemsCount": "عناصر",
+      "itemCount": "{count} عنصر/عناصر",
+      "quantityTotal": "الكمية {count}",
       "total": "الإجمالي",
       "status": "الحالة",
+      "date": "آخر تحديث",
       "source": "المصدر",
       "actions": "الإجراءات",
       "copyDuaa": "نسخ الدعاء",
@@ -85,7 +94,8 @@
       "paidAmount": "تم الدفع",
       "remainingAmount": "المتبقي",
       "orderHistory": "تاريخ التغييرات",
-      "copied": "تم النسخ!"
+      "copied": "تم النسخ!",
+      "downloaded": "تم التحميل بنجاح"
     },
     "bulkAction": {
       "selectedCount": "تم تحديد {count} طلبات",
@@ -104,8 +114,72 @@
       "failed": "فشل تحديث تاريخ التنفيذ"
     },
     "changeStatusModal": {
+      "title": "تغيير حالة الطلب",
+      "cancel": "إلغاء",
+      "save": "حفظ",
+      "saving": "جارٍ الحفظ...",
+      "cancellationReasonLabel": "سبب الإلغاء",
+      "cancellationReasonPlaceholder": "أدخل سبب الإلغاء...",
+      "cancellationReasonRequired": "سبب الإلغاء مطلوب",
       "success": "تم تحديث الحالة بنجاح",
       "failed": "فشل تحديث الحالة"
+    },
+    "orderDetails": "تفاصيل الطلب",
+    "loadingOrderDetails": "جارٍ تحميل تفاصيل الطلب...",
+    "detailsLoadFailed": "فشل تحميل تفاصيل الطلب",
+    "statusUpdateSuccess": "تم تحديث حالة الطلب بنجاح",
+    "statusUpdateFailed": "فشل تحديث حالة الطلب",
+    "amountDetails": "تفاصيل المبلغ",
+    "items": "المنتجات",
+    "customerInfo": "معلومات العميل",
+    "email": "البريد الإلكتروني",
+    "phone": "رقم الهاتف",
+    "country": "الدولة",
+    "source": "المصدر",
+    "locale": "اللغة",
+    "termsAgreedAt": "وقت الموافقة على الشروط",
+    "updatedAt": "آخر تحديث",
+    "productId": "معرف المنتج",
+    "productSlug": "رابط المنتج",
+    "referral": "الإحالة",
+    "yes": "نعم",
+    "customerType": {
+      "label": "نوع العميل",
+      "guest": "زائر عام",
+      "registered": "مستخدم مسجل"
+    },
+    "totals": {
+      "totalPaidNow": "العملية الحالية",
+      "fullAmount": "المبلغ الإجمالي للطلب",
+      "paidAmount": "المبلغ المدفوع",
+      "remainingAmount": "المبلغ المتبقي",
+      "couponCode": "رمز القسيمة",
+      "couponDiscount": "خصم القسيمة",
+      "isUpgrade": "طلب ترقية",
+      "upgradeDiscount": "خصم الترقية",
+      "originalProduct": "المنتج الأصلي"
+    },
+    "paymentTimeline": {
+      "title": "سجل المدفوعات",
+      "empty": "لا توجد سجلات دفع حتى الآن",
+      "paymentLabel": "دفعة #{index}",
+      "orderAmount": "مبلغ الطلب",
+      "gatewayAmount": "مبلغ بوابة الدفع",
+      "method": "طريقة الدفع",
+      "createdAt": "تاريخ الإنشاء",
+      "paidAt": "تاريخ الدفع",
+      "reference": "مرجع إيزي كاش",
+      "productCode": "كود المنتج",
+      "customerReference": "مرجع العميل",
+      "statuses": {
+        "pending": "معلق",
+        "paid": "مدفوع",
+        "failed": "فاشل",
+        "expired": "منتهي"
+      }
+    },
+    "reservationData": {
+      "title": "بيانات الحجز"
     },
     "editOrder": {
       "title": "تعديل الطلب",
@@ -170,7 +244,8 @@
       "copyMessageFailed": "فشل نسخ رسالة واتساب"
     },
     "messages": {
-      "loadFailed": "فشل تحميل بيانات التنفيذ."
+      "loadFailed": "فشل تحميل بيانات التنفيذ.",
+      "downloadFailed": "فشل تحميل الصورة"
     }
   },
   "orders": {

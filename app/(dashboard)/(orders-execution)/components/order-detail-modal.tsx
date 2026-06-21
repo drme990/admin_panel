@@ -4,7 +4,7 @@ import Image from 'next/image';
 
 import Modal from '@/components/ui/modal';
 import { Order, OrderPayment } from '@/types/Order';
-import { STATUS_COLORS, PAYMENT_STATUS_COLORS } from './order-table-columns';
+import { STATUS_COLORS, PAYMENT_STATUS_COLORS } from './order-status';
 import {
   LuCreditCard as CreditCard,
   LuCalendar as Calendar,
@@ -16,6 +16,16 @@ import {
   LuTag as Tag,
   LuUserRoundPlus as UserRoundPlus,
 } from 'react-icons/lu';
+
+interface Props {
+  isOpen: boolean;
+  onClose: () => void;
+  order: Order | null;
+  loadingDetails: boolean;
+  formatDate: (date: string) => string;
+  locale: string;
+  namespace?: 'orders' | 'execution';
+}
 
 function isOrderGuest(order: Pick<Order, 'userId' | 'isGuest'>): boolean {
   if (typeof order.isGuest === 'boolean') return order.isGuest;
@@ -89,15 +99,6 @@ function getPaymentTimeline(order: Order): OrderPayment[] {
   );
 }
 
-interface Props {
-  isOpen: boolean;
-  onClose: () => void;
-  order: Order | null;
-  loadingDetails: boolean;
-  formatDate: (date: string) => string;
-  locale: string;
-}
-
 export default function OrderDetailModal({
   isOpen,
   onClose,
@@ -105,8 +106,9 @@ export default function OrderDetailModal({
   loadingDetails,
   formatDate,
   locale,
+  namespace = 'orders',
 }: Props) {
-  const t = useTranslations('orders');
+  const t = useTranslations(namespace);
 
   const formatMoney = (amount: number | undefined, currency: string) =>
     `${Number(amount ?? 0).toFixed(2)} ${currency}`;
@@ -148,7 +150,7 @@ export default function OrderDetailModal({
                       {t(`status.${order.status}`)}
                     </span>
                     {order.cancellationReason && order.status === 'cancelled' && (
-                      <span className="text-xs text-secondary truncate max-w-[200px]">
+                      <span className="text-xs text-secondary truncate max-w-50">
                         {order.cancellationReason}
                       </span>
                     )}

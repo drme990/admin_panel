@@ -6,7 +6,7 @@ import { useTranslations } from 'next-intl';
 import Modal from '@/components/ui/modal';
 import Button from '@/components/ui/button';
 import { OrderStatus } from '@/types/Order';
-import { STATUS_COLORS } from './order-table-columns';
+import { STATUS_COLORS } from './order-status';
 
 interface Props {
   isOpen: boolean;
@@ -14,6 +14,7 @@ interface Props {
   currentStatus: OrderStatus;
   onUpdateStatus: (status: OrderStatus, cancellationReason?: string) => void;
   updating: boolean;
+  namespace?: 'orders' | 'execution';
 }
 
 const AVAILABLE_STATUSES: OrderStatus[] = ['completed', 'refunded', 'cancelled'];
@@ -24,8 +25,9 @@ export default function ChangeStatusModal({
   currentStatus,
   onUpdateStatus,
   updating,
+  namespace = 'orders',
 }: Props) {
-  const t = useTranslations('orders');
+  const t = useTranslations(namespace);
   const [selectedStatus, setSelectedStatus] = useState<OrderStatus>('completed');
   const [cancellationReason, setCancellationReason] = useState('');
 

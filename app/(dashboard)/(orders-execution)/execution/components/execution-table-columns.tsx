@@ -70,6 +70,22 @@ async function copyToClipboard(text: string): Promise<void> {
   });
 }
 
+async function downloadImageDirectly(url: string, filename: string): Promise<void> {
+  const response = await fetch(url, { mode: 'cors' });
+  if (!response.ok) {
+    throw new Error(`Failed to download image: ${response.status} ${response.statusText}`);
+  }
+  const blob = await response.blob();
+  const blobUrl = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = blobUrl;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(blobUrl);
+}
+
 interface ColumnCallbacks {
   onView: (order: Order) => void;
   onWhatsapp: (order: Order) => void;
@@ -251,48 +267,6 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
       },
     },
     {
-      header: t('table.shortDuaa'),
-      accessor: (order: Order) => {
-        const duaa = getReservationValue(order, 'shortDuaa');
-        if (!duaa) return <span className={order.status === 'partial-paid' ? 'text-orange-600 dark:text-orange-400' : 'text-secondary'}>-</span>;
-        return (
-          <div className="flex flex-col items-center gap-1">
-            <span className="inline-flex items-center justify-center p-2 text-primary">
-              <LuHandHelping size={24} />
-            </span>
-            <div className="flex flex-row gap-1">
-              <Tooltip position={tooltipPos} content={t('table.copyDuaa')}>
-                <Button
-                  variant="ghost"
-                  size="custom"
-                  className="h-5 w-5 p-0 text-secondary hover:text-foreground"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    void copyToClipboard(duaa).then(() => toast.success(t('table.copied'))).catch(() => toast.error('Copy failed'));
-                  }}
-                  aria-label={t('table.copyDuaa')}
-                >
-                  <LuCopy size={12} />
-                </Button>
-              </Tooltip>
-              <Tooltip position={tooltipPos} content={t('table.editDuaa')}>
-                <Button
-                  variant="ghost"
-                  size="custom"
-                  className="h-5 w-5 p-0 text-secondary hover:text-foreground"
-                  onClick={(e) => { e.stopPropagation(); onEditField(order, 'duaa'); }}
-                  aria-label={t('table.editDuaa')}
-                >
-                  <LuPencil size={12} />
-                </Button>
-              </Tooltip>
-            </div>
-          </div>
-        );
-      },
-      className: 'min-w-16',
-    },
-    {
       header: t('table.photo'),
       accessor: (order: Order) => {
         const photoUrl = getReservationValue(order, 'photo');
@@ -330,12 +304,9 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
                   onClick={(e) => {
                     e.stopPropagation();
                     if (photoUrl) {
-                      const a = document.createElement('a');
-                      a.href = photoUrl;
-                      a.download = `photo-${order.orderNumber}`;
-                      a.target = '_blank';
-                      a.rel = 'noopener noreferrer';
-                      a.click();
+                      void downloadImageDirectly(photoUrl, `photo-${order.orderNumber}`)
+                        .then(() => toast.success(t('table.downloaded')))
+                        .catch(() => toast.error(t('messages.downloadFailed')));
                     }
                   }}
                   aria-label={t('table.downloadPhoto')}
@@ -404,6 +375,48 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
           </div>
         </div>
       ),
+      className: 'min-w-16',
+    },
+    {
+      header: t('table.shortDuaa'),
+      accessor: (order: Order) => {
+        const duaa = getReservationValue(order, 'shortDuaa');
+        if (!duaa) return <span className={order.status === 'partial-paid' ? 'text-orange-600 dark:text-orange-400' : 'text-secondary'}>-</span>;
+        return (
+          <div className="flex flex-col items-center gap-1">
+            <span className="inline-flex items-center justify-center p-2 text-primary">
+              <LuHandHelping size={24} />
+            </span>
+            <div className="flex flex-row gap-1">
+              <Tooltip position={tooltipPos} content={t('table.copyDuaa')}>
+                <Button
+                  variant="ghost"
+                  size="custom"
+                  className="h-5 w-5 p-0 text-secondary hover:text-foreground"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void copyToClipboard(duaa).then(() => toast.success(t('table.copied'))).catch(() => toast.error('Copy failed'));
+                  }}
+                  aria-label={t('table.copyDuaa')}
+                >
+                  <LuCopy size={12} />
+                </Button>
+              </Tooltip>
+              <Tooltip position={tooltipPos} content={t('table.editDuaa')}>
+                <Button
+                  variant="ghost"
+                  size="custom"
+                  className="h-5 w-5 p-0 text-secondary hover:text-foreground"
+                  onClick={(e) => { e.stopPropagation(); onEditField(order, 'duaa'); }}
+                  aria-label={t('table.editDuaa')}
+                >
+                  <LuPencil size={12} />
+                </Button>
+              </Tooltip>
+            </div>
+          </div>
+        );
+      },
       className: 'min-w-16',
     },
     {

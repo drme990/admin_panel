@@ -35,13 +35,19 @@
     "total": "Total",
     "status": {
       "all": "All",
-      "paid": "Paid",
+      "pending": "Pending",
+      "processing": "Processing",
       "partial-paid": "Partially Paid",
-      "processing": "Processing"
+      "paid": "Paid",
+      "completed": "Completed",
+      "failed": "Failed",
+      "refunded": "Refunded",
+      "cancelled": "Cancelled"
     },
     "stats": {
       "totalOrders": "Total Orders",
-      "totalItems": "Total Items"
+      "totalItems": "Total Items",
+      "uncategorized": "Uncategorized"
     },
     "table": {
       "orderNumber": "Order #",
@@ -54,8 +60,11 @@
       "photo": "Photo",
       "items": "Items",
       "itemsCount": "items",
+      "itemCount": "{count} item(s)",
+      "quantityTotal": "Qty {count}",
       "total": "Total",
       "status": "Status",
+      "date": "Last Updated",
       "source": "Source",
       "actions": "Actions",
       "copyDuaa": "Copy Duaa",
@@ -85,7 +94,8 @@
       "paidAmount": "Paid",
       "remainingAmount": "Remaining",
       "orderHistory": "Order History",
-      "copied": "Copied!"
+      "copied": "Copied!",
+      "downloaded": "Downloaded successfully"
     },
     "bulkAction": {
       "selectedCount": "Selected {count} orders",
@@ -104,8 +114,72 @@
       "failed": "Failed to update execution date"
     },
     "changeStatusModal": {
+      "title": "Change Order Status",
+      "cancel": "Cancel",
+      "save": "Save",
+      "saving": "Saving...",
+      "cancellationReasonLabel": "Cancellation Reason",
+      "cancellationReasonPlaceholder": "Enter the reason for cancellation...",
+      "cancellationReasonRequired": "Cancellation reason is required",
       "success": "Status updated successfully",
       "failed": "Failed to update status"
+    },
+    "orderDetails": "Order Details",
+    "loadingOrderDetails": "Loading order details...",
+    "detailsLoadFailed": "Failed to load order details",
+    "statusUpdateSuccess": "Order status updated successfully",
+    "statusUpdateFailed": "Failed to update order status",
+    "amountDetails": "Amount Details",
+    "items": "Products",
+    "customerInfo": "Customer Information",
+    "email": "Email",
+    "phone": "Phone Number",
+    "country": "Country",
+    "source": "Source",
+    "locale": "Locale",
+    "termsAgreedAt": "Terms Agreed At",
+    "updatedAt": "Last Updated",
+    "productId": "Product ID",
+    "productSlug": "Product Slug",
+    "referral": "Referral",
+    "yes": "Yes",
+    "customerType": {
+      "label": "Customer Type",
+      "guest": "Public Guest",
+      "registered": "Registered User"
+    },
+    "totals": {
+      "totalPaidNow": "Current Transaction",
+      "fullAmount": "Order Full Amount",
+      "paidAmount": "Paid Amount",
+      "remainingAmount": "Remaining Amount",
+      "couponCode": "Coupon Code",
+      "couponDiscount": "Coupon Discount",
+      "isUpgrade": "Upgrade Order",
+      "upgradeDiscount": "Upgrade Discount",
+      "originalProduct": "Original Product"
+    },
+    "paymentTimeline": {
+      "title": "Payment Timeline",
+      "empty": "No payment records yet",
+      "paymentLabel": "Payment #{index}",
+      "orderAmount": "Order Amount",
+      "gatewayAmount": "Gateway Amount",
+      "method": "Payment Method",
+      "createdAt": "Created At",
+      "paidAt": "Paid At",
+      "reference": "EasyKash Reference",
+      "productCode": "Product Code",
+      "customerReference": "Customer Reference",
+      "statuses": {
+        "pending": "Pending",
+        "paid": "Paid",
+        "failed": "Failed",
+        "expired": "Expired"
+      }
+    },
+    "reservationData": {
+      "title": "Reservation Data"
     },
     "editOrder": {
       "title": "Edit Order",
@@ -170,7 +244,8 @@
       "copyMessageFailed": "Failed to copy WhatsApp message"
     },
     "messages": {
-      "loadFailed": "Failed to load execution data."
+      "loadFailed": "Failed to load execution data.",
+      "downloadFailed": "Failed to download image"
     }
   },
   "orders": {

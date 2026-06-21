@@ -19,7 +19,7 @@ interface CategoryStat {
   products: ProductStat[];
 }
 
-interface OrderStatsData {
+export interface OrderStatsData {
   totalItems: number;
   byCategory: CategoryStat[];
 }
@@ -28,6 +28,7 @@ interface OrderStatsProps {
   stats: OrderStatsData | null;
   loading: boolean;
   locale: string;
+  namespace?: 'orders' | 'execution';
 }
 
 function hexToRgba(hex: string, alpha: number): string {
@@ -39,8 +40,13 @@ function hexToRgba(hex: string, alpha: number): string {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
-export default function OrderStats({ stats, loading, locale }: OrderStatsProps) {
-  const t = useTranslations('orders');
+export default function OrderStats({
+  stats,
+  loading,
+  locale,
+  namespace = 'orders',
+}: OrderStatsProps) {
+  const t = useTranslations(namespace);
 
   if (loading) {
     return (

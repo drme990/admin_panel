@@ -547,6 +547,9 @@ export function useOrderPage(options: UseOrderPageOptions) {
         shortDuaa?: string;
         photo?: string;
         items?: Order['items'];
+        gender?: string;
+        isAlive?: string;
+        intention?: string;
       },
     ): Promise<boolean> => {
       try {
@@ -556,6 +559,9 @@ export function useOrderPage(options: UseOrderPageOptions) {
         if ('shortDuaa' in fields) body.shortDuaa = fields.shortDuaa;
         if ('photo' in fields) body.photo = fields.photo;
         if ('items' in fields) body.items = fields.items;
+        if ('gender' in fields) body.gender = fields.gender;
+        if ('isAlive' in fields) body.isAlive = fields.isAlive;
+        if ('intention' in fields) body.intention = fields.intention;
 
         const res = await fetch(`/api/orders/${orderId}`, {
           method: 'PATCH',
@@ -609,6 +615,45 @@ export function useOrderPage(options: UseOrderPageOptions) {
               label: { ar: 'الصورة', en: 'Photo' },
               type: 'picture',
               value: fields.photo,
+            });
+          }
+        }
+        if (fields.gender !== undefined) {
+          const idx = nextReservationData.findIndex((f) => f.key === 'gender');
+          if (idx >= 0) {
+            nextReservationData[idx] = { ...nextReservationData[idx], value: fields.gender };
+          } else {
+            nextReservationData.push({
+              key: 'gender',
+              label: { ar: 'الجنس', en: 'Gender' },
+              type: 'radio',
+              value: fields.gender,
+            });
+          }
+        }
+        if (fields.isAlive !== undefined) {
+          const idx = nextReservationData.findIndex((f) => f.key === 'isAlive');
+          if (idx >= 0) {
+            nextReservationData[idx] = { ...nextReservationData[idx], value: fields.isAlive };
+          } else {
+            nextReservationData.push({
+              key: 'isAlive',
+              label: { ar: 'الحالة', en: 'Status' },
+              type: 'radio',
+              value: fields.isAlive,
+            });
+          }
+        }
+        if (fields.intention !== undefined) {
+          const idx = nextReservationData.findIndex((f) => f.key === 'intention');
+          if (idx >= 0) {
+            nextReservationData[idx] = { ...nextReservationData[idx], value: fields.intention };
+          } else {
+            nextReservationData.push({
+              key: 'intention',
+              label: { ar: 'النية', en: 'Intention' },
+              type: 'select',
+              value: fields.intention,
             });
           }
         }

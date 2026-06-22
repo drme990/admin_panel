@@ -34,7 +34,7 @@
       "allIntentions": "كل النيات",
       "intention": "النية"
     },
-    "total": "الإجمالي",
+    "total": "إجمالي الحجوزات",
     "status": {
       "all": "الكل",
       "pending": "معلق",
@@ -221,6 +221,9 @@
       "typePhoto": "الصورة",
       "typeExecutionDate": "تاريخ التنفيذ",
       "typeBulkExecutionDate": "تاريخ التنفيذ بالجملة",
+      "typeGender": "الجنس",
+      "typeIsAlive": "الحالة",
+      "typeIntention": "النية",
       "typeUnknown": "غير معروف",
       "previous": "السابق",
       "new": "الجديد",

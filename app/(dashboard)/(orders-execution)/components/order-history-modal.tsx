@@ -14,7 +14,10 @@ export interface OrderHistoryEntry {
   | 'duaa'
   | 'photo'
   | 'executionDate'
-  | 'bulk_execution_date';
+  | 'bulk_execution_date'
+  | 'gender'
+  | 'isAlive'
+  | 'intention';
   previousValue: string | null;
   newValue: string | null;
   changedByUserName: string;
@@ -41,6 +44,9 @@ function formatChangeType(
     photo: 'orderHistory.typePhoto',
     executionDate: 'orderHistory.typeExecutionDate',
     bulk_execution_date: 'orderHistory.typeBulkExecutionDate',
+    gender: 'orderHistory.typeGender',
+    isAlive: 'orderHistory.typeIsAlive',
+    intention: 'orderHistory.typeIntention',
   };
   return t(keyMap[type] || 'orderHistory.typeUnknown');
 }

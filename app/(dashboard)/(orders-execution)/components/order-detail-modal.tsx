@@ -6,15 +6,15 @@ import Modal from '@/components/ui/modal';
 import { Order, OrderPayment } from '@/types/Order';
 import { STATUS_COLORS, PAYMENT_STATUS_COLORS } from '../lib/order-status';
 import {
-  LuCreditCard as CreditCard,
-  LuCalendar as Calendar,
-  LuHash as Hash,
-  LuPackage as Package,
-  LuMail as Mail,
-  LuPhone as Phone,
-  LuGlobe as Globe,
-  LuTag as Tag,
-  LuUserRoundPlus as UserRoundPlus,
+  LuCreditCard,
+  LuCalendar,
+  LuHash,
+  LuPackage,
+  LuMail,
+  LuPhone,
+  LuGlobe,
+  LuTag,
+  LuUserRoundPlus,
 } from 'react-icons/lu';
 
 interface Props {
@@ -175,22 +175,22 @@ export default function OrderDetailModal({
                   <h3 className="font-semibold mb-3">{t('amountDetails')}</h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <InfoRow
-                      icon={<CreditCard size={14} />}
+                      icon={<LuCreditCard size={14} />}
                       label={t('totals.totalPaidNow')}
                       value={formatMoney(currentTransactionAmount, order.currency)}
                     />
                     <InfoRow
-                      icon={<CreditCard size={14} />}
+                      icon={<LuCreditCard size={14} />}
                       label={t('totals.fullAmount')}
                       value={formatMoney(order.fullAmount ?? order.totalAmount, order.currency)}
                     />
                     <InfoRow
-                      icon={<CreditCard size={14} />}
+                      icon={<LuCreditCard size={14} />}
                       label={t('totals.paidAmount')}
                       value={formatMoney(order.paidAmount ?? order.totalAmount, order.currency)}
                     />
                     <InfoRow
-                      icon={<CreditCard size={14} />}
+                      icon={<LuCreditCard size={14} />}
                       label={t('totals.remainingAmount')}
                       value={
                         hasRemaining
@@ -199,26 +199,26 @@ export default function OrderDetailModal({
                       }
                     />
                     <InfoRow
-                      icon={<Tag size={14} />}
+                      icon={<LuTag size={14} />}
                       label={t('totals.couponCode')}
                       value={order.couponCode || 'N/A'}
                     />
                     <InfoRow
-                      icon={<Tag size={14} />}
+                      icon={<LuTag size={14} />}
                       label={t('totals.couponDiscount')}
                       value={`${(order.couponDiscount ?? 0).toFixed(2)} ${order.currency}`}
                     />
                     {order.isUpgrade && (
                       <>
-                        <InfoRow icon={<Tag size={14} />} label={t('totals.isUpgrade')} value={t('yes')} />
+                        <InfoRow icon={<LuTag size={14} />} label={t('totals.isUpgrade')} value={t('yes')} />
                         <InfoRow
-                          icon={<Tag size={14} />}
+                          icon={<LuTag size={14} />}
                           label={t('totals.upgradeDiscount')}
                           value={`${(order.upgradeDiscount ?? 0).toFixed(0)}%`}
                         />
                         {order.fromProductId && (
                           <InfoRow
-                            icon={<Package size={14} />}
+                            icon={<LuPackage size={14} />}
                             label={t('totals.originalProduct')}
                             value={order.fromProductId}
                           />
@@ -256,51 +256,51 @@ export default function OrderDetailModal({
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                               <InfoRow
-                                icon={<CreditCard size={14} />}
+                                icon={<LuCreditCard size={14} />}
                                 label={t('paymentTimeline.orderAmount')}
                                 value={formatMoney(payment.orderAmount ?? payment.amount, payment.currency || order.currency)}
                               />
                               {typeof payment.gatewayAmount === 'number' && (
                                 <InfoRow
-                                  icon={<CreditCard size={14} />}
+                                  icon={<LuCreditCard size={14} />}
                                   label={t('paymentTimeline.gatewayAmount')}
                                   value={formatMoney(payment.gatewayAmount, payment.gatewayCurrency || payment.currency)}
                                 />
                               )}
                               <InfoRow
-                                icon={<CreditCard size={14} />}
+                                icon={<LuCreditCard size={14} />}
                                 label={t('paymentTimeline.method')}
                                 value={payment.paymentMethod || 'N/A'}
                               />
                               <InfoRow
-                                icon={<Calendar size={14} />}
+                                icon={<LuCalendar size={14} />}
                                 label={t('paymentTimeline.createdAt')}
                                 value={formatDate(payment.createdAt)}
                               />
                               {payment.paidAt && (
                                 <InfoRow
-                                  icon={<Calendar size={14} />}
+                                  icon={<LuCalendar size={14} />}
                                   label={t('paymentTimeline.paidAt')}
                                   value={formatDate(payment.paidAt)}
                                 />
                               )}
                               {payment.easykashRef && (
                                 <InfoRow
-                                  icon={<Hash size={14} />}
+                                  icon={<LuHash size={14} />}
                                   label={t('paymentTimeline.reference')}
                                   value={payment.easykashRef}
                                 />
                               )}
                               {payment.easykashProductCode && (
                                 <InfoRow
-                                  icon={<Hash size={14} />}
+                                  icon={<LuHash size={14} />}
                                   label={t('paymentTimeline.productCode')}
                                   value={payment.easykashProductCode}
                                 />
                               )}
                               {customerReference && (
                                 <InfoRow
-                                  icon={<Hash size={14} />}
+                                  icon={<LuHash size={14} />}
                                   label={t('paymentTimeline.customerReference')}
                                   value={customerReference}
                                 />
@@ -320,7 +320,7 @@ export default function OrderDetailModal({
                 {/* Order items */}
                 <div>
                   <h3 className="font-semibold mb-3 flex items-center gap-2">
-                    <Package size={16} /> {t('items')}
+                    <LuPackage size={16} /> {t('items')}
                   </h3>
                   <div className="mb-3 text-xs text-secondary">
                     {t('table.itemCount', { count: order.items.length })} •{' '}
@@ -364,26 +364,26 @@ export default function OrderDetailModal({
                 <div>
                   <h3 className="font-semibold mb-3">{t('customerInfo')}</h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <InfoRow icon={<Hash size={14} />} label={t('table.orderNumber')} value={order.orderNumber} />
-                    <InfoRow icon={<Package size={14} />} label={t('source')} value={order.source || 'manasik'} />
+                    <InfoRow icon={<LuHash size={14} />} label={t('table.orderNumber')} value={order.orderNumber} />
+                    <InfoRow icon={<LuPackage size={14} />} label={t('source')} value={order.source || 'manasik'} />
                     <InfoRow
-                      icon={<Hash size={14} />}
+                      icon={<LuHash size={14} />}
                       label={t('customerType.label')}
                       value={isOrderGuest(order) ? t('customerType.guest') : t('customerType.registered')}
                     />
-                    <InfoRow icon={<Mail size={14} />} label={t('email')} value={order.billingData.email} />
-                    <InfoRow icon={<Phone size={14} />} label={t('phone')} value={order.billingData.phone} />
-                    <InfoRow icon={<Globe size={14} />} label={t('country')} value={order.billingData.country} />
-                    <InfoRow icon={<Calendar size={14} />} label={t('table.date')} value={formatDate(order.statusUpdateTime)} />
-                    <InfoRow icon={<Hash size={14} />} label={t('locale')} value={order.locale || 'N/A'} />
+                    <InfoRow icon={<LuMail size={14} />} label={t('email')} value={order.billingData.email} />
+                    <InfoRow icon={<LuPhone size={14} />} label={t('phone')} value={order.billingData.phone} />
+                    <InfoRow icon={<LuGlobe size={14} />} label={t('country')} value={order.billingData.country} />
+                    <InfoRow icon={<LuCalendar size={14} />} label={t('table.date')} value={formatDate(order.statusUpdateTime)} />
+                    <InfoRow icon={<LuHash size={14} />} label={t('locale')} value={order.locale || 'N/A'} />
                     <InfoRow
-                      icon={<Hash size={14} />}
+                      icon={<LuHash size={14} />}
                       label={t('termsAgreedAt')}
                       value={order.termsAgreedAt ? formatDate(order.termsAgreedAt) : 'N/A'}
                     />
-                    <InfoRow icon={<Hash size={14} />} label={t('updatedAt')} value={formatDate(order.statusUpdateTime)} />
+                    <InfoRow icon={<LuHash size={14} />} label={t('updatedAt')} value={formatDate(order.statusUpdateTime)} />
                     {order.referralId && (
-                      <InfoRow icon={<UserRoundPlus size={14} />} label={t('referral')} value={order.referralId} />
+                      <InfoRow icon={<LuUserRoundPlus size={14} />} label={t('referral')} value={order.referralId} />
                     )}
                   </div>
                 </div>

@@ -3,13 +3,15 @@
 import { useEffect, useCallback, useRef, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { toast } from 'react-toastify';
-import { LuDownload } from 'react-icons/lu';
+import { LuDownload, LuPhone, LuEye } from 'react-icons/lu';
+import { FaWhatsapp } from 'react-icons/fa6';
 
 import Table from '@/components/ui/table';
 import Pagination from '@/components/ui/pagination';
 import BulkAction from '@/components/ui/bulk-action';
 import Button from '@/components/ui/button';
 import ConfirmModal, { useConfirmModal } from '@/components/ui/confirm-modal';
+import Modal from '@/components/ui/modal';
 
 import { Order } from '@/types/Order';
 import { Category } from '@/types/Category';
@@ -64,6 +66,11 @@ export default function ExecutionPage() {
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [uploadingPhotoOrderId, setUploadingPhotoOrderId] = useState<string | null>(null);
   const { confirm, modalProps } = useConfirmModal();
+
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const [categoryModalOrders, setCategoryModalOrders] = useState<Order[]>([]);
+  const [categoryModalLoading, setCategoryModalLoading] = useState(false);
 
   const {
     state,
@@ -272,6 +279,58 @@ export default function ExecutionPage() {
   const handleRefresh = () => {
     void fetchExecution();
   };
+
+  const handleCategoryClick = useCallback(
+    async (categoryId: string) => {
+      setSelectedCategoryId(categoryId);
+      setIsCategoryModalOpen(true);
+      setCategoryModalLoading(true);
+      setCategoryModalOrders([]);
+
+      try {
+        const params = new URLSearchParams();
+        params.set('limit', '500');
+        params.set('page', '1');
+        if (sourceFilter !== 'all') params.set('source', sourceFilter);
+        if (referralFilter) params.set('referralId', referralFilter);
+        params.set('category', categoryId);
+        if (statusFilter !== 'all') params.set('status', statusFilter);
+        if (intentionFilter && intentionFilter !== 'all') params.set('intention', intentionFilter);
+        if (searchQuery) params.set('search', searchQuery);
+
+        const normalizedRange = normalizeDateRange(fromDateFilter, toDateFilter);
+        if (normalizedRange.fromDate) params.set('fromDate', normalizedRange.fromDate);
+        if (normalizedRange.toDate) params.set('toDate', normalizedRange.toDate);
+
+        const res = await fetch(`/api/execution?${params.toString()}`, {
+          cache: 'no-store',
+        });
+        const data: ExecutionResponse = await res.json();
+
+        if (data.success && data.data) {
+          setCategoryModalOrders(data.data.orders);
+        } else {
+          toast.error(data.error || t('messages.loadFailed'));
+          setCategoryModalOrders([]);
+        }
+      } catch {
+        toast.error(t('messages.loadFailed'));
+        setCategoryModalOrders([]);
+      } finally {
+        setCategoryModalLoading(false);
+      }
+    },
+    [
+      fromDateFilter,
+      toDateFilter,
+      sourceFilter,
+      referralFilter,
+      statusFilter,
+      intentionFilter,
+      searchQuery,
+      t,
+    ],
+  );
 
   const fetchExecutionStats = useCallback(
     async (signal?: AbortSignal) => {
@@ -670,7 +729,155 @@ export default function ExecutionPage() {
         onPageSizeChange={setPageSize}
       />
 
-      <OrderStats stats={stats} loading={loadingStats} locale={locale} namespace="execution" />
+      <OrderStats stats={stats} loading={loadingStats} locale={locale} namespace="execution" onCategoryClick={handleCategoryClick} />
+
+      {/* Category Orders Modal */}
+      <Modal
+        isOpen={isCategoryModalOpen}
+        onClose={() => setIsCategoryModalOpen(false)}
+        title={(() => {
+          const cat = stats?.byCategory?.find((c) => c.categoryId === selectedCategoryId);
+          return cat?.categoryName || '';
+        })()}
+        size="xl"
+      >
+        <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
+          {categoryModalLoading ? (
+            <Table<Order>
+              columns={[]}
+              data={[]}
+              loading={true}
+            />
+          ) : categoryModalOrders.length === 0 ? (
+            <div className="text-center py-8 text-secondary">
+              {t('emptyMessage')}
+            </div>
+          ) : (
+            (() => {
+              const groups = new Map<string, Order[]>();
+              categoryModalOrders.forEach((order) => {
+                const firstItem = order.items?.[0];
+                const productName = firstItem
+                  ? (locale === 'ar' ? firstItem.productName?.ar : firstItem.productName?.en) || t('stats.uncategorized')
+                  : t('stats.uncategorized');
+                if (!groups.has(productName)) {
+                  groups.set(productName, []);
+                }
+                groups.get(productName)!.push(order);
+              });
+              return Array.from(groups.entries()).map(([productName, orders]) => (
+                <div key={productName} className="bg-card-bg border border-stroke rounded-site overflow-hidden">
+                  <div className="flex items-center justify-between px-4 py-3 bg-background border-b border-stroke">
+                    <h4 className="font-semibold text-sm">{productName}</h4>
+                    <span className="text-xs text-secondary bg-card-bg border border-stroke rounded-full px-2.5 py-1">
+                      {orders.length} {t('ordersCount')}
+                    </span>
+                  </div>
+                  <Table<Order>
+                    columns={[
+                      {
+                        header: t('table.orderNumber'),
+                        accessor: (order: Order) => (
+                          <span className="font-semibold">{order.orderNumber}</span>
+                        ),
+                        className: 'min-w-28',
+                      },
+                      {
+                        header: t('table.sacrificeFor'),
+                        accessor: (order: Order) => {
+                          const sacrificeFor = order.reservationData?.find((f) => f.key === 'sacrificeFor')?.value;
+                          const names = sacrificeFor
+                            ? sacrificeFor.replace(/\n/g, ',').replace(/;/g, ',').split(',').map((s) => s.trim()).filter(Boolean)
+                            : [];
+                          const displayName = names.length > 0 ? names[0] : (order.billingData?.fullName || '-');
+                          return <span>{displayName}</span>;
+                        },
+                        className: 'min-w-40',
+                      },
+                      {
+                        header: t('table.paidAmount'),
+                        accessor: (order: Order) => {
+                          const displayedAmount = typeof order.paidAmount === 'number' ? order.paidAmount : order.totalAmount;
+                          const remaining = order.remainingAmount ?? 0;
+                          const hasRemaining = remaining > 0.001;
+                          return (
+                            <span className={`font-bold ${hasRemaining ? 'text-orange-600 dark:text-orange-400' : 'text-success'}`}>
+                              {displayedAmount.toFixed(2)} {order.currency}
+                            </span>
+                          );
+                        },
+                        className: 'min-w-24',
+                      },
+                      {
+                        header: t('table.remainingAmount'),
+                        accessor: (order: Order) => {
+                          const remaining = order.remainingAmount;
+                          if (!remaining || remaining <= 0) {
+                            return (
+                              <span className="inline-block px-2 py-0.5 text-xs font-medium rounded-full bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                                {t('status.paid')}
+                              </span>
+                            );
+                          }
+                          return (
+                            <span className="font-bold text-orange-600 dark:text-orange-400">
+                              {remaining.toFixed(2)} {order.currency}
+                            </span>
+                          );
+                        },
+                        className: 'min-w-24',
+                      },
+                      {
+                        header: t('table.actions'),
+                        accessor: (order: Order) => (
+                          <div className="flex flex-row gap-2">
+                            <Button
+                              variant="icon-primary"
+                              size="custom"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                void copyOrderWhatsappNumber(order);
+                              }}
+                              aria-label={t('table.copyPhone')}
+                            >
+                              <LuPhone size={16} />
+                            </Button>
+                            <Button
+                              variant="icon-primary"
+                              size="custom"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                void startOrderWhatsappMessage(order);
+                              }}
+                              aria-label={t('table.whatsapp')}
+                            >
+                              <FaWhatsapp size={16} />
+                            </Button>
+                            <Button
+                              variant="icon-primary"
+                              size="custom"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                viewOrder(order);
+                              }}
+                              aria-label={t('table.viewDetails')}
+                            >
+                              <LuEye size={16} />
+                            </Button>
+                          </div>
+                        ),
+                        className: 'min-w-32',
+                      },
+                    ]}
+                    data={orders}
+                    onRowClick={viewOrder}
+                  />
+                </div>
+              ));
+            })()
+          )}
+        </div>
+      </Modal>
 
       <OrderDetailModal
         isOpen={isModalOpen}

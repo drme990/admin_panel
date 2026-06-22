@@ -29,6 +29,7 @@ interface OrderStatsProps {
   loading: boolean;
   locale: string;
   namespace?: 'orders' | 'execution';
+  onCategoryClick?: (categoryId: string) => void;
 }
 
 function hexToRgba(hex: string, alpha: number): string {
@@ -45,6 +46,7 @@ export default function OrderStats({
   loading,
   locale,
   namespace = 'orders',
+  onCategoryClick,
 }: OrderStatsProps) {
   const t = useTranslations(namespace);
 
@@ -96,7 +98,8 @@ export default function OrderStats({
         return (
           <div
             key={cat.categoryId}
-            className="bg-card-bg border border-stroke rounded-site p-4 sm:p-6 hover:border-primary/50 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 group"
+            className={`bg-card-bg border border-stroke rounded-site p-4 sm:p-6 hover:border-primary/50 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 group ${onCategoryClick ? 'cursor-pointer' : ''}`}
+            onClick={() => onCategoryClick?.(cat.categoryId)}
           >
             <div className="flex items-center justify-between mb-4 sm:mb-5">
               <div

@@ -21,6 +21,7 @@ import Dropdown from '@/components/ui/dropdown';
 import { Order, OrderItem } from '@/types/Order';
 import { Product } from '@/types/Product';
 import { uploadImageToR2, deleteOldImage } from '../../../../lib/image-upload-utils';
+import { RESERVATION_FIELD_PRESETS } from '@/lib/reservation-fields';
 
 interface Props {
   isOpen: boolean;
@@ -32,12 +33,28 @@ interface Props {
     shortDuaa?: string;
     photo?: string;
     items?: OrderItem[];
+    gender?: string;
+    isAlive?: string;
+    intention?: string;
   }) => Promise<boolean>;
   updating: boolean;
 }
 
 function getReservationValue(order: Order | null, key: string): string {
   return order?.reservationData?.find((f) => f.key === key)?.value || '';
+}
+
+function normalizePresetValue(
+  storedValue: string,
+  preset: { options?: Array<{ ar: string; en: string }> } | undefined,
+  locale: string,
+): string {
+  if (!storedValue || !preset?.options) return '';
+  const matched = preset.options.find(
+    (o) => o.ar === storedValue || o.en === storedValue,
+  );
+  if (!matched) return '';
+  return locale === 'ar' ? matched.ar : matched.en;
 }
 
 export default function EditOrderModal({
@@ -61,6 +78,9 @@ export default function EditOrderModal({
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [originalPhotoUrl, setOriginalPhotoUrl] = useState('');
+  const [gender, setGender] = useState('');
+  const [isAlive, setIsAlive] = useState('');
+  const [intention, setIntention] = useState('');
 
   useEffect(() => {
     if (isOpen && order) {
@@ -76,8 +96,14 @@ export default function EditOrderModal({
       setPhotoUrl(currentPhotoUrl);
       setOriginalPhotoUrl(currentPhotoUrl);
       setItems(order.items ? [...order.items] : []);
+      const genderPreset = RESERVATION_FIELD_PRESETS.find((p) => p.key === 'gender');
+      const isAlivePreset = RESERVATION_FIELD_PRESETS.find((p) => p.key === 'isAlive');
+      const intentionPreset = RESERVATION_FIELD_PRESETS.find((p) => p.key === 'intention');
+      setGender(normalizePresetValue(getReservationValue(order, 'gender'), genderPreset, locale));
+      setIsAlive(normalizePresetValue(getReservationValue(order, 'isAlive'), isAlivePreset, locale));
+      setIntention(normalizePresetValue(getReservationValue(order, 'intention'), intentionPreset, locale));
     }
-  }, [isOpen, order]);
+  }, [isOpen, order, locale]);
 
   useEffect(() => {
     if (isOpen && field === 'items') {
@@ -165,11 +191,17 @@ export default function EditOrderModal({
   const handleSave = async () => {
     if (!order || !field) return;
     const fields: Parameters<typeof onUpdate>[1] = {};
-    if (field === 'name')
+    if (field === 'name') {
       fields.sacrificeFor = names.filter(Boolean).join(', ');
+      fields.gender = gender;
+      fields.isAlive = isAlive;
+    }
     if (field === 'duaa') fields.shortDuaa = shortDuaa;
     if (field === 'photo') fields.photo = photoUrl;
-    if (field === 'items') fields.items = items;
+    if (field === 'items') {
+      fields.items = items;
+      fields.intention = intention;
+    }
     const success = await onUpdate(order._id, fields);
     if (success) {
       if (field === 'photo' && originalPhotoUrl && originalPhotoUrl !== photoUrl) {
@@ -291,6 +323,35 @@ export default function EditOrderModal({
               <LuPlus size={14} className="mr-1" />
               {t('editOrder.addName')}
             </Button>
+
+            {(() => {
+              const genderPreset = RESERVATION_FIELD_PRESETS.find((p) => p.key === 'gender');
+              const isAlivePreset = RESERVATION_FIELD_PRESETS.find((p) => p.key === 'isAlive');
+              const genderOptions = genderPreset?.options?.map((o) => ({
+                label: locale === 'ar' ? o.ar : o.en,
+                value: locale === 'ar' ? o.ar : o.en,
+              })) || [];
+              const isAliveOptions = isAlivePreset?.options?.map((o) => ({
+                label: locale === 'ar' ? o.ar : o.en,
+                value: locale === 'ar' ? o.ar : o.en,
+              })) || [];
+              return (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 border-t border-stroke">
+                  <Dropdown
+                    label={locale === 'ar' ? genderPreset?.label?.ar : genderPreset?.label?.en}
+                    value={gender}
+                    options={genderOptions}
+                    onChange={(val) => setGender(val)}
+                  />
+                  <Dropdown
+                    label={locale === 'ar' ? isAlivePreset?.label?.ar : isAlivePreset?.label?.en}
+                    value={isAlive}
+                    options={isAliveOptions}
+                    onChange={(val) => setIsAlive(val)}
+                  />
+                </div>
+              );
+            })()}
           </div>
         )}
 
@@ -380,6 +441,22 @@ export default function EditOrderModal({
             <label className="block text-sm font-medium text-foreground">
               {t('editOrder.items')}
             </label>
+
+            {(() => {
+              const intentionPreset = RESERVATION_FIELD_PRESETS.find((p) => p.key === 'intention');
+              const intentionOptions = intentionPreset?.options?.map((o) => ({
+                label: locale === 'ar' ? o.ar : o.en,
+                value: locale === 'ar' ? o.ar : o.en,
+              })) || [];
+              return (
+                <Dropdown
+                  label={locale === 'ar' ? intentionPreset?.label?.ar : intentionPreset?.label?.en}
+                  value={intention}
+                  options={intentionOptions}
+                  onChange={(val) => setIntention(val)}
+                />
+              );
+            })()}
 
             {loadingProducts && (
               <p className="text-sm text-secondary">{t('editOrder.loadingProducts')}</p>

@@ -15,23 +15,24 @@ import { Order } from '@/types/Order';
 import { Category } from '@/types/Category';
 import { Referral } from '@/types/Referral';
 
-import ExecutionFilters from './components/execution-filters';
-import { useExecutionColumns } from './components/execution-table-columns';
-import ExecutionTitle from './components/execution-title';
-import ChangeExecutionDateModal from './components/change-execution-date-modal';
-import EditOrderModal from './components/edit-order-modal';
-import OrderHistoryModal, { OrderHistoryEntry } from './components/order-history-modal';
-import ExportModal from './components/export-modal';
+import ExecutionFilters from '../components/execution-filters';
+import { useExecutionColumns } from '../components/execution-table-columns';
+import ExecutionTitle from '../components/execution-title';
+import ChangeExecutionDateModal from '../components/change-execution-date-modal';
+import EditOrderModal from '../components/edit-order-modal';
+import OrderHistoryModal, { OrderHistoryEntry } from '../components/order-history-modal';
+import ExportModal from '../components/export-modal';
+import { uploadImageToR2, deleteOldImage } from '../../../../lib/image-upload-utils';
 import OrderDetailModal from '../components/order-detail-modal';
 import ChangeStatusModal from '../components/change-status-modal';
 import OrderStats from '../components/order-stats';
-import useOrderPage from '../components/use-order-page';
+import useOrderPage from '../lib/use-order-page';
 import {
   getRelativeIsoDate,
   normalizeDateRange,
   addDaysToIsoDate,
   formatHeaderDate,
-} from '../components/order-utils';
+} from '../lib/order-utils';
 
 interface ExecutionResponse {
   success: boolean;
@@ -51,36 +52,6 @@ interface ExecutionResponse {
 }
 
 type DateQuickPreset = 'today' | 'tomorrow' | 'yesterday' | 'last7Days' | 'all';
-
-async function uploadImageToR2(file: File): Promise<string> {
-  const formData = new FormData();
-  formData.append('file', file);
-  formData.append('folder', 'customers');
-
-  const res = await fetch('/api/upload/image', {
-    method: 'POST',
-    credentials: 'include',
-    body: formData,
-  });
-
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok || !data.success || !data.data?.url) {
-    throw new Error(data.error || 'Failed to upload image to R2');
-  }
-  return data.data.url as string;
-}
-
-async function deleteOldImage(url: string): Promise<void> {
-  if (!url || url.startsWith('data:')) return;
-  const res = await fetch(`/api/upload/image?url=${encodeURIComponent(url)}`, {
-    method: 'DELETE',
-    credentials: 'include',
-  });
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    throw new Error(data.error || 'Failed to delete old image');
-  }
-}
 
 export default function ExecutionPage() {
   const t = useTranslations('execution');
@@ -137,6 +108,7 @@ export default function ExecutionPage() {
       sourceFilter: 'all',
       categoryFilter: 'all',
       statusFilter: 'all',
+      intentionFilter: 'all',
       pageSize: 50,
     },
   });
@@ -154,6 +126,7 @@ export default function ExecutionPage() {
     sourceFilter,
     referralFilter,
     categoryFilter,
+    intentionFilter,
     searchInput,
     searchQuery,
     selectedOrder,
@@ -230,6 +203,7 @@ export default function ExecutionPage() {
         if (referralFilter) params.set('referralId', referralFilter);
         if (categoryFilter && categoryFilter !== 'all') params.set('category', categoryFilter);
         if (statusFilter !== 'all') params.set('status', statusFilter);
+        if (intentionFilter && intentionFilter !== 'all') params.set('intention', intentionFilter);
         if (searchQuery) params.set('search', searchQuery);
 
         const normalizedRange = normalizeDateRange(fromDateFilter, toDateFilter);
@@ -279,6 +253,7 @@ export default function ExecutionPage() {
       referralFilter,
       categoryFilter,
       statusFilter,
+      intentionFilter,
       searchQuery,
       page,
       pageSize,
@@ -307,6 +282,7 @@ export default function ExecutionPage() {
         if (sourceFilter !== 'all') params.set('source', sourceFilter);
         if (referralFilter) params.set('referralId', referralFilter);
         if (categoryFilter && categoryFilter !== 'all') params.set('category', categoryFilter);
+        if (intentionFilter && intentionFilter !== 'all') params.set('intention', intentionFilter);
         if (searchQuery) params.set('search', searchQuery);
 
         const normalizedRange = normalizeDateRange(fromDateFilter, toDateFilter);
@@ -333,7 +309,7 @@ export default function ExecutionPage() {
         }
       }
     },
-    [statusFilter, sourceFilter, referralFilter, categoryFilter, searchQuery, fromDateFilter, toDateFilter, setLoadingStats, setStats],
+    [statusFilter, sourceFilter, referralFilter, categoryFilter, intentionFilter, searchQuery, fromDateFilter, toDateFilter, setLoadingStats, setStats],
   );
 
   useEffect(() => {
@@ -636,6 +612,8 @@ export default function ExecutionPage() {
         totalOrders={totalOrders}
         statusFilter={statusFilter}
         onStatusChange={(val) => setFilter({ statusFilter: val })}
+        intentionFilter={intentionFilter as string}
+        onIntentionChange={(val) => setFilter({ intentionFilter: val })}
       />
 
       {fromDateFilter && (

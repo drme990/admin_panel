@@ -106,15 +106,26 @@ export default function OrderStats({
                 <LuPackage size={24} className="text-white sm:hidden" />
                 <LuPackage size={28} className="text-white hidden sm:block" />
               </div>
-              <span
-                className="inline-flex items-center rounded-full px-2 py-0.5 sm:px-2.5 sm:py-1 text-xs font-semibold"
-                style={{
-                  backgroundColor: hexToRgba(accentColor, 0.15),
-                  color: accentColor,
-                }}
-              >
-                {cat.percentage}%
-              </span>
+              <div className="flex items-center gap-2">
+                <span
+                  className="inline-flex items-center rounded-full px-2 py-0.5 sm:px-2.5 sm:py-1 text-xs font-semibold"
+                  style={{
+                    backgroundColor: hexToRgba(accentColor, 0.15),
+                    color: accentColor,
+                  }}
+                >
+                  #{cat.categoryNumber}
+                </span>
+                <span
+                  className="inline-flex items-center rounded-full px-2 py-0.5 sm:px-2.5 sm:py-1 text-xs font-semibold"
+                  style={{
+                    backgroundColor: hexToRgba(accentColor, 0.15),
+                    color: accentColor,
+                  }}
+                >
+                  {cat.percentage}%
+                </span>
+              </div>
             </div>
             <h3 className="text-2xl sm:text-3xl font-bold text-foreground mb-1">
               {cat.totalItems.toLocaleString()}

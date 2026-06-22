@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import { toast } from 'react-toastify';
 
 import { Order, OrderStatus } from '@/types/Order';
-import { OrderStatsData } from './order-stats';
+import { OrderStatsData } from '../components/order-stats';
 import { copyToClipboard, normalizeWhatsappPhone } from './order-utils';
 import {
   buildOrderWhatsappMessageFromOrder,
@@ -32,6 +32,7 @@ export interface OrderPageState {
   searchQuery: string;
   whatsappFilter?: string;
   categoryFilter?: string;
+  intentionFilter?: string;
 
   // Loading
   loading: boolean;
@@ -87,6 +88,7 @@ export const initialOrderPageState: OrderPageState = {
   searchQuery: '',
   whatsappFilter: 'all',
   categoryFilter: 'all',
+  intentionFilter: 'all',
   loading: false,
   loadingStats: false,
   stats: null,
@@ -125,6 +127,7 @@ export type FilterPayload = Partial<
     | 'searchQuery'
     | 'whatsappFilter'
     | 'categoryFilter'
+    | 'intentionFilter'
   >
 >;
 

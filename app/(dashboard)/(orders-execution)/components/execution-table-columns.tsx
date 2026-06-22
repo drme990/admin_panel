@@ -24,6 +24,7 @@ import Button from '@/components/ui/button';
 import Checkbox from '@/components/ui/checkbox';
 import Tooltip from '@/components/ui/tooltip';
 import { Order, OrderStatus } from '@/types/Order';
+import { STATUS_COLORS } from '../lib/order-status';
 
 function getReservationValue(order: Order, key: string): string | undefined {
   return order.reservationData?.find((f) => f.key === key)?.value;
@@ -40,17 +41,6 @@ function getNameLines(value?: string): string[] {
     .map((s) => s.trim())
     .filter(Boolean);
 }
-
-const STATUS_COLORS: Record<OrderStatus, string> = {
-  pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
-  processing: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
-  'partial-paid': 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400',
-  paid: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
-  completed: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400',
-  failed: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
-  refunded: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400',
-  cancelled: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400',
-};
 
 async function copyToClipboard(text: string): Promise<void> {
   if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
@@ -272,20 +262,30 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
       header: t('table.photo'),
       accessor: (order: Order) => {
         const photoUrl = getReservationValue(order, 'photo');
-        if (!photoUrl) return <span className={order.status === 'partial-paid' ? 'text-orange-600 dark:text-orange-400' : 'text-secondary'}>-</span>;
+        const hasPhoto = Boolean(photoUrl);
+        const partialPaid = order.status === 'partial-paid';
+        const iconColor = hasPhoto
+          ? (partialPaid ? 'text-orange-600 dark:text-orange-400' : 'text-primary')
+          : 'text-secondary';
         return (
           <div className="flex flex-col items-center gap-1">
-            <Tooltip position={tooltipPos} content={t('table.viewPhoto')}>
-              <a
-                href={photoUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(e) => e.stopPropagation()}
-                className={`inline-flex items-center justify-center p-2 text-primary ${order.status === 'partial-paid' ? 'text-orange-600 dark:text-orange-400' : ''}`}
-              >
+            {hasPhoto ? (
+              <Tooltip position={tooltipPos} content={t('table.viewPhoto')}>
+                <a
+                  href={photoUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className={`inline-flex items-center justify-center p-2 ${iconColor}`}
+                >
+                  <LuImage size={24} />
+                </a>
+              </Tooltip>
+            ) : (
+              <span className={`inline-flex items-center justify-center p-2 ${iconColor}`}>
                 <LuImage size={24} />
-              </a>
-            </Tooltip>
+              </span>
+            )}
             <div className="flex flex-row gap-1">
               <Tooltip position={tooltipPos} content={t('table.uploadPhoto')}>
                 <Button
@@ -316,6 +316,7 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
                         .catch(() => toast.error(t('messages.downloadFailed')));
                     }
                   }}
+                  disabled={!hasPhoto}
                   aria-label={t('table.downloadPhoto')}
                 >
                   <LuDownload size={12} />
@@ -327,16 +328,28 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
                   size="custom"
                   className="h-5 w-5 p-0 text-secondary hover:text-foreground"
                   onClick={(e) => { e.stopPropagation(); onCopyPhotoUrl(order); }}
+                  disabled={!hasPhoto}
                   aria-label={t('table.sharePhoto')}
                 >
                   <LuShare2 size={12} />
+                </Button>
+              </Tooltip>
+              <Tooltip position={tooltipPos} content={t('table.editPhoto')}>
+                <Button
+                  variant="ghost"
+                  size="custom"
+                  className="h-5 w-5 p-0 text-secondary hover:text-foreground"
+                  onClick={(e) => { e.stopPropagation(); onEditField(order, 'photo'); }}
+                  aria-label={t('table.editPhoto')}
+                >
+                  <LuPencil size={12} />
                 </Button>
               </Tooltip>
             </div>
           </div>
         );
       },
-      className: 'min-w-16',
+      className: 'min-w-20',
     },
     {
       header: t('table.design'),
@@ -388,10 +401,11 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
       header: t('table.shortDuaa'),
       accessor: (order: Order) => {
         const duaa = getReservationValue(order, 'shortDuaa');
-        if (!duaa) return <span className={order.status === 'partial-paid' ? 'text-orange-600 dark:text-orange-400' : 'text-secondary'}>-</span>;
+        const hasDuaa = Boolean(duaa);
+        const iconColor = hasDuaa ? 'text-primary' : 'text-secondary';
         return (
           <div className="flex flex-col items-center gap-1">
-            <span className="inline-flex items-center justify-center p-2 text-primary">
+            <span className={`inline-flex items-center justify-center p-2 ${iconColor}`}>
               <LuHandHelping size={24} />
             </span>
             <div className="flex flex-row gap-1">
@@ -402,8 +416,11 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
                   className="h-5 w-5 p-0 text-secondary hover:text-foreground"
                   onClick={(e) => {
                     e.stopPropagation();
-                    void copyToClipboard(duaa).then(() => toast.success(t('table.copied'))).catch(() => toast.error('Copy failed'));
+                    if (duaa) {
+                      void copyToClipboard(duaa).then(() => toast.success(t('table.copied'))).catch(() => toast.error('Copy failed'));
+                    }
                   }}
+                  disabled={!hasDuaa}
                   aria-label={t('table.copyDuaa')}
                 >
                   <LuCopy size={12} />
@@ -431,9 +448,11 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
       accessor: (order: Order) => {
         const displayedAmount =
           typeof order.paidAmount === 'number' ? order.paidAmount : order.totalAmount;
+        const remaining = order.remainingAmount ?? 0;
+        const hasRemaining = remaining > 0.001;
         return (
           <span
-            className={`font-bold ${order.status === 'partial-paid' ? 'text-orange-600 dark:text-orange-400' : 'text-success'}`}
+            className={`font-bold ${hasRemaining ? 'text-orange-600 dark:text-orange-400' : 'text-success'}`}
           >
             {displayedAmount.toFixed(2)} {order.currency}
           </span>
@@ -444,7 +463,7 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
     {
       header: t('table.remainingAmount'),
       accessor: (order: Order) => {
-        const remaining = order.remainingAmount ?? 0;
+        const remaining = order.remainingAmount;
 
         if (order.status === 'processing') {
           return (
@@ -454,15 +473,7 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
           );
         }
 
-        if (order.status === 'partial-paid' || order.isPartialPayment) {
-          return (
-            <span className="font-bold text-orange-600 dark:text-orange-400">
-              {remaining.toFixed(2)} {order.currency}
-            </span>
-          );
-        }
-
-        if (remaining <= 0) {
+        if (!remaining || remaining <= 0) {
           return (
             <span className="inline-block px-2 py-0.5 text-xs font-medium rounded-full bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
               {t('status.paid')}

@@ -6,7 +6,7 @@ import { useTranslations } from 'next-intl';
 import Modal from '@/components/ui/modal';
 import Button from '@/components/ui/button';
 import { OrderStatus } from '@/types/Order';
-import { STATUS_COLORS } from './order-status';
+import { STATUS_COLORS } from '../lib/order-status';
 
 interface Props {
   isOpen: boolean;
@@ -58,11 +58,10 @@ export default function ChangeStatusModal({
           {AVAILABLE_STATUSES.map((status) => (
             <label
               key={status}
-              className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
-                selectedStatus === status
+              className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${selectedStatus === status
                   ? 'border-primary bg-primary/5'
                   : 'border-stroke bg-background hover:bg-foreground/5'
-              }`}
+                }`}
             >
               <input
                 type="radio"

@@ -13,17 +13,17 @@ import ConfirmModal, { useConfirmModal } from '@/components/ui/confirm-modal';
 import { Order, OrderStatus } from '@/types/Order';
 import { Referral } from '@/types/Referral';
 
-import OrderFilters from './components/order-filters';
-import { useOrderColumns } from './components/order-table-columns';
+import OrderFilters from '../components/order-filters';
+import { useOrderColumns } from '../components/order-table-columns';
 import OrderDetailModal from '../components/order-detail-modal';
 import ChangeStatusModal from '../components/change-status-modal';
 import OrderStats from '../components/order-stats';
-import useOrderPage from '../components/use-order-page';
+import useOrderPage from '../lib/use-order-page';
 import {
   toIsoDateInput,
   getRelativeIsoDate,
   normalizeDateRange,
-} from '../components/order-utils';
+} from '../lib/order-utils';
 
 interface OrdersResponse {
   orders: Order[];

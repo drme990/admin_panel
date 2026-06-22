@@ -20,6 +20,7 @@ import Tooltip from '@/components/ui/tooltip';
 import Dropdown from '@/components/ui/dropdown';
 import { Order, OrderItem } from '@/types/Order';
 import { Product } from '@/types/Product';
+import { uploadImageToR2, deleteOldImage } from '../../../../lib/image-upload-utils';
 
 interface Props {
   isOpen: boolean;
@@ -58,6 +59,8 @@ export default function EditOrderModal({
   const [fileInputKey, setFileInputKey] = useState(0);
   const [products, setProducts] = useState<Product[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [originalPhotoUrl, setOriginalPhotoUrl] = useState('');
 
   useEffect(() => {
     if (isOpen && order) {
@@ -69,7 +72,9 @@ export default function EditOrderModal({
           .filter(Boolean),
       );
       setShortDuaa(getReservationValue(order, 'shortDuaa'));
-      setPhotoUrl(getReservationValue(order, 'photo'));
+      const currentPhotoUrl = getReservationValue(order, 'photo');
+      setPhotoUrl(currentPhotoUrl);
+      setOriginalPhotoUrl(currentPhotoUrl);
       setItems(order.items ? [...order.items] : []);
     }
   }, [isOpen, order]);
@@ -88,19 +93,29 @@ export default function EditOrderModal({
   }, [isOpen, field]);
 
   const handleFileChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (!file) return;
-      if (!file.type.startsWith('image/')) {
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
+      if (!allowedTypes.includes(file.type)) {
         toast.error(t('editOrder.invalidImage'));
         return;
       }
-      const reader = new FileReader();
-      reader.onload = () => {
-        setPhotoUrl(reader.result as string);
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error(t('editOrder.imageTooLarge'));
+        return;
+      }
+      try {
+        setUploadingPhoto(true);
+        const url = await uploadImageToR2(file);
+        setPhotoUrl(url);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : t('editOrder.uploadFailed');
+        toast.error(message);
+      } finally {
+        setUploadingPhoto(false);
         setFileInputKey((k) => k + 1);
-      };
-      reader.readAsDataURL(file);
+      }
     },
     [t],
   );
@@ -157,6 +172,11 @@ export default function EditOrderModal({
     if (field === 'items') fields.items = items;
     const success = await onUpdate(order._id, fields);
     if (success) {
+      if (field === 'photo' && originalPhotoUrl && originalPhotoUrl !== photoUrl) {
+        deleteOldImage(originalPhotoUrl).catch((error: unknown) => {
+          console.warn('Failed to delete old customer image:', error);
+        });
+      }
       onClose();
     }
   };
@@ -297,16 +317,23 @@ export default function EditOrderModal({
                 className="flex-1"
               />
               <Tooltip position={tooltipPos} content={t('editOrder.uploadPhoto')}>
-                <label className="inline-flex cursor-pointer">
+                <label className={`inline-flex ${uploadingPhoto ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}>
                   <input
                     key={fileInputKey}
                     type="file"
                     accept="image/*"
                     className="hidden"
                     onChange={handleFileChange}
+                    disabled={uploadingPhoto}
                   />
-                  <span className="font-medium transition-all duration-200 rounded-site flex items-center justify-center border border-stroke text-foreground hover:bg-foreground hover:text-background px-4 py-2 text-sm cursor-pointer">
-                    <LuUpload size={16} />
+                  <span className="font-medium transition-all duration-200 rounded-site flex items-center justify-center border border-stroke text-foreground hover:bg-foreground hover:text-background px-4 py-2 text-sm">
+                    {uploadingPhoto ? (
+                      <span className="inline-flex items-center gap-1">
+                        <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                      </span>
+                    ) : (
+                      <LuUpload size={16} />
+                    )}
                   </span>
                 </label>
               </Tooltip>

@@ -4,7 +4,7 @@ import Image from 'next/image';
 
 import Modal from '@/components/ui/modal';
 import { Order, OrderPayment } from '@/types/Order';
-import { STATUS_COLORS, PAYMENT_STATUS_COLORS } from './order-status';
+import { STATUS_COLORS, PAYMENT_STATUS_COLORS } from '../lib/order-status';
 import {
   LuCreditCard as CreditCard,
   LuCalendar as Calendar,

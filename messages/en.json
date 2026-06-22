@@ -30,7 +30,9 @@
       "fromDate": "From Date",
       "toDate": "To Date",
       "allReferrals": "All Referrals",
-      "source": "Source"
+      "source": "Source",
+      "allIntentions": "All Intentions",
+      "intention": "Intention"
     },
     "total": "Total",
     "status": {

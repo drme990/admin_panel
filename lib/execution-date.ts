@@ -15,20 +15,6 @@ function getEgyptToday(): string {
 }
 
 /**
- * Get current time-of-day in Egypt as HH:mm string.
- */
-function getEgyptTime(): string {
-  const now = new Date();
-  const formatter = new Intl.DateTimeFormat('en-US', {
-    timeZone: EGYPT_TIMEZONE,
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  });
-  return formatter.format(now);
-}
-
-/**
  * Add days to a YYYY-MM-DD string and return the new YYYY-MM-DD string.
  */
 function addDays(dateStr: string, days: number): string {
@@ -42,17 +28,21 @@ function addDays(dateStr: string, days: number): string {
 }
 
 /**
- * Check if the current Egypt time is at or after the given cutoff HH:mm.
+ * Check if the current time is at or after the cutoff on the given execution date.
+ * cutoffTime is HH:mm. baseDate is YYYY-MM-DD.
  */
-function isAtOrAfterCutoff(cutoffTime: string | null | undefined): boolean {
-  if (!cutoffTime) return false;
+function isAtOrAfterCutoff(
+  cutoffTime: string | null | undefined,
+  baseDate: string,
+): boolean {
+  if (!cutoffTime || !baseDate) return false;
 
-  const [cutoffHours, cutoffMinutes] = cutoffTime.split(':').map(Number);
-  const [egyptHours, egyptMinutes] = getEgyptTime().split(':').map(Number);
+  const iso = `${baseDate}T${cutoffTime}:00+02:00`;
+  const cutoffDate = new Date(iso);
+  if (Number.isNaN(cutoffDate.getTime())) return false;
 
-  if (egyptHours > cutoffHours) return true;
-  if (egyptHours < cutoffHours) return false;
-  return egyptMinutes >= cutoffMinutes;
+  const now = new Date();
+  return now.getTime() >= cutoffDate.getTime();
 }
 
 /**
@@ -104,7 +94,7 @@ export interface BookingSettings {
  * Rules:
  * 1. Start from the stored defaultExecutionDate, or tomorrow if none.
  * 2. If the stored date is in the past (<= today), catch up to tomorrow.
- * 3. If the stored date is "tomorrow" and the daily cutoff has passed → push to day-after-tomorrow.
+ * 3. If the stored date is "tomorrow" and the cutoff on that date has passed → push forward.
  * 4. If the admin manually ended the day today → push one more day forward.
  * 5. Skip any blocked dates.
  */
@@ -125,7 +115,7 @@ export function computeDefaultExecutionDate(
     base = tomorrow;
   }
 
-  if (base === tomorrow && isAtOrAfterCutoff(settings.cutoffTime)) {
+  if (base === tomorrow && isAtOrAfterCutoff(settings.cutoffTime, base)) {
     base = addDays(base, 1);
   }
 

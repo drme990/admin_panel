@@ -18,6 +18,8 @@ interface CustomDatePickerProps {
   helperText?: string;
   disabledDates?: string[];
   markedDates?: string[];
+  minDate?: string;
+  maxDate?: string;
   className?: string;
 }
 
@@ -70,6 +72,8 @@ export default function CustomDatePicker({
   helperText,
   disabledDates = [],
   markedDates = [],
+  minDate,
+  maxDate,
   className,
 }: CustomDatePickerProps) {
   const selectedDate = useMemo(() => fromIsoDate(value), [value]);
@@ -99,6 +103,9 @@ export default function CustomDatePicker({
     () => new Set(markedDates.filter(isIsoDate)),
     [markedDates],
   );
+
+  const minIso = minDate && isIsoDate(minDate) ? minDate : null;
+  const maxIso = maxDate && isIsoDate(maxDate) ? maxDate : null;
 
   const monthLabel = monthDate.toLocaleDateString(
     locale === 'ar' ? 'ar-EG' : 'en-GB',
@@ -247,7 +254,10 @@ export default function CustomDatePicker({
               {calendarDays.map(({ date, inCurrentMonth }) => {
                 const iso = toIsoDate(date);
                 const isSelected = value === iso;
-                const isDisabled = disabledSet.has(iso);
+                const isDisabled =
+                  disabledSet.has(iso) ||
+                  (minIso !== null && iso < minIso) ||
+                  (maxIso !== null && iso > maxIso);
                 const isMarked = markedSet.has(iso);
 
                 return (
@@ -264,20 +274,20 @@ export default function CustomDatePicker({
                     className={cn(
                       'h-10 rounded-lg text-sm transition-colors',
                       isDisabled &&
-                        'cursor-not-allowed bg-background text-secondary/40',
+                      'cursor-not-allowed bg-background text-secondary/40',
                       !isDisabled &&
-                        !isSelected &&
-                        !isMarked &&
-                        inCurrentMonth &&
-                        'text-foreground hover:bg-primary/10',
+                      !isSelected &&
+                      !isMarked &&
+                      inCurrentMonth &&
+                      'text-foreground hover:bg-primary/10',
                       !isDisabled &&
-                        !isSelected &&
-                        !isMarked &&
-                        !inCurrentMonth &&
-                        'text-secondary/40 hover:bg-primary/5',
+                      !isSelected &&
+                      !isMarked &&
+                      !inCurrentMonth &&
+                      'text-secondary/40 hover:bg-primary/5',
                       isMarked &&
-                        !isSelected &&
-                        'bg-warning/10 text-warning ring-1 ring-warning/30 hover:bg-warning/15',
+                      !isSelected &&
+                      'bg-warning/10 text-warning ring-1 ring-warning/30 hover:bg-warning/15',
                       isSelected && 'bg-primary text-white shadow-sm',
                     )}
                   >

@@ -20,31 +20,19 @@ interface ExportModalProps {
 
 interface ExportRow {
   orderNumber: string;
-  sacrificeFor: string;
+  fullName: string;
+  phone: string;
+  email: string;
+  country: string;
   items: string;
-  photo: string;
-  design: string;
-  duaa: string;
+  totalAmount: string;
   paidAmount: string;
   remainingAmount: string;
+  currency: string;
   status: string;
   source: string;
+  createdAt: string;
   updatedAt: string;
-}
-
-function getReservationValue(order: Order, key: string): string | undefined {
-  return order.reservationData?.find((f) => f.key === key)?.value;
-}
-
-function getNameLines(value?: string): string[] {
-  if (!value) return [];
-  return value
-    .replace(/\n/g, ',')
-    .replace(/;/g, ',')
-    .replace(/\r/g, ',')
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean);
 }
 
 function formatDate(dateValue?: string, locale: string = 'en'): string {
@@ -59,29 +47,39 @@ function formatDate(dateValue?: string, locale: string = 'en'): string {
   }
 }
 
+function formatAmount(amount?: number): string {
+  if (typeof amount !== 'number') return '0.00';
+  return amount.toFixed(2);
+}
+
 function buildExportRows(orders: Order[], locale: string): ExportRow[] {
   return orders.map((order) => {
-    const names = getNameLines(getReservationValue(order, 'sacrificeFor'));
+    const bd = order.billingData;
+    const currency = order.currency || '';
+
     const items = (order.items || [])
       .map((item) => {
         const name = locale === 'ar' ? item.productName?.ar : item.productName?.en;
         const qty = item.quantity || 1;
-        return qty > 1 ? `${qty} ${name}` : (name || '');
+        return qty > 1 ? `${qty}x ${name}` : (name || '');
       })
       .join(', ');
 
     return {
-      orderNumber: order.orderNumber,
-      sacrificeFor: names.join(', '),
+      orderNumber: order.orderNumber || '',
+      fullName: bd?.fullName || '',
+      phone: bd?.phone || '',
+      email: bd?.email || '',
+      country: bd?.country || '',
       items,
-      photo: getReservationValue(order, 'photo') || '',
-      design: getReservationValue(order, 'design') || '',
-      duaa: getReservationValue(order, 'shortDuaa') || '',
-      paidAmount: `${typeof order.paidAmount === 'number' ? order.paidAmount.toFixed(2) : (order.totalAmount || 0).toFixed(2)} ${order.currency}`,
-      remainingAmount: `${(order.remainingAmount ?? 0).toFixed(2)} ${order.currency}`,
-      status: order.status,
+      totalAmount: formatAmount(order.totalAmount),
+      paidAmount: formatAmount(order.paidAmount ?? order.totalAmount),
+      remainingAmount: formatAmount(order.remainingAmount ?? 0),
+      currency,
+      status: order.status || '',
       source: order.source || 'manasik',
-      updatedAt: formatDate(order.statusUpdateTime, locale),
+      createdAt: formatDate(order.createdAt, locale),
+      updatedAt: formatDate(order.statusUpdateTime || order.updatedAt, locale),
     };
   });
 }
@@ -89,15 +87,18 @@ function buildExportRows(orders: Order[], locale: string): ExportRow[] {
 function getHeaders(t: (key: string) => string): string[] {
   return [
     t('export.headers.orderNumber'),
-    t('export.headers.sacrificeFor'),
+    t('export.headers.fullName'),
+    t('export.headers.phone'),
+    t('export.headers.email'),
+    t('export.headers.country'),
     t('export.headers.items'),
-    t('export.headers.photo'),
-    t('export.headers.design'),
-    t('export.headers.duaa'),
+    t('export.headers.totalAmount'),
     t('export.headers.paidAmount'),
     t('export.headers.remainingAmount'),
+    t('export.headers.currency'),
     t('export.headers.status'),
     t('export.headers.source'),
+    t('export.headers.createdAt'),
     t('export.headers.updatedAt'),
   ];
 }
@@ -105,15 +106,18 @@ function getHeaders(t: (key: string) => string): string[] {
 function rowToArray(row: ExportRow): string[] {
   return [
     row.orderNumber,
-    row.sacrificeFor,
+    row.fullName,
+    row.phone,
+    row.email,
+    row.country,
     row.items,
-    row.photo,
-    row.design,
-    row.duaa,
+    row.totalAmount,
     row.paidAmount,
     row.remainingAmount,
+    row.currency,
     row.status,
     row.source,
+    row.createdAt,
     row.updatedAt,
   ];
 }
@@ -257,27 +261,27 @@ function exportPdf(
   doc.setFontSize(14);
   doc.text(title, 14, 15);
 
-  autoTable(doc as Parameters<typeof autoTable>[0], {
+  const body = rows.map(rowToArray);
+  autoTable(doc, {
     head: [headers],
-    body: rows.map(rowToArray),
+    body,
     startY: 22,
-    styles: { fontSize: 7, cellPadding: 2, overflow: 'linebreak' },
-    headStyles: { fillColor: [66, 133, 244], textColor: [255, 255, 255], fontStyle: 'bold' },
+    styles: { fontSize: 8, cellPadding: 2 },
+    headStyles: { fillColor: [59, 130, 246] },
     alternateRowStyles: { fillColor: [245, 247, 250] },
     margin: { left: 10, right: 10 },
+    tableWidth: 'wrap',
   });
 
   doc.save(`${filename}.pdf`);
 }
 
-/* ── Shared download helper ──────────────────────────── */
 function triggerDownload(blob: Blob, filename: string) {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(link.href);
 }

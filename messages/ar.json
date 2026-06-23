@@ -267,15 +267,18 @@
       "sheetName": "التنفيذات",
       "headers": {
         "orderNumber": "رقم الطلب",
-        "sacrificeFor": "المؤدى عنه",
+        "fullName": "اسم العميل",
+        "phone": "الهاتف",
+        "email": "البريد الإلكتروني",
+        "country": "الدولة",
         "items": "المنتجات",
-        "photo": "الصورة",
-        "design": "التصميم",
-        "duaa": "الدعاء",
+        "totalAmount": "الإجمالي",
         "paidAmount": "مدفوع",
         "remainingAmount": "باقي",
+        "currency": "العملة",
         "status": "الحالة",
         "source": "المصدر",
+        "createdAt": "تاريخ الإنشاء",
         "updatedAt": "آخر تحديث"
       }
     },

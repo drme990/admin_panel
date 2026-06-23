@@ -267,15 +267,18 @@
       "sheetName": "Execution",
       "headers": {
         "orderNumber": "Order #",
-        "sacrificeFor": "Sacrifice For",
+        "fullName": "Customer Name",
+        "phone": "Phone",
+        "email": "Email",
+        "country": "Country",
         "items": "Items",
-        "photo": "Photo",
-        "design": "Design",
-        "duaa": "Duaa",
+        "totalAmount": "Total",
         "paidAmount": "Paid",
         "remainingAmount": "Remaining",
+        "currency": "Currency",
         "status": "Status",
         "source": "Source",
+        "createdAt": "Created At",
         "updatedAt": "Updated At"
       }
     },

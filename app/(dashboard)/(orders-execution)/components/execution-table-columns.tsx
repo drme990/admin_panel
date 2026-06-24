@@ -143,6 +143,15 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
       className: 'w-12',
     },
     {
+      header: '#' as ReactNode,
+      accessor: (_order: Order, index?: number) => (
+        <span className="text-sm font-semibold text-foreground">
+          {(index ?? 0) + 1}
+        </span>
+      ),
+      className: 'w-12',
+    },
+    {
       header: t('table.sacrificeFor'),
       accessor: (order: Order) => {
         const names = getNameLines(getReservationValue(order, 'sacrificeFor'));
@@ -266,7 +275,8 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
         const partialPaid = order.status === 'partial-paid';
         const iconColor = hasPhoto
           ? (partialPaid ? 'text-orange-600 dark:text-orange-400' : 'text-primary')
-          : 'text-secondary';
+          : 'text-secondary/50';
+
         return (
           <div className="flex flex-col items-center gap-1">
             {hasPhoto ? (

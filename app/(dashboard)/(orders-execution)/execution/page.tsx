@@ -33,7 +33,6 @@ import {
   getRelativeIsoDate,
   normalizeDateRange,
   addDaysToIsoDate,
-  formatHeaderDate,
 } from '../lib/order-utils';
 
 interface ExecutionResponse {
@@ -388,7 +387,6 @@ export default function ExecutionPage() {
 
   const handleChangeExecutionDate = (order: Order) => {
     setChangeExecutionDateModalOpen(true);
-    setChangingExecutionDateId(order._id);
     dispatch({ type: 'SET_SELECTED_ORDER', payload: order });
   };
 
@@ -438,6 +436,26 @@ export default function ExecutionPage() {
   const closeOrderHistoryModal = () => {
     setOrderHistoryModalOpen(false);
     setOrderHistory([], false);
+  };
+
+  const handleRollback = async (entry: OrderHistoryEntry) => {
+    if (!selectedOrder || !entry.previousValue) return;
+    const success = await updateOrder(selectedOrder._id, { photo: entry.previousValue });
+    if (success) {
+      // Refresh history after rollback
+      setLoadingOrderHistory(true);
+      try {
+        const res = await fetch(`/api/orders/${selectedOrder._id}/history`);
+        const data = await res.json();
+        if (data.success) {
+          setOrderHistory(data.data || [], false);
+        }
+      } catch (error) {
+        console.error('Error refreshing order history:', error);
+      } finally {
+        setLoadingOrderHistory(false);
+      }
+    }
   };
 
   const handleUploadPhoto = (order: Order) => {
@@ -922,6 +940,8 @@ export default function ExecutionPage() {
         orderNumber={selectedOrder?.orderNumber || ''}
         history={orderHistory as OrderHistoryEntry[]}
         loading={loadingOrderHistory}
+        onRollback={handleRollback}
+        updating={savingOrderId !== null}
       />
 
       <ExportModal

@@ -227,7 +227,9 @@
       "typeUnknown": "Unknown",
       "previous": "Previous",
       "new": "New",
-      "by": "By"
+      "by": "By",
+      "rollback": "Rollback to previous",
+      "rollingBack": "Rolling back..."
     },
     "header": {
       "executions": "Executions",

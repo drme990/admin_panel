@@ -117,15 +117,6 @@ export default function OrderStats({
                     color: accentColor,
                   }}
                 >
-                  #{cat.categoryNumber}
-                </span>
-                <span
-                  className="inline-flex items-center rounded-full px-2 py-0.5 sm:px-2.5 sm:py-1 text-xs font-semibold"
-                  style={{
-                    backgroundColor: hexToRgba(accentColor, 0.15),
-                    color: accentColor,
-                  }}
-                >
                   {cat.percentage}%
                 </span>
               </div>

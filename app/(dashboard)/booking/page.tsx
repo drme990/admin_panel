@@ -298,7 +298,7 @@ export default function BookingAdminPage() {
               value={defaultExecutionDate}
               onChange={setDefaultExecutionDate}
               markedDates={sortedDates}
-              minDate={tomorrow}
+              minDate={egyptToday}
               maxDate={dayAfterTomorrow}
               disabledDates={sortedDates}
             />

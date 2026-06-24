@@ -55,6 +55,7 @@
       "orderNumber": "Order #",
       "customer": "Customer",
       "sacrificeFor": "For",
+      "count": "Count",
       "intention": "Intention",
       "gender": "Gender",
       "isAlive": "Status",

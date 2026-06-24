@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useCallback, useRef, useState } from 'react';
+import { useEffect, useCallback, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { toast } from 'react-toastify';
 import { LuDownload, LuPhone, LuEye } from 'react-icons/lu';
@@ -772,9 +772,13 @@ export default function ExecutionPage() {
             </div>
           ) : (
             (() => {
+              const selectedCategory = categories.find((c) => c._id === selectedCategoryId);
+              const categoryProductIds = new Set(selectedCategory?.products.map((p) => p._id) || []);
+
               const groups = new Map<string, Order[]>();
               categoryModalOrders.forEach((order) => {
-                const firstItem = order.items?.[0];
+                const matchingItems = (order.items || []).filter((item) => categoryProductIds.has(item.productId));
+                const firstItem = matchingItems[0] || order.items?.[0];
                 const productName = firstItem
                   ? (locale === 'ar' ? firstItem.productName?.ar : firstItem.productName?.en) || t('stats.uncategorized')
                   : t('stats.uncategorized');
@@ -811,6 +815,36 @@ export default function ExecutionPage() {
                           return <span>{displayName}</span>;
                         },
                         className: 'min-w-40',
+                      },
+                      {
+                        header: t('table.count'),
+                        accessor: (order: Order) => {
+                          const matchingItems = (order.items || []).filter((item) => categoryProductIds.has(item.productId));
+                          const count = matchingItems.reduce((sum, item) => sum + (item.quantity || 1), 0);
+                          return <span className="font-semibold">{count}</span>;
+                        },
+                        className: 'w-16',
+                      },
+                      {
+                        header: t('table.items'),
+                        accessor: (order: Order) => {
+                          const matchingItems = (order.items || []).filter((item) => categoryProductIds.has(item.productId));
+                          if (matchingItems.length === 0) return <span className="text-secondary">-</span>;
+                          return (
+                            <div className="flex flex-col gap-0.5">
+                              {matchingItems.map((item, i) => {
+                                const qty = item.quantity || 1;
+                                const name = locale === 'ar' ? item.productName?.ar : item.productName?.en;
+                                return (
+                                  <span key={i} className="text-sm text-foreground">
+                                    {qty > 1 ? `${qty} ${name}` : name}
+                                  </span>
+                                );
+                              })}
+                            </div>
+                          );
+                        },
+                        className: 'min-w-32',
                       },
                       {
                         header: t('table.paidAmount'),

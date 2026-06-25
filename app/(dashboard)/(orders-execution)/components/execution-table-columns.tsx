@@ -18,6 +18,7 @@ import {
   LuShare2,
   LuPenLine,
   LuBan,
+  LuFileText,
 } from 'react-icons/lu';
 import { FaWhatsapp } from 'react-icons/fa6';
 
@@ -86,6 +87,8 @@ interface ColumnCallbacks {
   onEditField: (order: Order, field: 'name' | 'items' | 'duaa' | 'photo') => void;
   onUploadPhoto: (order: Order) => void;
   onCopyPhotoUrl: (order: Order) => void;
+  onUploadInvoice: (order: Order) => void;
+  onDownloadInvoice: (order: Order) => void;
   onChangeStatus: (order: Order) => void;
   onViewHistory: (order: Order) => void;
   onBlock: (order: Order) => void;
@@ -98,6 +101,7 @@ interface ColumnCallbacks {
   copyingPhoneOrderId: string | null;
   copyingMessageOrderId: string | null;
   uploadingPhotoOrderId: string | null;
+  uploadingInvoiceOrderId: string | null;
   blockingOrderId: string | null;
   blockedUserIds: Set<string>;
 }
@@ -114,6 +118,8 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
     onEditField,
     onUploadPhoto,
     onCopyPhotoUrl,
+    onUploadInvoice,
+    onDownloadInvoice,
     onChangeStatus,
     onViewHistory,
     onBlock,
@@ -126,6 +132,7 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
     copyingPhoneOrderId,
     copyingMessageOrderId,
     uploadingPhotoOrderId,
+    uploadingInvoiceOrderId,
     blockingOrderId,
     blockedUserIds,
   } = callbacks;
@@ -367,6 +374,55 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
         );
       },
       className: 'min-w-20',
+    },
+    {
+      header: t('table.invoice'),
+      accessor: (order: Order) => {
+        const hasInvoice = Boolean(order.invoiceUrl);
+        const partialPaid = order.status === 'partial-paid';
+        const iconColor = hasInvoice
+          ? (partialPaid ? 'text-orange-600 dark:text-orange-400' : 'text-primary')
+          : 'text-secondary/50';
+
+        return (
+          <div className="flex flex-col items-center gap-1">
+            <span className={`inline-flex items-center justify-center p-2 ${iconColor}`}>
+              <LuFileText size={24} />
+            </span>
+            <div className="flex flex-row gap-1">
+              <Tooltip position={tooltipPos} content={t('table.uploadInvoice')}>
+                <Button
+                  variant="ghost"
+                  size="custom"
+                  className="h-5 w-5 p-0 text-secondary hover:text-foreground"
+                  onClick={(e) => { e.stopPropagation(); onUploadInvoice(order); }}
+                  disabled={uploadingInvoiceOrderId === order._id}
+                  aria-label={t('table.uploadInvoice')}
+                >
+                  {uploadingInvoiceOrderId === order._id ? (
+                    <LuRefreshCw size={12} className="animate-spin" />
+                  ) : (
+                    <LuUpload size={12} />
+                  )}
+                </Button>
+              </Tooltip>
+              <Tooltip position={tooltipPos} content={t('table.downloadInvoice')}>
+                <Button
+                  variant="ghost"
+                  size="custom"
+                  className="h-5 w-5 p-0 text-secondary hover:text-foreground"
+                  onClick={(e) => { e.stopPropagation(); onDownloadInvoice(order); }}
+                  disabled={!hasInvoice}
+                  aria-label={t('table.downloadInvoice')}
+                >
+                  <LuDownload size={12} />
+                </Button>
+              </Tooltip>
+            </div>
+          </div>
+        );
+      },
+      className: 'min-w-16',
     },
     {
       header: t('table.design'),

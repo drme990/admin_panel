@@ -27,3 +27,20 @@ export async function deleteOldImage(url: string): Promise<void> {
     throw new Error(data.error || 'Failed to delete old image');
   }
 }
+
+export async function uploadInvoiceToR2(file: File): Promise<string> {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const res = await fetch('/api/upload/invoice', {
+    method: 'POST',
+    credentials: 'include',
+    body: formData,
+  });
+
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data.success || !data.data?.url) {
+    throw new Error(data.error || 'Failed to upload invoice to R2');
+  }
+  return data.data.url as string;
+}

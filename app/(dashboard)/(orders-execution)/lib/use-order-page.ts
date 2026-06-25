@@ -313,6 +313,8 @@ export function useOrderPage(options: UseOrderPageOptions) {
 
   const photoUploadOrderRef = useRef<Order | null>(null);
   const photoInputRef = useRef<HTMLInputElement | null>(null);
+  const invoiceUploadOrderRef = useRef<Order | null>(null);
+  const invoiceInputRef = useRef<HTMLInputElement | null>(null);
 
   const setPage = useCallback((page: number) => dispatch({ type: 'SET_PAGE', payload: page }), []);
   const setPageSize = useCallback((size: number) => dispatch({ type: 'SET_PAGE_SIZE', payload: size }), []);
@@ -546,6 +548,7 @@ export function useOrderPage(options: UseOrderPageOptions) {
         sacrificeFor?: string;
         shortDuaa?: string;
         photo?: string;
+        invoiceUrl?: string;
         items?: Order['items'];
         gender?: string;
         isAlive?: string;
@@ -558,6 +561,7 @@ export function useOrderPage(options: UseOrderPageOptions) {
         if ('sacrificeFor' in fields) body.sacrificeFor = fields.sacrificeFor;
         if ('shortDuaa' in fields) body.shortDuaa = fields.shortDuaa;
         if ('photo' in fields) body.photo = fields.photo;
+        if ('invoiceUrl' in fields) body.invoiceUrl = fields.invoiceUrl;
         if ('items' in fields) body.items = fields.items;
         if ('gender' in fields) body.gender = fields.gender;
         if ('isAlive' in fields) body.isAlive = fields.isAlive;
@@ -665,6 +669,12 @@ export function useOrderPage(options: UseOrderPageOptions) {
         if (fields.items !== undefined) {
           dispatch({ type: 'SET_ORDERS_ITEMS', payload: { orderId, items: fields.items } });
         }
+        if (fields.invoiceUrl !== undefined) {
+          dispatch({
+            type: 'UPDATE_ORDER_IN_LIST',
+            payload: { orderId, updates: { invoiceUrl: fields.invoiceUrl } },
+          });
+        }
         return true;
       } catch (error) {
         console.error('Error updating order:', error);
@@ -713,6 +723,8 @@ export function useOrderPage(options: UseOrderPageOptions) {
     // Refs
     photoUploadOrderRef,
     photoInputRef,
+    invoiceUploadOrderRef,
+    invoiceInputRef,
     // Common actions
     fetchOrderDetails,
     resolveOrderWhatsappPayload,

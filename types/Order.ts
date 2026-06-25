@@ -84,25 +84,25 @@ export interface PaymentAttempt {
 
 export interface ReservationOrderField {
   key:
-    | 'intention'
-    | 'sacrificeFor'
-    | 'gender'
-    | 'isAlive'
-    | 'shortDuaa'
-    | 'photo'
-    | 'executionDate';
+  | 'intention'
+  | 'sacrificeFor'
+  | 'gender'
+  | 'isAlive'
+  | 'shortDuaa'
+  | 'photo'
+  | 'executionDate';
   label: {
     ar: string;
     en: string;
   };
   type:
-    | 'text'
-    | 'textarea'
-    | 'number'
-    | 'date'
-    | 'select'
-    | 'radio'
-    | 'picture';
+  | 'text'
+  | 'textarea'
+  | 'number'
+  | 'date'
+  | 'select'
+  | 'radio'
+  | 'picture';
   value: string;
 }
 
@@ -134,6 +134,7 @@ export interface Order {
   // Referral
   referralId?: string;
   cancellationReason?: string;
+  invoiceUrl?: string;
   statusUpdateTime: string;
   // Terms
   termsAgreedAt?: string;

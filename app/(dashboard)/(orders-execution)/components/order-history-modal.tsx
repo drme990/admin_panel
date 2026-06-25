@@ -14,6 +14,7 @@ export interface OrderHistoryEntry {
   | 'items'
   | 'duaa'
   | 'photo'
+  | 'invoice'
   | 'executionDate'
   | 'bulk_execution_date'
   | 'gender'
@@ -34,6 +35,7 @@ interface Props {
   loading: boolean;
   onRollback?: (entry: OrderHistoryEntry) => void;
   updating?: boolean;
+  namespace?: 'orders' | 'execution';
 }
 
 function formatChangeType(
@@ -45,6 +47,7 @@ function formatChangeType(
     items: 'orderHistory.typeItems',
     duaa: 'orderHistory.typeDuaa',
     photo: 'orderHistory.typePhoto',
+    invoice: 'orderHistory.typeInvoice',
     executionDate: 'orderHistory.typeExecutionDate',
     bulk_execution_date: 'orderHistory.typeBulkExecutionDate',
     gender: 'orderHistory.typeGender',
@@ -82,6 +85,31 @@ function PhotoValue({ value, onClick }: { value: string | null; onClick?: (url: 
   return <span className="text-foreground break-all">{value.length > 40 ? `${value.slice(0, 40)}...` : value}</span>;
 }
 
+function InvoiceValue({ value, onClick }: { value: string | null; onClick?: (url: string) => void }) {
+  if (!value) return <span className="text-secondary">-</span>;
+  if (isImageUrl(value)) {
+    return (
+      <img
+        src={value}
+        alt="Invoice"
+        className="w-16 h-16 object-cover rounded cursor-pointer hover:opacity-80 transition-opacity"
+        onClick={() => onClick?.(value)}
+      />
+    );
+  }
+  return (
+    <a
+      href={value}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-primary hover:underline break-all text-sm"
+      onClick={(e) => e.stopPropagation()}
+    >
+      {value}
+    </a>
+  );
+}
+
 function TextValue({ type, value }: { type: OrderHistoryEntry['changeType']; value: string | null }) {
   if (value === null || value === undefined) return <span className="text-secondary">-</span>;
   if (type === 'items') {
@@ -112,8 +140,9 @@ export default function OrderHistoryModal({
   loading,
   onRollback,
   updating,
+  namespace = 'execution',
 }: Props) {
-  const t = useTranslations('execution');
+  const t = useTranslations(namespace);
   const [expandedPhoto, setExpandedPhoto] = useState<string | null>(null);
 
   return (
@@ -162,6 +191,8 @@ export default function OrderHistoryModal({
                     </span>
                     {entry.changeType === 'photo' ? (
                       <PhotoValue value={entry.previousValue} onClick={setExpandedPhoto} />
+                    ) : entry.changeType === 'invoice' ? (
+                      <InvoiceValue value={entry.previousValue} onClick={setExpandedPhoto} />
                     ) : (
                       <TextValue type={entry.changeType} value={entry.previousValue} />
                     )}
@@ -172,13 +203,15 @@ export default function OrderHistoryModal({
                     </span>
                     {entry.changeType === 'photo' ? (
                       <PhotoValue value={entry.newValue} onClick={setExpandedPhoto} />
+                    ) : entry.changeType === 'invoice' ? (
+                      <InvoiceValue value={entry.newValue} onClick={setExpandedPhoto} />
                     ) : (
                       <TextValue type={entry.changeType} value={entry.newValue} />
                     )}
                   </div>
                 </div>
 
-                {entry.changeType === 'photo' && entry.previousValue && onRollback && (
+                {(entry.changeType === 'photo' || entry.changeType === 'invoice') && entry.previousValue && onRollback && (
                   <div className="pt-1 border-t border-stroke">
                     <Button
                       variant="ghost"

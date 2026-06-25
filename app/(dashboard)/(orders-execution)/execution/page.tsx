@@ -3,7 +3,7 @@
 import { useEffect, useCallback, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { toast } from 'react-toastify';
-import { LuDownload, LuPhone, LuEye, LuPalette, LuUpload, LuPencil } from 'react-icons/lu';
+import { LuDownload, LuPhone, LuEye, LuPalette, LuUpload, LuPencil, LuFileText, LuRefreshCw } from 'react-icons/lu';
 import { FaWhatsapp } from 'react-icons/fa6';
 
 import Table from '@/components/ui/table';
@@ -24,7 +24,11 @@ import ChangeExecutionDateModal from '../components/change-execution-date-modal'
 import EditOrderModal from '../components/edit-order-modal';
 import OrderHistoryModal, { OrderHistoryEntry } from '../components/order-history-modal';
 import ExportModal from '../components/export-modal';
-import { uploadImageToR2, deleteOldImage } from '../../../../lib/image-upload-utils';
+import {
+  uploadImageToR2,
+  deleteOldImage,
+  uploadInvoiceToR2,
+} from '../../../../lib/image-upload-utils';
 import OrderDetailModal from '../components/order-detail-modal';
 import ChangeStatusModal from '../components/change-status-modal';
 import OrderStats from '../components/order-stats';
@@ -64,6 +68,7 @@ export default function ExecutionPage() {
   const [referrals, setReferrals] = useState<Referral[]>([]);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [uploadingPhotoOrderId, setUploadingPhotoOrderId] = useState<string | null>(null);
+  const [uploadingInvoiceOrderId, setUploadingInvoiceOrderId] = useState<string | null>(null);
   const { confirm, modalProps } = useConfirmModal();
 
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
@@ -108,6 +113,8 @@ export default function ExecutionPage() {
     setAsyncAction,
     photoUploadOrderRef,
     photoInputRef,
+    invoiceUploadOrderRef,
+    invoiceInputRef,
   } = useOrderPage({
     namespace: 'execution',
     initialState: {
@@ -497,7 +504,19 @@ export default function ExecutionPage() {
 
   const handleRollback = async (entry: OrderHistoryEntry) => {
     if (!selectedOrder || !entry.previousValue) return;
-    const success = await updateOrder(selectedOrder._id, { photo: entry.previousValue });
+
+    const rollbackFields: Record<string, Record<string, string>> = {
+      photo: { photo: entry.previousValue },
+      invoice: { invoiceUrl: entry.previousValue },
+    };
+
+    const fields = rollbackFields[entry.changeType];
+    if (!fields) {
+      toast.error('Rollback not supported for this change type');
+      return;
+    }
+
+    const success = await updateOrder(selectedOrder._id, fields);
     if (success) {
       // Refresh history after rollback
       setLoadingOrderHistory(true);
@@ -572,6 +591,65 @@ export default function ExecutionPage() {
     } catch {
       toast.error(t('editOrder.failed'));
     }
+  };
+
+  const handleUploadInvoice = (order: Order) => {
+    invoiceUploadOrderRef.current = order;
+    invoiceInputRef.current?.click();
+  };
+
+  const handleInvoiceFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const order = invoiceUploadOrderRef.current;
+    if (!order) return;
+
+    const allowedTypes = [
+      'image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif',
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'text/plain',
+    ];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error(t('editOrder.invalidInvoice'));
+      if (invoiceInputRef.current) invoiceInputRef.current.value = '';
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error(t('editOrder.invoiceTooLarge'));
+      if (invoiceInputRef.current) invoiceInputRef.current.value = '';
+      return;
+    }
+
+    try {
+      setUploadingInvoiceOrderId(order._id);
+      const oldInvoiceUrl = order.invoiceUrl;
+      const invoiceUrl = await uploadInvoiceToR2(file);
+      await updateOrder(order._id, { invoiceUrl });
+
+      if (oldInvoiceUrl) {
+        deleteOldImage(oldInvoiceUrl).catch((error: unknown) => {
+          console.warn('Failed to delete old invoice:', error);
+        });
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : t('editOrder.uploadFailed');
+      toast.error(message);
+      console.error('Invoice upload failed:', error);
+    } finally {
+      invoiceUploadOrderRef.current = null;
+      setUploadingInvoiceOrderId(null);
+      if (invoiceInputRef.current) invoiceInputRef.current.value = '';
+    }
+  };
+
+  const handleDownloadInvoice = (order: Order) => {
+    if (!order.invoiceUrl) {
+      toast.error(t('editOrder.noInvoiceToDownload'));
+      return;
+    }
+    window.open(order.invoiceUrl, '_blank');
   };
 
   const updateExecutionDate = async (date: string) => {
@@ -693,6 +771,8 @@ export default function ExecutionPage() {
     onEditField: handleEditField,
     onUploadPhoto: handleUploadPhoto,
     onCopyPhotoUrl: handleCopyPhotoUrl,
+    onUploadInvoice: handleUploadInvoice,
+    onDownloadInvoice: handleDownloadInvoice,
     onChangeStatus: handleChangeStatus,
     onViewHistory: handleViewHistory,
     onBlock: handleBlockCustomer,
@@ -705,6 +785,7 @@ export default function ExecutionPage() {
     copyingPhoneOrderId,
     copyingMessageOrderId,
     uploadingPhotoOrderId,
+    uploadingInvoiceOrderId,
     blockingOrderId,
     blockedUserIds,
   });
@@ -907,6 +988,50 @@ export default function ExecutionPage() {
                         className: 'min-w-32',
                       },
                       {
+                        header: t('table.invoice'),
+                        accessor: (order: Order) => {
+                          const hasInvoice = Boolean(order.invoiceUrl);
+                          const partialPaid = order.status === 'partial-paid';
+                          const iconColor = hasInvoice
+                            ? (partialPaid ? 'text-orange-600 dark:text-orange-400' : 'text-primary')
+                            : 'text-secondary/50';
+                          return (
+                            <div className="flex flex-col items-center gap-1">
+                              <span className={`inline-flex items-center justify-center p-2 ${iconColor}`}>
+                                <LuFileText size={24} />
+                              </span>
+                              <div className="flex flex-row gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="custom"
+                                  className="h-5 w-5 p-0 text-secondary hover:text-foreground"
+                                  onClick={(e) => { e.stopPropagation(); handleUploadInvoice(order); }}
+                                  disabled={uploadingInvoiceOrderId === order._id}
+                                  aria-label={t('table.uploadInvoice')}
+                                >
+                                  {uploadingInvoiceOrderId === order._id ? (
+                                    <LuRefreshCw size={12} className="animate-spin" />
+                                  ) : (
+                                    <LuUpload size={12} />
+                                  )}
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="custom"
+                                  className="h-5 w-5 p-0 text-secondary hover:text-foreground"
+                                  onClick={(e) => { e.stopPropagation(); handleDownloadInvoice(order); }}
+                                  disabled={!hasInvoice}
+                                  aria-label={t('table.downloadInvoice')}
+                                >
+                                  <LuDownload size={12} />
+                                </Button>
+                              </div>
+                            </div>
+                          );
+                        },
+                        className: 'min-w-16',
+                      },
+                      {
                         header: t('table.design'),
                         accessor: () => (
                           <div className="flex flex-col items-center gap-1">
@@ -1076,6 +1201,7 @@ export default function ExecutionPage() {
         loading={loadingOrderHistory}
         onRollback={handleRollback}
         updating={savingOrderId !== null}
+        namespace="execution"
       />
 
       <ExportModal
@@ -1093,6 +1219,14 @@ export default function ExecutionPage() {
         accept="image/*"
         className="hidden"
         onChange={handlePhotoFileChange}
+      />
+
+      <input
+        ref={invoiceInputRef}
+        type="file"
+        accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
+        className="hidden"
+        onChange={handleInvoiceFileChange}
       />
     </div>
   );

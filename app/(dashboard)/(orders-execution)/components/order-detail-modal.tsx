@@ -15,6 +15,7 @@ import {
   LuGlobe,
   LuTag,
   LuUserRoundPlus,
+  LuFileText,
 } from 'react-icons/lu';
 
 interface Props {
@@ -387,6 +388,27 @@ export default function OrderDetailModal({
                     )}
                   </div>
                 </div>
+
+                {/* Invoice */}
+                {order.invoiceUrl ? (
+                  <div>
+                    <h3 className="font-semibold mb-3">{t('table.invoice')}</h3>
+                    <div className="flex flex-col items-center gap-3 p-4 rounded-lg bg-background border border-stroke">
+                      <span className="inline-flex items-center justify-center p-2 text-primary">
+                        <LuFileText size={32} />
+                      </span>
+                      <a
+                        href={order.invoiceUrl}
+                        download
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center px-3 py-1 rounded-md text-sm font-medium bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                      >
+                        {t('table.downloadInvoice')}
+                      </a>
+                    </div>
+                  </div>
+                ) : null}
 
                 {/* Reservation data */}
                 {order.reservationData?.length ? (

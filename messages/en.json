@@ -95,6 +95,8 @@
       "sharePhoto": "Share Photo",
       "uploadInvoice": "Upload Invoice",
       "downloadInvoice": "Download Invoice",
+      "copyPaymentLink": "Copy Payment Link",
+      "regeneratePaymentLink": "Regenerate Link",
       "editName": "Edit Name",
       "editItems": "Edit Items",
       "editDuaa": "Edit Duaa",
@@ -390,7 +392,11 @@
     "messages": {
       "loadFailed": "Failed to load execution data.",
       "downloadFailed": "Failed to download image"
-    }
+    },
+    "noPaymentLink": "No payment link available",
+    "paymentLinkCopied": "Payment link copied",
+    "paymentLinkRegenerated": "Payment link regenerated",
+    "regenerateFailed": "Failed to regenerate link"
   },
   "orders": {
     "pageTitle": "Order History",
@@ -556,6 +562,10 @@
     },
     "statusUpdateSuccess": "Order status updated successfully",
     "statusUpdateFailed": "Failed to update order status",
+    "noPaymentLink": "No payment link available",
+    "paymentLinkCopied": "Payment link copied",
+    "paymentLinkRegenerated": "Payment link regenerated",
+    "regenerateFailed": "Failed to regenerate link",
     "createManualOrder": {
       "title": "Create Manual Order",
       "source": "Source",
@@ -665,7 +675,9 @@
       "date": "Last Updated",
       "actions": "Actions",
       "invoice": "Invoice",
-      "downloadInvoice": "Download Invoice"
+      "downloadInvoice": "Download Invoice",
+      "copyPaymentLink": "Copy Payment Link",
+      "regeneratePaymentLink": "Regenerate Link"
     }
   },
   "admin": {

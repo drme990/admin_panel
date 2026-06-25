@@ -95,6 +95,8 @@
       "sharePhoto": "مشاركة الصورة",
       "uploadInvoice": "رفع الفاتورة",
       "downloadInvoice": "تحميل الفاتورة",
+      "copyPaymentLink": "نسخ رابط الدفع",
+      "regeneratePaymentLink": "إعادة إنشاء الرابط",
       "editName": "تعديل الاسم",
       "editItems": "تعديل المنتجات",
       "editDuaa": "تعديل الدعاء",
@@ -390,7 +392,11 @@
     "messages": {
       "loadFailed": "فشل تحميل بيانات التنفيذ.",
       "downloadFailed": "فشل تحميل الصورة"
-    }
+    },
+    "noPaymentLink": "لا يوجد رابط دفع متاح",
+    "paymentLinkCopied": "تم نسخ رابط الدفع",
+    "paymentLinkRegenerated": "تم إعادة إنشاء رابط الدفع",
+    "regenerateFailed": "فشل إعادة إنشاء الرابط"
   },
   "orders": {
     "pageTitle": "سجل الطلبات",
@@ -556,6 +562,10 @@
     },
     "statusUpdateSuccess": "تم تحديث حالة الطلب بنجاح",
     "statusUpdateFailed": "فشل تحديث حالة الطلب",
+    "noPaymentLink": "لا يوجد رابط دفع متاح",
+    "paymentLinkCopied": "تم نسخ رابط الدفع",
+    "paymentLinkRegenerated": "تم إعادة إنشاء رابط الدفع",
+    "regenerateFailed": "فشل إعادة إنشاء الرابط",
     "createManualOrder": {
       "title": "إنشاء طلب يدوي",
       "source": "المصدر",
@@ -665,7 +675,9 @@
       "date": "آخر تحديث",
       "actions": "إجراءات",
       "invoice": "الفاتورة",
-      "downloadInvoice": "تحميل الفاتورة"
+      "downloadInvoice": "تحميل الفاتورة",
+      "copyPaymentLink": "نسخ رابط الدفع",
+      "regeneratePaymentLink": "إعادة إنشاء الرابط"
     }
   },
   "admin": {

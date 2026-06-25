@@ -74,6 +74,8 @@ export default function OrderHistoryPage() {
   );
 
   const [referrals, setReferrals] = useState<Referral[]>([]);
+  const [copyingPaymentLinkOrderId, setCopyingPaymentLinkOrderId] = useState<string | null>(null);
+  const [regeneratingPaymentLinkOrderId, setRegeneratingPaymentLinkOrderId] = useState<string | null>(null);
   const { confirm, modalProps } = useConfirmModal();
 
   const {
@@ -373,6 +375,46 @@ export default function OrderHistoryPage() {
     }
   };
 
+  const handleCopyPaymentLink = async (order: Order) => {
+    const latestPayment = [...(order.payments || [])].sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    )[0];
+    if (!latestPayment?.redirectUrl) {
+      toast.error(t('noPaymentLink') || 'No payment link available');
+      return;
+    }
+    try {
+      setCopyingPaymentLinkOrderId(order._id);
+      await navigator.clipboard.writeText(latestPayment.redirectUrl);
+      toast.success(t('paymentLinkCopied') || 'Payment link copied');
+    } catch {
+      toast.error(t('copyFailed') || 'Failed to copy');
+    } finally {
+      setCopyingPaymentLinkOrderId(null);
+    }
+  };
+
+  const handleRegeneratePaymentLink = async (order: Order) => {
+    try {
+      setRegeneratingPaymentLinkOrderId(order._id);
+      const res = await fetch(`/api/admin/orders/${order._id}/regenerate-payment-link`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      const data = await res.json();
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to regenerate payment link');
+      }
+      toast.success(t('paymentLinkRegenerated') || 'Payment link regenerated');
+      void fetchOrders();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : t('regenerateFailed') || 'Failed to regenerate';
+      toast.error(message);
+    } finally {
+      setRegeneratingPaymentLinkOrderId(null);
+    }
+  };
+
   const handleBlockCustomer = async (order: Order) => {
     if (order.isGuest || !order.userId || !order.source) {
       toast.error(t('blockCustomerGuest'));
@@ -499,6 +541,8 @@ export default function OrderHistoryPage() {
     onCopyMessage: copyOrderWhatsappMessage,
     onChangeStatus: handleChangeStatus,
     onBlock: handleBlockCustomer,
+    onCopyPaymentLink: handleCopyPaymentLink,
+    onRegeneratePaymentLink: handleRegeneratePaymentLink,
     onToggleSelect: toggleOrderSelection,
     onToggleSelectAll: toggleSelectAll,
     selectedOrderIds,
@@ -506,6 +550,8 @@ export default function OrderHistoryPage() {
     whatsappOrderId,
     copyingPhoneOrderId,
     copyingMessageOrderId,
+    copyingPaymentLinkOrderId,
+    regeneratingPaymentLinkOrderId,
     blockingOrderId,
     blockedUserIds,
     tooltipPos: ToolTipPositions as 'left' | 'right',

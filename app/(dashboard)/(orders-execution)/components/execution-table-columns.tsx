@@ -19,6 +19,8 @@ import {
   LuPenLine,
   LuBan,
   LuFileText,
+  LuLink,
+  LuRotateCw,
 } from 'react-icons/lu';
 import { FaWhatsapp } from 'react-icons/fa6';
 
@@ -89,6 +91,8 @@ interface ColumnCallbacks {
   onCopyPhotoUrl: (order: Order) => void;
   onUploadInvoice: (order: Order) => void;
   onDownloadInvoice: (order: Order) => void;
+  onCopyPaymentLink: (order: Order) => void;
+  onRegeneratePaymentLink: (order: Order) => void;
   onChangeStatus: (order: Order) => void;
   onViewHistory: (order: Order) => void;
   onBlock: (order: Order) => void;
@@ -102,6 +106,8 @@ interface ColumnCallbacks {
   copyingMessageOrderId: string | null;
   uploadingPhotoOrderId: string | null;
   uploadingInvoiceOrderId: string | null;
+  copyingPaymentLinkOrderId: string | null;
+  regeneratingPaymentLinkOrderId: string | null;
   blockingOrderId: string | null;
   blockedUserIds: Set<string>;
 }
@@ -120,6 +126,8 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
     onCopyPhotoUrl,
     onUploadInvoice,
     onDownloadInvoice,
+    onCopyPaymentLink,
+    onRegeneratePaymentLink,
     onChangeStatus,
     onViewHistory,
     onBlock,
@@ -133,6 +141,8 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
     copyingMessageOrderId,
     uploadingPhotoOrderId,
     uploadingInvoiceOrderId,
+    copyingPaymentLinkOrderId,
+    regeneratingPaymentLinkOrderId,
     blockingOrderId,
     blockedUserIds,
   } = callbacks;
@@ -684,6 +694,50 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
                 <LuHistory size={16} />
               </Button>
             </Tooltip>
+
+            {order.status === 'pending' && order.payments && order.payments.length > 0 && (() => {
+              const latestPayment = [...order.payments].sort(
+                (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+              )[0];
+              const isExpired = latestPayment.expiresAt
+                ? new Date(latestPayment.expiresAt).getTime() < Date.now()
+                : false;
+              const hasRedirectUrl = !!latestPayment.redirectUrl;
+
+              if (!isExpired && hasRedirectUrl) {
+                return (
+                  <Tooltip position={tooltipPos} content={t('table.copyPaymentLink')}>
+                    <Button
+                      variant="icon-primary"
+                      size="custom"
+                      onClick={(e) => { e.stopPropagation(); void onCopyPaymentLink(order); }}
+                      disabled={copyingPaymentLinkOrderId === order._id}
+                      aria-label={t('table.copyPaymentLink')}
+                    >
+                      {copyingPaymentLinkOrderId === order._id
+                        ? <LuRefreshCw size={16} className="animate-spin" />
+                        : <LuLink size={16} />}
+                    </Button>
+                  </Tooltip>
+                );
+              }
+
+              return (
+                <Tooltip position={tooltipPos} content={t('table.regeneratePaymentLink')}>
+                  <Button
+                    variant="icon-primary"
+                    size="custom"
+                    onClick={(e) => { e.stopPropagation(); onRegeneratePaymentLink(order); }}
+                    disabled={regeneratingPaymentLinkOrderId === order._id}
+                    aria-label={t('table.regeneratePaymentLink')}
+                  >
+                    {regeneratingPaymentLinkOrderId === order._id
+                      ? <LuRefreshCw size={16} className="animate-spin" />
+                      : <LuRotateCw size={16} />}
+                  </Button>
+                </Tooltip>
+              );
+            })()}
           </div>
         </div>
       ),

@@ -3,7 +3,7 @@
 import { useEffect, useCallback, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { toast } from 'react-toastify';
-import { LuDownload, LuPhone, LuEye, LuPalette, LuUpload, LuPencil, LuFileText, LuRefreshCw } from 'react-icons/lu';
+import { LuDownload, LuPhone, LuEye, LuPalette, LuUpload, LuPencil, LuFileText, LuRefreshCw, LuPlus } from 'react-icons/lu';
 import { FaWhatsapp } from 'react-icons/fa6';
 
 import Table from '@/components/ui/table';
@@ -31,6 +31,7 @@ import {
 } from '../../../../lib/image-upload-utils';
 import OrderDetailModal from '../components/order-detail-modal';
 import ChangeStatusModal from '../components/change-status-modal';
+import CreateManualOrderModal from '../components/create-manual-order-modal';
 import OrderStats from '../components/order-stats';
 import useOrderPage from '../lib/use-order-page';
 import {
@@ -69,6 +70,7 @@ export default function ExecutionPage() {
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [uploadingPhotoOrderId, setUploadingPhotoOrderId] = useState<string | null>(null);
   const [uploadingInvoiceOrderId, setUploadingInvoiceOrderId] = useState<string | null>(null);
+  const [isCreateManualOrderModalOpen, setIsCreateManualOrderModalOpen] = useState(false);
   const { confirm, modalProps } = useConfirmModal();
 
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
@@ -797,15 +799,24 @@ export default function ExecutionPage() {
           <h1 className="text-2xl font-bold text-foreground">{t('title')}</h1>
           <p className="text-secondary mt-1">{t('description')}</p>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setIsExportModalOpen(true)}
-          className="shrink-0"
-        >
-          <LuDownload size={16} className="me-2" />
-          {t('export.button')}
-        </Button>
+        <div className="flex items-center gap-2 shrink-0">
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() => setIsCreateManualOrderModalOpen(true)}
+          >
+            <LuPlus size={16} className="me-2" />
+            {t('createManualOrder.title')}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsExportModalOpen(true)}
+          >
+            <LuDownload size={16} className="me-2" />
+            {t('export.button')}
+          </Button>
+        </div>
       </div>
 
       <ExecutionFilters
@@ -1209,6 +1220,16 @@ export default function ExecutionPage() {
         onClose={() => setIsExportModalOpen(false)}
         orders={orders}
         date={fromDateFilter || ''}
+      />
+
+      <CreateManualOrderModal
+        isOpen={isCreateManualOrderModalOpen}
+        onClose={() => setIsCreateManualOrderModalOpen(false)}
+        onSuccess={() => {
+          void fetchExecution();
+          void fetchExecutionStats();
+        }}
+        namespace="execution"
       />
 
       <ConfirmModal {...modalProps} />

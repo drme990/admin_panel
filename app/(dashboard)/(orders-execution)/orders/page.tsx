@@ -8,6 +8,7 @@ import { toast } from 'react-toastify';
 import Table from '@/components/ui/table';
 import Pagination from '@/components/ui/pagination';
 import BulkAction from '@/components/ui/bulk-action';
+import Button from '@/components/ui/button';
 import ConfirmModal, { useConfirmModal } from '@/components/ui/confirm-modal';
 
 import { Order, OrderStatus } from '@/types/Order';
@@ -17,8 +18,10 @@ import OrderFilters from '../components/order-filters';
 import { useOrderColumns } from '../components/order-table-columns';
 import OrderDetailModal from '../components/order-detail-modal';
 import ChangeStatusModal from '../components/change-status-modal';
+import CreateManualOrderModal from '../components/create-manual-order-modal';
 import OrderStats from '../components/order-stats';
 import useOrderPage from '../lib/use-order-page';
+import { LuPlus } from 'react-icons/lu';
 import {
   toIsoDateInput,
   getRelativeIsoDate,
@@ -113,6 +116,8 @@ export default function OrderHistoryPage() {
       pageSize: 20,
     },
   });
+
+  const [isCreateManualOrderModalOpen, setIsCreateManualOrderModalOpen] = useState(false);
 
   const {
     orders,
@@ -509,8 +514,17 @@ export default function OrderHistoryPage() {
 
   return (
     <div className="space-y-6">
-      <div>
+      <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-foreground">{t('pageTitle')}</h1>
+        <Button
+          variant="primary"
+          size="custom"
+          className="px-4 py-2"
+          onClick={() => setIsCreateManualOrderModalOpen(true)}
+        >
+          <LuPlus size={18} className="me-2" />
+          {t('createManualOrder.title')}
+        </Button>
       </div>
 
       <OrderFilters
@@ -587,6 +601,16 @@ export default function OrderHistoryPage() {
         currentStatus={selectedOrder?.status ?? 'pending'}
         onUpdateStatus={updateOrderStatus}
         updating={updatingStatus}
+        namespace="orders"
+      />
+
+      <CreateManualOrderModal
+        isOpen={isCreateManualOrderModalOpen}
+        onClose={() => setIsCreateManualOrderModalOpen(false)}
+        onSuccess={() => {
+          void fetchOrders();
+          void fetchStats();
+        }}
         namespace="orders"
       />
 

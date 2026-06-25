@@ -3,7 +3,7 @@
 import { useEffect, useCallback, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { toast } from 'react-toastify';
-import { LuDownload, LuPhone, LuEye } from 'react-icons/lu';
+import { LuDownload, LuPhone, LuEye, LuPalette, LuUpload, LuPencil } from 'react-icons/lu';
 import { FaWhatsapp } from 'react-icons/fa6';
 
 import Table from '@/components/ui/table';
@@ -307,7 +307,10 @@ export default function ExecutionPage() {
         const data: ExecutionResponse = await res.json();
 
         if (data.success && data.data) {
-          setCategoryModalOrders(data.data.orders);
+          const sorted = [...data.data.orders].sort(
+            (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+          );
+          setCategoryModalOrders(sorted);
         } else {
           toast.error(data.error || t('messages.loadFailed'));
           setCategoryModalOrders([]);
@@ -845,6 +848,46 @@ export default function ExecutionPage() {
                           );
                         },
                         className: 'min-w-32',
+                      },
+                      {
+                        header: t('table.design'),
+                        accessor: () => (
+                          <div className="flex flex-col items-center gap-1">
+                            <span className="inline-flex items-center justify-center p-2 text-primary">
+                              <LuPalette size={24} />
+                            </span>
+                            <div className="flex flex-row gap-1">
+                              <Button
+                                variant="ghost"
+                                size="custom"
+                                className="h-5 w-5 p-0 text-secondary hover:text-foreground"
+                                disabled
+                                aria-label={t('table.uploadDesign')}
+                              >
+                                <LuUpload size={12} />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="custom"
+                                className="h-5 w-5 p-0 text-secondary hover:text-foreground"
+                                disabled
+                                aria-label={t('table.downloadDesign')}
+                              >
+                                <LuDownload size={12} />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="custom"
+                                className="h-5 w-5 p-0 text-secondary hover:text-foreground"
+                                disabled
+                                aria-label={t('table.editDesign')}
+                              >
+                                <LuPencil size={12} />
+                              </Button>
+                            </div>
+                          </div>
+                        ),
+                        className: 'min-w-20',
                       },
                       {
                         header: t('table.paidAmount'),

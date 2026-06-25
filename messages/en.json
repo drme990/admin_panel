@@ -127,8 +127,13 @@
       "save": "Save",
       "saving": "Saving...",
       "cancellationReasonLabel": "Cancellation Reason",
-      "cancellationReasonPlaceholder": "Enter the reason for cancellation...",
+      "cancellationReasonPlaceholder": "Select a reason...",
+      "customReasonPlaceholder": "Enter custom reason...",
       "cancellationReasonRequired": "Cancellation reason is required",
+      "reasonReturned": "Returned",
+      "reasonScammer": "Scammer",
+      "reasonDuplicate": "Duplicate",
+      "reasonOther": "Other",
       "success": "Status updated successfully",
       "failed": "Failed to update status"
     },
@@ -457,8 +462,13 @@
       "save": "Save",
       "saving": "Saving...",
       "cancellationReasonLabel": "Cancellation Reason",
-      "cancellationReasonPlaceholder": "Enter the reason for cancellation...",
-      "cancellationReasonRequired": "Cancellation reason is required"
+      "cancellationReasonPlaceholder": "Select a reason...",
+      "customReasonPlaceholder": "Enter custom reason...",
+      "cancellationReasonRequired": "Cancellation reason is required",
+      "reasonReturned": "Returned",
+      "reasonScammer": "Scammer",
+      "reasonDuplicate": "Duplicate",
+      "reasonOther": "Other"
     },
     "statusEditor": {
       "label": "Order Status",

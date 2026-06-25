@@ -1,12 +1,15 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 
 import Modal from '@/components/ui/modal';
 import Button from '@/components/ui/button';
+import Dropdown from '@/components/ui/dropdown';
 import { OrderStatus } from '@/types/Order';
 import { STATUS_COLORS } from '../lib/order-status';
+
+type CancellationPreset = 'returned' | 'scammer' | 'duplicate' | 'other';
 
 interface Props {
   isOpen: boolean;
@@ -29,21 +32,35 @@ export default function ChangeStatusModal({
 }: Props) {
   const t = useTranslations(namespace);
   const [selectedStatus, setSelectedStatus] = useState<OrderStatus>('completed');
-  const [cancellationReason, setCancellationReason] = useState('');
+  const [cancellationPreset, setCancellationPreset] = useState<CancellationPreset>('returned');
+  const [customReason, setCustomReason] = useState('');
+
+  const presetOptions = useMemo(
+    () => [
+      { label: t('changeStatusModal.reasonReturned'), value: 'returned' as CancellationPreset },
+      { label: t('changeStatusModal.reasonScammer'), value: 'scammer' as CancellationPreset },
+      { label: t('changeStatusModal.reasonDuplicate'), value: 'duplicate' as CancellationPreset },
+      { label: t('changeStatusModal.reasonOther'), value: 'other' as CancellationPreset },
+    ],
+    [t],
+  );
 
   useEffect(() => {
     if (isOpen) {
       setSelectedStatus('completed');
-      setCancellationReason('');
+      setCancellationPreset('returned');
+      setCustomReason('');
     }
   }, [isOpen]);
 
   const isCancelled = selectedStatus === 'cancelled';
-  const canSubmit = !isCancelled || cancellationReason.trim().length > 0;
+  const isOther = cancellationPreset === 'other';
+  const cancellationReason = isOther ? customReason.trim() : t(`changeStatusModal.reason${cancellationPreset.charAt(0).toUpperCase() + cancellationPreset.slice(1)}`);
+  const canSubmit = !isCancelled || (isOther ? customReason.trim().length > 0 : true);
 
   const handleSave = () => {
     if (!canSubmit) return;
-    onUpdateStatus(selectedStatus, isCancelled ? cancellationReason.trim() : undefined);
+    onUpdateStatus(selectedStatus, isCancelled ? cancellationReason : undefined);
   };
 
   return (
@@ -59,8 +76,8 @@ export default function ChangeStatusModal({
             <label
               key={status}
               className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${selectedStatus === status
-                  ? 'border-primary bg-primary/5'
-                  : 'border-stroke bg-background hover:bg-foreground/5'
+                ? 'border-primary bg-primary/5'
+                : 'border-stroke bg-background hover:bg-foreground/5'
                 }`}
             >
               <input
@@ -79,17 +96,23 @@ export default function ChangeStatusModal({
         </div>
 
         {isCancelled && (
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-foreground">
-              {t('changeStatusModal.cancellationReasonLabel')}
-            </label>
-            <textarea
-              value={cancellationReason}
-              onChange={(e) => setCancellationReason(e.target.value)}
+          <div className="flex flex-col gap-2">
+            <Dropdown
+              label={t('changeStatusModal.cancellationReasonLabel')}
+              value={cancellationPreset}
+              options={presetOptions}
+              onChange={(val) => setCancellationPreset(val)}
               placeholder={t('changeStatusModal.cancellationReasonPlaceholder')}
-              rows={3}
-              className="w-full rounded-lg border border-stroke bg-background p-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors resize-none"
             />
+            {isOther && (
+              <textarea
+                value={customReason}
+                onChange={(e) => setCustomReason(e.target.value)}
+                placeholder={t('changeStatusModal.customReasonPlaceholder')}
+                rows={2}
+                className="w-full rounded-lg border border-stroke bg-background p-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors resize-none"
+              />
+            )}
             {!canSubmit && (
               <span className="text-xs text-red-500">
                 {t('changeStatusModal.cancellationReasonRequired')}

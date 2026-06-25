@@ -127,8 +127,13 @@
       "save": "حفظ",
       "saving": "جارٍ الحفظ...",
       "cancellationReasonLabel": "سبب الإلغاء",
-      "cancellationReasonPlaceholder": "أدخل سبب الإلغاء...",
+      "cancellationReasonPlaceholder": "اختر سبباً...",
+      "customReasonPlaceholder": "أدخل السبب...",
       "cancellationReasonRequired": "سبب الإلغاء مطلوب",
+      "reasonReturned": "مرتجع",
+      "reasonScammer": "نصاب",
+      "reasonDuplicate": "مكرر",
+      "reasonOther": "سبب آخر",
       "success": "تم تحديث الحالة بنجاح",
       "failed": "فشل تحديث الحالة"
     },
@@ -457,8 +462,13 @@
       "save": "حفظ",
       "saving": "جارٍ الحفظ...",
       "cancellationReasonLabel": "سبب الإلغاء",
-      "cancellationReasonPlaceholder": "أدخل سبب الإلغاء...",
-      "cancellationReasonRequired": "سبب الإلغاء مطلوب"
+      "cancellationReasonPlaceholder": "اختر سبباً...",
+      "customReasonPlaceholder": "أدخل السبب...",
+      "cancellationReasonRequired": "سبب الإلغاء مطلوب",
+      "reasonReturned": "مرتجع",
+      "reasonScammer": "نصاب",
+      "reasonDuplicate": "مكرر",
+      "reasonOther": "سبب آخر"
     },
     "statusEditor": {
       "label": "حالة الطلب",

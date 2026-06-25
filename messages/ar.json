@@ -70,6 +70,7 @@
       "date": "آخر تحديث",
       "source": "المصدر",
       "actions": "الإجراءات",
+      "invoice": "الفاتورة",
       "copyDuaa": "نسخ الدعاء",
       "copyPhone": "نسخ الرقم",
       "copyMessage": "نسخ الرسالة",
@@ -92,7 +93,6 @@
       "downloadPhoto": "تحميل الصورة",
       "editPhoto": "تعديل الصورة",
       "sharePhoto": "مشاركة الصورة",
-      "invoice": "الفاتورة",
       "uploadInvoice": "رفع الفاتورة",
       "downloadInvoice": "تحميل الفاتورة",
       "editName": "تعديل الاسم",
@@ -663,7 +663,9 @@
       "remaining": "المتبقي {remaining} {currency}",
       "status": "الحالة",
       "date": "آخر تحديث",
-      "actions": "إجراءات"
+      "actions": "إجراءات",
+      "invoice": "الفاتورة",
+      "downloadInvoice": "تحميل الفاتورة"
     }
   },
   "admin": {

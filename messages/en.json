@@ -70,6 +70,7 @@
       "date": "Last Updated",
       "source": "Source",
       "actions": "Actions",
+      "invoice": "Invoice",
       "copyDuaa": "Copy Duaa",
       "copyPhone": "Copy Phone",
       "copyMessage": "Copy Message",
@@ -92,7 +93,6 @@
       "downloadPhoto": "Download Photo",
       "editPhoto": "Edit Photo",
       "sharePhoto": "Share Photo",
-      "invoice": "Invoice",
       "uploadInvoice": "Upload Invoice",
       "downloadInvoice": "Download Invoice",
       "editName": "Edit Name",
@@ -663,7 +663,9 @@
       "remaining": "Remaining {remaining} {currency}",
       "status": "Status",
       "date": "Last Updated",
-      "actions": "Actions"
+      "actions": "Actions",
+      "invoice": "Invoice",
+      "downloadInvoice": "Download Invoice"
     }
   },
   "admin": {

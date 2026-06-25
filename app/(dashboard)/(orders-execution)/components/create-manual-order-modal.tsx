@@ -472,7 +472,7 @@ export default function CreateManualOrderModal({
         reservationData.push({ key: 'photo', value: form.reservationData.photo.trim() });
       }
 
-      const res = await fetch('/api/admin/orders/create', {
+      const res = await fetch('/api/orders/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

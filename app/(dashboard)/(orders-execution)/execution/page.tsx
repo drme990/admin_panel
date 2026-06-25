@@ -103,6 +103,8 @@ export default function ExecutionPage() {
     setOrderHistoryModalOpen,
     setOrderHistory,
     setLoadingOrderHistory,
+    setBlockedUserIds,
+    setBlockingOrderId,
     setAsyncAction,
     photoUploadOrderRef,
     photoInputRef,
@@ -156,6 +158,8 @@ export default function ExecutionPage() {
     whatsappOrderId,
     copyingPhoneOrderId,
     copyingMessageOrderId,
+    blockedUserIds,
+    blockingOrderId,
   } = state;
 
   useEffect(() => {
@@ -436,6 +440,56 @@ export default function ExecutionPage() {
     }
   };
 
+  const handleBlockCustomer = async (order: Order) => {
+    if (order.isGuest || !order.userId || !order.source) {
+      toast.error(t('blockCustomerGuest'));
+      return;
+    }
+
+    const isCurrentlyBanned = blockedUserIds.has(order.userId);
+
+    const confirmed = await confirm({
+      title: isCurrentlyBanned ? t('unblockCustomer') : t('blockCustomer'),
+      message: isCurrentlyBanned ? t('unblockCustomerConfirm') : t('blockCustomerConfirm'),
+      type: isCurrentlyBanned ? 'info' : 'danger',
+      confirmText: isCurrentlyBanned ? t('unblockCustomer') : t('blockCustomer'),
+      cancelText: t('changeStatusModal.cancel') || t('cancel'),
+    });
+
+    if (!confirmed) return;
+
+    setBlockingOrderId(order._id);
+    try {
+      const res = await fetch(
+        `/api/customers/${order.source}/${order.userId}/ban`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ isBanned: !isCurrentlyBanned }),
+        },
+      );
+
+      const data = await res.json();
+      if (!data.success) {
+        toast.error(data.error || (isCurrentlyBanned ? t('unblockCustomerFailed') : t('blockCustomerFailed')));
+        return;
+      }
+
+      setBlockedUserIds(
+        new Set(
+          isCurrentlyBanned
+            ? Array.from(blockedUserIds).filter((id) => id !== order.userId)
+            : [...Array.from(blockedUserIds), order.userId],
+        ),
+      );
+      toast.success(isCurrentlyBanned ? t('unblockCustomerSuccess') : t('blockCustomerSuccess'));
+    } catch {
+      toast.error(isCurrentlyBanned ? t('unblockCustomerFailed') : t('blockCustomerFailed'));
+    } finally {
+      setBlockingOrderId(null);
+    }
+  };
+
   const closeOrderHistoryModal = () => {
     setOrderHistoryModalOpen(false);
     setOrderHistory([], false);
@@ -641,6 +695,7 @@ export default function ExecutionPage() {
     onCopyPhotoUrl: handleCopyPhotoUrl,
     onChangeStatus: handleChangeStatus,
     onViewHistory: handleViewHistory,
+    onBlock: handleBlockCustomer,
     onToggleSelect: toggleOrderSelection,
     onToggleSelectAll: toggleSelectAll,
     selectedOrderIds,
@@ -650,6 +705,8 @@ export default function ExecutionPage() {
     copyingPhoneOrderId,
     copyingMessageOrderId,
     uploadingPhotoOrderId,
+    blockingOrderId,
+    blockedUserIds,
   });
 
   return (

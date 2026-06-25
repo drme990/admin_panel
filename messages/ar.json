@@ -77,6 +77,8 @@
       "viewDetails": "عرض التفاصيل",
       "changeExecutionDate": "تغيير التاريخ",
       "changeStatus": "تغيير الحالة",
+      "blockCustomer": "حظر العميل",
+      "unblockCustomer": "إلغاء حظر العميل",
       "copyName": "نسخ الأسم",
       "copyOrderNumber": "نسخ رقم الطلب",
       "copyItems": "نسخ المنتجات",
@@ -211,6 +213,15 @@
       "selectProduct": "اختر منتجاً",
       "addItem": "إضافة منتج"
     },
+    "blockCustomer": "حظر العميل",
+    "unblockCustomer": "إلغاء حظر العميل",
+    "blockCustomerConfirm": "هل أنت متأكد من حظر هذا العميل؟ سيتم منعه من إنشاء طلبات جديدة.",
+    "unblockCustomerConfirm": "هل أنت متأكد من إلغاء حظر هذا العميل؟",
+    "blockCustomerSuccess": "تم حظر العميل بنجاح",
+    "unblockCustomerSuccess": "تم إلغاء حظر العميل بنجاح",
+    "blockCustomerFailed": "فشل حظر العميل",
+    "unblockCustomerFailed": "فشل إلغاء حظر العميل",
+    "blockCustomerGuest": "لا يمكن حظر طلبات الزوار",
     "orderHistory": {
       "title": "تاريخ تغييرات الطلب",
       "close": "إغلاق",
@@ -1459,7 +1470,8 @@
         "referral": "إحالة",
         "coupon": "كوبون",
         "appearance": "مظهر",
-        "customer": "عميل"
+        "customer": "عميل",
+        "booking": "الحجز"
       }
     },
     "appearance": {

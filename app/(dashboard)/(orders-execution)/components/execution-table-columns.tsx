@@ -17,6 +17,7 @@ import {
   LuHistory,
   LuShare2,
   LuPenLine,
+  LuBan,
 } from 'react-icons/lu';
 import { FaWhatsapp } from 'react-icons/fa6';
 
@@ -87,6 +88,7 @@ interface ColumnCallbacks {
   onCopyPhotoUrl: (order: Order) => void;
   onChangeStatus: (order: Order) => void;
   onViewHistory: (order: Order) => void;
+  onBlock: (order: Order) => void;
   onToggleSelect: (orderId: string) => void;
   onToggleSelectAll: () => void;
   selectedOrderIds: string[];
@@ -96,6 +98,8 @@ interface ColumnCallbacks {
   copyingPhoneOrderId: string | null;
   copyingMessageOrderId: string | null;
   uploadingPhotoOrderId: string | null;
+  blockingOrderId: string | null;
+  blockedUserIds: Set<string>;
 }
 
 export function useExecutionColumns(callbacks: ColumnCallbacks) {
@@ -112,6 +116,7 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
     onCopyPhotoUrl,
     onChangeStatus,
     onViewHistory,
+    onBlock,
     onToggleSelect,
     onToggleSelectAll,
     selectedOrderIds,
@@ -121,6 +126,8 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
     copyingPhoneOrderId,
     copyingMessageOrderId,
     uploadingPhotoOrderId,
+    blockingOrderId,
+    blockedUserIds,
   } = callbacks;
 
   const columns = [
@@ -545,6 +552,36 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
                   : <FaWhatsapp size={16} />}
               </Button>
             </Tooltip>
+
+            {order.userId && blockedUserIds.has(order.userId) ? (
+              <Tooltip position={tooltipPos} content={t('table.unblockCustomer')}>
+                <Button
+                  variant="icon-danger"
+                  size="custom"
+                  onClick={(e) => { e.stopPropagation(); onBlock(order); }}
+                  disabled={blockingOrderId === order._id}
+                  aria-label={t('table.unblockCustomer')}
+                >
+                  {blockingOrderId === order._id
+                    ? <LuRefreshCw size={16} className="animate-spin" />
+                    : <LuBan size={16} />}
+                </Button>
+              </Tooltip>
+            ) : (
+              <Tooltip position={tooltipPos} content={t('table.blockCustomer')}>
+                <Button
+                  variant="icon-primary"
+                  size="custom"
+                  onClick={(e) => { e.stopPropagation(); onBlock(order); }}
+                  disabled={blockingOrderId === order._id || order.isGuest || !order.userId}
+                  aria-label={t('table.blockCustomer')}
+                >
+                  {blockingOrderId === order._id
+                    ? <LuRefreshCw size={16} className="animate-spin" />
+                    : <LuBan size={16} />}
+                </Button>
+              </Tooltip>
+            )}
           </div>
 
           <div className="flex flex-row gap-2">
@@ -594,7 +631,7 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
           </div>
         </div>
       ),
-      className: 'min-w-56',
+      className: 'min-w-64',
     },
   ];
 

@@ -77,6 +77,8 @@
       "viewDetails": "View Details",
       "changeExecutionDate": "Change Date",
       "changeStatus": "Change Status",
+      "blockCustomer": "Block Customer",
+      "unblockCustomer": "Unblock Customer",
       "copyName": "Copy Name",
       "copyOrderNumber": "Copy Order Number",
       "copyItems": "Copy Items",
@@ -211,6 +213,15 @@
       "selectProduct": "Select a product",
       "addItem": "Add Item"
     },
+    "blockCustomer": "Block Customer",
+    "unblockCustomer": "Unblock Customer",
+    "blockCustomerConfirm": "Are you sure you want to block this customer? They will be banned from placing new orders.",
+    "unblockCustomerConfirm": "Are you sure you want to unblock this customer?",
+    "blockCustomerSuccess": "Customer blocked successfully",
+    "unblockCustomerSuccess": "Customer unblocked successfully",
+    "blockCustomerFailed": "Failed to block customer",
+    "unblockCustomerFailed": "Failed to unblock customer",
+    "blockCustomerGuest": "Cannot block guest orders",
     "orderHistory": {
       "title": "Order Change History",
       "close": "Close",
@@ -1459,7 +1470,8 @@
         "referral": "Referral",
         "coupon": "Coupon",
         "appearance": "Appearance",
-        "customer": "Customer"
+        "customer": "Customer",
+        "booking": "Booking"
       }
     },
     "appearance": {

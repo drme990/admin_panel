@@ -10,12 +10,44 @@ import Modal from '@/components/ui/modal';
 import Button from '@/components/ui/button';
 import Input from '@/components/ui/input';
 import MultiNameInput from '@/components/ui/multi-name-input';
+import QuantityInput from '@/components/ui/quantity-input';
 import Dropdown from '@/components/ui/dropdown';
+import CountrySelector from '@/components/shared/country-selector';
+import RadioButton from '@/components/ui/radio-button';
 import Tabs from '@/components/ui/tabs';
 import Switch from '@/components/ui/switch';
 import CustomDatePicker from '@/components/ui/custom-date-picker';
 import { uploadImageToR2, uploadInvoiceToR2 } from '../../../../lib/image-upload-utils';
-import { LuCopy, LuCheck, LuRefreshCw, LuUpload, LuDownload, LuPlus, LuX, LuSearch, LuUserCheck } from 'react-icons/lu';
+import { LuCopy, LuCheck, LuRefreshCw, LuUpload, LuDownload, LuPlus, LuX, LuAtSign } from 'react-icons/lu';
+import { FaWhatsapp } from 'react-icons/fa';
+import { cn } from '@/lib/utils';
+import { isValidPhoneNumber } from 'libphonenumber-js';
+import { COUNTRIES } from '@/lib/countries';
+
+function validatePhoneNumber(phone: string, countryName: string): boolean {
+  if (!phone.trim()) return false;
+
+  const normalizedCountry = countryName.trim().toLowerCase();
+  const country = COUNTRIES.find(
+    (c) =>
+      c.value.toLowerCase() === normalizedCountry ||
+      c.en.toLowerCase() === normalizedCountry ||
+      c.ar.toLowerCase() === normalizedCountry ||
+      c.code.toLowerCase() === normalizedCountry,
+  );
+
+  try {
+    if (country) {
+      return isValidPhoneNumber(
+        phone,
+        country.code as Parameters<typeof isValidPhoneNumber>[1],
+      );
+    }
+    return isValidPhoneNumber(phone);
+  } catch {
+    return false;
+  }
+}
 
 interface Product {
   _id: string;
@@ -139,9 +171,17 @@ export default function CreateManualOrderModal({
   } | null>(null);
   const [copied, setCopied] = useState(false);
   const [linkedUserId, setLinkedUserId] = useState<string | null>(null);
-  const [lookingUpUser, setLookingUpUser] = useState(false);
+  const [foundUsers, setFoundUsers] = useState<Array<{
+    _id: string;
+    name: string;
+    email: string;
+    phone: string;
+    country: string;
+    appId: string;
+  }>>([]);
   const invoiceInputRef = useRef<HTMLInputElement | null>(null);
   const photoInputRef = useRef<HTMLInputElement | null>(null);
+  const lastLookupRef = useRef<{ phone: string; email: string }>({ phone: '', email: '' });
 
   const resetForm = useCallback(() => {
     const initialReferralId =
@@ -152,14 +192,16 @@ export default function CreateManualOrderModal({
     setCopied(false);
     setUseCustomExecutionDate(false);
     setLinkedUserId(null);
+    setFoundUsers([]);
     setFormErrors({});
+    lastLookupRef.current = { phone: '', email: '' };
   }, [user]);
 
   useEffect(() => {
     if (isOpen) {
       resetForm();
       setLoadingProducts(true);
-      fetch('/api/products', { cache: 'no-store' })
+      fetch('/api/products?status=Active', { cache: 'no-store' })
         .then((r) => r.json())
         .then((data) => {
           if (data.success) {
@@ -379,6 +421,8 @@ export default function CreateManualOrderModal({
     }
     if (!form.billingData.phone.trim()) {
       errors.phone = t('createManualOrder.errors.phoneRequired');
+    } else if (!validatePhoneNumber(form.billingData.phone, form.billingData.country)) {
+      errors.phone = t('createManualOrder.errors.phoneInvalid') || 'Invalid phone number';
     }
     if (!form.billingData.country.trim()) {
       errors.country = t('createManualOrder.errors.countryRequired');
@@ -470,39 +514,79 @@ export default function CreateManualOrderModal({
     }
   };
 
-  const handleLookupUser = async () => {
-    const phone = form.billingData.phone.trim();
-    if (!phone) return;
+  const lookupUser = useCallback(async (phone: string, email: string) => {
+    if (!phone && !email) return;
+    if (lastLookupRef.current.phone === phone && lastLookupRef.current.email === email) return;
 
-    setLookingUpUser(true);
+    lastLookupRef.current = { phone, email };
     try {
-      const res = await fetch(`/api//orders/lookup-user?phone=${encodeURIComponent(phone)}`, {
+      const params = new URLSearchParams();
+      if (phone) params.set('phone', phone);
+      if (email) params.set('email', email);
+      const res = await fetch(`/api/orders/lookup-user?${params.toString()}`, {
         credentials: 'include',
       });
       const data = await res.json();
-      if (data.success && data.data) {
-        const user = data.data;
-        setForm((prev) => ({
-          ...prev,
-          billingData: {
-            fullName: user.name || prev.billingData.fullName,
-            email: user.email || prev.billingData.email,
-            phone: user.phone || prev.billingData.phone,
-            country: user.country || prev.billingData.country,
-          },
-        }));
-        setLinkedUserId(user._id);
-        toast.success(t('createManualOrder.userFound') || 'User found — data auto-filled');
+      if (data.success && Array.isArray(data.data)) {
+        setFoundUsers(data.data);
       } else {
-        setLinkedUserId(null);
-        toast.info(t('createManualOrder.userNotFound') || 'No registered user found with this phone');
+        setFoundUsers([]);
       }
     } catch {
       toast.error(t('createManualOrder.userLookupFailed') || 'Failed to lookup user');
-    } finally {
-      setLookingUpUser(false);
+      setFoundUsers([]);
     }
+  }, [t]);
+
+  const selectUser = (user: {
+    _id: string;
+    name: string;
+    email: string;
+    phone: string;
+    country: string;
+    appId: string;
+  }) => {
+    setForm((prev) => ({
+      ...prev,
+      billingData: {
+        fullName: user.name || prev.billingData.fullName,
+        email: user.email || prev.billingData.email,
+        phone: user.phone || prev.billingData.phone,
+        country: user.country || prev.billingData.country,
+      },
+    }));
+    lastLookupRef.current = {
+      phone: user.phone.trim(),
+      email: user.email.trim(),
+    };
+    setLinkedUserId(user._id);
+    setFoundUsers([]);
+    setFormErrors((prev) => ({ ...prev, phone: '', email: '' }));
+    toast.success(t('createManualOrder.userSelected') || 'User selected');
   };
+
+  useEffect(() => {
+    const phone = form.billingData.phone.trim();
+    const email = form.billingData.email.trim();
+
+    if (!phone && !email) {
+      setLinkedUserId(null);
+      setFoundUsers([]);
+      lastLookupRef.current = { phone: '', email: '' };
+      return;
+    }
+
+    if (lastLookupRef.current.phone === phone && lastLookupRef.current.email === email) {
+      return;
+    }
+
+    setFoundUsers([]);
+    const timer = setTimeout(() => {
+      lookupUser(phone, email);
+    }, 800);
+
+    return () => clearTimeout(timer);
+  }, [form.billingData.phone, form.billingData.email, lookupUser]);
 
   const handleSubmit = async () => {
     const errors = validateForm();
@@ -767,14 +851,11 @@ export default function CreateManualOrderModal({
                   )}
                 </div>
                 <div className="sm:col-span-3">
-                  <Input
+                  <QuantityInput
                     label={index === 0 ? t('createManualOrder.quantity') : undefined}
-                    type="number"
-                    min={0}
                     value={item.quantity}
-                    onChange={(e) =>
-                      updateItem(index, { quantity: Math.max(0, parseInt(e.target.value) || 0) })
-                    }
+                    min={0}
+                    onChange={(val) => updateItem(index, { quantity: val })}
                     error={formErrors[`item_${index}_quantity`]}
                   />
                 </div>
@@ -825,7 +906,7 @@ export default function CreateManualOrderModal({
         </h4>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Input
-            label={t('createManualOrder.fullName')}
+            placeholder={t('createManualOrder.fullNamePlaceholder')}
             value={form.billingData.fullName}
             onChange={(e) =>
               setForm((prev) => ({
@@ -833,72 +914,152 @@ export default function CreateManualOrderModal({
                 billingData: { ...prev.billingData, fullName: e.target.value },
               }))
             }
-            required
             error={formErrors.fullName}
           />
           <Input
-            label={t('createManualOrder.email')}
+            placeholder={t('createManualOrder.phonePlaceholder')}
+            value={form.billingData.phone}
+            onChange={(e) => {
+              setForm((prev) => ({
+                ...prev,
+                billingData: { ...prev.billingData, phone: e.target.value },
+              }));
+              setLinkedUserId(null);
+              setFormErrors((prev) => ({ ...prev, phone: '' }));
+            }}
+            onBlur={() => {
+              const phone = form.billingData.phone.trim();
+              if (!phone) {
+                setFormErrors((prev) => ({
+                  ...prev,
+                  phone: t('createManualOrder.errors.phoneRequired'),
+                }));
+              } else if (!validatePhoneNumber(form.billingData.phone, form.billingData.country)) {
+                setFormErrors((prev) => ({
+                  ...prev,
+                  phone: t('createManualOrder.errors.phoneInvalid') || 'Invalid phone number',
+                }));
+              }
+            }}
+            error={formErrors.phone}
+            suffix={
+              form.billingData.phone.replace(/\D/g, '').length > 0 ? (
+                <a
+                  href={`https://wa.me/${form.billingData.phone.replace(/\D/g, '')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-success hover:text-foreground transition-colors"
+                  aria-label="Open WhatsApp chat"
+                >
+                  <FaWhatsapp size={18} />
+                </a>
+              ) : null
+            }
+          />
+          <Input
+            placeholder={t('createManualOrder.emailPlaceholder')}
             type="email"
             value={form.billingData.email}
-            onChange={(e) =>
+            onChange={(e) => {
               setForm((prev) => ({
                 ...prev,
                 billingData: { ...prev.billingData, email: e.target.value },
-              }))
-            }
-            required
+              }));
+              setLinkedUserId(null);
+            }}
             error={formErrors.email}
+            suffix={
+              !form.billingData.email.trim() && form.billingData.phone.trim() ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setForm((prev) => ({
+                      ...prev,
+                      billingData: {
+                        ...prev.billingData,
+                        email: `${prev.billingData.phone.trim()}@gmail.com`,
+                      },
+                    }));
+                    setLinkedUserId(null);
+                    setFoundUsers([]);
+                  }}
+                  className="text-secondary hover:text-foreground transition-colors"
+                  aria-label="Use phone as Gmail"
+                >
+                  <LuAtSign size={16} />
+                </button>
+              ) : null
+            }
           />
-          <div className="flex items-end gap-2">
-            <div className="flex-1">
-              <Input
-                label={t('createManualOrder.phone')}
-                value={form.billingData.phone}
-                onChange={(e) => {
-                  setForm((prev) => ({
-                    ...prev,
-                    billingData: { ...prev.billingData, phone: e.target.value },
-                  }));
-                  setLinkedUserId(null);
-                }}
-                required
-                error={formErrors.phone}
-              />
-            </div>
-            <Button
-              variant="outline"
-              size="custom"
-              className="px-3 py-2.5 mb-0.5"
-              onClick={handleLookupUser}
-              disabled={lookingUpUser || !form.billingData.phone.trim()}
-            >
-              {lookingUpUser ? (
-                <LuRefreshCw size={16} className="animate-spin" />
-              ) : linkedUserId ? (
-                <LuUserCheck size={16} className="text-success" />
-              ) : (
-                <LuSearch size={16} />
-              )}
-              <span className="ms-1 text-sm">
-                {linkedUserId
-                  ? t('createManualOrder.userLinked') || 'Linked'
-                  : t('createManualOrder.findUser') || 'Find User'}
-              </span>
-            </Button>
-          </div>
-          <Input
-            label={t('createManualOrder.country')}
+          <CountrySelector
             value={form.billingData.country}
-            onChange={(e) =>
+            onChange={(val) =>
               setForm((prev) => ({
                 ...prev,
-                billingData: { ...prev.billingData, country: e.target.value },
+                billingData: { ...prev.billingData, country: val },
               }))
             }
-            required
+            placeholder={t('createManualOrder.countryPlaceholder')}
             error={formErrors.country}
           />
         </div>
+
+        {foundUsers.length > 0 && (
+          <div className="mt-4 rounded-lg border border-stroke bg-background p-3">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-semibold text-foreground">
+                {t('createManualOrder.foundUsers')}
+              </span>
+              <button
+                type="button"
+                onClick={() => setFoundUsers([])}
+                className="text-xs text-secondary hover:text-foreground transition-colors"
+              >
+                <LuX size={14} />
+              </button>
+            </div>
+            <div className="space-y-2 max-h-60 overflow-y-auto">
+              {foundUsers.map((user) => (
+                <div
+                  key={user._id}
+                  className={cn(
+                    'flex items-center justify-between rounded-md border p-2 transition-colors',
+                    linkedUserId === user._id
+                      ? 'border-success bg-success/5'
+                      : 'border-stroke bg-background hover:border-success/40',
+                  )}
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-medium text-foreground truncate">
+                      {user.name || '-'}
+                    </div>
+                    <div className="text-xs text-secondary truncate">
+                      {user.email || '-'}
+                    </div>
+                    <div className="text-xs text-secondary truncate">
+                      {user.phone || '-'}
+                    </div>
+                    {user.country && (
+                      <div className="text-xs text-secondary truncate">
+                        {user.country}
+                      </div>
+                    )}
+                  </div>
+                  <Button
+                    variant={linkedUserId === user._id ? 'primary' : 'outline'}
+                    size="sm"
+                    onClick={() => selectUser(user)}
+                    className="ml-2 shrink-0"
+                  >
+                    {linkedUserId === user._id
+                      ? t('createManualOrder.userSelected') || 'Selected'
+                      : t('createManualOrder.selectUser') || 'Select'}
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Reservation Data */}
@@ -935,30 +1096,52 @@ export default function CreateManualOrderModal({
             }
             placeholder={t('createManualOrder.selectIntention')}
           />
-          <Dropdown
-            label={t('createManualOrder.gender')}
-            value={form.reservationData.gender}
-            options={genderOptions}
-            onChange={(val) =>
-              setForm((prev) => ({
-                ...prev,
-                reservationData: { ...prev.reservationData, gender: val },
-              }))
-            }
-            placeholder={t('createManualOrder.selectGender')}
-          />
-          <Dropdown
-            label={t('createManualOrder.isAlive')}
-            value={form.reservationData.isAlive}
-            options={isAliveOptions}
-            onChange={(val) =>
-              setForm((prev) => ({
-                ...prev,
-                reservationData: { ...prev.reservationData, isAlive: val },
-              }))
-            }
-            placeholder={t('createManualOrder.selectStatus')}
-          />
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-2">
+              {t('createManualOrder.gender')}
+            </label>
+            <div className="flex flex-wrap gap-4">
+              {genderOptions.map((option) => (
+                <RadioButton
+                  key={`gender-${option.value}`}
+                  id={`gender-${option.value}`}
+                  name="gender"
+                  value={option.value}
+                  label={option.label}
+                  checked={form.reservationData.gender === option.value}
+                  onChange={(val) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      reservationData: { ...prev.reservationData, gender: val },
+                    }))
+                  }
+                />
+              ))}
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-2">
+              {t('createManualOrder.isAlive')}
+            </label>
+            <div className="flex flex-wrap gap-4">
+              {isAliveOptions.map((option) => (
+                <RadioButton
+                  key={`status-${option.value}`}
+                  id={`status-${option.value}`}
+                  name="status"
+                  value={option.value}
+                  label={option.label}
+                  checked={form.reservationData.isAlive === option.value}
+                  onChange={(val) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      reservationData: { ...prev.reservationData, isAlive: val },
+                    }))
+                  }
+                />
+              ))}
+            </div>
+          </div>
           <div className="sm:col-span-2">
             <label className="block text-sm font-medium text-foreground mb-2">
               {t('createManualOrder.shortDuaa')}
@@ -1041,6 +1224,10 @@ export default function CreateManualOrderModal({
                 locale={locale}
                 label={t('createManualOrder.executionDate')}
                 placeholder={t('createManualOrder.executionDate')}
+                minDate={(() => {
+                  const today = new Date();
+                  return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+                })()}
               />
             )}
             {!useCustomExecutionDate && (

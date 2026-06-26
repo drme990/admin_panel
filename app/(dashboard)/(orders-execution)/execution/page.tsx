@@ -102,6 +102,7 @@ export default function ExecutionPage() {
     copyOrderWhatsappMessage,
     updateOrderStatus,
     updateOrder,
+    fetchOrderDetails,
     setChangeExecutionDateModalOpen,
     setChangingExecutionDateId,
     setEditOrderModalOpen,
@@ -113,6 +114,7 @@ export default function ExecutionPage() {
     setBlockedUserIds,
     setBlockingOrderId,
     setAsyncAction,
+    setSelectedOrder,
     photoUploadOrderRef,
     photoInputRef,
     invoiceUploadOrderRef,
@@ -654,47 +656,31 @@ export default function ExecutionPage() {
     window.open(order.invoiceUrl, '_blank');
   };
 
-  const [copyingPaymentLinkOrderId, setCopyingPaymentLinkOrderId] = useState<string | null>(null);
-  const [regeneratingPaymentLinkOrderId, setRegeneratingPaymentLinkOrderId] = useState<string | null>(null);
+  const [creatingPaymentLinkOrderId, setCreatingPaymentLinkOrderId] = useState<string | null>(null);
 
-  const handleCopyPaymentLink = async (order: Order) => {
-    const latestPayment = [...(order.payments || [])].sort(
-      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-    )[0];
-    if (!latestPayment?.redirectUrl) {
-      toast.error(t('noPaymentLink') || 'No payment link available');
-      return;
-    }
+  const handleCreatePaymentLink = async (order: Order) => {
     try {
-      setCopyingPaymentLinkOrderId(order._id);
-      await navigator.clipboard.writeText(latestPayment.redirectUrl);
-      toast.success(t('paymentLinkCopied') || 'Payment link copied');
-    } catch {
-      toast.error(t('copyFailed') || 'Failed to copy');
-    } finally {
-      setCopyingPaymentLinkOrderId(null);
-    }
-  };
-
-  const handleRegeneratePaymentLink = async (order: Order) => {
-    try {
-      setRegeneratingPaymentLinkOrderId(order._id);
-      const res = await fetch(`/api/admin/orders/${order._id}/regenerate-payment-link`, {
+      setCreatingPaymentLinkOrderId(order._id);
+      const res = await fetch(`/api/orders/${order._id}/regenerate-payment-link`, {
         method: 'POST',
         credentials: 'include',
       });
       const data = await res.json();
       if (!data.success) {
-        throw new Error(data.error || 'Failed to regenerate payment link');
+        throw new Error(data.error || 'Failed to create payment link');
       }
-      toast.success(t('paymentLinkRegenerated') || 'Payment link regenerated');
-      // Refresh the order in the list
+      toast.success(t('paymentLinkRegenerated') || 'Payment link created');
+      // Reload the order details so the new link appears in the modal
+      const updatedOrder = await fetchOrderDetails(order._id, false);
+      if (updatedOrder) {
+        setSelectedOrder(updatedOrder);
+      }
       void fetchExecution();
     } catch (error) {
-      const message = error instanceof Error ? error.message : t('regenerateFailed') || 'Failed to regenerate';
+      const message = error instanceof Error ? error.message : t('regenerateFailed') || 'Failed to create payment link';
       toast.error(message);
     } finally {
-      setRegeneratingPaymentLinkOrderId(null);
+      setCreatingPaymentLinkOrderId(null);
     }
   };
 
@@ -819,8 +805,6 @@ export default function ExecutionPage() {
     onCopyPhotoUrl: handleCopyPhotoUrl,
     onUploadInvoice: handleUploadInvoice,
     onDownloadInvoice: handleDownloadInvoice,
-    onCopyPaymentLink: handleCopyPaymentLink,
-    onRegeneratePaymentLink: handleRegeneratePaymentLink,
     onChangeStatus: handleChangeStatus,
     onViewHistory: handleViewHistory,
     onBlock: handleBlockCustomer,
@@ -834,8 +818,6 @@ export default function ExecutionPage() {
     copyingMessageOrderId,
     uploadingPhotoOrderId,
     uploadingInvoiceOrderId,
-    copyingPaymentLinkOrderId,
-    regeneratingPaymentLinkOrderId,
     blockingOrderId,
     blockedUserIds,
   });
@@ -1223,6 +1205,8 @@ export default function ExecutionPage() {
         formatDate={formatDate}
         locale={locale}
         namespace="execution"
+        onCreatePaymentLink={selectedOrder ? handleCreatePaymentLink : undefined}
+        isCreatingPaymentLink={selectedOrder ? creatingPaymentLinkOrderId === selectedOrder._id : false}
       />
 
       <ChangeExecutionDateModal

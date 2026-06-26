@@ -1,8 +1,10 @@
-import { type ReactNode } from 'react';
+import { type ReactNode, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import Image from 'next/image';
 
 import Modal from '@/components/ui/modal';
+import Button from '@/components/ui/button';
+import Tooltip from '@/components/ui/tooltip';
 import { Order, OrderPayment } from '@/types/Order';
 import { STATUS_COLORS, PAYMENT_STATUS_COLORS } from '../lib/order-status';
 import {
@@ -16,6 +18,10 @@ import {
   LuTag,
   LuUserRoundPlus,
   LuFileText,
+  LuLink,
+  LuCopy,
+  LuCheck,
+  LuRotateCw,
 } from 'react-icons/lu';
 
 interface Props {
@@ -26,6 +32,8 @@ interface Props {
   formatDate: (date: string) => string;
   locale: string;
   namespace?: 'orders' | 'execution';
+  onCreatePaymentLink?: (order: Order) => void;
+  isCreatingPaymentLink?: boolean;
 }
 
 function isOrderGuest(order: Pick<Order, 'userId' | 'isGuest'>): boolean {
@@ -108,11 +116,39 @@ export default function OrderDetailModal({
   formatDate,
   locale,
   namespace = 'orders',
+  onCreatePaymentLink,
+  isCreatingPaymentLink,
 }: Props) {
   const t = useTranslations(namespace);
+  const [copiedPaymentId, setCopiedPaymentId] = useState<string | null>(null);
 
   const formatMoney = (amount: number | undefined, currency: string) =>
     `${Number(amount ?? 0).toFixed(2)} ${currency}`;
+
+  const canCreatePaymentLink =
+    !!order &&
+    !!onCreatePaymentLink &&
+    (order.status === 'pending' || order.status === 'partial-paid') &&
+    (order.remainingAmount ?? 0) > 0.001;
+
+  const handleCopyPaymentLink = async (payment: OrderPayment) => {
+    if (!payment.redirectUrl) return;
+    try {
+      await navigator.clipboard.writeText(payment.redirectUrl);
+      setCopiedPaymentId(payment.paymentId);
+      setTimeout(() => setCopiedPaymentId(null), 2000);
+    } catch {
+      // ignore
+    }
+  };
+
+  const isPaymentLinkExpired = (payment: OrderPayment) => {
+    if (!payment.expiresAt) return false;
+    return new Date(payment.expiresAt).getTime() < Date.now();
+  };
+
+  const hasPaymentLink = (payment: OrderPayment) =>
+    !!payment.redirectUrl && !isPaymentLinkExpired(payment);
 
   const getReservationLabel = (label: { ar: string; en: string }) =>
     locale === 'ar' ? label.ar : label.en;
@@ -231,7 +267,26 @@ export default function OrderDetailModal({
 
                 {/* Payment timeline */}
                 <div>
-                  <h3 className="font-semibold mb-3">{t('paymentTimeline.title')}</h3>
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="font-semibold">{t('paymentTimeline.title')}</h3>
+                    {canCreatePaymentLink && (
+                      <Tooltip position={locale === 'ar' ? 'right' : 'left'} content={t('paymentTimeline.createLink') || 'Create payment link'}>
+                        <Button
+                          variant="icon-primary"
+                          size="custom"
+                          onClick={() => onCreatePaymentLink?.(order)}
+                          disabled={isCreatingPaymentLink}
+                          aria-label={t('paymentTimeline.createLink') || 'Create payment link'}
+                        >
+                          {isCreatingPaymentLink ? (
+                            <LuRotateCw size={18} className="animate-spin" />
+                          ) : (
+                            <LuLink size={18} />
+                          )}
+                        </Button>
+                      </Tooltip>
+                    )}
+                  </div>
                   {paymentTimeline.length > 0 ? (
                     <div className="flex flex-col gap-2">
                       {paymentTimeline.map((payment, index) => {
@@ -250,9 +305,27 @@ export default function OrderDetailModal({
                               <span className="text-sm font-semibold text-foreground">
                                 {t('paymentTimeline.paymentLabel', { index: index + 1 })}
                               </span>
-                              <span className={`inline-block px-2 py-0.5 text-xs font-medium rounded-full ${PAYMENT_STATUS_COLORS[paymentStatus] || ''}`}>
-                                {t(`paymentTimeline.statuses.${paymentStatus}`)}
-                              </span>
+                              <div className="flex items-center gap-2">
+                                {hasPaymentLink(payment) && (
+                                  <Tooltip position={locale === 'ar' ? 'right' : 'left'} content={t('paymentTimeline.copyLink') || 'Copy payment link'}>
+                                    <Button
+                                      variant="icon-primary"
+                                      size="custom"
+                                      onClick={() => handleCopyPaymentLink(payment)}
+                                      aria-label={t('paymentTimeline.copyLink') || 'Copy payment link'}
+                                    >
+                                      {copiedPaymentId === payment.paymentId ? (
+                                        <LuCheck size={16} className="text-success" />
+                                      ) : (
+                                        <LuCopy size={16} />
+                                      )}
+                                    </Button>
+                                  </Tooltip>
+                                )}
+                                <span className={`inline-block px-2 py-0.5 text-xs font-medium rounded-full ${PAYMENT_STATUS_COLORS[paymentStatus] || ''}`}>
+                                  {t(`paymentTimeline.statuses.${paymentStatus}`)}
+                                </span>
+                              </div>
                             </div>
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">

@@ -74,8 +74,7 @@ export default function OrderHistoryPage() {
   );
 
   const [referrals, setReferrals] = useState<Referral[]>([]);
-  const [copyingPaymentLinkOrderId, setCopyingPaymentLinkOrderId] = useState<string | null>(null);
-  const [regeneratingPaymentLinkOrderId, setRegeneratingPaymentLinkOrderId] = useState<string | null>(null);
+  const [creatingPaymentLinkOrderId, setCreatingPaymentLinkOrderId] = useState<string | null>(null);
   const { confirm, modalProps } = useConfirmModal();
 
   const {
@@ -104,6 +103,8 @@ export default function OrderHistoryPage() {
     setBlockingOrderId,
     setBlockedUserIds,
     setAsyncAction,
+    fetchOrderDetails,
+    setSelectedOrder,
   } = useOrderPage({
     namespace: 'orders',
     initialState: {
@@ -375,43 +376,29 @@ export default function OrderHistoryPage() {
     }
   };
 
-  const handleCopyPaymentLink = async (order: Order) => {
-    const latestPayment = [...(order.payments || [])].sort(
-      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-    )[0];
-    if (!latestPayment?.redirectUrl) {
-      toast.error(t('noPaymentLink') || 'No payment link available');
-      return;
-    }
+  const handleCreatePaymentLink = async (order: Order) => {
     try {
-      setCopyingPaymentLinkOrderId(order._id);
-      await navigator.clipboard.writeText(latestPayment.redirectUrl);
-      toast.success(t('paymentLinkCopied') || 'Payment link copied');
-    } catch {
-      toast.error(t('copyFailed') || 'Failed to copy');
-    } finally {
-      setCopyingPaymentLinkOrderId(null);
-    }
-  };
-
-  const handleRegeneratePaymentLink = async (order: Order) => {
-    try {
-      setRegeneratingPaymentLinkOrderId(order._id);
-      const res = await fetch(`/api/admin/orders/${order._id}/regenerate-payment-link`, {
+      setCreatingPaymentLinkOrderId(order._id);
+      const res = await fetch(`/api/orders/${order._id}/regenerate-payment-link`, {
         method: 'POST',
         credentials: 'include',
       });
       const data = await res.json();
       if (!data.success) {
-        throw new Error(data.error || 'Failed to regenerate payment link');
+        throw new Error(data.error || 'Failed to create payment link');
       }
-      toast.success(t('paymentLinkRegenerated') || 'Payment link regenerated');
+      toast.success(t('paymentLinkRegenerated') || 'Payment link created');
+      // Reload the order details so the new link appears in the modal
+      const updatedOrder = await fetchOrderDetails(order._id, false);
+      if (updatedOrder) {
+        setSelectedOrder(updatedOrder);
+      }
       void fetchOrders();
     } catch (error) {
-      const message = error instanceof Error ? error.message : t('regenerateFailed') || 'Failed to regenerate';
+      const message = error instanceof Error ? error.message : t('regenerateFailed') || 'Failed to create payment link';
       toast.error(message);
     } finally {
-      setRegeneratingPaymentLinkOrderId(null);
+      setCreatingPaymentLinkOrderId(null);
     }
   };
 
@@ -541,8 +528,6 @@ export default function OrderHistoryPage() {
     onCopyMessage: copyOrderWhatsappMessage,
     onChangeStatus: handleChangeStatus,
     onBlock: handleBlockCustomer,
-    onCopyPaymentLink: handleCopyPaymentLink,
-    onRegeneratePaymentLink: handleRegeneratePaymentLink,
     onToggleSelect: toggleOrderSelection,
     onToggleSelectAll: toggleSelectAll,
     selectedOrderIds,
@@ -550,8 +535,6 @@ export default function OrderHistoryPage() {
     whatsappOrderId,
     copyingPhoneOrderId,
     copyingMessageOrderId,
-    copyingPaymentLinkOrderId,
-    regeneratingPaymentLinkOrderId,
     blockingOrderId,
     blockedUserIds,
     tooltipPos: ToolTipPositions as 'left' | 'right',
@@ -639,6 +622,8 @@ export default function OrderHistoryPage() {
         formatDate={formatDate}
         locale={locale}
         namespace="orders"
+        onCreatePaymentLink={selectedOrder ? handleCreatePaymentLink : undefined}
+        isCreatingPaymentLink={selectedOrder ? creatingPaymentLinkOrderId === selectedOrder._id : false}
       />
 
       <ChangeStatusModal

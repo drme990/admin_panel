@@ -13,8 +13,6 @@ import {
   LuPhone,
   LuPenLine,
   LuBan,
-  LuLink,
-  LuRotateCw,
 } from 'react-icons/lu';
 
 import {
@@ -30,8 +28,6 @@ interface ColumnCallbacks {
   onCopyMessage: (order: Order) => void;
   onChangeStatus: (order: Order) => void;
   onBlock: (order: Order) => void;
-  onCopyPaymentLink: (order: Order) => void;
-  onRegeneratePaymentLink: (order: Order) => void;
   onToggleSelect: (orderId: string) => void;
   onToggleSelectAll: () => void;
   selectedOrderIds: string[];
@@ -39,8 +35,6 @@ interface ColumnCallbacks {
   whatsappOrderId: string | null;
   copyingPhoneOrderId: string | null;
   copyingMessageOrderId: string | null;
-  copyingPaymentLinkOrderId: string | null;
-  regeneratingPaymentLinkOrderId: string | null;
   blockingOrderId: string | null;
   blockedUserIds: Set<string>;
   tooltipPos: 'left' | 'right';
@@ -51,11 +45,9 @@ export function useOrderColumns(callbacks: ColumnCallbacks) {
   const t = useTranslations('orders');
   const {
     onView, onWhatsapp, onCopyPhone, onCopyMessage, onChangeStatus, onBlock,
-    onCopyPaymentLink, onRegeneratePaymentLink,
     onToggleSelect, onToggleSelectAll,
     selectedOrderIds, allVisibleSelected,
-    whatsappOrderId, copyingPhoneOrderId, copyingMessageOrderId, copyingPaymentLinkOrderId,
-    regeneratingPaymentLinkOrderId, blockingOrderId, blockedUserIds,
+    whatsappOrderId, copyingPhoneOrderId, copyingMessageOrderId, blockingOrderId, blockedUserIds,
     tooltipPos, formatDate,
   } = callbacks;
 
@@ -244,50 +236,6 @@ export function useOrderColumns(callbacks: ColumnCallbacks) {
                 <LuPenLine size={16} />
               </Button>
             </Tooltip>
-
-            {row.status === 'pending' && row.payments && row.payments.length > 0 && (() => {
-              const latestPayment = [...row.payments].sort(
-                (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-              )[0];
-              const isExpired = latestPayment.expiresAt
-                ? new Date(latestPayment.expiresAt).getTime() < Date.now()
-                : false;
-              const hasRedirectUrl = !!latestPayment.redirectUrl;
-
-              if (!isExpired && hasRedirectUrl) {
-                return (
-                  <Tooltip position={tooltipPos} content={t('table.copyPaymentLink')}>
-                    <Button
-                      variant="icon-primary"
-                      size="custom"
-                      onClick={(e) => { e.stopPropagation(); void onCopyPaymentLink(row); }}
-                      disabled={copyingPaymentLinkOrderId === row._id}
-                      aria-label={t('table.copyPaymentLink')}
-                    >
-                      {copyingPaymentLinkOrderId === row._id
-                        ? <LuRefreshCw size={16} className="animate-spin" />
-                        : <LuLink size={16} />}
-                    </Button>
-                  </Tooltip>
-                );
-              }
-
-              return (
-                <Tooltip position={tooltipPos} content={t('table.regeneratePaymentLink')}>
-                  <Button
-                    variant="icon-primary"
-                    size="custom"
-                    onClick={(e) => { e.stopPropagation(); onRegeneratePaymentLink(row); }}
-                    disabled={regeneratingPaymentLinkOrderId === row._id}
-                    aria-label={t('table.regeneratePaymentLink')}
-                  >
-                    {regeneratingPaymentLinkOrderId === row._id
-                      ? <LuRefreshCw size={16} className="animate-spin" />
-                      : <LuRotateCw size={16} />}
-                  </Button>
-                </Tooltip>
-              );
-            })()}
 
             {row.userId && blockedUserIds.has(row.userId) ? (
               <Tooltip position={tooltipPos} content={t('unblockCustomer')}>

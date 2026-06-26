@@ -73,6 +73,7 @@ interface FormState {
     photo: string;
   };
   paymentMethod: PaymentMethod;
+  paidAmount: string;
 }
 
 const emptyItem = (): OrderItemForm => ({
@@ -102,6 +103,7 @@ const DEFAULT_FORM: FormState = {
     photo: '',
   },
   paymentMethod: 'easykash',
+  paidAmount: '',
 };
 
 export default function CreateManualOrderModal({
@@ -126,6 +128,10 @@ export default function CreateManualOrderModal({
   const [result, setResult] = useState<{
     orderNumber: string;
     totalAmount: number;
+    fullAmount: number;
+    paidAmount: number;
+    remainingAmount: number;
+    isPartialPayment: boolean;
     currency: string;
     checkoutUrl: string | null;
   } | null>(null);
@@ -313,6 +319,35 @@ export default function CreateManualOrderModal({
 
   const isEasykash = form.paymentMethod === 'easykash';
 
+  // Compute the full order total based on selected items + currency
+  const fullOrderTotal = useMemo(() => {
+    let total = 0;
+    for (const item of form.items) {
+      if (!item.productId || item.quantity <= 0) continue;
+      const product = getProduct(item.productId);
+      if (!product) continue;
+      const size = product.sizes?.[item.sizeIndex];
+      if (!size) continue;
+      let unitPrice = size.price ?? 0;
+      const currencyPrice = size.prices?.find(
+        (p) => p.currencyCode === form.currency,
+      );
+      if (currencyPrice) unitPrice = currencyPrice.amount;
+      total += unitPrice * item.quantity;
+    }
+    return total;
+  }, [form.items, form.currency, getProduct]);
+
+  const paidAmountNum = useMemo(() => {
+    const n = parseFloat(form.paidAmount);
+    return Number.isFinite(n) && n >= 0 ? n : 0;
+  }, [form.paidAmount]);
+
+  const isPartialPayment = paidAmountNum > 0 && paidAmountNum < fullOrderTotal;
+  const remainingAmount = isPartialPayment
+    ? Math.max(0, fullOrderTotal - paidAmountNum)
+    : 0;
+
   const canSubmit = useMemo(() => {
     if (form.items.length === 0) return false;
     for (const item of form.items) {
@@ -325,8 +360,10 @@ export default function CreateManualOrderModal({
     if (!form.billingData.phone.trim()) return false;
     if (!form.billingData.country.trim()) return false;
     if (!isEasykash && !invoiceFile) return false;
+    if (isPartialPayment && paidAmountNum <= 0) return false;
+    if (isPartialPayment && paidAmountNum >= fullOrderTotal) return false;
     return true;
-  }, [form, isEasykash, invoiceFile]);
+  }, [form, isEasykash, invoiceFile, isPartialPayment, paidAmountNum, fullOrderTotal]);
 
   const updateItem = (index: number, patch: Partial<OrderItemForm>) => {
     setForm((prev) => {
@@ -490,6 +527,7 @@ export default function CreateManualOrderModal({
           invoiceUrl: invoiceUrl || undefined,
           locale: 'ar',
           userId: linkedUserId || undefined,
+          paidAmount: isPartialPayment ? paidAmountNum : undefined,
         }),
       });
 
@@ -501,6 +539,10 @@ export default function CreateManualOrderModal({
       setResult({
         orderNumber: data.data.order.orderNumber,
         totalAmount: data.data.order.totalAmount,
+        fullAmount: data.data.order.fullAmount,
+        paidAmount: data.data.order.paidAmount,
+        remainingAmount: data.data.order.remainingAmount,
+        isPartialPayment: data.data.order.isPartialPayment,
         currency: data.data.order.currency,
         checkoutUrl: data.data.checkoutUrl,
       });
@@ -544,14 +586,28 @@ export default function CreateManualOrderModal({
             <p className="text-sm text-secondary mb-1">{t('createManualOrder.orderNumber')}</p>
             <p className="text-2xl font-bold text-success">{result.orderNumber}</p>
             <p className="text-sm text-foreground mt-1">
-              {result.totalAmount.toFixed(2)} {result.currency}
+              {result.isPartialPayment ? (
+                <>
+                  <span className="font-semibold">
+                    {t('createManualOrder.paid') || 'Paid'}: {result.paidAmount.toFixed(2)} {result.currency}
+                  </span>
+                  {' · '}
+                  <span className="text-orange-600 dark:text-orange-400 font-semibold">
+                    {t('createManualOrder.remaining') || 'Remaining'}: {result.remainingAmount.toFixed(2)} {result.currency}
+                  </span>
+                </>
+              ) : (
+                <>{result.totalAmount.toFixed(2)} {result.currency}</>
+              )}
             </p>
           </div>
 
           {result.checkoutUrl ? (
             <div className="flex flex-col gap-2">
               <label className="text-sm font-medium text-foreground">
-                {t('createManualOrder.paymentLink')}
+                {result.isPartialPayment
+                  ? (t('createManualOrder.remainingPaymentLink') || 'Remaining Payment Link')
+                  : t('createManualOrder.paymentLink')}
               </label>
               <div className="flex gap-2">
                 <input
@@ -574,7 +630,9 @@ export default function CreateManualOrderModal({
           ) : (
             <div className="p-3 rounded-lg bg-primary/5 border border-primary/10 text-center">
               <p className="text-sm text-primary font-medium">
-                {t('createManualOrder.paidOrderSuccess')}
+                {result.isPartialPayment
+                  ? (t('createManualOrder.partialOrderSuccess') || 'Partial order created successfully')
+                  : t('createManualOrder.paidOrderSuccess')}
               </p>
             </div>
           )}
@@ -948,6 +1006,58 @@ export default function CreateManualOrderModal({
           {t('createManualOrder.payment')}
         </h4>
         <div className="flex flex-col gap-4">
+          {/* Order total summary */}
+          {fullOrderTotal > 0 && (
+            <div className="p-3 rounded-lg bg-primary/5 border border-primary/10 flex flex-col gap-1">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-secondary">
+                  {t('createManualOrder.fullAmount') || 'Full Order Total'}
+                </span>
+                <span className="font-bold text-foreground">
+                  {fullOrderTotal.toFixed(2)} {form.currency}
+                </span>
+              </div>
+              {isPartialPayment && (
+                <>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-secondary">
+                      {t('createManualOrder.paid') || 'Paid Amount'}
+                    </span>
+                    <span className="font-bold text-success">
+                      {paidAmountNum.toFixed(2)} {form.currency}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-secondary">
+                      {t('createManualOrder.remaining') || 'Remaining'}
+                    </span>
+                    <span className="font-bold text-orange-600 dark:text-orange-400">
+                      {remainingAmount.toFixed(2)} {form.currency}
+                    </span>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* Paid amount input — allows admin to record a partial payment */}
+          <Input
+            label={t('createManualOrder.paidAmount') || 'Paid Amount (leave empty for full payment)'}
+            type="number"
+            min={0}
+            step="0.01"
+            value={form.paidAmount}
+            placeholder={fullOrderTotal > 0 ? fullOrderTotal.toFixed(2) : '0.00'}
+            onChange={(e) =>
+              setForm((prev) => ({ ...prev, paidAmount: e.target.value }))
+            }
+          />
+          {isPartialPayment && (
+            <p className="text-xs text-orange-600 dark:text-orange-400">
+              {t('createManualOrder.partialPaymentHint') || 'Order will be created as partial-paid. The remaining amount can be collected later via a payment link or another invoice.'}
+            </p>
+          )}
+
           <Dropdown
             label={t('createManualOrder.paymentMethod')}
             value={form.paymentMethod}
@@ -989,6 +1099,12 @@ export default function CreateManualOrderModal({
                 onChange={handleInvoiceFileChange}
               />
             </div>
+          )}
+
+          {isEasykash && isPartialPayment && (
+            <p className="text-xs text-secondary">
+              {t('createManualOrder.easykashPartialHint') || 'An EasyKash payment link will be generated for the remaining amount. The paid portion will be recorded as a manual payment.'}
+            </p>
           )}
         </div>
       </div>

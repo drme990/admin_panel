@@ -188,7 +188,21 @@
       "userLinked": "تم الربط",
       "userFound": "تم العثور على المستخدم — تم تعبئة البيانات تلقائياً",
       "userNotFound": "لا يوجد مستخدم مسجل بهذا الرقم",
-      "userLookupFailed": "فشل البحث عن المستخدم"
+      "userLookupFailed": "فشل البحث عن المستخدم",
+      "errors": {
+        "itemsRequired": "مطلوب صنف واحد على الأقل",
+        "productRequired": "يرجى اختيار منتج",
+        "quantityRequired": "الكمية يجب أن تكون 1 على الأقل",
+        "currencyRequired": "العملة مطلوبة",
+        "fullNameRequired": "الاسم الكامل مطلوب",
+        "emailRequired": "البريد الإلكتروني مطلوب",
+        "phoneRequired": "الهاتف مطلوب",
+        "countryRequired": "الدولة مطلوبة",
+        "invoiceRequired": "الفاتورة مطلوبة لطريقة الدفع هذه",
+        "paidAmountRequired": "المبلغ المدفوع يجب أن يكون أكبر من 0",
+        "paidAmountInvalid": "المبلغ المدفوع يجب أن يكون أقل من إجمالي الطلب",
+        "fixForm": "يرجى تصحيح الأخطاء أعلاه"
+      }
     },
     "createManualPayment": {
       "easykash": "EasyKash",
@@ -660,7 +674,21 @@
       "userLinked": "تم الربط",
       "userFound": "تم العثور على المستخدم — تم تعبئة البيانات تلقائياً",
       "userNotFound": "لا يوجد مستخدم مسجل بهذا الرقم",
-      "userLookupFailed": "فشل البحث عن المستخدم"
+      "userLookupFailed": "فشل البحث عن المستخدم",
+      "errors": {
+        "itemsRequired": "مطلوب صنف واحد على الأقل",
+        "productRequired": "يرجى اختيار منتج",
+        "quantityRequired": "الكمية يجب أن تكون 1 على الأقل",
+        "currencyRequired": "العملة مطلوبة",
+        "fullNameRequired": "الاسم الكامل مطلوب",
+        "emailRequired": "البريد الإلكتروني مطلوب",
+        "phoneRequired": "الهاتف مطلوب",
+        "countryRequired": "الدولة مطلوبة",
+        "invoiceRequired": "الفاتورة مطلوبة لطريقة الدفع هذه",
+        "paidAmountRequired": "المبلغ المدفوع يجب أن يكون أكبر من 0",
+        "paidAmountInvalid": "المبلغ المدفوع يجب أن يكون أقل من إجمالي الطلب",
+        "fixForm": "يرجى تصحيح الأخطاء أعلاه"
+      }
     },
     "createManualPayment": {
       "easykash": "EasyKash",

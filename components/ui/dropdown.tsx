@@ -17,6 +17,7 @@ interface DropdownProps<T = string> {
   disabled?: boolean;
   className?: string;
   required?: boolean;
+  error?: string;
 }
 
 export default function Dropdown<T = string>({
@@ -28,6 +29,7 @@ export default function Dropdown<T = string>({
   disabled = false,
   className = '',
   required = false,
+  error,
 }: DropdownProps<T>) {
   const [isOpen, setIsOpen] = useState(false);
   const [direction, setDirection] = useState<'down' | 'up'>('down');
@@ -88,7 +90,7 @@ export default function Dropdown<T = string>({
         type="button"
         onClick={() => !disabled && setIsOpen(!isOpen)}
         disabled={disabled}
-        className="w-full px-4 py-2 rounded-lg border border-stroke bg-background focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-between"
+        className={`w-full px-4 py-2 rounded-lg border bg-background focus:outline-none focus:ring-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-between ${error ? 'border-error focus:ring-error/20 focus:border-error' : 'border-stroke focus:ring-primary focus:border-primary'}`}
       >
         <span className="flex items-center gap-2">
           {selectedOption?.icon}
@@ -100,6 +102,10 @@ export default function Dropdown<T = string>({
             }`}
         />
       </Button>
+
+      {error && (
+        <p className="text-xs text-error mt-1">{error}</p>
+      )}
 
       {isOpen && (
         <div

@@ -188,7 +188,21 @@
       "userLinked": "Linked",
       "userFound": "User found — data auto-filled",
       "userNotFound": "No registered user found with this phone",
-      "userLookupFailed": "Failed to lookup user"
+      "userLookupFailed": "Failed to lookup user",
+      "errors": {
+        "itemsRequired": "At least one item is required",
+        "productRequired": "Please select a product",
+        "quantityRequired": "Quantity must be at least 1",
+        "currencyRequired": "Currency is required",
+        "fullNameRequired": "Full name is required",
+        "emailRequired": "Email is required",
+        "phoneRequired": "Phone is required",
+        "countryRequired": "Country is required",
+        "invoiceRequired": "Invoice is required for this payment method",
+        "paidAmountRequired": "Paid amount must be greater than 0",
+        "paidAmountInvalid": "Paid amount must be less than the order total",
+        "fixForm": "Please fix the errors above"
+      }
     },
     "createManualPayment": {
       "easykash": "EasyKash",
@@ -660,7 +674,21 @@
       "userLinked": "Linked",
       "userFound": "User found — data auto-filled",
       "userNotFound": "No registered user found with this phone",
-      "userLookupFailed": "Failed to lookup user"
+      "userLookupFailed": "Failed to lookup user",
+      "errors": {
+        "itemsRequired": "At least one item is required",
+        "productRequired": "Please select a product",
+        "quantityRequired": "Quantity must be at least 1",
+        "currencyRequired": "Currency is required",
+        "fullNameRequired": "Full name is required",
+        "emailRequired": "Email is required",
+        "phoneRequired": "Phone is required",
+        "countryRequired": "Country is required",
+        "invoiceRequired": "Invoice is required for this payment method",
+        "paidAmountRequired": "Paid amount must be greater than 0",
+        "paidAmountInvalid": "Paid amount must be less than the order total",
+        "fixForm": "Please fix the errors above"
+      }
     },
     "createManualPayment": {
       "easykash": "EasyKash",

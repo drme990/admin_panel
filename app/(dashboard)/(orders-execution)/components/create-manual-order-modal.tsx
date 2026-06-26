@@ -126,6 +126,7 @@ export default function CreateManualOrderModal({
   const [uploadingInvoice, setUploadingInvoice] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [useCustomExecutionDate, setUseCustomExecutionDate] = useState(false);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [result, setResult] = useState<{
     orderNumber: string;
     totalAmount: number;
@@ -151,6 +152,7 @@ export default function CreateManualOrderModal({
     setCopied(false);
     setUseCustomExecutionDate(false);
     setLinkedUserId(null);
+    setFormErrors({});
   }, [user]);
 
   useEffect(() => {
@@ -233,6 +235,10 @@ export default function CreateManualOrderModal({
       setForm((prev) => ({ ...prev, currency: currencyOptions[0].value }));
     }
   }, [currencyOptions, form.currency]);
+
+  useEffect(() => {
+    setFormErrors({});
+  }, [form]);
 
   const sourceOptions = useMemo(
     () => [
@@ -349,22 +355,45 @@ export default function CreateManualOrderModal({
     ? Math.max(0, fullOrderTotal - paidAmountNum)
     : 0;
 
-  const canSubmit = useMemo(() => {
-    if (form.items.length === 0) return false;
-    for (const item of form.items) {
-      if (!item.productId) return false;
-      if (item.quantity <= 0) return false;
+  const validateForm = useCallback((): Record<string, string> => {
+    const errors: Record<string, string> = {};
+    if (form.items.length === 0) {
+      errors.items = t('createManualOrder.errors.itemsRequired');
     }
-    if (!form.currency) return false;
-    if (!form.billingData.fullName.trim()) return false;
-    if (!form.billingData.email.trim()) return false;
-    if (!form.billingData.phone.trim()) return false;
-    if (!form.billingData.country.trim()) return false;
-    if (!isEasykash && !invoiceFile) return false;
-    if (isPartialPayment && paidAmountNum <= 0) return false;
-    if (isPartialPayment && paidAmountNum >= fullOrderTotal) return false;
-    return true;
-  }, [form, isEasykash, invoiceFile, isPartialPayment, paidAmountNum, fullOrderTotal]);
+    form.items.forEach((item, index) => {
+      if (!item.productId) {
+        errors[`item_${index}_product`] = t('createManualOrder.errors.productRequired');
+      }
+      if (item.quantity <= 0) {
+        errors[`item_${index}_quantity`] = t('createManualOrder.errors.quantityRequired');
+      }
+    });
+    if (!form.currency) {
+      errors.currency = t('createManualOrder.errors.currencyRequired');
+    }
+    if (!form.billingData.fullName.trim()) {
+      errors.fullName = t('createManualOrder.errors.fullNameRequired');
+    }
+    if (!form.billingData.email.trim()) {
+      errors.email = t('createManualOrder.errors.emailRequired');
+    }
+    if (!form.billingData.phone.trim()) {
+      errors.phone = t('createManualOrder.errors.phoneRequired');
+    }
+    if (!form.billingData.country.trim()) {
+      errors.country = t('createManualOrder.errors.countryRequired');
+    }
+    if (!isEasykash && !invoiceFile) {
+      errors.invoice = t('createManualOrder.errors.invoiceRequired');
+    }
+    if (isPartialPayment && paidAmountNum <= 0) {
+      errors.paidAmount = t('createManualOrder.errors.paidAmountRequired');
+    }
+    if (isPartialPayment && paidAmountNum >= fullOrderTotal) {
+      errors.paidAmount = t('createManualOrder.errors.paidAmountInvalid');
+    }
+    return errors;
+  }, [form, isEasykash, invoiceFile, isPartialPayment, paidAmountNum, fullOrderTotal, t]);
 
   const updateItem = (index: number, patch: Partial<OrderItemForm>) => {
     setForm((prev) => {
@@ -476,8 +505,13 @@ export default function CreateManualOrderModal({
   };
 
   const handleSubmit = async () => {
-    if (!canSubmit) return;
-
+    const errors = validateForm();
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      toast.error(t('createManualOrder.errors.fixForm') || 'Please fix the errors above');
+      return;
+    }
+    setFormErrors({});
     setCreating(true);
     try {
       let invoiceUrl = '';
@@ -698,6 +732,10 @@ export default function CreateManualOrderModal({
           </span>
         </div>
 
+        {formErrors.items && (
+          <p className="text-xs text-error mb-2">{formErrors.items}</p>
+        )}
+
         <div className="flex flex-col gap-3">
           {form.items.map((item, index) => {
             const product = getProduct(item.productId);
@@ -715,6 +753,7 @@ export default function CreateManualOrderModal({
                     onChange={(val) => updateItem(index, { productId: val, sizeIndex: 0 })}
                     placeholder={t('createManualOrder.selectProduct')}
                     disabled={loadingProducts}
+                    error={formErrors[`item_${index}_product`]}
                   />
                 </div>
                 <div className="sm:col-span-3">
@@ -736,6 +775,7 @@ export default function CreateManualOrderModal({
                     onChange={(e) =>
                       updateItem(index, { quantity: Math.max(0, parseInt(e.target.value) || 0) })
                     }
+                    error={formErrors[`item_${index}_quantity`]}
                   />
                 </div>
                 <div className="sm:col-span-2 flex justify-end pb-1">
@@ -774,6 +814,7 @@ export default function CreateManualOrderModal({
           options={currencyOptions}
           onChange={(val) => setForm((prev) => ({ ...prev, currency: val }))}
           placeholder={t('createManualOrder.selectCurrency')}
+          error={formErrors.currency}
         />
       </div>
 
@@ -793,6 +834,7 @@ export default function CreateManualOrderModal({
               }))
             }
             required
+            error={formErrors.fullName}
           />
           <Input
             label={t('createManualOrder.email')}
@@ -805,6 +847,7 @@ export default function CreateManualOrderModal({
               }))
             }
             required
+            error={formErrors.email}
           />
           <div className="flex items-end gap-2">
             <div className="flex-1">
@@ -819,6 +862,7 @@ export default function CreateManualOrderModal({
                   setLinkedUserId(null);
                 }}
                 required
+                error={formErrors.phone}
               />
             </div>
             <Button
@@ -852,6 +896,7 @@ export default function CreateManualOrderModal({
               }))
             }
             required
+            error={formErrors.country}
           />
         </div>
       </div>
@@ -1058,6 +1103,7 @@ export default function CreateManualOrderModal({
             onChange={(e) =>
               setForm((prev) => ({ ...prev, paidAmount: e.target.value }))
             }
+            error={formErrors.paidAmount}
           />
           {isPartialPayment && (
             <p className="text-xs text-orange-600 dark:text-orange-400">
@@ -1083,7 +1129,7 @@ export default function CreateManualOrderModal({
                 <Button
                   variant="outline"
                   size="custom"
-                  className="px-3 py-2"
+                  className={`px-3 py-2 ${formErrors.invoice ? 'border-error text-error hover:text-error hover:border-error' : ''}`}
                   onClick={() => invoiceInputRef.current?.click()}
                   disabled={uploadingInvoice}
                 >
@@ -1098,6 +1144,9 @@ export default function CreateManualOrderModal({
                   <span className="text-sm text-secondary">{invoiceFile.name}</span>
                 )}
               </div>
+              {formErrors.invoice && (
+                <p className="text-xs text-error">{formErrors.invoice}</p>
+              )}
               <input
                 ref={invoiceInputRef}
                 type="file"
@@ -1124,7 +1173,7 @@ export default function CreateManualOrderModal({
         <Button
           variant="primary"
           onClick={handleSubmit}
-          disabled={creating || !canSubmit}
+          disabled={creating}
         >
           {creating ? (
             <>

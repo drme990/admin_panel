@@ -940,7 +940,8 @@
         "totalProducts": "Total Products",
         "totalCustomers": "Total Customers",
         "orders": "Orders",
-        "countries": "Countries"
+        "countries": "Countries",
+        "execution": "Execution"
       },
       "quickActions": {
         "title": "Quick Actions",

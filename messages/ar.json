@@ -940,7 +940,8 @@
         "totalProducts": "إجمالي المنتجات",
         "totalCustomers": "إجمالي العملاء",
         "orders": "الطلبات",
-        "countries": "البلدان"
+        "countries": "البلدان",
+        "execution": "التنفيذ"
       },
       "quickActions": {
         "title": "إجراءات سريعة",

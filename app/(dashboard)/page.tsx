@@ -2,7 +2,7 @@ import {
   LuPackage as Package,
   LuUsers as Users,
   LuShoppingCart as ShoppingCart,
-  LuGlobe as Globe,
+  LuCalendar as Calendar,
 } from 'react-icons/lu';
 import Link from 'next/link';
 import { cookies } from 'next/headers';
@@ -27,10 +27,10 @@ async function getStats() {
 
     if (!res.ok) {
       return {
-        totalProducts: 0,
+        activeProducts: 0,
         totalCustomers: 0,
         totalOrders: 0,
-        totalCountries: 0,
+        tomorrowExecutionCount: 0,
       };
     }
 
@@ -38,18 +38,18 @@ async function getStats() {
     return data.success
       ? data.data
       : {
-          totalProducts: 0,
-          totalCustomers: 0,
-          totalOrders: 0,
-          totalCountries: 0,
-        };
+        activeProducts: 0,
+        totalCustomers: 0,
+        totalOrders: 0,
+        tomorrowExecutionCount: 0,
+      };
   } catch (error) {
     console.error('Error fetching stats:', error);
     return {
-      totalProducts: 0,
+      activeProducts: 0,
       totalCustomers: 0,
       totalOrders: 0,
-      totalCountries: 0,
+      tomorrowExecutionCount: 0,
     };
   }
 }
@@ -75,9 +75,9 @@ async function getAnalytics() {
     const data = await res.json();
     return data.success
       ? {
-          revenueByDay: data.data?.revenueByDay || [],
-          revenueByMonth: data.data?.revenueByMonth || [],
-        }
+        revenueByDay: data.data?.revenueByDay || [],
+        revenueByMonth: data.data?.revenueByMonth || [],
+      }
       : { revenueByDay: [], revenueByMonth: [] };
   } catch (error) {
     console.error('Error fetching analytics:', error);
@@ -136,7 +136,7 @@ export default async function DashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           title={t('stats.totalProducts')}
-          value={stats.totalProducts}
+          value={stats.activeProducts}
           icon={Package}
           href="/products"
           color="bg-orange-500"
@@ -156,10 +156,10 @@ export default async function DashboardPage() {
           color="bg-purple-500"
         />
         <StatCard
-          title={t('stats.countries')}
-          value={stats.totalCountries}
-          icon={Globe}
-          href="/countries"
+          title={t('stats.execution')}
+          value={stats.tomorrowExecutionCount}
+          icon={Calendar}
+          href="/execution"
           color="bg-teal-500"
         />
       </div>

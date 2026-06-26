@@ -9,6 +9,7 @@ import { toast } from 'react-toastify';
 import Modal from '@/components/ui/modal';
 import Button from '@/components/ui/button';
 import Input from '@/components/ui/input';
+import MultiNameInput from '@/components/ui/multi-name-input';
 import Dropdown from '@/components/ui/dropdown';
 import Tabs from '@/components/ui/tabs';
 import Switch from '@/components/ui/switch';
@@ -861,16 +862,22 @@ export default function CreateManualOrderModal({
           {t('createManualOrder.reservationData')}
         </h4>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Input
-            label={t('createManualOrder.sacrificeFor')}
-            value={form.reservationData.sacrificeFor}
-            onChange={(e) =>
-              setForm((prev) => ({
-                ...prev,
-                reservationData: { ...prev.reservationData, sacrificeFor: e.target.value },
-              }))
-            }
-          />
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-2">
+              {t('createManualOrder.sacrificeFor')}
+            </label>
+            <MultiNameInput
+              value={form.reservationData.sacrificeFor}
+              onChange={(value) =>
+                setForm((prev) => ({
+                  ...prev,
+                  reservationData: { ...prev.reservationData, sacrificeFor: value },
+                }))
+              }
+              placeholder={t('createManualOrder.sacrificeForPlaceholder')}
+              isRTL={locale === 'ar'}
+            />
+          </div>
           <Dropdown
             label={t('createManualOrder.intention')}
             value={form.reservationData.intention}

@@ -191,6 +191,7 @@ interface UIState {
   focusedField: 'phone' | 'email' | null;
   foundUsers: UserSuggestion[];
   customPriceBlurred: number[];
+  phoneWhatsappClicked: boolean;
 }
 
 type UIAction =
@@ -215,6 +216,7 @@ type UIAction =
   | { type: 'SET_FOUND_USERS'; users: UserSuggestion[] }
   | { type: 'BLUR_CUSTOM_PRICE'; index: number }
   | { type: 'CLEAR_CUSTOM_PRICE_BLURRED' }
+  | { type: 'SET_WHATSAPP_PHONE_CLICKED'; clicked: boolean }
   | { type: 'RESET_UI' };
 
 const UI_INITIAL_STATE: UIState = {
@@ -235,6 +237,7 @@ const UI_INITIAL_STATE: UIState = {
   focusedField: null,
   foundUsers: [],
   customPriceBlurred: [],
+  phoneWhatsappClicked: false,
 };
 
 function uiReducer(state: UIState, action: UIAction): UIState {
@@ -283,6 +286,8 @@ function uiReducer(state: UIState, action: UIAction): UIState {
         : { ...state, customPriceBlurred: [...state.customPriceBlurred, action.index] };
     case 'CLEAR_CUSTOM_PRICE_BLURRED':
       return { ...state, customPriceBlurred: [] };
+    case 'SET_WHATSAPP_PHONE_CLICKED':
+      return { ...state, phoneWhatsappClicked: action.clicked };
     case 'RESET_UI':
       return UI_INITIAL_STATE;
     default:
@@ -319,6 +324,7 @@ export default function CreateManualOrderModal({
     focusedField,
     foundUsers,
     customPriceBlurred,
+    phoneWhatsappClicked,
   } = ui;
   const invoiceInputRef = useRef<HTMLInputElement | null>(null);
   const photoInputRef = useRef<HTMLInputElement | null>(null);
@@ -630,6 +636,8 @@ export default function CreateManualOrderModal({
       errors.phone = t('createManualOrder.errors.phoneRequired');
     } else if (!validatePhoneNumber(form.billingData.phone, form.billingData.country)) {
       errors.phone = t('createManualOrder.errors.phoneInvalid') || 'Invalid phone number';
+    } else if (!phoneWhatsappClicked) {
+      errors.phone = t('createManualOrder.errors.whatsappNotClicked') || 'Please click the WhatsApp icon to validate the phone number';
     }
     if (!form.billingData.country.trim()) {
       errors.country = t('createManualOrder.errors.countryRequired');
@@ -647,7 +655,7 @@ export default function CreateManualOrderModal({
       errors.paidAmount = t('createManualOrder.errors.paidAmountInvalid');
     }
     return errors;
-  }, [form, isEasykash, invoiceFile, isPartialPayment, paidAmountNum, fullOrderTotal, t]);
+  }, [form, isEasykash, invoiceFile, isPartialPayment, paidAmountNum, fullOrderTotal, phoneWhatsappClicked, t]);
 
   const updateItem = (index: number, patch: Partial<OrderItemForm>) => {
     setForm((prev) => {
@@ -759,6 +767,7 @@ export default function CreateManualOrderModal({
     dispatch({ type: 'SET_LINKED_USER_ID', userId: user._id });
     dispatch({ type: 'SET_FOUND_USERS', users: [] });
     dispatch({ type: 'PATCH_FORM_ERRORS', errors: { phone: '', email: '' } });
+    dispatch({ type: 'SET_WHATSAPP_PHONE_CLICKED', clicked: false });
     skipBlurValidationRef.current = true;
     toast.success(t('createManualOrder.userSelected') || 'User selected');
   }, [form.source, t]);
@@ -1280,6 +1289,9 @@ export default function CreateManualOrderModal({
                 }));
                 dispatch({ type: 'SET_LINKED_USER_ID', userId: null });
                 dispatch({ type: 'PATCH_FORM_ERRORS', errors: { phone: '' } });
+                if (phoneWhatsappClicked) {
+                  dispatch({ type: 'SET_WHATSAPP_PHONE_CLICKED', clicked: false });
+                }
               }}
               onFocus={() => dispatch({ type: 'SET_FOCUSED_FIELD', field: 'phone' })}
               onBlur={() => {
@@ -1304,18 +1316,32 @@ export default function CreateManualOrderModal({
               error={formErrors.phone}
               suffix={
                 form.billingData.phone.replace(/\D/g, '').length > 0 ? (
-                  <a
-                    href={`https://wa.me/${form.billingData.phone.replace(/\D/g, '')}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-success hover:text-foreground transition-colors"
+                  <button
+                    type="button"
+                    onClick={() => {
+                      dispatch({ type: 'SET_WHATSAPP_PHONE_CLICKED', clicked: true });
+                      dispatch({ type: 'PATCH_FORM_ERRORS', errors: { phone: '' } });
+                      window.open(
+                        `https://wa.me/${form.billingData.phone.replace(/\D/g, '')}`,
+                        '_blank',
+                      );
+                    }}
+                    className={`transition-colors ${phoneWhatsappClicked
+                      ? 'text-success'
+                      : 'text-success hover:text-foreground'
+                      }`}
                     aria-label="Open WhatsApp chat"
                   >
                     <FaWhatsapp size={18} />
-                  </a>
+                  </button>
                 ) : null
               }
             />
+            {!phoneWhatsappClicked && form.billingData.phone.replace(/\D/g, '').length > 0 && (
+              <p className="text-xs text-secondary">
+                {t('createManualOrder.whatsappClickHint') || 'Click the WhatsApp icon to validate the phone number'}
+              </p>
+            )}
             {focusedField === 'phone' && foundUsers.length > 0 && (
               <div className="absolute z-20 left-0 right-0 top-full mt-1 rounded-lg border border-stroke bg-card-bg shadow-xl max-h-60 overflow-y-auto p-1">
                 {foundUsers.map((user) => (

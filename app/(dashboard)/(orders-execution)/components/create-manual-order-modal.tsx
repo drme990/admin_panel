@@ -18,7 +18,7 @@ import Tabs from '@/components/ui/tabs';
 import Switch from '@/components/ui/switch';
 import CustomDatePicker from '@/components/ui/custom-date-picker';
 import { uploadImageToR2, uploadInvoiceToR2, deleteOldImage } from '../../../../lib/image-upload-utils';
-import { InvoiceUploadMenu } from './invoic-upload-menu';
+
 import { LuCopy, LuCheck, LuRefreshCw, LuUpload, LuDownload, LuPlus, LuX, LuAtSign } from 'react-icons/lu';
 import { FaWhatsapp } from 'react-icons/fa';
 import { isValidPhoneNumber } from 'libphonenumber-js';
@@ -1248,18 +1248,6 @@ export default function CreateManualOrderModal({
         </Button>
       </div>
 
-      {/* Global Currency */}
-      <div className="border-t border-stroke pt-4">
-        <Dropdown
-          label={t('createManualOrder.currency')}
-          value={form.currency}
-          options={currencyOptions}
-          onChange={(val) => setForm((prev) => ({ ...prev, currency: val }))}
-          placeholder={t('createManualOrder.selectCurrency')}
-          error={formErrors.currency}
-        />
-      </div>
-
       {/* Customer Info */}
       <div className="border-t border-stroke pt-4">
         <h4 className="text-sm font-semibold text-foreground mb-3">
@@ -1671,6 +1659,15 @@ export default function CreateManualOrderModal({
           )}
 
           <Dropdown
+            label={t('createManualOrder.currency')}
+            value={form.currency}
+            options={currencyOptions}
+            onChange={(val) => setForm((prev) => ({ ...prev, currency: val }))}
+            placeholder={t('createManualOrder.selectCurrency')}
+            error={formErrors.currency}
+          />
+
+          <Dropdown
             label={t('createManualOrder.paymentMethod')}
             value={form.paymentMethod}
             options={paymentMethodOptions}
@@ -1685,29 +1682,41 @@ export default function CreateManualOrderModal({
               <label className="text-sm font-medium text-foreground">
                 {t('createManualOrder.invoiceUpload')}
               </label>
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-3">
                 {uploadingInvoice ? (
                   <span className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-stroke text-secondary">
                     <LuRefreshCw size={16} className="animate-spin" />
                     {t('createManualOrder.uploadingInvoice') || 'Uploading...'}
                   </span>
                 ) : (
-                  <InvoiceUploadMenu
-                    onUpload={(reviewed) => {
-                      dispatch({ type: 'SET_INVOICE_REVIEWED', reviewed });
-                      invoiceInputRef.current?.click();
-                    }}
-                    disabled={uploadingInvoice}
-                    variant="outline"
-                    className={formErrors.invoice ? 'border-error text-error hover:text-error hover:border-error' : ''}
-                    buttonLabel={invoiceFile
-                      ? (t('createManualOrder.changeInvoice') || 'Change Invoice')
-                      : (t('createManualOrder.uploadInvoice') || 'Upload Invoice')}
-                    labels={{
-                      uploadReviewed: t('createManualOrder.uploadReviewedInvoice') || 'Upload reviewed invoice',
-                      uploadUnreviewed: t('createManualOrder.uploadUnreviewedInvoice') || 'Upload unreviewed invoice',
-                    }}
-                  />
+                  <>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className={formErrors.invoice ? 'border-error text-error hover:text-error hover:border-error' : ''}
+                      onClick={() => {
+                        dispatch({ type: 'SET_INVOICE_REVIEWED', reviewed: true });
+                        invoiceInputRef.current?.click();
+                      }}
+                    >
+                      <LuUpload size={16} className="me-2" />
+                      {t('createManualOrder.uploadReviewedInvoice') || 'Reviewed Invoice'}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className={formErrors.invoice ? 'border-error text-error hover:text-error hover:border-error' : ''}
+                      onClick={() => {
+                        dispatch({ type: 'SET_INVOICE_REVIEWED', reviewed: false });
+                        invoiceInputRef.current?.click();
+                      }}
+                    >
+                      <LuUpload size={16} className="me-2" />
+                      {t('createManualOrder.uploadUnreviewedInvoice') || 'Unreviewed Invoice'}
+                    </Button>
+                  </>
                 )}
                 {invoiceFile && (
                   <span className="text-sm text-secondary">{invoiceFile.name}</span>

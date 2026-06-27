@@ -24,6 +24,10 @@ import { FaWhatsapp } from 'react-icons/fa';
 import { isValidPhoneNumber } from 'libphonenumber-js';
 import { COUNTRIES } from '@/lib/countries';
 
+function extractDigits(value: string): string {
+  return value.replace(/\D/g, '');
+}
+
 function validatePhoneNumber(phone: string, countryName: string): boolean {
   if (!phone.trim()) return false;
 
@@ -318,16 +322,26 @@ export default function CreateManualOrderModal({
   } = ui;
   const invoiceInputRef = useRef<HTMLInputElement | null>(null);
   const photoInputRef = useRef<HTMLInputElement | null>(null);
-  const lastLookupRef = useRef<{ phone: string; email: string }>({ phone: '', email: '' });
+  const lastLookupRef = useRef<{ phone: string; email: string; source: string }>({ phone: '', email: '', source: '' });
   const skipBlurValidationRef = useRef(false);
+  const [invoicePreviewUrl, setInvoicePreviewUrl] = useState<string | null>(null);
 
   const resetForm = useCallback(() => {
     const initialReferralId =
       user?.role !== 'super_admin' && user?.ref ? user.ref : '';
     setForm({ ...DEFAULT_FORM, referralId: initialReferralId });
     dispatch({ type: 'RESET_UI' });
-    lastLookupRef.current = { phone: '', email: '' };
+    lastLookupRef.current = { phone: '', email: '', source: '' };
+    setInvoicePreviewUrl(null);
   }, [user]);
+
+  useEffect(() => {
+    return () => {
+      if (invoicePreviewUrl) {
+        URL.revokeObjectURL(invoicePreviewUrl);
+      }
+    };
+  }, [invoicePreviewUrl]);
 
   useEffect(() => {
     if (isOpen) {
@@ -676,6 +690,8 @@ export default function CreateManualOrderModal({
       return;
     }
 
+    const previewUrl = file.type.startsWith('image/') ? URL.createObjectURL(file) : null;
+    setInvoicePreviewUrl(previewUrl);
     dispatch({ type: 'SET_INVOICE_FILE', file });
   };
 
@@ -718,31 +734,7 @@ export default function CreateManualOrderModal({
     }
   };
 
-  const lookupUser = useCallback(async (phone: string, email: string) => {
-    if (!phone && !email) return;
-    if (lastLookupRef.current.phone === phone && lastLookupRef.current.email === email) return;
-
-    lastLookupRef.current = { phone, email };
-    try {
-      const params = new URLSearchParams();
-      if (phone) params.set('phone', phone);
-      if (email) params.set('email', email);
-      const res = await fetch(`/api/orders/lookup-user?${params.toString()}`, {
-        credentials: 'include',
-      });
-      const data = await res.json();
-      if (data.success && Array.isArray(data.data)) {
-        dispatch({ type: 'SET_FOUND_USERS', users: data.data });
-      } else {
-        dispatch({ type: 'SET_FOUND_USERS', users: [] });
-      }
-    } catch {
-      toast.error(t('createManualOrder.userLookupFailed') || 'Failed to lookup user');
-      dispatch({ type: 'SET_FOUND_USERS', users: [] });
-    }
-  }, [t, dispatch]);
-
-  const selectUser = (user: {
+  const selectUser = useCallback((user: {
     _id: string;
     name: string;
     email: string;
@@ -762,13 +754,59 @@ export default function CreateManualOrderModal({
     lastLookupRef.current = {
       phone: user.phone.trim(),
       email: user.email.trim(),
+      source: form.source,
     };
     dispatch({ type: 'SET_LINKED_USER_ID', userId: user._id });
     dispatch({ type: 'SET_FOUND_USERS', users: [] });
     dispatch({ type: 'PATCH_FORM_ERRORS', errors: { phone: '', email: '' } });
     skipBlurValidationRef.current = true;
     toast.success(t('createManualOrder.userSelected') || 'User selected');
-  };
+  }, [form.source, t]);
+
+  const lookupUser = useCallback(async (phone: string, email: string) => {
+    if (!phone && !email) return;
+    if (
+      lastLookupRef.current.phone === phone &&
+      lastLookupRef.current.email === email &&
+      lastLookupRef.current.source === form.source
+    ) {
+      return;
+    }
+
+    lastLookupRef.current = { phone, email, source: form.source };
+    try {
+      const params = new URLSearchParams();
+      if (phone) params.set('phone', phone);
+      if (email) params.set('email', email);
+      if (form.source) params.set('source', form.source);
+      const res = await fetch(`/api/orders/lookup-user?${params.toString()}`, {
+        credentials: 'include',
+      });
+      const data = await res.json();
+      if (data.success && Array.isArray(data.data)) {
+        const users = data.data as UserSuggestion[];
+        const inputPhoneDigits = phone ? extractDigits(phone) : '';
+        const inputEmail = email ? email.toLowerCase().trim() : '';
+        const exactMatch = users.find((u) => {
+          const userPhoneDigits = u.phone ? extractDigits(u.phone) : '';
+          const userEmail = u.email ? u.email.toLowerCase().trim() : '';
+          const phoneMatch = inputPhoneDigits.length > 0 && userPhoneDigits === inputPhoneDigits;
+          const emailMatch = inputEmail.length > 0 && userEmail === inputEmail;
+          return phoneMatch || emailMatch;
+        });
+        if (exactMatch) {
+          selectUser(exactMatch);
+        } else {
+          dispatch({ type: 'SET_FOUND_USERS', users });
+        }
+      } else {
+        dispatch({ type: 'SET_FOUND_USERS', users: [] });
+      }
+    } catch {
+      toast.error(t('createManualOrder.userLookupFailed') || 'Failed to lookup user');
+      dispatch({ type: 'SET_FOUND_USERS', users: [] });
+    }
+  }, [t, dispatch, form.source, selectUser]);
 
   useEffect(() => {
     const phone = form.billingData.phone.trim();
@@ -777,11 +815,15 @@ export default function CreateManualOrderModal({
     if (!phone && !email) {
       dispatch({ type: 'SET_LINKED_USER_ID', userId: null });
       dispatch({ type: 'SET_FOUND_USERS', users: [] });
-      lastLookupRef.current = { phone: '', email: '' };
+      lastLookupRef.current = { phone: '', email: '', source: '' };
       return;
     }
 
-    if (lastLookupRef.current.phone === phone && lastLookupRef.current.email === email) {
+    if (
+      lastLookupRef.current.phone === phone &&
+      lastLookupRef.current.email === email &&
+      lastLookupRef.current.source === form.source
+    ) {
       return;
     }
 
@@ -791,7 +833,7 @@ export default function CreateManualOrderModal({
     }, 800);
 
     return () => clearTimeout(timer);
-  }, [form.billingData.phone, form.billingData.email, lookupUser]);
+  }, [form.billingData.phone, form.billingData.email, form.source, lookupUser]);
 
   const handleSubmit = async () => {
     const errors = validateForm();
@@ -1072,7 +1114,16 @@ export default function CreateManualOrderModal({
                 {item.type === 'existing' ? (
                   <>
                     <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
-                      <div className="sm:col-span-4">
+                      <div className="sm:col-span-2">
+                        <QuantityInput
+                          label={index === 0 ? t('createManualOrder.quantity') : undefined}
+                          value={item.quantity}
+                          min={0}
+                          onChange={(val) => updateItem(index, { quantity: val })}
+                          error={formErrors[`item_${index}_quantity`]}
+                        />
+                      </div>
+                      <div className="sm:col-span-5">
                         <Dropdown
                           label={index === 0 ? t('createManualOrder.product') : undefined}
                           value={item.productId}
@@ -1083,7 +1134,7 @@ export default function CreateManualOrderModal({
                           error={formErrors[`item_${index}_product`]}
                         />
                       </div>
-                      <div className="sm:col-span-4">
+                      <div className="sm:col-span-5">
                         {sizeOpts.length > 1 && (
                           <Dropdown
                             label={index === 0 ? t('createManualOrder.size') : undefined}
@@ -1092,15 +1143,6 @@ export default function CreateManualOrderModal({
                             onChange={(val) => updateItem(index, { sizeIndex: val })}
                           />
                         )}
-                      </div>
-                      <div className="sm:col-span-4">
-                        <QuantityInput
-                          label={index === 0 ? t('createManualOrder.quantity') : undefined}
-                          value={item.quantity}
-                          min={0}
-                          onChange={(val) => updateItem(index, { quantity: val })}
-                          error={formErrors[`item_${index}_quantity`]}
-                        />
                       </div>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1136,7 +1178,16 @@ export default function CreateManualOrderModal({
                 ) : (
                   <>
                     <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
-                      <div className="sm:col-span-4">
+                      <div className="sm:col-span-2">
+                        <QuantityInput
+                          label={index === 0 ? t('createManualOrder.quantity') : undefined}
+                          value={item.quantity}
+                          min={0}
+                          onChange={(val) => updateItem(index, { quantity: val })}
+                          error={formErrors[`item_${index}_quantity`]}
+                        />
+                      </div>
+                      <div className="sm:col-span-5">
                         <Input
                           label={index === 0 ? (t('createManualOrder.customName') || 'Custom name') : undefined}
                           value={item.customName}
@@ -1147,7 +1198,7 @@ export default function CreateManualOrderModal({
                           error={formErrors[`item_${index}_name`]}
                         />
                       </div>
-                      <div className="sm:col-span-4">
+                      <div className="sm:col-span-5">
                         <Input
                           label={index === 0 ? (t('createManualOrder.customSize') || 'Custom size') : undefined}
                           value={item.customSize}
@@ -1155,15 +1206,6 @@ export default function CreateManualOrderModal({
                           onChange={(e) =>
                             updateItem(index, { customSize: e.target.value })
                           }
-                        />
-                      </div>
-                      <div className="sm:col-span-4">
-                        <QuantityInput
-                          label={index === 0 ? t('createManualOrder.quantity') : undefined}
-                          value={item.quantity}
-                          min={0}
-                          onChange={(val) => updateItem(index, { quantity: val })}
-                          error={formErrors[`item_${index}_quantity`]}
                         />
                       </div>
                     </div>
@@ -1321,7 +1363,7 @@ export default function CreateManualOrderModal({
                         ...prev,
                         billingData: {
                           ...prev.billingData,
-                          email: `${prev.billingData.phone.trim()}@gmail.com`,
+                          email: `${extractDigits(prev.billingData.phone)}@gmail.com`,
                         },
                       }));
                       dispatch({ type: 'SET_LINKED_USER_ID', userId: null });
@@ -1645,6 +1687,15 @@ export default function CreateManualOrderModal({
                   <span className="text-sm text-secondary">{invoiceFile.name}</span>
                 )}
               </div>
+              {invoicePreviewUrl && (
+                <div className="w-fit">
+                  <img
+                    src={invoicePreviewUrl}
+                    alt="Invoice preview"
+                    className="h-32 rounded-lg border border-stroke object-contain bg-background"
+                  />
+                </div>
+              )}
               {formErrors.invoice && (
                 <p className="text-xs text-error">{formErrors.invoice}</p>
               )}

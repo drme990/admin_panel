@@ -19,6 +19,7 @@ import {
   LuPenLine,
   LuBan,
   LuFileText,
+  LuCircleAlert,
 } from 'react-icons/lu';
 import { FaWhatsapp } from 'react-icons/fa6';
 
@@ -475,7 +476,7 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
               <span className={`relative inline-flex items-center justify-center p-2 ${iconColor}`}>
                 <LuFileText size={24} />
                 {hasUnreviewedInvoice && (
-                  <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-error border border-card-bg" />
+                  <LuCircleAlert className='absolute -top-0.5 -right-0.5 h-3.5 w-3.5 text-error' />
                 )}
               </span>
             </div>

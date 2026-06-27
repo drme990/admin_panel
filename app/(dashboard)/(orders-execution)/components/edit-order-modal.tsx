@@ -4,9 +4,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { toast } from 'react-toastify';
 import {
-  LuUpload,
-  LuDownload,
-  LuShare2,
   LuMinus,
   LuPlus,
   LuX,
@@ -20,18 +17,16 @@ import Tooltip from '@/components/ui/tooltip';
 import Dropdown from '@/components/ui/dropdown';
 import { Order, OrderItem } from '@/types/Order';
 import { Product } from '@/types/Product';
-import { uploadImageToR2, deleteOldImage } from '../../../../lib/image-upload-utils';
 import { RESERVATION_FIELD_PRESETS } from '@/lib/reservation-fields';
 
 interface Props {
   isOpen: boolean;
   onClose: () => void;
   order: Order | null;
-  field: 'name' | 'items' | 'duaa' | 'photo' | null;
+  field: 'name' | 'items' | 'duaa' | null;
   onUpdate: (orderId: string, fields: {
     sacrificeFor?: string;
     shortDuaa?: string;
-    photo?: string;
     items?: OrderItem[];
     gender?: string;
     isAlive?: string;
@@ -71,13 +66,9 @@ export default function EditOrderModal({
 
   const [names, setNames] = useState<string[]>([]);
   const [shortDuaa, setShortDuaa] = useState('');
-  const [photoUrl, setPhotoUrl] = useState('');
   const [items, setItems] = useState<OrderItem[]>([]);
-  const [fileInputKey, setFileInputKey] = useState(0);
   const [products, setProducts] = useState<Product[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
-  const [uploadingPhoto, setUploadingPhoto] = useState(false);
-  const [originalPhotoUrl, setOriginalPhotoUrl] = useState('');
   const [gender, setGender] = useState('');
   const [isAlive, setIsAlive] = useState('');
   const [intention, setIntention] = useState('');
@@ -92,9 +83,6 @@ export default function EditOrderModal({
           .filter(Boolean),
       );
       setShortDuaa(getReservationValue(order, 'shortDuaa'));
-      const currentPhotoUrl = getReservationValue(order, 'photo');
-      setPhotoUrl(currentPhotoUrl);
-      setOriginalPhotoUrl(currentPhotoUrl);
       setItems(order.items ? [...order.items] : []);
       const genderPreset = RESERVATION_FIELD_PRESETS.find((p) => p.key === 'gender');
       const isAlivePreset = RESERVATION_FIELD_PRESETS.find((p) => p.key === 'isAlive');
@@ -118,64 +106,6 @@ export default function EditOrderModal({
     }
   }, [isOpen, field]);
 
-  const handleFileChange = useCallback(
-    async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
-      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
-      if (!allowedTypes.includes(file.type)) {
-        toast.error(t('editOrder.invalidImage'));
-        return;
-      }
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error(t('editOrder.imageTooLarge'));
-        return;
-      }
-      try {
-        setUploadingPhoto(true);
-        const url = await uploadImageToR2(file);
-        setPhotoUrl(url);
-      } catch (error) {
-        const message = error instanceof Error ? error.message : t('editOrder.uploadFailed');
-        toast.error(message);
-      } finally {
-        setUploadingPhoto(false);
-        setFileInputKey((k) => k + 1);
-      }
-    },
-    [t],
-  );
-
-  const handleDownload = useCallback(() => {
-    if (!photoUrl) return;
-    const a = document.createElement('a');
-    a.href = photoUrl;
-    a.download = `photo-${order?.orderNumber || 'order'}`;
-    a.target = '_blank';
-    a.rel = 'noopener noreferrer';
-    a.click();
-  }, [photoUrl, order?.orderNumber]);
-
-  const handleShare = useCallback(async () => {
-    if (!photoUrl) {
-      toast.error(t('editOrder.noPhotoToShare'));
-      return;
-    }
-    try {
-      if (navigator.share) {
-        await navigator.share({
-          title: `Order ${order?.orderNumber || ''}`,
-          url: photoUrl,
-        });
-      } else {
-        await navigator.clipboard.writeText(photoUrl);
-        toast.success(t('editOrder.photoUrlCopied'));
-      }
-    } catch {
-      // user cancelled share
-    }
-  }, [photoUrl, order?.orderNumber, t]);
-
   const handleQuantityChange = useCallback(
     (index: number, delta: number) => {
       setItems((prev) => {
@@ -197,18 +127,12 @@ export default function EditOrderModal({
       fields.isAlive = isAlive;
     }
     if (field === 'duaa') fields.shortDuaa = shortDuaa;
-    if (field === 'photo') fields.photo = photoUrl;
     if (field === 'items') {
       fields.items = items;
       fields.intention = intention;
     }
     const success = await onUpdate(order._id, fields);
     if (success) {
-      if (field === 'photo' && originalPhotoUrl && originalPhotoUrl !== photoUrl) {
-        deleteOldImage(originalPhotoUrl).catch((error: unknown) => {
-          console.warn('Failed to delete old customer image:', error);
-        });
-      }
       onClose();
     }
   };
@@ -268,9 +192,8 @@ export default function EditOrderModal({
       title={
         field === 'name' ? t('editOrder.sacrificeFor') :
           field === 'duaa' ? t('editOrder.shortDuaa') :
-            field === 'photo' ? t('editOrder.photo') :
-              field === 'items' ? t('editOrder.items') :
-                t('editOrder.title')
+            field === 'items' ? t('editOrder.items') :
+              t('editOrder.title')
       }
       size="lg"
       footer={
@@ -363,77 +286,6 @@ export default function EditOrderModal({
             placeholder={t('editOrder.shortDuaaPlaceholder')}
             rows={3}
           />
-        )}
-
-        {field === 'photo' && (
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-foreground">
-              {t('editOrder.photo')}
-            </label>
-            <div className="flex gap-2 items-center">
-              <Input
-                value={photoUrl}
-                onChange={(e) => setPhotoUrl(e.target.value)}
-                placeholder={t('editOrder.photoPlaceholder')}
-                className="flex-1"
-              />
-              <Tooltip position={tooltipPos} content={t('editOrder.uploadPhoto')}>
-                <label className={`inline-flex ${uploadingPhoto ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}>
-                  <input
-                    key={fileInputKey}
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={handleFileChange}
-                    disabled={uploadingPhoto}
-                  />
-                  <span className="font-medium transition-all duration-200 rounded-site flex items-center justify-center border border-stroke text-foreground hover:bg-foreground hover:text-background px-4 py-2 text-sm">
-                    {uploadingPhoto ? (
-                      <span className="inline-flex items-center gap-1">
-                        <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                      </span>
-                    ) : (
-                      <LuUpload size={16} />
-                    )}
-                  </span>
-                </label>
-              </Tooltip>
-              <Tooltip position={tooltipPos} content={t('editOrder.downloadPhoto')}>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleDownload}
-                  disabled={!photoUrl}
-                >
-                  <LuDownload size={16} />
-                </Button>
-              </Tooltip>
-              <Tooltip position={tooltipPos} content={t('editOrder.sharePhoto')}>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleShare}
-                  disabled={!photoUrl}
-                >
-                  <LuShare2 size={16} />
-                </Button>
-              </Tooltip>
-            </div>
-            {photoUrl && (
-              <a
-                href={photoUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-block mt-2"
-              >
-                <img
-                  src={photoUrl}
-                  alt="Preview"
-                  className="h-24 w-24 object-cover rounded border border-stroke"
-                />
-              </a>
-            )}
-          </div>
         )}
 
         {field === 'items' && (

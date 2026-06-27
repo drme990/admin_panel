@@ -1,12 +1,12 @@
 import { type ReactNode, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import Image from 'next/image';
 
 import Modal from '@/components/ui/modal';
 import Button from '@/components/ui/button';
 import Tooltip from '@/components/ui/tooltip';
 import { Order, OrderPayment } from '@/types/Order';
 import { STATUS_COLORS, PAYMENT_STATUS_COLORS } from '../lib/order-status';
+import { isImageUrl } from '../lib/order-utils';
 import {
   LuCreditCard,
   LuCalendar,
@@ -21,6 +21,7 @@ import {
   LuLink,
   LuCopy,
   LuCheck,
+  LuX,
   LuRotateCw,
 } from 'react-icons/lu';
 
@@ -121,6 +122,8 @@ export default function OrderDetailModal({
 }: Props) {
   const t = useTranslations(namespace);
   const [copiedPaymentId, setCopiedPaymentId] = useState<string | null>(null);
+  console.log(order);
+
 
   const formatMoney = (amount: number | undefined, currency: string) =>
     `${Number(amount ?? 0).toFixed(2)} ${currency}`;
@@ -463,25 +466,52 @@ export default function OrderDetailModal({
                 </div>
 
                 {/* Invoice */}
-                {order.invoiceUrl ? (
-                  <div>
-                    <h3 className="font-semibold mb-3">{t('table.invoice')}</h3>
-                    <div className="flex flex-col items-center gap-3 p-4 rounded-lg bg-background border border-stroke">
-                      <span className="inline-flex items-center justify-center p-2 text-primary">
-                        <LuFileText size={32} />
-                      </span>
-                      <a
-                        href={order.invoiceUrl}
-                        download
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center px-3 py-1 rounded-md text-sm font-medium bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
-                      >
-                        {t('table.downloadInvoice')}
-                      </a>
+                {(() => {
+                  const invoices = order.invoiceUrls || [];
+                  if (invoices.length === 0) return null;
+                  return (
+                    <div>
+                      <h3 className="font-semibold mb-3">
+                        {invoices.length > 1 ? t('table.invoices') || t('table.invoice') : t('table.invoice')}
+                      </h3>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        {invoices.map((invoice) => (
+                          <a
+                            key={invoice.url}
+                            href={invoice.url}
+                            download
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="relative flex flex-col items-center gap-2 p-3 rounded-lg bg-background border border-stroke hover:border-primary transition-colors"
+                          >
+                            <span
+                              className={`absolute top-2 left-2 inline-flex items-center justify-center w-7 h-7 rounded-full ${invoice.reviewed ? 'bg-success' : 'bg-error'
+                                }`}
+                              title={invoice.reviewed ? t('table.reviewedInvoice') || 'Reviewed' : t('table.unreviewedInvoice') || 'Unreviewed'}
+                            >
+                              {invoice.reviewed ? <LuCheck size={16} /> : <LuX size={16} />}
+                            </span>
+                            {isImageUrl(invoice.url) ? (
+                              <img
+                                src={invoice.url}
+                                alt="Invoice"
+                                className="w-full h-24 object-cover rounded-md"
+                                loading="lazy"
+                              />
+                            ) : (
+                              <span className="inline-flex items-center justify-center p-2 text-primary h-24">
+                                <LuFileText size={32} />
+                              </span>
+                            )}
+                            <span className="text-xs text-primary font-medium truncate max-w-full">
+                              {t('table.downloadInvoice')}
+                            </span>
+                          </a>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                ) : null}
+                  );
+                })()}
 
                 {/* Reservation data */}
                 {order.reservationData?.length ? (
@@ -498,12 +528,10 @@ export default function OrderDetailModal({
                               className="flex flex-col items-center gap-3 p-4 rounded-lg bg-background border border-stroke"
                             >
                               <div className="overflow-hidden">
-                                <Image
+                                <img
                                   src={field.value}
                                   alt={getReservationLabel(field.label)}
-                                  width={200}
-                                  height={200}
-                                  className="object-cover"
+                                  className="w-full max-w-50 h-auto object-cover rounded"
                                 />
                               </div>
                               <a

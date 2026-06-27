@@ -85,3 +85,12 @@ export function normalizeWhatsappPhone(
   if (!digitsOnly) return null;
   return withPlus ? `+${digitsOnly}` : digitsOnly;
 }
+
+export function isImageUrl(url: string): boolean {
+  try {
+    const pathname = new URL(url).pathname;
+    return /\.(jpg|jpeg|png|gif|webp|bmp|svg|avif)$/i.test(pathname);
+  } catch {
+    return false;
+  }
+}

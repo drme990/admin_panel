@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useCallback, useState } from 'react';
+import { useEffect, useCallback, useState, useRef } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { toast } from 'react-toastify';
 import { LuDownload, LuPhone, LuEye, LuPalette, LuUpload, LuPencil, LuFileText, LuRefreshCw, LuPlus } from 'react-icons/lu';
@@ -38,7 +38,9 @@ import {
   getRelativeIsoDate,
   normalizeDateRange,
   addDaysToIsoDate,
+  isImageUrl,
 } from '../lib/order-utils';
+import { InvoiceUploadMenu } from '../components/invoic-upload-menu';
 
 interface ExecutionResponse {
   success: boolean;
@@ -107,13 +109,11 @@ export default function ExecutionPage() {
     setChangingExecutionDateId,
     setEditOrderModalOpen,
     setEditingField,
-    setSavingOrderId,
     setOrderHistoryModalOpen,
     setOrderHistory,
     setLoadingOrderHistory,
     setBlockedUserIds,
     setBlockingOrderId,
-    setAsyncAction,
     setSelectedOrder,
     photoUploadOrderRef,
     photoInputRef,
@@ -131,6 +131,8 @@ export default function ExecutionPage() {
       pageSize: 50,
     },
   });
+
+  const invoiceReviewedRef = useRef<boolean>(false);
 
   const {
     orders,
@@ -419,7 +421,7 @@ export default function ExecutionPage() {
     return value ? value.substring(0, 10) : '';
   };
 
-  const handleEditField = (order: Order, field: 'name' | 'items' | 'duaa' | 'photo') => {
+  const handleEditField = (order: Order, field: 'name' | 'items' | 'duaa') => {
     dispatch({ type: 'SET_SELECTED_ORDER', payload: order });
     setEditingField(field);
     setEditOrderModalOpen(true);
@@ -509,12 +511,24 @@ export default function ExecutionPage() {
   const handleRollback = async (entry: OrderHistoryEntry) => {
     if (!selectedOrder || !entry.previousValue) return;
 
-    const rollbackFields: Record<string, Record<string, string>> = {
-      photo: { photo: entry.previousValue },
-      invoice: { invoiceUrl: entry.previousValue },
-    };
+    const fields: Parameters<typeof updateOrder>[1] | null = (() => {
+      if (entry.changeType === 'photo') {
+        return { photo: entry.previousValue };
+      }
+      if (entry.changeType === 'invoice') {
+        try {
+          const parsed = JSON.parse(entry.previousValue) as Array<{ url: string; reviewed: boolean }>;
+          if (Array.isArray(parsed)) {
+            return { invoiceUrls: parsed };
+          }
+        } catch {
+          // fallback: treat as legacy single URL
+          return { invoiceUrls: entry.previousValue ? [{ url: entry.previousValue, reviewed: false }] : [] };
+        }
+      }
+      return null;
+    })();
 
-    const fields = rollbackFields[entry.changeType];
     if (!fields) {
       toast.error('Rollback not supported for this change type');
       return;
@@ -597,8 +611,9 @@ export default function ExecutionPage() {
     }
   };
 
-  const handleUploadInvoice = (order: Order) => {
+  const handleUploadInvoice = (order: Order, reviewed: boolean) => {
     invoiceUploadOrderRef.current = order;
+    invoiceReviewedRef.current = reviewed;
     invoiceInputRef.current?.click();
   };
 
@@ -628,32 +643,27 @@ export default function ExecutionPage() {
 
     try {
       setUploadingInvoiceOrderId(order._id);
-      const oldInvoiceUrl = order.invoiceUrl;
       const invoiceUrl = await uploadInvoiceToR2(file);
-      await updateOrder(order._id, { invoiceUrl });
-
-      if (oldInvoiceUrl) {
-        deleteOldImage(oldInvoiceUrl).catch((error: unknown) => {
-          console.warn('Failed to delete old invoice:', error);
-        });
-      }
+      await updateOrder(order._id, { invoiceUrl, invoiceReviewed: invoiceReviewedRef.current });
     } catch (error) {
       const message = error instanceof Error ? error.message : t('editOrder.uploadFailed');
       toast.error(message);
       console.error('Invoice upload failed:', error);
     } finally {
       invoiceUploadOrderRef.current = null;
+      invoiceReviewedRef.current = false;
       setUploadingInvoiceOrderId(null);
       if (invoiceInputRef.current) invoiceInputRef.current.value = '';
     }
   };
 
   const handleDownloadInvoice = (order: Order) => {
-    if (!order.invoiceUrl) {
+    const invoices = order.invoiceUrls || [];
+    if (invoices.length === 0) {
       toast.error(t('editOrder.noInvoiceToDownload'));
       return;
     }
-    window.open(order.invoiceUrl, '_blank');
+    window.open(invoices[invoices.length - 1].url, '_blank');
   };
 
   const [creatingPaymentLinkOrderId, setCreatingPaymentLinkOrderId] = useState<string | null>(null);
@@ -1031,31 +1041,61 @@ export default function ExecutionPage() {
                       {
                         header: t('table.invoice'),
                         accessor: (order: Order) => {
-                          const hasInvoice = Boolean(order.invoiceUrl);
+                          const invoices = order.invoiceUrls || [];
+                          const hasInvoice = invoices.length > 0;
                           const partialPaid = order.status === 'partial-paid';
                           const iconColor = hasInvoice
                             ? (partialPaid ? 'text-orange-600 dark:text-orange-400' : 'text-primary')
                             : 'text-secondary/50';
                           return (
                             <div className="flex flex-col items-center gap-1">
-                              <span className={`inline-flex items-center justify-center p-2 ${iconColor}`}>
-                                <LuFileText size={24} />
-                              </span>
+                              <div className="flex flex-row gap-1 items-center min-h-12">
+                                {hasInvoice ? (
+                                  invoices.slice(0, 3).map((invoice) => (
+                                    <a
+                                      key={invoice.url}
+                                      href={invoice.url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      onClick={(e) => e.stopPropagation()}
+                                      className="inline-flex items-center justify-center w-10 h-10 rounded-lg border border-stroke bg-background overflow-hidden hover:border-primary transition-colors"
+                                      title={invoice.url.split('/').pop() || invoice.url}
+                                    >
+                                      {isImageUrl(invoice.url) ? (
+                                        <img
+                                          src={invoice.url}
+                                          alt="Invoice"
+                                          className="w-full h-full object-cover"
+                                          loading="lazy"
+                                        />
+                                      ) : (
+                                        <LuFileText size={20} className={iconColor} />
+                                      )}
+                                    </a>
+                                  ))
+                                ) : (
+                                  <span className={`inline-flex items-center justify-center p-2 ${iconColor}`}>
+                                    <LuFileText size={24} />
+                                  </span>
+                                )}
+                              </div>
                               <div className="flex flex-row gap-1">
-                                <Button
-                                  variant="ghost"
-                                  size="custom"
-                                  className="h-5 w-5 p-0 text-secondary hover:text-foreground"
-                                  onClick={(e) => { e.stopPropagation(); handleUploadInvoice(order); }}
-                                  disabled={uploadingInvoiceOrderId === order._id}
-                                  aria-label={t('table.uploadInvoice')}
-                                >
-                                  {uploadingInvoiceOrderId === order._id ? (
-                                    <LuRefreshCw size={12} className="animate-spin" />
-                                  ) : (
-                                    <LuUpload size={12} />
-                                  )}
-                                </Button>
+                                {uploadingInvoiceOrderId === order._id ? (
+                                  <span className="inline-flex h-5 w-5 items-center justify-center">
+                                    <LuRefreshCw size={12} className="animate-spin text-secondary" />
+                                  </span>
+                                ) : (
+                                  <InvoiceUploadMenu
+                                    onUpload={(reviewed) => handleUploadInvoice(order, reviewed)}
+                                    disabled={uploadingInvoiceOrderId === order._id}
+                                    tooltipPos={ToolTipPositions as 'left' | 'right'}
+                                    labels={{
+                                      tooltip: t('table.uploadInvoice') || 'Upload invoice',
+                                      uploadReviewed: t('table.uploadReviewedInvoice') || 'Upload reviewed',
+                                      uploadUnreviewed: t('table.uploadUnreviewedInvoice') || 'Upload unreviewed',
+                                    }}
+                                  />
+                                )}
                                 <Button
                                   variant="ghost"
                                   size="custom"

@@ -1,4 +1,4 @@
-import { type ReactNode } from 'react';
+import { type ReactNode, useState, useRef, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { useLocale } from 'next-intl';
 import { toast } from 'react-toastify';
@@ -25,8 +25,10 @@ import { FaWhatsapp } from 'react-icons/fa6';
 import Button from '@/components/ui/button';
 import Checkbox from '@/components/ui/checkbox';
 import Tooltip from '@/components/ui/tooltip';
-import { Order, OrderStatus } from '@/types/Order';
+import { Order } from '@/types/Order';
 import { STATUS_COLORS } from '../lib/order-status';
+import { isImageUrl } from '../lib/order-utils';
+import { InvoiceUploadMenu } from './invoic-upload-menu';
 
 function getReservationValue(order: Order, key: string): string | undefined {
   return order.reservationData?.find((f) => f.key === key)?.value;
@@ -84,10 +86,10 @@ interface ColumnCallbacks {
   onCopyPhone: (order: Order) => void;
   onCopyMessage: (order: Order) => void;
   onChangeExecutionDate: (order: Order) => void;
-  onEditField: (order: Order, field: 'name' | 'items' | 'duaa' | 'photo') => void;
+  onEditField: (order: Order, field: 'name' | 'items' | 'duaa') => void;
   onUploadPhoto: (order: Order) => void;
   onCopyPhotoUrl: (order: Order) => void;
-  onUploadInvoice: (order: Order) => void;
+  onUploadInvoice: (order: Order, reviewed: boolean) => void;
   onDownloadInvoice: (order: Order) => void;
   onChangeStatus: (order: Order) => void;
   onViewHistory: (order: Order) => void;
@@ -358,71 +360,11 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
                   <LuShare2 size={12} />
                 </Button>
               </Tooltip>
-              <Tooltip position={tooltipPos} content={t('table.editPhoto')}>
-                <Button
-                  variant="ghost"
-                  size="custom"
-                  className="h-5 w-5 p-0 text-secondary hover:text-foreground"
-                  onClick={(e) => { e.stopPropagation(); onEditField(order, 'photo'); }}
-                  aria-label={t('table.editPhoto')}
-                >
-                  <LuPencil size={12} />
-                </Button>
-              </Tooltip>
             </div>
           </div>
         );
       },
       className: 'min-w-20',
-    },
-    {
-      header: t('table.invoice'),
-      accessor: (order: Order) => {
-        const hasInvoice = Boolean(order.invoiceUrl);
-        const partialPaid = order.status === 'partial-paid';
-        const iconColor = hasInvoice
-          ? (partialPaid ? 'text-orange-600 dark:text-orange-400' : 'text-primary')
-          : 'text-secondary/50';
-
-        return (
-          <div className="flex flex-col items-center gap-1">
-            <span className={`inline-flex items-center justify-center p-2 ${iconColor}`}>
-              <LuFileText size={24} />
-            </span>
-            <div className="flex flex-row gap-1">
-              <Tooltip position={tooltipPos} content={t('table.uploadInvoice')}>
-                <Button
-                  variant="ghost"
-                  size="custom"
-                  className="h-5 w-5 p-0 text-secondary hover:text-foreground"
-                  onClick={(e) => { e.stopPropagation(); onUploadInvoice(order); }}
-                  disabled={uploadingInvoiceOrderId === order._id}
-                  aria-label={t('table.uploadInvoice')}
-                >
-                  {uploadingInvoiceOrderId === order._id ? (
-                    <LuRefreshCw size={12} className="animate-spin" />
-                  ) : (
-                    <LuUpload size={12} />
-                  )}
-                </Button>
-              </Tooltip>
-              <Tooltip position={tooltipPos} content={t('table.downloadInvoice')}>
-                <Button
-                  variant="ghost"
-                  size="custom"
-                  className="h-5 w-5 p-0 text-secondary hover:text-foreground"
-                  onClick={(e) => { e.stopPropagation(); onDownloadInvoice(order); }}
-                  disabled={!hasInvoice}
-                  aria-label={t('table.downloadInvoice')}
-                >
-                  <LuDownload size={12} />
-                </Button>
-              </Tooltip>
-            </div>
-          </div>
-        );
-      },
-      className: 'min-w-16',
     },
     {
       header: t('table.design'),
@@ -508,6 +450,58 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
                   aria-label={t('table.editDuaa')}
                 >
                   <LuPencil size={12} />
+                </Button>
+              </Tooltip>
+            </div>
+          </div>
+        );
+      },
+      className: 'min-w-16',
+    },
+    {
+      header: t('table.invoice'),
+      accessor: (order: Order) => {
+        const invoices = order.invoiceUrls || [];
+        const hasInvoice = invoices.length > 0;
+        const partialPaid = order.status === 'partial-paid';
+        const iconColor = hasInvoice
+          ? (partialPaid ? 'text-orange-600 dark:text-orange-400' : 'text-primary')
+          : 'text-secondary/50';
+
+        return (
+          <div className="flex flex-col items-center gap-1">
+            <div className="flex flex-row gap-1 items-center min-h-12">
+              <span className={`inline-flex items-center justify-center p-2 ${iconColor}`}>
+                <LuFileText size={24} />
+              </span>
+            </div>
+            <div className="flex flex-row gap-1">
+              {uploadingInvoiceOrderId === order._id ? (
+                <span className="inlin  e-flex h-5 w-5   items-center justify-center">
+                  <LuRefreshCw size={12} className="animate-spin text-secondary" />
+                </span>
+              ) : (
+                <InvoiceUploadMenu
+                  onUpload={(reviewed) => onUploadInvoice(order, reviewed)}
+                  disabled={uploadingInvoiceOrderId === order._id}
+                  tooltipPos={tooltipPos}
+                  labels={{
+                    tooltip: t('table.uploadInvoice') || 'Upload invoice',
+                    uploadReviewed: t('table.uploadReviewedInvoice') || 'Upload reviewed',
+                    uploadUnreviewed: t('table.uploadUnreviewedInvoice') || 'Upload unreviewed',
+                  }}
+                />
+              )}
+              <Tooltip position={tooltipPos} content={t('table.downloadInvoice')}>
+                <Button
+                  variant="ghost"
+                  size="custom"
+                  className="h-5 w-5 p-0 text-secondary hover:text-foreground"
+                  onClick={(e) => { e.stopPropagation(); onDownloadInvoice(order); }}
+                  disabled={!hasInvoice}
+                  aria-label={t('table.downloadInvoice')}
+                >
+                  <LuDownload size={12} />
                 </Button>
               </Tooltip>
             </div>

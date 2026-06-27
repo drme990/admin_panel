@@ -57,7 +57,7 @@ export interface OrderPageState {
   isChangeExecutionDateModalOpen: boolean;
   changingExecutionDateId: string | null;
   isEditOrderModalOpen: boolean;
-  editingField: 'name' | 'items' | 'duaa' | 'photo' | null;
+  editingField: 'name' | 'items' | 'duaa' | null;
   savingOrderId: string | null;
   isOrderHistoryModalOpen: boolean;
   orderHistory: unknown[];
@@ -154,7 +154,7 @@ export type OrderPageAction =
   | { type: 'SET_CHANGE_EXECUTION_DATE_MODAL_OPEN'; payload: boolean }
   | { type: 'SET_CHANGING_EXECUTION_DATE_ID'; payload: string | null }
   | { type: 'SET_EDIT_ORDER_MODAL_OPEN'; payload: boolean }
-  | { type: 'SET_EDITING_FIELD'; payload: 'name' | 'items' | 'duaa' | 'photo' | null }
+  | { type: 'SET_EDITING_FIELD'; payload: 'name' | 'items' | 'duaa' | null }
   | { type: 'SET_SAVING_ORDER_ID'; payload: string | null }
   | { type: 'SET_ORDER_HISTORY_MODAL_OPEN'; payload: boolean }
   | { type: 'SET_ORDER_HISTORY'; payload: { history: unknown[]; loading: boolean } }
@@ -344,7 +344,7 @@ export function useOrderPage(options: UseOrderPageOptions) {
   const setChangeExecutionDateModalOpen = useCallback((value: boolean) => dispatch({ type: 'SET_CHANGE_EXECUTION_DATE_MODAL_OPEN', payload: value }), []);
   const setChangingExecutionDateId = useCallback((value: string | null) => dispatch({ type: 'SET_CHANGING_EXECUTION_DATE_ID', payload: value }), []);
   const setEditOrderModalOpen = useCallback((value: boolean) => dispatch({ type: 'SET_EDIT_ORDER_MODAL_OPEN', payload: value }), []);
-  const setEditingField = useCallback((field: 'name' | 'items' | 'duaa' | 'photo' | null) => dispatch({ type: 'SET_EDITING_FIELD', payload: field }), []);
+  const setEditingField = useCallback((field: 'name' | 'items' | 'duaa' | null) => dispatch({ type: 'SET_EDITING_FIELD', payload: field }), []);
   const setSavingOrderId = useCallback((value: string | null) => dispatch({ type: 'SET_SAVING_ORDER_ID', payload: value }), []);
   const setOrderHistoryModalOpen = useCallback((value: boolean) => dispatch({ type: 'SET_ORDER_HISTORY_MODAL_OPEN', payload: value }), []);
   const setOrderHistory = useCallback((history: unknown[], loading: boolean) => dispatch({ type: 'SET_ORDER_HISTORY', payload: { history, loading } }), []);
@@ -549,6 +549,8 @@ export function useOrderPage(options: UseOrderPageOptions) {
         shortDuaa?: string;
         photo?: string;
         invoiceUrl?: string;
+        invoiceReviewed?: boolean;
+        invoiceUrls?: Array<{ url: string; reviewed: boolean }>;
         items?: Order['items'];
         gender?: string;
         isAlive?: string;
@@ -562,6 +564,8 @@ export function useOrderPage(options: UseOrderPageOptions) {
         if ('shortDuaa' in fields) body.shortDuaa = fields.shortDuaa;
         if ('photo' in fields) body.photo = fields.photo;
         if ('invoiceUrl' in fields) body.invoiceUrl = fields.invoiceUrl;
+        if ('invoiceReviewed' in fields) body.invoiceReviewed = fields.invoiceReviewed;
+        if ('invoiceUrls' in fields) body.invoiceUrls = fields.invoiceUrls;
         if ('items' in fields) body.items = fields.items;
         if ('gender' in fields) body.gender = fields.gender;
         if ('isAlive' in fields) body.isAlive = fields.isAlive;
@@ -670,9 +674,33 @@ export function useOrderPage(options: UseOrderPageOptions) {
           dispatch({ type: 'SET_ORDERS_ITEMS', payload: { orderId, items: fields.items } });
         }
         if (fields.invoiceUrl !== undefined) {
+          const currentOrder = state.orders.find((o) => o._id === orderId);
+          const currentInvoices = currentOrder?.invoiceUrls || [];
+          const alreadyExists = currentInvoices.some((invoice) => invoice.url === fields.invoiceUrl);
+          const nextInvoices = alreadyExists
+            ? currentInvoices
+            : [...currentInvoices, { url: fields.invoiceUrl, reviewed: fields.invoiceReviewed ?? false }];
+
           dispatch({
             type: 'UPDATE_ORDER_IN_LIST',
-            payload: { orderId, updates: { invoiceUrl: fields.invoiceUrl } },
+            payload: {
+              orderId,
+              updates: {
+                invoiceUrls: nextInvoices,
+              },
+            },
+          });
+        }
+
+        if (fields.invoiceUrls !== undefined) {
+          dispatch({
+            type: 'UPDATE_ORDER_IN_LIST',
+            payload: {
+              orderId,
+              updates: {
+                invoiceUrls: fields.invoiceUrls,
+              },
+            },
           });
         }
         return true;

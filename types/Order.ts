@@ -15,7 +15,12 @@ export type PaymentMethod =
   | 'fawry'
   | 'meeza'
   | 'valu'
-  | 'other';
+  | 'other'
+  | 'easykash'
+  | 'insta_pay'
+  | 'vodafone_cash'
+  | 'paypal'
+  | 'binance';
 
 type LocalizedOrderText = {
   ar?: string;
@@ -134,7 +139,7 @@ export interface Order {
   // Referral
   referralId?: string;
   cancellationReason?: string;
-  invoiceUrl?: string;
+  invoiceUrls?: Array<{ url: string; reviewed: boolean }>;
   statusUpdateTime: string;
   // Terms
   termsAgreedAt?: string;

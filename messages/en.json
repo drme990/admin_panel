@@ -71,6 +71,7 @@
       "source": "Source",
       "actions": "Actions",
       "invoice": "Invoice",
+      "invoices": "Invoices",
       "copyDuaa": "Copy Duaa",
       "copyPhone": "Copy Phone",
       "copyMessage": "Copy Message",
@@ -94,7 +95,11 @@
       "editPhoto": "Edit Photo",
       "sharePhoto": "Share Photo",
       "uploadInvoice": "Upload Invoice",
+      "uploadReviewedInvoice": "Reviewed Invoice",
+      "uploadUnreviewedInvoice": "Unreviewed Invoice",
       "downloadInvoice": "Download Invoice",
+      "reviewedInvoice": "Reviewed Invoice",
+      "unreviewedInvoice": "Unreviewed Invoice",
       "copyPaymentLink": "Copy Payment Link",
       "regeneratePaymentLink": "Regenerate Link",
       "editName": "Edit Name",
@@ -151,6 +156,9 @@
       "paymentMethod": "Payment Method",
       "invoiceUpload": "Invoice / Receipt",
       "uploadInvoice": "Upload Invoice",
+      "uploadReviewedInvoice": "Reviewed Invoice",
+      "uploadUnreviewedInvoice": "Unreviewed Invoice",
+      "uploadingInvoice": "Uploading...",
       "changeInvoice": "Change Invoice",
       "cancel": "Cancel",
       "create": "Create Order",
@@ -194,8 +202,6 @@
       "userNotFound": "No registered users found",
       "userLookupFailed": "Failed to lookup user",
       "userSelected": "User selected",
-      "selectUser": "Select",
-      "foundUsers": "Found users",
       "errors": {
         "itemsRequired": "At least one item is required",
         "productRequired": "Please select a product",
@@ -206,6 +212,7 @@
         "phoneRequired": "Phone is required",
         "phoneInvalid": "Invalid phone number",
         "countryRequired": "Country is required",
+        "paymentMethodRequired": "Payment method is required",
         "invoiceRequired": "Invoice is required for this payment method",
         "paidAmountRequired": "Paid amount must be greater than 0",
         "paidAmountInvalid": "Paid amount must be less than the order total",
@@ -213,9 +220,13 @@
       }
     },
     "createManualPayment": {
+      "selectPaymentMethod": "Select payment method",
       "easykash": "EasyKash",
       "instaPay": "Insta Pay",
-      "vodafoneCash": "Vodafone Cash"
+      "vodafoneCash": "Vodafone Cash",
+      "bankTransfer": "Bank Transfer",
+      "paypal": "PayPal",
+      "binance": "Binance"
     },
     "bulkAction": {
       "selectedCount": "Selected {count} orders",
@@ -645,6 +656,9 @@
       "paymentMethod": "Payment Method",
       "invoiceUpload": "Invoice / Receipt",
       "uploadInvoice": "Upload Invoice",
+      "uploadReviewedInvoice": "Reviewed Invoice",
+      "uploadUnreviewedInvoice": "Unreviewed Invoice",
+      "uploadingInvoice": "Uploading...",
       "changeInvoice": "Change Invoice",
       "cancel": "Cancel",
       "create": "Create Order",
@@ -688,8 +702,6 @@
       "userNotFound": "No registered users found",
       "userLookupFailed": "Failed to lookup user",
       "userSelected": "User selected",
-      "selectUser": "Select",
-      "foundUsers": "Found users",
       "errors": {
         "itemsRequired": "At least one item is required",
         "productRequired": "Please select a product",
@@ -700,6 +712,7 @@
         "phoneRequired": "Phone is required",
         "phoneInvalid": "Invalid phone number",
         "countryRequired": "Country is required",
+        "paymentMethodRequired": "Payment method is required",
         "invoiceRequired": "Invoice is required for this payment method",
         "paidAmountRequired": "Paid amount must be greater than 0",
         "paidAmountInvalid": "Paid amount must be less than the order total",
@@ -707,9 +720,13 @@
       }
     },
     "createManualPayment": {
+      "selectPaymentMethod": "Select payment method",
       "easykash": "EasyKash",
       "instaPay": "Insta Pay",
-      "vodafoneCash": "Vodafone Cash"
+      "vodafoneCash": "Vodafone Cash",
+      "bankTransfer": "Bank Transfer",
+      "paypal": "PayPal",
+      "binance": "Binance"
     },
     "bulkAction": {
       "selectedCount": "{count} orders selected",
@@ -741,6 +758,7 @@
       "date": "Last Updated",
       "actions": "Actions",
       "invoice": "Invoice",
+      "invoices": "Invoices",
       "downloadInvoice": "Download Invoice",
       "copyPaymentLink": "Copy Payment Link",
       "regeneratePaymentLink": "Regenerate Link"

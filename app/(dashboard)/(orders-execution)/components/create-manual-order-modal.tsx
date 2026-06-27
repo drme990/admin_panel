@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef, useReducer } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { useAuth } from '@/components/providers/auth-provider';
 import { Referral } from '@/types/Referral';
@@ -17,10 +17,10 @@ import RadioButton from '@/components/ui/radio-button';
 import Tabs from '@/components/ui/tabs';
 import Switch from '@/components/ui/switch';
 import CustomDatePicker from '@/components/ui/custom-date-picker';
-import { uploadImageToR2, uploadInvoiceToR2 } from '../../../../lib/image-upload-utils';
+import { uploadImageToR2, uploadInvoiceToR2, deleteOldImage } from '../../../../lib/image-upload-utils';
+import { InvoiceUploadMenu } from './invoic-upload-menu';
 import { LuCopy, LuCheck, LuRefreshCw, LuUpload, LuDownload, LuPlus, LuX, LuAtSign } from 'react-icons/lu';
 import { FaWhatsapp } from 'react-icons/fa';
-import { cn } from '@/lib/utils';
 import { isValidPhoneNumber } from 'libphonenumber-js';
 import { COUNTRIES } from '@/lib/countries';
 
@@ -76,7 +76,7 @@ interface Props {
   namespace?: 'orders' | 'execution';
 }
 
-type PaymentMethod = 'easykash' | 'insta_pay' | 'vodafone_cash';
+type PaymentMethod = 'easykash' | 'insta_pay' | 'vodafone_cash' | 'bank_transfer' | 'paypal' | 'binance' | '';
 type Source = 'manasik' | 'ghadaq';
 
 interface OrderItemForm {
@@ -135,9 +135,136 @@ const DEFAULT_FORM: FormState = {
     executionDate: '',
     photo: '',
   },
-  paymentMethod: 'easykash',
+  paymentMethod: '',
   paidAmount: '',
 };
+
+interface UserSuggestion {
+  _id: string;
+  name: string;
+  email: string;
+  phone: string;
+  country: string;
+  appId: string;
+}
+
+interface OrderResult {
+  orderNumber: string;
+  totalAmount: number;
+  fullAmount: number;
+  paidAmount: number;
+  remainingAmount: number;
+  isPartialPayment: boolean;
+  currency: string;
+  checkoutUrl: string | null;
+}
+
+interface UIState {
+  products: Product[];
+  loadingProducts: boolean;
+  referrals: Referral[];
+  loadingReferrals: boolean;
+  creating: boolean;
+  invoiceFile: File | null;
+  invoiceReviewed: boolean;
+  uploadingInvoice: boolean;
+  uploadingPhoto: boolean;
+  useCustomExecutionDate: boolean;
+  formErrors: Record<string, string | undefined>;
+  result: OrderResult | null;
+  copied: boolean;
+  linkedUserId: string | null;
+  focusedField: 'phone' | 'email' | null;
+  foundUsers: UserSuggestion[];
+}
+
+type UIAction =
+  | { type: 'SET_PRODUCTS'; products: Product[] }
+  | { type: 'SET_LOADING_PRODUCTS'; loading: boolean }
+  | { type: 'SET_REFERRALS'; referrals: Referral[] }
+  | { type: 'SET_LOADING_REFERRALS'; loading: boolean }
+  | { type: 'SET_CREATING'; creating: boolean }
+  | { type: 'SET_INVOICE_FILE'; file: File | null }
+  | { type: 'SET_INVOICE_REVIEWED'; reviewed: boolean }
+  | { type: 'SET_UPLOADING_INVOICE'; uploading: boolean }
+  | { type: 'SET_UPLOADING_PHOTO'; uploading: boolean }
+  | { type: 'SET_USE_CUSTOM_EXECUTION_DATE'; checked: boolean }
+  | { type: 'SET_FORM_ERRORS'; errors: Record<string, string | undefined> }
+  | { type: 'PATCH_FORM_ERRORS'; errors: Record<string, string | undefined> }
+  | { type: 'CLEAR_FORM_ERRORS' }
+  | { type: 'SET_RESULT'; result: OrderResult | null }
+  | { type: 'SET_COPIED'; copied: boolean }
+  | { type: 'SET_LINKED_USER_ID'; userId: string | null }
+  | { type: 'SET_FOCUSED_FIELD'; field: 'phone' | 'email' | null }
+  | { type: 'CLEAR_FOCUSED_FIELD_IF'; field: 'phone' | 'email' }
+  | { type: 'SET_FOUND_USERS'; users: UserSuggestion[] }
+  | { type: 'RESET_UI' };
+
+const UI_INITIAL_STATE: UIState = {
+  products: [],
+  loadingProducts: false,
+  referrals: [],
+  loadingReferrals: false,
+  creating: false,
+  invoiceFile: null,
+  invoiceReviewed: false,
+  uploadingInvoice: false,
+  uploadingPhoto: false,
+  useCustomExecutionDate: false,
+  formErrors: {},
+  result: null,
+  copied: false,
+  linkedUserId: null,
+  focusedField: null,
+  foundUsers: [],
+};
+
+function uiReducer(state: UIState, action: UIAction): UIState {
+  switch (action.type) {
+    case 'SET_PRODUCTS':
+      return { ...state, products: action.products };
+    case 'SET_LOADING_PRODUCTS':
+      return { ...state, loadingProducts: action.loading };
+    case 'SET_REFERRALS':
+      return { ...state, referrals: action.referrals };
+    case 'SET_LOADING_REFERRALS':
+      return { ...state, loadingReferrals: action.loading };
+    case 'SET_CREATING':
+      return { ...state, creating: action.creating };
+    case 'SET_INVOICE_FILE':
+      return { ...state, invoiceFile: action.file };
+    case 'SET_INVOICE_REVIEWED':
+      return { ...state, invoiceReviewed: action.reviewed };
+    case 'SET_UPLOADING_INVOICE':
+      return { ...state, uploadingInvoice: action.uploading };
+    case 'SET_UPLOADING_PHOTO':
+      return { ...state, uploadingPhoto: action.uploading };
+    case 'SET_USE_CUSTOM_EXECUTION_DATE':
+      return { ...state, useCustomExecutionDate: action.checked };
+    case 'SET_FORM_ERRORS':
+      return { ...state, formErrors: action.errors };
+    case 'PATCH_FORM_ERRORS':
+      return { ...state, formErrors: { ...state.formErrors, ...action.errors } };
+    case 'CLEAR_FORM_ERRORS':
+      return { ...state, formErrors: {} };
+    case 'SET_RESULT':
+      return { ...state, result: action.result };
+    case 'SET_COPIED':
+      return { ...state, copied: action.copied };
+    case 'SET_LINKED_USER_ID':
+      return { ...state, linkedUserId: action.userId };
+    case 'SET_FOCUSED_FIELD':
+      return { ...state, focusedField: action.field };
+    case 'CLEAR_FOCUSED_FIELD_IF':
+      return state.focusedField === action.field ? { ...state, focusedField: null } : state;
+    case 'SET_FOUND_USERS':
+      return { ...state, foundUsers: action.users };
+    case 'RESET_UI':
+      return UI_INITIAL_STATE;
+    default:
+      return state;
+  }
+}
 
 export default function CreateManualOrderModal({
   isOpen,
@@ -149,82 +276,66 @@ export default function CreateManualOrderModal({
   const locale = useLocale();
   const { user } = useAuth();
   const [form, setForm] = useState<FormState>(DEFAULT_FORM);
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loadingProducts, setLoadingProducts] = useState(false);
-  const [referrals, setReferrals] = useState<Referral[]>([]);
-  const [loadingReferrals, setLoadingReferrals] = useState(false);
-  const [creating, setCreating] = useState(false);
-  const [invoiceFile, setInvoiceFile] = useState<File | null>(null);
-  const [uploadingInvoice, setUploadingInvoice] = useState(false);
-  const [uploadingPhoto, setUploadingPhoto] = useState(false);
-  const [useCustomExecutionDate, setUseCustomExecutionDate] = useState(false);
-  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
-  const [result, setResult] = useState<{
-    orderNumber: string;
-    totalAmount: number;
-    fullAmount: number;
-    paidAmount: number;
-    remainingAmount: number;
-    isPartialPayment: boolean;
-    currency: string;
-    checkoutUrl: string | null;
-  } | null>(null);
-  const [copied, setCopied] = useState(false);
-  const [linkedUserId, setLinkedUserId] = useState<string | null>(null);
-  const [foundUsers, setFoundUsers] = useState<Array<{
-    _id: string;
-    name: string;
-    email: string;
-    phone: string;
-    country: string;
-    appId: string;
-  }>>([]);
+  const [ui, dispatch] = useReducer(uiReducer, UI_INITIAL_STATE);
+  const {
+    products,
+    loadingProducts,
+    referrals,
+    loadingReferrals,
+    creating,
+    invoiceFile,
+    invoiceReviewed,
+    uploadingInvoice,
+    uploadingPhoto,
+    useCustomExecutionDate,
+    formErrors,
+    result,
+    copied,
+    linkedUserId,
+    focusedField,
+    foundUsers,
+  } = ui;
   const invoiceInputRef = useRef<HTMLInputElement | null>(null);
   const photoInputRef = useRef<HTMLInputElement | null>(null);
   const lastLookupRef = useRef<{ phone: string; email: string }>({ phone: '', email: '' });
+  const skipBlurValidationRef = useRef(false);
 
   const resetForm = useCallback(() => {
     const initialReferralId =
       user?.role !== 'super_admin' && user?.ref ? user.ref : '';
     setForm({ ...DEFAULT_FORM, referralId: initialReferralId });
-    setInvoiceFile(null);
-    setResult(null);
-    setCopied(false);
-    setUseCustomExecutionDate(false);
-    setLinkedUserId(null);
-    setFoundUsers([]);
-    setFormErrors({});
+    dispatch({ type: 'RESET_UI' });
     lastLookupRef.current = { phone: '', email: '' };
   }, [user]);
 
   useEffect(() => {
     if (isOpen) {
       resetForm();
-      setLoadingProducts(true);
+      dispatch({ type: 'SET_LOADING_PRODUCTS', loading: true });
       fetch('/api/products?status=Active', { cache: 'no-store' })
         .then((r) => r.json())
         .then((data) => {
           if (data.success) {
-            setProducts(data.data.products || []);
+            dispatch({ type: 'SET_PRODUCTS', products: data.data.products || [] });
           }
         })
         .catch(() => {
           toast.error(t('createManualOrder.loadProductsFailed'));
         })
-        .finally(() => setLoadingProducts(false));
+        .finally(() => dispatch({ type: 'SET_LOADING_PRODUCTS', loading: false }));
 
-      setLoadingReferrals(true);
+      dispatch({ type: 'SET_LOADING_REFERRALS', loading: true });
       fetch('/api/referrals?limit=100', { cache: 'no-store' })
         .then((r) => r.json())
         .then((data) => {
           if (data.success) {
-            setReferrals(data.data.referrals || []);
+            dispatch({ type: 'SET_REFERRALS', referrals: data.data.referrals || [] });
           }
         })
         .catch(() => {
           toast.error(t('createManualOrder.loadReferralsFailed'));
         })
-        .finally(() => setLoadingReferrals(false));
+        .finally(() => dispatch({ type: 'SET_LOADING_REFERRALS', loading: false }));
     }
   }, [isOpen, t, resetForm]);
 
@@ -279,8 +390,8 @@ export default function CreateManualOrderModal({
   }, [currencyOptions, form.currency]);
 
   useEffect(() => {
-    setFormErrors({});
-  }, [form]);
+    dispatch({ type: 'CLEAR_FORM_ERRORS' });
+  }, [form, dispatch]);
 
   const sourceOptions = useMemo(
     () => [
@@ -330,9 +441,13 @@ export default function CreateManualOrderModal({
 
   const paymentMethodOptions = useMemo(
     () => [
-      { label: t('createManualPayment.easykash'), value: 'easykash' as PaymentMethod },
+      { label: t('createManualPayment.selectPaymentMethod') || 'Select payment method', value: '' as PaymentMethod },
       { label: t('createManualPayment.instaPay'), value: 'insta_pay' as PaymentMethod },
       { label: t('createManualPayment.vodafoneCash'), value: 'vodafone_cash' as PaymentMethod },
+      { label: t('createManualPayment.bankTransfer'), value: 'bank_transfer' as PaymentMethod },
+      { label: t('createManualPayment.paypal'), value: 'paypal' as PaymentMethod },
+      { label: t('createManualPayment.binance'), value: 'binance' as PaymentMethod },
+      { label: t('createManualPayment.easykash'), value: 'easykash' as PaymentMethod },
     ],
     [t],
   );
@@ -397,8 +512,8 @@ export default function CreateManualOrderModal({
     ? Math.max(0, fullOrderTotal - paidAmountNum)
     : 0;
 
-  const validateForm = useCallback((): Record<string, string> => {
-    const errors: Record<string, string> = {};
+  const validateForm = useCallback((): Record<string, string | undefined> => {
+    const errors: Record<string, string | undefined> = {};
     if (form.items.length === 0) {
       errors.items = t('createManualOrder.errors.itemsRequired');
     }
@@ -426,6 +541,9 @@ export default function CreateManualOrderModal({
     }
     if (!form.billingData.country.trim()) {
       errors.country = t('createManualOrder.errors.countryRequired');
+    }
+    if (!form.paymentMethod) {
+      errors.paymentMethod = t('createManualOrder.errors.paymentMethodRequired') || 'Payment method is required';
     }
     if (!isEasykash && !invoiceFile) {
       errors.invoice = t('createManualOrder.errors.invoiceRequired');
@@ -479,7 +597,7 @@ export default function CreateManualOrderModal({
       return;
     }
 
-    setInvoiceFile(file);
+    dispatch({ type: 'SET_INVOICE_FILE', file });
   };
 
   const handlePhotoFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -499,17 +617,24 @@ export default function CreateManualOrderModal({
     }
 
     try {
-      setUploadingPhoto(true);
+      dispatch({ type: 'SET_UPLOADING_PHOTO', uploading: true });
+      const oldPhotoUrl = form.reservationData.photo;
       const url = await uploadImageToR2(file);
       setForm((prev) => ({
         ...prev,
         reservationData: { ...prev.reservationData, photo: url },
       }));
+
+      if (oldPhotoUrl) {
+        deleteOldImage(oldPhotoUrl).catch((error: unknown) => {
+          console.warn('Failed to delete old customer image:', error);
+        });
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : t('editOrder.uploadFailed');
       toast.error(message);
     } finally {
-      setUploadingPhoto(false);
+      dispatch({ type: 'SET_UPLOADING_PHOTO', uploading: false });
       if (photoInputRef.current) photoInputRef.current.value = '';
     }
   };
@@ -528,15 +653,15 @@ export default function CreateManualOrderModal({
       });
       const data = await res.json();
       if (data.success && Array.isArray(data.data)) {
-        setFoundUsers(data.data);
+        dispatch({ type: 'SET_FOUND_USERS', users: data.data });
       } else {
-        setFoundUsers([]);
+        dispatch({ type: 'SET_FOUND_USERS', users: [] });
       }
     } catch {
       toast.error(t('createManualOrder.userLookupFailed') || 'Failed to lookup user');
-      setFoundUsers([]);
+      dispatch({ type: 'SET_FOUND_USERS', users: [] });
     }
-  }, [t]);
+  }, [t, dispatch]);
 
   const selectUser = (user: {
     _id: string;
@@ -559,9 +684,10 @@ export default function CreateManualOrderModal({
       phone: user.phone.trim(),
       email: user.email.trim(),
     };
-    setLinkedUserId(user._id);
-    setFoundUsers([]);
-    setFormErrors((prev) => ({ ...prev, phone: '', email: '' }));
+    dispatch({ type: 'SET_LINKED_USER_ID', userId: user._id });
+    dispatch({ type: 'SET_FOUND_USERS', users: [] });
+    dispatch({ type: 'PATCH_FORM_ERRORS', errors: { phone: '', email: '' } });
+    skipBlurValidationRef.current = true;
     toast.success(t('createManualOrder.userSelected') || 'User selected');
   };
 
@@ -570,8 +696,8 @@ export default function CreateManualOrderModal({
     const email = form.billingData.email.trim();
 
     if (!phone && !email) {
-      setLinkedUserId(null);
-      setFoundUsers([]);
+      dispatch({ type: 'SET_LINKED_USER_ID', userId: null });
+      dispatch({ type: 'SET_FOUND_USERS', users: [] });
       lastLookupRef.current = { phone: '', email: '' };
       return;
     }
@@ -580,7 +706,7 @@ export default function CreateManualOrderModal({
       return;
     }
 
-    setFoundUsers([]);
+    dispatch({ type: 'SET_FOUND_USERS', users: [] });
     const timer = setTimeout(() => {
       lookupUser(phone, email);
     }, 800);
@@ -591,18 +717,18 @@ export default function CreateManualOrderModal({
   const handleSubmit = async () => {
     const errors = validateForm();
     if (Object.keys(errors).length > 0) {
-      setFormErrors(errors);
+      dispatch({ type: 'SET_FORM_ERRORS', errors });
       toast.error(t('createManualOrder.errors.fixForm') || 'Please fix the errors above');
       return;
     }
-    setFormErrors({});
-    setCreating(true);
+    dispatch({ type: 'CLEAR_FORM_ERRORS' });
+    dispatch({ type: 'SET_CREATING', creating: true });
     try {
       let invoiceUrl = '';
       if (!isEasykash && invoiceFile) {
-        setUploadingInvoice(true);
+        dispatch({ type: 'SET_UPLOADING_INVOICE', uploading: true });
         invoiceUrl = await uploadInvoiceToR2(invoiceFile);
-        setUploadingInvoice(false);
+        dispatch({ type: 'SET_UPLOADING_INVOICE', uploading: false });
       }
 
       const reservationData = [];
@@ -644,6 +770,7 @@ export default function CreateManualOrderModal({
           reservationData,
           paymentMethod: form.paymentMethod,
           invoiceUrl: invoiceUrl || undefined,
+          invoiceReviewed: invoiceUrl ? invoiceReviewed : undefined,
           locale: 'ar',
           userId: linkedUserId || undefined,
           paidAmount: isPartialPayment ? paidAmountNum : undefined,
@@ -655,15 +782,18 @@ export default function CreateManualOrderModal({
         throw new Error(data.error || 'Failed to create order');
       }
 
-      setResult({
-        orderNumber: data.data.order.orderNumber,
-        totalAmount: data.data.order.totalAmount,
-        fullAmount: data.data.order.fullAmount,
-        paidAmount: data.data.order.paidAmount,
-        remainingAmount: data.data.order.remainingAmount,
-        isPartialPayment: data.data.order.isPartialPayment,
-        currency: data.data.order.currency,
-        checkoutUrl: data.data.checkoutUrl,
+      dispatch({
+        type: 'SET_RESULT',
+        result: {
+          orderNumber: data.data.order.orderNumber,
+          totalAmount: data.data.order.totalAmount,
+          fullAmount: data.data.order.fullAmount,
+          paidAmount: data.data.order.paidAmount,
+          remainingAmount: data.data.order.remainingAmount,
+          isPartialPayment: data.data.order.isPartialPayment,
+          currency: data.data.order.currency,
+          checkoutUrl: data.data.checkoutUrl,
+        },
       });
 
       onSuccess();
@@ -671,8 +801,8 @@ export default function CreateManualOrderModal({
       const message = error instanceof Error ? error.message : t('createManualOrder.failed');
       toast.error(message);
     } finally {
-      setCreating(false);
-      setUploadingInvoice(false);
+      dispatch({ type: 'SET_CREATING', creating: false });
+      dispatch({ type: 'SET_UPLOADING_INVOICE', uploading: false });
     }
   };
 
@@ -680,8 +810,8 @@ export default function CreateManualOrderModal({
     if (!result?.checkoutUrl) return;
     try {
       await navigator.clipboard.writeText(result.checkoutUrl);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      dispatch({ type: 'SET_COPIED', copied: true });
+      setTimeout(() => dispatch({ type: 'SET_COPIED', copied: false }), 2000);
     } catch {
       toast.error(t('createManualOrder.copyFailed'));
     }
@@ -916,81 +1046,132 @@ export default function CreateManualOrderModal({
             }
             error={formErrors.fullName}
           />
-          <Input
-            placeholder={t('createManualOrder.phonePlaceholder')}
-            value={form.billingData.phone}
-            onChange={(e) => {
-              setForm((prev) => ({
-                ...prev,
-                billingData: { ...prev.billingData, phone: e.target.value },
-              }));
-              setLinkedUserId(null);
-              setFormErrors((prev) => ({ ...prev, phone: '' }));
-            }}
-            onBlur={() => {
-              const phone = form.billingData.phone.trim();
-              if (!phone) {
-                setFormErrors((prev) => ({
+
+          <div className="relative">
+            <Input
+              placeholder={t('createManualOrder.phonePlaceholder')}
+              value={form.billingData.phone}
+              onChange={(e) => {
+                setForm((prev) => ({
                   ...prev,
-                  phone: t('createManualOrder.errors.phoneRequired'),
+                  billingData: { ...prev.billingData, phone: e.target.value },
                 }));
-              } else if (!validatePhoneNumber(form.billingData.phone, form.billingData.country)) {
-                setFormErrors((prev) => ({
-                  ...prev,
-                  phone: t('createManualOrder.errors.phoneInvalid') || 'Invalid phone number',
-                }));
+                dispatch({ type: 'SET_LINKED_USER_ID', userId: null });
+                dispatch({ type: 'PATCH_FORM_ERRORS', errors: { phone: '' } });
+              }}
+              onFocus={() => dispatch({ type: 'SET_FOCUSED_FIELD', field: 'phone' })}
+              onBlur={() => {
+                setTimeout(() => dispatch({ type: 'CLEAR_FOCUSED_FIELD_IF', field: 'phone' }), 150);
+                if (skipBlurValidationRef.current) {
+                  skipBlurValidationRef.current = false;
+                  return;
+                }
+                const phone = form.billingData.phone.trim();
+                if (!phone) {
+                  dispatch({
+                    type: 'PATCH_FORM_ERRORS',
+                    errors: { phone: t('createManualOrder.errors.phoneRequired') },
+                  });
+                } else if (!validatePhoneNumber(form.billingData.phone, form.billingData.country)) {
+                  dispatch({
+                    type: 'PATCH_FORM_ERRORS',
+                    errors: { phone: t('createManualOrder.errors.phoneInvalid') || 'Invalid phone number' },
+                  });
+                }
+              }}
+              error={formErrors.phone}
+              suffix={
+                form.billingData.phone.replace(/\D/g, '').length > 0 ? (
+                  <a
+                    href={`https://wa.me/${form.billingData.phone.replace(/\D/g, '')}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-success hover:text-foreground transition-colors"
+                    aria-label="Open WhatsApp chat"
+                  >
+                    <FaWhatsapp size={18} />
+                  </a>
+                ) : null
               }
-            }}
-            error={formErrors.phone}
-            suffix={
-              form.billingData.phone.replace(/\D/g, '').length > 0 ? (
-                <a
-                  href={`https://wa.me/${form.billingData.phone.replace(/\D/g, '')}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-success hover:text-foreground transition-colors"
-                  aria-label="Open WhatsApp chat"
-                >
-                  <FaWhatsapp size={18} />
-                </a>
-              ) : null
-            }
-          />
-          <Input
-            placeholder={t('createManualOrder.emailPlaceholder')}
-            type="email"
-            value={form.billingData.email}
-            onChange={(e) => {
-              setForm((prev) => ({
-                ...prev,
-                billingData: { ...prev.billingData, email: e.target.value },
-              }));
-              setLinkedUserId(null);
-            }}
-            error={formErrors.email}
-            suffix={
-              !form.billingData.email.trim() && form.billingData.phone.trim() ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setForm((prev) => ({
-                      ...prev,
-                      billingData: {
-                        ...prev.billingData,
-                        email: `${prev.billingData.phone.trim()}@gmail.com`,
-                      },
-                    }));
-                    setLinkedUserId(null);
-                    setFoundUsers([]);
-                  }}
-                  className="text-secondary hover:text-foreground transition-colors"
-                  aria-label="Use phone as Gmail"
-                >
-                  <LuAtSign size={16} />
-                </button>
-              ) : null
-            }
-          />
+            />
+            {focusedField === 'phone' && foundUsers.length > 0 && (
+              <div className="absolute z-20 left-0 right-0 top-full mt-1 rounded-lg border border-stroke bg-card-bg shadow-xl max-h-60 overflow-y-auto p-1">
+                {foundUsers.map((user) => (
+                  <button
+                    key={user._id}
+                    type="button"
+                    onClick={() => selectUser(user)}
+                    className="w-full px-3 py-2 text-start text-sm hover:bg-background rounded-lg transition-colors"
+                  >
+                    <div className="font-medium truncate">{user.name || '-'}</div>
+                    <div className="text-xs text-secondary truncate">{user.phone || '-'}</div>
+                    <div className="text-xs text-secondary truncate">{user.email || '-'}</div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="relative">
+            <Input
+              placeholder={t('createManualOrder.emailPlaceholder')}
+              type="email"
+              value={form.billingData.email}
+              onChange={(e) => {
+                setForm((prev) => ({
+                  ...prev,
+                  billingData: { ...prev.billingData, email: e.target.value },
+                }));
+                dispatch({ type: 'SET_LINKED_USER_ID', userId: null });
+              }}
+              onFocus={() => dispatch({ type: 'SET_FOCUSED_FIELD', field: 'email' })}
+              onBlur={() => {
+                setTimeout(() => dispatch({ type: 'CLEAR_FOCUSED_FIELD_IF', field: 'email' }), 150);
+                if (skipBlurValidationRef.current) {
+                  skipBlurValidationRef.current = false;
+                  return;
+                }
+              }}
+              error={formErrors.email}
+              suffix={
+                !form.billingData.email.trim() && form.billingData.phone.trim() ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setForm((prev) => ({
+                        ...prev,
+                        billingData: {
+                          ...prev.billingData,
+                          email: `${prev.billingData.phone.trim()}@gmail.com`,
+                        },
+                      }));
+                      dispatch({ type: 'SET_LINKED_USER_ID', userId: null });
+                      dispatch({ type: 'SET_FOUND_USERS', users: [] });
+                    }}
+                    className="text-secondary hover:text-foreground transition-colors"
+                    aria-label="Use phone as Gmail"
+                  >
+                    <LuAtSign size={16} />
+                  </button>
+                ) : null
+              }
+            />
+            {focusedField === 'email' && foundUsers.length > 0 && (
+              <div className="absolute z-20 left-0 right-0 top-full mt-1 rounded-lg border border-stroke bg-card-bg shadow-xl max-h-60 overflow-y-auto p-1">
+                {foundUsers.map((user) => (
+                  <button
+                    key={user._id}
+                    type="button"
+                    onClick={() => selectUser(user)}
+                    className="w-full px-3 py-2 text-start text-sm hover:bg-background rounded-lg transition-colors"
+                  >
+                    <div className="font-medium truncate">{user.name || '-'}</div>
+                    <div className="text-xs text-secondary truncate">{user.email || '-'}</div>
+                    <div className="text-xs text-secondary truncate">{user.phone || '-'}</div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           <CountrySelector
             value={form.billingData.country}
             onChange={(val) =>
@@ -1003,63 +1184,6 @@ export default function CreateManualOrderModal({
             error={formErrors.country}
           />
         </div>
-
-        {foundUsers.length > 0 && (
-          <div className="mt-4 rounded-lg border border-stroke bg-background p-3">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-semibold text-foreground">
-                {t('createManualOrder.foundUsers')}
-              </span>
-              <button
-                type="button"
-                onClick={() => setFoundUsers([])}
-                className="text-xs text-secondary hover:text-foreground transition-colors"
-              >
-                <LuX size={14} />
-              </button>
-            </div>
-            <div className="space-y-2 max-h-60 overflow-y-auto">
-              {foundUsers.map((user) => (
-                <div
-                  key={user._id}
-                  className={cn(
-                    'flex items-center justify-between rounded-md border p-2 transition-colors',
-                    linkedUserId === user._id
-                      ? 'border-success bg-success/5'
-                      : 'border-stroke bg-background hover:border-success/40',
-                  )}
-                >
-                  <div className="min-w-0 flex-1">
-                    <div className="text-sm font-medium text-foreground truncate">
-                      {user.name || '-'}
-                    </div>
-                    <div className="text-xs text-secondary truncate">
-                      {user.email || '-'}
-                    </div>
-                    <div className="text-xs text-secondary truncate">
-                      {user.phone || '-'}
-                    </div>
-                    {user.country && (
-                      <div className="text-xs text-secondary truncate">
-                        {user.country}
-                      </div>
-                    )}
-                  </div>
-                  <Button
-                    variant={linkedUserId === user._id ? 'primary' : 'outline'}
-                    size="sm"
-                    onClick={() => selectUser(user)}
-                    className="ml-2 shrink-0"
-                  >
-                    {linkedUserId === user._id
-                      ? t('createManualOrder.userSelected') || 'Selected'
-                      : t('createManualOrder.selectUser') || 'Select'}
-                  </Button>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Reservation Data */}
@@ -1202,7 +1326,7 @@ export default function CreateManualOrderModal({
             <Switch
               checked={useCustomExecutionDate}
               onChange={(checked) => {
-                setUseCustomExecutionDate(checked);
+                dispatch({ type: 'SET_USE_CUSTOM_EXECUTION_DATE', checked });
                 if (!checked) {
                   setForm((prev) => ({
                     ...prev,
@@ -1305,6 +1429,7 @@ export default function CreateManualOrderModal({
             onChange={(val) =>
               setForm((prev) => ({ ...prev, paymentMethod: val }))
             }
+            error={formErrors.paymentMethod}
           />
 
           {!isEasykash && (
@@ -1313,20 +1438,29 @@ export default function CreateManualOrderModal({
                 {t('createManualOrder.invoiceUpload')}
               </label>
               <div className="flex items-center gap-3">
-                <Button
-                  variant="outline"
-                  size="custom"
-                  className={`px-3 py-2 ${formErrors.invoice ? 'border-error text-error hover:text-error hover:border-error' : ''}`}
-                  onClick={() => invoiceInputRef.current?.click()}
-                  disabled={uploadingInvoice}
-                >
-                  {uploadingInvoice ? (
-                    <LuRefreshCw size={16} className="animate-spin me-2" />
-                  ) : (
-                    <LuUpload size={16} className="me-2" />
-                  )}
-                  {invoiceFile ? t('createManualOrder.changeInvoice') : t('createManualOrder.uploadInvoice')}
-                </Button>
+                {uploadingInvoice ? (
+                  <span className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-stroke text-secondary">
+                    <LuRefreshCw size={16} className="animate-spin" />
+                    {t('createManualOrder.uploadingInvoice') || 'Uploading...'}
+                  </span>
+                ) : (
+                  <InvoiceUploadMenu
+                    onUpload={(reviewed) => {
+                      dispatch({ type: 'SET_INVOICE_REVIEWED', reviewed });
+                      invoiceInputRef.current?.click();
+                    }}
+                    disabled={uploadingInvoice}
+                    variant="outline"
+                    className={formErrors.invoice ? 'border-error text-error hover:text-error hover:border-error' : ''}
+                    buttonLabel={invoiceFile
+                      ? (t('createManualOrder.changeInvoice') || 'Change Invoice')
+                      : (t('createManualOrder.uploadInvoice') || 'Upload Invoice')}
+                    labels={{
+                      uploadReviewed: t('createManualOrder.uploadReviewedInvoice') || 'Upload reviewed invoice',
+                      uploadUnreviewed: t('createManualOrder.uploadUnreviewedInvoice') || 'Upload unreviewed invoice',
+                    }}
+                  />
+                )}
                 {invoiceFile && (
                   <span className="text-sm text-secondary">{invoiceFile.name}</span>
                 )}
@@ -1372,6 +1506,6 @@ export default function CreateManualOrderModal({
           )}
         </Button>
       </div>
-    </Modal>
+    </Modal >
   );
 }

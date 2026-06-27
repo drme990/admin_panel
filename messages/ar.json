@@ -71,6 +71,7 @@
       "source": "المصدر",
       "actions": "الإجراءات",
       "invoice": "الفاتورة",
+      "invoices": "الفواتير",
       "copyDuaa": "نسخ الدعاء",
       "copyPhone": "نسخ الرقم",
       "copyMessage": "نسخ الرسالة",
@@ -94,7 +95,11 @@
       "editPhoto": "تعديل الصورة",
       "sharePhoto": "مشاركة الصورة",
       "uploadInvoice": "رفع الفاتورة",
+      "uploadReviewedInvoice": "فاتورة مراجعة",
+      "uploadUnreviewedInvoice": "فاتورة غير مراجعة",
       "downloadInvoice": "تحميل الفاتورة",
+      "reviewedInvoice": "فاتورة مراجعة",
+      "unreviewedInvoice": "فاتورة غير مراجعة",
       "copyPaymentLink": "نسخ رابط الدفع",
       "regeneratePaymentLink": "إعادة إنشاء الرابط",
       "editName": "تعديل الاسم",
@@ -151,6 +156,9 @@
       "paymentMethod": "طريقة الدفع",
       "invoiceUpload": "الفاتورة / الإيصال",
       "uploadInvoice": "رفع الفاتورة",
+      "uploadReviewedInvoice": "فاتورة مراجعة",
+      "uploadUnreviewedInvoice": "فاتورة غير مراجعة",
+      "uploadingInvoice": "جاري الرفع...",
       "changeInvoice": "تغيير الفاتورة",
       "cancel": "إلغاء",
       "create": "إنشاء الطلب",
@@ -194,8 +202,6 @@
       "userNotFound": "لا يوجد مستخدمين مسجلين",
       "userLookupFailed": "فشل البحث عن المستخدم",
       "userSelected": "تم اختيار المستخدم",
-      "selectUser": "اختيار",
-      "foundUsers": "المستخدمون الموجودون",
       "errors": {
         "itemsRequired": "مطلوب صنف واحد على الأقل",
         "productRequired": "يرجى اختيار منتج",
@@ -206,6 +212,7 @@
         "phoneRequired": "الهاتف مطلوب",
         "phoneInvalid": "رقم الهاتف غير صالح",
         "countryRequired": "الدولة مطلوبة",
+        "paymentMethodRequired": "طريقة الدفع مطلوبة",
         "invoiceRequired": "الفاتورة مطلوبة لطريقة الدفع هذه",
         "paidAmountRequired": "المبلغ المدفوع يجب أن يكون أكبر من 0",
         "paidAmountInvalid": "المبلغ المدفوع يجب أن يكون أقل من إجمالي الطلب",
@@ -213,9 +220,13 @@
       }
     },
     "createManualPayment": {
+      "selectPaymentMethod": "اختر طريقة الدفع",
       "easykash": "EasyKash",
       "instaPay": "Insta Pay",
-      "vodafoneCash": "فودافون كاش"
+      "vodafoneCash": "فودافون كاش",
+      "bankTransfer": "حوالة بنكية",
+      "paypal": "PayPal",
+      "binance": "Binance"
     },
     "bulkAction": {
       "selectedCount": "تم تحديد {count} طلبات",
@@ -645,6 +656,9 @@
       "paymentMethod": "طريقة الدفع",
       "invoiceUpload": "الفاتورة / الإيصال",
       "uploadInvoice": "رفع الفاتورة",
+      "uploadReviewedInvoice": "فاتورة مراجعة",
+      "uploadUnreviewedInvoice": "فاتورة غير مراجعة",
+      "uploadingInvoice": "جاري الرفع...",
       "changeInvoice": "تغيير الفاتورة",
       "cancel": "إلغاء",
       "create": "إنشاء الطلب",
@@ -688,8 +702,6 @@
       "userNotFound": "لا يوجد مستخدمين مسجلين",
       "userLookupFailed": "فشل البحث عن المستخدم",
       "userSelected": "تم اختيار المستخدم",
-      "selectUser": "اختيار",
-      "foundUsers": "المستخدمون الموجودون",
       "errors": {
         "itemsRequired": "مطلوب صنف واحد على الأقل",
         "productRequired": "يرجى اختيار منتج",
@@ -700,6 +712,7 @@
         "phoneRequired": "الهاتف مطلوب",
         "phoneInvalid": "رقم الهاتف غير صالح",
         "countryRequired": "الدولة مطلوبة",
+        "paymentMethodRequired": "طريقة الدفع مطلوبة",
         "invoiceRequired": "الفاتورة مطلوبة لطريقة الدفع هذه",
         "paidAmountRequired": "المبلغ المدفوع يجب أن يكون أكبر من 0",
         "paidAmountInvalid": "المبلغ المدفوع يجب أن يكون أقل من إجمالي الطلب",
@@ -707,9 +720,13 @@
       }
     },
     "createManualPayment": {
+      "selectPaymentMethod": "اختر طريقة الدفع",
       "easykash": "EasyKash",
       "instaPay": "Insta Pay",
-      "vodafoneCash": "فودافون كاش"
+      "vodafoneCash": "فودافون كاش",
+      "bankTransfer": "حوالة بنكية",
+      "paypal": "PayPal",
+      "binance": "Binance"
     },
     "bulkAction": {
       "selectedCount": "تم تحديد {count} طلبات",
@@ -741,6 +758,7 @@
       "date": "آخر تحديث",
       "actions": "إجراءات",
       "invoice": "الفاتورة",
+      "invoices": "الفواتير",
       "downloadInvoice": "تحميل الفاتورة",
       "copyPaymentLink": "نسخ رابط الدفع",
       "regeneratePaymentLink": "إعادة إنشاء الرابط"

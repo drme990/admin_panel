@@ -62,6 +62,7 @@ function resolveLocalizedSizeValue(value: SizeValue | undefined, locale: string)
 }
 
 function resolveOrderItemSizeLabel(item: Order['items'][number], locale: string): string | null {
+  if (item.customSize) return item.customSize;
   const directSize =
     resolveLocalizedSizeValue(item.sizeName, locale) ??
     resolveLocalizedSizeValue(item.sizeLabel, locale) ??
@@ -417,12 +418,14 @@ export default function OrderDetailModal({
                             <span>{t('table.quantityTotal', { count: item.quantity })}</span>
                             <span>{(item.price ?? 0).toFixed(2)} {item.currency}</span>
                           </div>
-                          <div className="text-[11px] text-secondary font-mono">
-                            <span>{t('productId')}: {item.productId}</span>
-                            {item.productSlug && (
-                              <span className="ms-2">{t('productSlug')}: {item.productSlug}</span>
-                            )}
-                          </div>
+                          {!item.isCustom && (
+                            <div className="text-[11px] text-secondary font-mono">
+                              <span>{t('productId')}: {item.productId}</span>
+                              {item.productSlug && (
+                                <span className="ms-2">{t('productSlug')}: {item.productSlug}</span>
+                              )}
+                            </div>
+                          )}
                         </div>
                         <div className="text-end shrink-0">
                           <p className="font-bold text-sm text-success">

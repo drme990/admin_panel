@@ -327,7 +327,7 @@ export default function EditOrderModal({
                   >
                     <div className="flex-1 w-full sm:w-auto min-w-0">
                       <Dropdown
-                        value={String(item.productId)}
+                        value={String(item.productId || '')}
                         options={productOptions}
                         onChange={(value) => handleChangeItemProduct(index, value)}
                         placeholder={t('editOrder.selectProduct')}

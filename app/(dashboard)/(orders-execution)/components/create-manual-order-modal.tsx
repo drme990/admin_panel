@@ -80,9 +80,13 @@ type PaymentMethod = 'easykash' | 'insta_pay' | 'vodafone_cash' | 'bank_transfer
 type Source = 'manasik' | 'ghadaq';
 
 interface OrderItemForm {
+  type: 'existing' | 'custom';
   productId: string;
   sizeIndex: number;
   quantity: number;
+  overridePrice: string;
+  customName: string;
+  customSize: string;
   customPrice: string;
 }
 
@@ -111,9 +115,13 @@ interface FormState {
 }
 
 const emptyItem = (): OrderItemForm => ({
+  type: 'existing',
   productId: '',
   sizeIndex: 0,
   quantity: 0,
+  overridePrice: '',
+  customName: '',
+  customSize: '',
   customPrice: '',
 });
 
@@ -494,11 +502,19 @@ export default function CreateManualOrderModal({
     [t],
   );
 
+  const itemTypeOptions = useMemo(
+    () => [
+      { label: t('createManualOrder.existingProduct') || 'Existing', value: 'existing' as OrderItemForm['type'] },
+      { label: t('createManualOrder.customProduct') || 'Custom', value: 'custom' as OrderItemForm['type'] },
+    ],
+    [t],
+  );
+
   const isEasykash = form.paymentMethod === 'easykash';
 
   const getOriginalUnitPrice = useCallback(
     (item: OrderItemForm) => {
-      if (!item.productId) return 0;
+      if (item.type !== 'existing' || !item.productId) return 0;
       const product = getProduct(item.productId);
       if (!product) return 0;
       const size = product.sizes?.[item.sizeIndex];
@@ -517,11 +533,18 @@ export default function CreateManualOrderModal({
   const fullOrderTotal = useMemo(() => {
     let total = 0;
     for (const item of form.items) {
-      if (!item.productId || item.quantity <= 0) continue;
-      const originalPrice = getOriginalUnitPrice(item);
-      const customPrice = parseFloat(item.customPrice);
-      const unitPrice = Number.isFinite(customPrice) && customPrice >= 0 ? customPrice : originalPrice;
-      total += unitPrice * item.quantity;
+      if (item.quantity <= 0) continue;
+      if (item.type === 'custom') {
+        const price = parseFloat(item.customPrice);
+        if (!Number.isFinite(price) || price <= 0) continue;
+        total += price * item.quantity;
+      } else {
+        if (!item.productId) continue;
+        const originalPrice = getOriginalUnitPrice(item);
+        const overridePrice = parseFloat(item.overridePrice);
+        const unitPrice = Number.isFinite(overridePrice) && overridePrice >= 0 ? overridePrice : originalPrice;
+        total += unitPrice * item.quantity;
+      }
     }
     return total;
   }, [form.items, getOriginalUnitPrice]);
@@ -534,12 +557,12 @@ export default function CreateManualOrderModal({
   const priceWarnings = useMemo(() => {
     const warnings: Array<{ index: number; message: string }> = [];
     form.items.forEach((item, index) => {
-      if (!item.productId || item.quantity <= 0) return;
-      const customPrice = parseFloat(item.customPrice);
-      if (!Number.isFinite(customPrice) || customPrice <= 0) return;
+      if (item.type !== 'existing' || !item.productId || item.quantity <= 0) return;
+      const overridePrice = parseFloat(item.overridePrice);
+      if (!Number.isFinite(overridePrice) || overridePrice <= 0) return;
       const originalPrice = getOriginalUnitPrice(item);
       if (originalPrice <= 0) return;
-      const deviation = Math.abs(customPrice - originalPrice) / originalPrice;
+      const deviation = Math.abs(overridePrice - originalPrice) / originalPrice;
       if (deviation > 0.05) {
         warnings.push({
           index,
@@ -563,8 +586,18 @@ export default function CreateManualOrderModal({
       errors.items = t('createManualOrder.errors.itemsRequired');
     }
     form.items.forEach((item, index) => {
-      if (!item.productId) {
-        errors[`item_${index}_product`] = t('createManualOrder.errors.productRequired');
+      if (item.type === 'custom') {
+        if (!item.customName.trim()) {
+          errors[`item_${index}_name`] = t('createManualOrder.errors.customNameRequired') || 'Custom product name is required';
+        }
+        const customPrice = parseFloat(item.customPrice);
+        if (!Number.isFinite(customPrice) || customPrice <= 0) {
+          errors[`item_${index}_price`] = t('createManualOrder.errors.customPriceRequired') || 'Custom price is required';
+        }
+      } else {
+        if (!item.productId) {
+          errors[`item_${index}_product`] = t('createManualOrder.errors.productRequired');
+        }
       }
       if (item.quantity <= 0) {
         errors[`item_${index}_quantity`] = t('createManualOrder.errors.quantityRequired');
@@ -805,12 +838,23 @@ export default function CreateManualOrderModal({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           source: form.source,
-          items: form.items.map((item) => ({
-            productId: item.productId,
-            quantity: item.quantity,
-            sizeIndex: item.sizeIndex,
-            customPrice: item.customPrice ? parseFloat(item.customPrice) : undefined,
-          })),
+          items: form.items.map((item) =>
+            item.type === 'custom'
+              ? {
+                type: 'custom' as const,
+                name: item.customName.trim(),
+                size: item.customSize.trim() || undefined,
+                quantity: item.quantity,
+                price: parseFloat(item.customPrice),
+              }
+              : {
+                type: 'existing' as const,
+                productId: item.productId,
+                quantity: item.quantity,
+                sizeIndex: item.sizeIndex,
+                customPrice: item.overridePrice ? parseFloat(item.overridePrice) : undefined,
+              },
+          ),
           currency: form.currency,
           referralId: form.referralId || undefined,
           billingData: form.billingData,
@@ -1007,9 +1051,12 @@ export default function CreateManualOrderModal({
                 className="flex flex-col gap-3 p-3 rounded-lg border border-stroke bg-background/50"
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-secondary">
-                    {t('createManualOrder.item')} {index + 1}
-                  </span>
+                  <Tabs
+                    value={item.type}
+                    options={itemTypeOptions}
+                    onChange={(val) => updateItem(index, { type: val })}
+                    size="sm"
+                  />
                   {index > 0 && (
                     <Button
                       variant="ghost"
@@ -1022,66 +1069,117 @@ export default function CreateManualOrderModal({
                     </Button>
                   )}
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
-                  <div className="sm:col-span-4">
-                    <Dropdown
-                      label={index === 0 ? t('createManualOrder.product') : undefined}
-                      value={item.productId}
-                      options={productOptions}
-                      onChange={(val) => updateItem(index, { productId: val, sizeIndex: 0 })}
-                      placeholder={t('createManualOrder.selectProduct')}
-                      disabled={loadingProducts}
-                      error={formErrors[`item_${index}_product`]}
-                    />
-                  </div>
-                  <div className="sm:col-span-4">
-                    {sizeOpts.length > 1 && (
-                      <Dropdown
-                        label={index === 0 ? t('createManualOrder.size') : undefined}
-                        value={item.sizeIndex}
-                        options={sizeOpts}
-                        onChange={(val) => updateItem(index, { sizeIndex: val })}
+                {item.type === 'existing' ? (
+                  <>
+                    <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+                      <div className="sm:col-span-4">
+                        <Dropdown
+                          label={index === 0 ? t('createManualOrder.product') : undefined}
+                          value={item.productId}
+                          options={productOptions}
+                          onChange={(val) => updateItem(index, { productId: val, sizeIndex: 0 })}
+                          placeholder={t('createManualOrder.selectProduct')}
+                          disabled={loadingProducts}
+                          error={formErrors[`item_${index}_product`]}
+                        />
+                      </div>
+                      <div className="sm:col-span-4">
+                        {sizeOpts.length > 1 && (
+                          <Dropdown
+                            label={index === 0 ? t('createManualOrder.size') : undefined}
+                            value={item.sizeIndex}
+                            options={sizeOpts}
+                            onChange={(val) => updateItem(index, { sizeIndex: val })}
+                          />
+                        )}
+                      </div>
+                      <div className="sm:col-span-4">
+                        <QuantityInput
+                          label={index === 0 ? t('createManualOrder.quantity') : undefined}
+                          value={item.quantity}
+                          min={0}
+                          onChange={(val) => updateItem(index, { quantity: val })}
+                          error={formErrors[`item_${index}_quantity`]}
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="flex items-center gap-2 text-sm">
+                        <span className="text-secondary">
+                          {t('createManualOrder.originalPrice') || 'Original price'}:
+                        </span>
+                        <span className="font-medium text-foreground">
+                          {getOriginalUnitPrice(item).toFixed(2)} {form.currency}
+                        </span>
+                      </div>
+                      <Input
+                        label={index === 0 ? (t('createManualOrder.overridePrice') || 'Override price') : undefined}
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        value={item.overridePrice}
+                        placeholder={getOriginalUnitPrice(item).toFixed(2)}
+                        onChange={(e) =>
+                          updateItem(index, { overridePrice: e.target.value })
+                        }
+                        onBlur={() =>
+                          dispatch({ type: 'BLUR_CUSTOM_PRICE', index })
+                        }
                       />
+                    </div>
+                    {customPriceBlurred.includes(index) && priceWarnings.find((w) => w.index === index) && (
+                      <p className="text-xs text-orange-600 dark:text-orange-400 -mt-1">
+                        {priceWarnings.find((w) => w.index === index)?.message}
+                      </p>
                     )}
-                  </div>
-                  <div className="sm:col-span-4">
-                    <QuantityInput
-                      label={index === 0 ? t('createManualOrder.quantity') : undefined}
-                      value={item.quantity}
+                  </>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+                      <div className="sm:col-span-4">
+                        <Input
+                          label={index === 0 ? (t('createManualOrder.customName') || 'Custom name') : undefined}
+                          value={item.customName}
+                          placeholder={t('createManualOrder.customNamePlaceholder') || 'Product name'}
+                          onChange={(e) =>
+                            updateItem(index, { customName: e.target.value })
+                          }
+                          error={formErrors[`item_${index}_name`]}
+                        />
+                      </div>
+                      <div className="sm:col-span-4">
+                        <Input
+                          label={index === 0 ? (t('createManualOrder.customSize') || 'Custom size') : undefined}
+                          value={item.customSize}
+                          placeholder={t('createManualOrder.customSizePlaceholder') || 'Size (optional)'}
+                          onChange={(e) =>
+                            updateItem(index, { customSize: e.target.value })
+                          }
+                        />
+                      </div>
+                      <div className="sm:col-span-4">
+                        <QuantityInput
+                          label={index === 0 ? t('createManualOrder.quantity') : undefined}
+                          value={item.quantity}
+                          min={0}
+                          onChange={(val) => updateItem(index, { quantity: val })}
+                          error={formErrors[`item_${index}_quantity`]}
+                        />
+                      </div>
+                    </div>
+                    <Input
+                      label={index === 0 ? (t('createManualOrder.customPrice') || 'Price') : undefined}
+                      type="number"
                       min={0}
-                      onChange={(val) => updateItem(index, { quantity: val })}
-                      error={formErrors[`item_${index}_quantity`]}
+                      step="0.01"
+                      value={item.customPrice}
+                      placeholder="0.00"
+                      onChange={(e) =>
+                        updateItem(index, { customPrice: e.target.value })
+                      }
+                      error={formErrors[`item_${index}_price`]}
                     />
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="flex items-center gap-2 text-sm">
-                    <span className="text-secondary">
-                      {t('createManualOrder.originalPrice') || 'Original price'}:
-                    </span>
-                    <span className="font-medium text-foreground">
-                      {getOriginalUnitPrice(item).toFixed(2)} {form.currency}
-                    </span>
-                  </div>
-                  <Input
-                    label={index === 0 ? (t('createManualOrder.customPrice') || 'Custom price') : undefined}
-                    type="number"
-                    min={0}
-                    step="0.01"
-                    value={item.customPrice}
-                    placeholder={getOriginalUnitPrice(item).toFixed(2)}
-                    onChange={(e) =>
-                      updateItem(index, { customPrice: e.target.value })
-                    }
-                    onBlur={() =>
-                      dispatch({ type: 'BLUR_CUSTOM_PRICE', index })
-                    }
-                  />
-                </div>
-                {customPriceBlurred.includes(index) && priceWarnings.find((w) => w.index === index) && (
-                  <p className="text-xs text-orange-600 dark:text-orange-400 -mt-1">
-                    {priceWarnings.find((w) => w.index === index)?.message}
-                  </p>
+                  </>
                 )}
               </div>
             );

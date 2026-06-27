@@ -969,7 +969,7 @@ export default function ExecutionPage() {
 
               const groups = new Map<string, Order[]>();
               categoryModalOrders.forEach((order) => {
-                const matchingItems = (order.items || []).filter((item) => categoryProductIds.has(item.productId));
+                const matchingItems = (order.items || []).filter((item) => categoryProductIds.has(item.productId || ''));
                 const firstItem = matchingItems[0] || order.items?.[0];
                 const productName = firstItem
                   ? (locale === 'ar' ? firstItem.productName?.ar : firstItem.productName?.en) || t('stats.uncategorized')
@@ -1011,7 +1011,7 @@ export default function ExecutionPage() {
                       {
                         header: t('table.count'),
                         accessor: (order: Order) => {
-                          const matchingItems = (order.items || []).filter((item) => categoryProductIds.has(item.productId));
+                          const matchingItems = (order.items || []).filter((item) => categoryProductIds.has(item.productId || ''));
                           const count = matchingItems.reduce((sum, item) => sum + (item.quantity || 1), 0);
                           return <span className="font-semibold">{count}</span>;
                         },
@@ -1020,7 +1020,7 @@ export default function ExecutionPage() {
                       {
                         header: t('table.items'),
                         accessor: (order: Order) => {
-                          const matchingItems = (order.items || []).filter((item) => categoryProductIds.has(item.productId));
+                          const matchingItems = (order.items || []).filter((item) => categoryProductIds.has(item.productId || ''));
                           if (matchingItems.length === 0) return <span className="text-secondary">-</span>;
                           return (
                             <div className="flex flex-col gap-0.5">

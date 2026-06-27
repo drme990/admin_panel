@@ -463,6 +463,7 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
       accessor: (order: Order) => {
         const invoices = order.invoiceUrls || [];
         const hasInvoice = invoices.length > 0;
+        const hasUnreviewedInvoice = invoices.some((inv) => !inv.reviewed);
         const partialPaid = order.status === 'partial-paid';
         const iconColor = hasInvoice
           ? (partialPaid ? 'text-orange-600 dark:text-orange-400' : 'text-primary')
@@ -471,8 +472,11 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
         return (
           <div className="flex flex-col items-center gap-1">
             <div className="flex flex-row gap-1 items-center min-h-12">
-              <span className={`inline-flex items-center justify-center p-2 ${iconColor}`}>
+              <span className={`relative inline-flex items-center justify-center p-2 ${iconColor}`}>
                 <LuFileText size={24} />
+                {hasUnreviewedInvoice && (
+                  <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-error border border-card-bg" />
+                )}
               </span>
             </div>
             <div className="flex flex-row gap-1">

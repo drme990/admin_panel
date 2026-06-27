@@ -210,7 +210,7 @@ export default function CustomerOrdersModal({
 
                         return (
                           <div
-                            key={`${item.productId}-${index}`}
+                            key={`${item.productId || item.productName.en || index}-${index}`}
                             className="flex justify-between items-start bg-stroke/30 rounded p-3 text-sm"
                           >
                             <div className="flex-1">

@@ -36,7 +36,7 @@ interface OrderItemSizeOption {
 }
 
 export interface OrderItem {
-  productId: string;
+  productId?: string;
   productSlug?: string;
   productName: {
     ar: string;
@@ -50,6 +50,8 @@ export interface OrderItem {
   sizeLabel?: OrderItemSizeValue;
   size?: OrderItemSizeValue;
   sizes?: OrderItemSizeOption[];
+  isCustom?: boolean;
+  customSize?: string;
 }
 
 export interface BillingData {

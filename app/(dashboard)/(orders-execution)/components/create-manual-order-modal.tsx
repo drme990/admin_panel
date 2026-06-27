@@ -83,6 +83,7 @@ interface OrderItemForm {
   productId: string;
   sizeIndex: number;
   quantity: number;
+  customPrice: string;
 }
 
 interface FormState {
@@ -113,6 +114,7 @@ const emptyItem = (): OrderItemForm => ({
   productId: '',
   sizeIndex: 0,
   quantity: 0,
+  customPrice: '',
 });
 
 const DEFAULT_FORM: FormState = {
@@ -176,6 +178,7 @@ interface UIState {
   linkedUserId: string | null;
   focusedField: 'phone' | 'email' | null;
   foundUsers: UserSuggestion[];
+  customPriceBlurred: number[];
 }
 
 type UIAction =
@@ -198,6 +201,8 @@ type UIAction =
   | { type: 'SET_FOCUSED_FIELD'; field: 'phone' | 'email' | null }
   | { type: 'CLEAR_FOCUSED_FIELD_IF'; field: 'phone' | 'email' }
   | { type: 'SET_FOUND_USERS'; users: UserSuggestion[] }
+  | { type: 'BLUR_CUSTOM_PRICE'; index: number }
+  | { type: 'CLEAR_CUSTOM_PRICE_BLURRED' }
   | { type: 'RESET_UI' };
 
 const UI_INITIAL_STATE: UIState = {
@@ -217,6 +222,7 @@ const UI_INITIAL_STATE: UIState = {
   linkedUserId: null,
   focusedField: null,
   foundUsers: [],
+  customPriceBlurred: [],
 };
 
 function uiReducer(state: UIState, action: UIAction): UIState {
@@ -259,6 +265,12 @@ function uiReducer(state: UIState, action: UIAction): UIState {
       return state.focusedField === action.field ? { ...state, focusedField: null } : state;
     case 'SET_FOUND_USERS':
       return { ...state, foundUsers: action.users };
+    case 'BLUR_CUSTOM_PRICE':
+      return state.customPriceBlurred.includes(action.index)
+        ? state
+        : { ...state, customPriceBlurred: [...state.customPriceBlurred, action.index] };
+    case 'CLEAR_CUSTOM_PRICE_BLURRED':
+      return { ...state, customPriceBlurred: [] };
     case 'RESET_UI':
       return UI_INITIAL_STATE;
     default:
@@ -294,6 +306,7 @@ export default function CreateManualOrderModal({
     linkedUserId,
     focusedField,
     foundUsers,
+    customPriceBlurred,
   } = ui;
   const invoiceInputRef = useRef<HTMLInputElement | null>(null);
   const photoInputRef = useRef<HTMLInputElement | null>(null);
@@ -483,29 +496,61 @@ export default function CreateManualOrderModal({
 
   const isEasykash = form.paymentMethod === 'easykash';
 
-  // Compute the full order total based on selected items + currency
-  const fullOrderTotal = useMemo(() => {
-    let total = 0;
-    for (const item of form.items) {
-      if (!item.productId || item.quantity <= 0) continue;
+  const getOriginalUnitPrice = useCallback(
+    (item: OrderItemForm) => {
+      if (!item.productId) return 0;
       const product = getProduct(item.productId);
-      if (!product) continue;
+      if (!product) return 0;
       const size = product.sizes?.[item.sizeIndex];
-      if (!size) continue;
+      if (!size) return 0;
       let unitPrice = size.price ?? 0;
       const currencyPrice = size.prices?.find(
         (p) => p.currencyCode === form.currency,
       );
       if (currencyPrice) unitPrice = currencyPrice.amount;
+      return unitPrice;
+    },
+    [getProduct, form.currency],
+  );
+
+  // Compute the full order total based on selected items + currency
+  const fullOrderTotal = useMemo(() => {
+    let total = 0;
+    for (const item of form.items) {
+      if (!item.productId || item.quantity <= 0) continue;
+      const originalPrice = getOriginalUnitPrice(item);
+      const customPrice = parseFloat(item.customPrice);
+      const unitPrice = Number.isFinite(customPrice) && customPrice >= 0 ? customPrice : originalPrice;
       total += unitPrice * item.quantity;
     }
     return total;
-  }, [form.items, form.currency, getProduct]);
+  }, [form.items, getOriginalUnitPrice]);
 
   const paidAmountNum = useMemo(() => {
     const n = parseFloat(form.paidAmount);
     return Number.isFinite(n) && n >= 0 ? n : 0;
   }, [form.paidAmount]);
+
+  const priceWarnings = useMemo(() => {
+    const warnings: Array<{ index: number; message: string }> = [];
+    form.items.forEach((item, index) => {
+      if (!item.productId || item.quantity <= 0) return;
+      const customPrice = parseFloat(item.customPrice);
+      if (!Number.isFinite(customPrice) || customPrice <= 0) return;
+      const originalPrice = getOriginalUnitPrice(item);
+      if (originalPrice <= 0) return;
+      const deviation = Math.abs(customPrice - originalPrice) / originalPrice;
+      if (deviation > 0.05) {
+        warnings.push({
+          index,
+          message:
+            t('createManualOrder.priceWarning') ||
+            'Custom price differs by more than 5% from the original price',
+        });
+      }
+    });
+    return warnings;
+  }, [form.items, getOriginalUnitPrice, t]);
 
   const isPartialPayment = paidAmountNum > 0 && paidAmountNum < fullOrderTotal;
   const remainingAmount = isPartialPayment
@@ -575,6 +620,7 @@ export default function CreateManualOrderModal({
       if (next.length === 0) next.push(emptyItem());
       return { ...prev, items: next };
     });
+    dispatch({ type: 'CLEAR_CUSTOM_PRICE_BLURRED' });
   };
 
   const handleInvoiceFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -763,6 +809,7 @@ export default function CreateManualOrderModal({
             productId: item.productId,
             quantity: item.quantity,
             sizeIndex: item.sizeIndex,
+            customPrice: item.customPrice ? parseFloat(item.customPrice) : undefined,
           })),
           currency: form.currency,
           referralId: form.referralId || undefined,
@@ -957,50 +1004,85 @@ export default function CreateManualOrderModal({
             return (
               <div
                 key={index}
-                className="grid grid-cols-1 sm:grid-cols-12 gap-3 p-3 rounded-lg border border-stroke bg-background/50 items-end"
+                className="flex flex-col gap-3 p-3 rounded-lg border border-stroke bg-background/50"
               >
-                <div className="sm:col-span-4">
-                  <Dropdown
-                    label={index === 0 ? t('createManualOrder.product') : undefined}
-                    value={item.productId}
-                    options={productOptions}
-                    onChange={(val) => updateItem(index, { productId: val, sizeIndex: 0 })}
-                    placeholder={t('createManualOrder.selectProduct')}
-                    disabled={loadingProducts}
-                    error={formErrors[`item_${index}_product`]}
-                  />
-                </div>
-                <div className="sm:col-span-3">
-                  {sizeOpts.length > 0 && (
-                    <Dropdown
-                      label={index === 0 ? t('createManualOrder.size') : undefined}
-                      value={item.sizeIndex}
-                      options={sizeOpts}
-                      onChange={(val) => updateItem(index, { sizeIndex: val })}
-                    />
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-secondary">
+                    {t('createManualOrder.item')} {index + 1}
+                  </span>
+                  {index > 0 && (
+                    <Button
+                      variant="ghost"
+                      size="custom"
+                      className="h-8 w-8 p-0 text-secondary hover:text-error -me-2 -mt-2"
+                      onClick={() => removeItem(index)}
+                      aria-label={t('createManualOrder.removeItem')}
+                    >
+                      <LuX size={16} />
+                    </Button>
                   )}
                 </div>
-                <div className="sm:col-span-3">
-                  <QuantityInput
-                    label={index === 0 ? t('createManualOrder.quantity') : undefined}
-                    value={item.quantity}
+                <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+                  <div className="sm:col-span-4">
+                    <Dropdown
+                      label={index === 0 ? t('createManualOrder.product') : undefined}
+                      value={item.productId}
+                      options={productOptions}
+                      onChange={(val) => updateItem(index, { productId: val, sizeIndex: 0 })}
+                      placeholder={t('createManualOrder.selectProduct')}
+                      disabled={loadingProducts}
+                      error={formErrors[`item_${index}_product`]}
+                    />
+                  </div>
+                  <div className="sm:col-span-4">
+                    {sizeOpts.length > 1 && (
+                      <Dropdown
+                        label={index === 0 ? t('createManualOrder.size') : undefined}
+                        value={item.sizeIndex}
+                        options={sizeOpts}
+                        onChange={(val) => updateItem(index, { sizeIndex: val })}
+                      />
+                    )}
+                  </div>
+                  <div className="sm:col-span-4">
+                    <QuantityInput
+                      label={index === 0 ? t('createManualOrder.quantity') : undefined}
+                      value={item.quantity}
+                      min={0}
+                      onChange={(val) => updateItem(index, { quantity: val })}
+                      error={formErrors[`item_${index}_quantity`]}
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="text-secondary">
+                      {t('createManualOrder.originalPrice') || 'Original price'}:
+                    </span>
+                    <span className="font-medium text-foreground">
+                      {getOriginalUnitPrice(item).toFixed(2)} {form.currency}
+                    </span>
+                  </div>
+                  <Input
+                    label={index === 0 ? (t('createManualOrder.customPrice') || 'Custom price') : undefined}
+                    type="number"
                     min={0}
-                    onChange={(val) => updateItem(index, { quantity: val })}
-                    error={formErrors[`item_${index}_quantity`]}
+                    step="0.01"
+                    value={item.customPrice}
+                    placeholder={getOriginalUnitPrice(item).toFixed(2)}
+                    onChange={(e) =>
+                      updateItem(index, { customPrice: e.target.value })
+                    }
+                    onBlur={() =>
+                      dispatch({ type: 'BLUR_CUSTOM_PRICE', index })
+                    }
                   />
                 </div>
-                <div className="sm:col-span-2 flex justify-end pb-1">
-                  <Button
-                    variant="ghost"
-                    size="custom"
-                    className="h-8 w-8 p-0 text-secondary hover:text-error"
-                    onClick={() => removeItem(index)}
-                    disabled={form.items.length === 1}
-                    aria-label={t('createManualOrder.removeItem')}
-                  >
-                    <LuX size={16} />
-                  </Button>
-                </div>
+                {customPriceBlurred.includes(index) && priceWarnings.find((w) => w.index === index) && (
+                  <p className="text-xs text-orange-600 dark:text-orange-400 -mt-1">
+                    {priceWarnings.find((w) => w.index === index)?.message}
+                  </p>
+                )}
               </div>
             );
           })}

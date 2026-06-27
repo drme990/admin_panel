@@ -16,6 +16,7 @@ interface CustomerInfoModalProps {
     lastLoginIp?: string;
     lastLoginAt?: string;
     detectedCountry?: string | null;
+    isAdminCreated?: boolean;
   } | null;
 }
 
@@ -48,6 +49,14 @@ export default function CustomerInfoModal({
             <p className="text-xs uppercase text-secondary">{t('email')}</p>
             <p className="text-sm font-medium text-foreground">
               {customer.email}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs uppercase text-secondary">
+              {t('isAdminCreated')}
+            </p>
+            <p className="text-sm font-medium text-foreground">
+              {customer.isAdminCreated ? t('yes') : t('no')}
             </p>
           </div>
           <div>

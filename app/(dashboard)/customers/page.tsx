@@ -44,6 +44,7 @@ type Customer = {
   lastLoginAt?: string;
   appId: 'ghadaq' | 'manasik';
   isBanned: boolean;
+  isAdminCreated?: boolean;
   ref: string | null;
   tier?: string | null;
   createdAt: string;
@@ -860,7 +861,7 @@ export default function CustomersPage() {
           suffix={<LuSearch className="text-secondary" size={18} />}
         />
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <div className="space-y-1">
             <p className="text-[10px] uppercase text-secondary font-medium tracking-wide">
               {tCommon('filterApp')}

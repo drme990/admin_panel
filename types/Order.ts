@@ -141,7 +141,7 @@ export interface Order {
   // Referral
   referralId?: string;
   cancellationReason?: string;
-  invoiceUrls?: Array<{ url: string; reviewed: boolean }>;
+  invoiceUrls?: Array<{ url: string; reviewed: boolean; value: number }>;
   statusUpdateTime: string;
   // Terms
   termsAgreedAt?: string;

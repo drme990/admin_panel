@@ -13,6 +13,7 @@ import {
   LuPhone,
   LuPenLine,
   LuBan,
+  LuHistory,
 } from 'react-icons/lu';
 
 import {
@@ -27,6 +28,7 @@ interface ColumnCallbacks {
   onCopyPhone: (order: Order) => void;
   onCopyMessage: (order: Order) => void;
   onChangeStatus: (order: Order) => void;
+  onViewHistory: (order: Order) => void;
   onBlock: (order: Order) => void;
   onToggleSelect: (orderId: string) => void;
   onToggleSelectAll: () => void;
@@ -44,7 +46,7 @@ interface ColumnCallbacks {
 export function useOrderColumns(callbacks: ColumnCallbacks) {
   const t = useTranslations('orders');
   const {
-    onView, onWhatsapp, onCopyPhone, onCopyMessage, onChangeStatus, onBlock,
+    onView, onWhatsapp, onCopyPhone, onCopyMessage, onChangeStatus, onViewHistory, onBlock,
     onToggleSelect, onToggleSelectAll,
     selectedOrderIds, allVisibleSelected,
     whatsappOrderId, copyingPhoneOrderId, copyingMessageOrderId, blockingOrderId, blockedUserIds,
@@ -234,6 +236,17 @@ export function useOrderColumns(callbacks: ColumnCallbacks) {
                 aria-label={t('changeStatus')}
               >
                 <LuPenLine size={16} />
+              </Button>
+            </Tooltip>
+
+            <Tooltip position={tooltipPos} content={t('table.orderHistory')}>
+              <Button
+                variant="icon-primary"
+                size="custom"
+                onClick={(e) => { e.stopPropagation(); onViewHistory(row); }}
+                aria-label={t('table.orderHistory')}
+              >
+                <LuHistory size={16} />
               </Button>
             </Tooltip>
 

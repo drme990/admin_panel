@@ -13,7 +13,7 @@ import Button from '@/components/ui/button';
 import ConfirmModal, { useConfirmModal } from '@/components/ui/confirm-modal';
 import Modal from '@/components/ui/modal';
 
-import { Order } from '@/types/Order';
+import { Order, OrderStatus } from '@/types/Order';
 import { Category } from '@/types/Category';
 import { Referral } from '@/types/Referral';
 
@@ -109,11 +109,13 @@ export default function ExecutionPage() {
     setChangingExecutionDateId,
     setEditOrderModalOpen,
     setEditingField,
+    setSavingOrderId,
     setOrderHistoryModalOpen,
     setOrderHistory,
     setLoadingOrderHistory,
     setBlockedUserIds,
     setBlockingOrderId,
+    setPendingBanOrder,
     setSelectedOrder,
     photoUploadOrderRef,
     photoInputRef,
@@ -173,6 +175,7 @@ export default function ExecutionPage() {
     copyingMessageOrderId,
     blockedUserIds,
     blockingOrderId,
+    pendingBanOrder,
   } = state;
 
   useEffect(() => {
@@ -214,6 +217,52 @@ export default function ExecutionPage() {
       window.clearTimeout(timer);
     };
   }, [searchInput, setFilter]);
+
+  // When an order is cancelled with "Scammer" reason, prompt admin to ban the user
+  useEffect(() => {
+    if (!pendingBanOrder) return;
+    const order = pendingBanOrder;
+    setPendingBanOrder(null);
+
+    const isCurrentlyBanned = blockedUserIds.has(order.userId || '');
+    if (isCurrentlyBanned) return;
+
+    (async () => {
+      const confirmed = await confirm({
+        title: t('banScammerTitle'),
+        message: t('banScammerMessage'),
+        type: 'danger',
+        confirmText: t('blockCustomer'),
+        cancelText: t('changeStatusModal.cancel'),
+      });
+
+      if (!confirmed) return;
+
+      setBlockingOrderId(order._id);
+      try {
+        const res = await fetch(
+          `/api/customers/${order.source}/${order.userId}/ban`,
+          {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ isBanned: true }),
+          },
+        );
+        const data = await res.json();
+        if (!data.success) {
+          toast.error(data.error || t('blockCustomerFailed'));
+          return;
+        }
+        setBlockedUserIds(new Set([...Array.from(blockedUserIds), order.userId!]));
+        toast.success(t('blockCustomerSuccess'));
+      } catch {
+        toast.error(t('blockCustomerFailed'));
+      } finally {
+        setBlockingOrderId(null);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingBanOrder]);
 
   const fetchExecution = useCallback(
     async (signal?: AbortSignal) => {
@@ -511,19 +560,68 @@ export default function ExecutionPage() {
   const handleRollback = async (entry: OrderHistoryEntry) => {
     if (!selectedOrder || !entry.previousValue) return;
 
+    // Status rollback: call PUT /api/orders/:id with the previous status
+    if (entry.changeType === 'status') {
+      const previousStatus = entry.previousValue as OrderStatus;
+      setSavingOrderId(selectedOrder._id);
+      try {
+        const res = await fetch(`/api/orders/${selectedOrder._id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: previousStatus }),
+        });
+        const data = await res.json();
+        if (!data.success) {
+          toast.error(data.error || t('statusUpdateFailed'));
+          return;
+        }
+        const updated = data.data as Order;
+        dispatch({
+          type: 'UPDATE_ORDER_IN_LIST',
+          payload: {
+            orderId: selectedOrder._id,
+            updates: {
+              status: updated.status,
+              cancellationReason: updated.cancellationReason,
+            },
+          },
+        });
+        toast.success(t('statusUpdateSuccess'));
+      } catch (error) {
+        console.error('Error rolling back status:', error);
+        toast.error(t('statusUpdateFailed'));
+      } finally {
+        setSavingOrderId(null);
+      }
+      // Refresh history
+      setLoadingOrderHistory(true);
+      try {
+        const res = await fetch(`/api/orders/${selectedOrder._id}/history`);
+        const data = await res.json();
+        if (data.success) {
+          setOrderHistory(data.data || [], false);
+        }
+      } catch (error) {
+        console.error('Error refreshing order history:', error);
+      } finally {
+        setLoadingOrderHistory(false);
+      }
+      return;
+    }
+
     const fields: Parameters<typeof updateOrder>[1] | null = (() => {
       if (entry.changeType === 'photo') {
         return { photo: entry.previousValue };
       }
       if (entry.changeType === 'invoice') {
         try {
-          const parsed = JSON.parse(entry.previousValue) as Array<{ url: string; reviewed: boolean }>;
+          const parsed = JSON.parse(entry.previousValue) as Array<{ url: string; reviewed: boolean; value: number }>;
           if (Array.isArray(parsed)) {
             return { invoiceUrls: parsed };
           }
         } catch {
           // fallback: treat as legacy single URL
-          return { invoiceUrls: entry.previousValue ? [{ url: entry.previousValue, reviewed: false }] : [] };
+          return { invoiceUrls: entry.previousValue ? [{ url: entry.previousValue, reviewed: false, value: 0 }] : [] };
         }
       }
       return null;

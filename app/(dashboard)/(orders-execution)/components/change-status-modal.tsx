@@ -15,7 +15,7 @@ interface Props {
   isOpen: boolean;
   onClose: () => void;
   currentStatus: OrderStatus;
-  onUpdateStatus: (status: OrderStatus, cancellationReason?: string) => void;
+  onUpdateStatus: (status: OrderStatus, cancellationReason?: string, isScammer?: boolean) => void;
   updating: boolean;
   namespace?: 'orders' | 'execution';
 }
@@ -60,7 +60,7 @@ export default function ChangeStatusModal({
 
   const handleSave = () => {
     if (!canSubmit) return;
-    onUpdateStatus(selectedStatus, isCancelled ? cancellationReason : undefined);
+    onUpdateStatus(selectedStatus, isCancelled ? cancellationReason : undefined, isCancelled && cancellationPreset === 'scammer');
   };
 
   return (

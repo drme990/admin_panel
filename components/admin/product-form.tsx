@@ -69,6 +69,8 @@ export default function ProductForm({
     name: { ar: '', en: '' },
     price: 0,
     prices: [] as CurrencyPrice[],
+    manualPrice: null as number | null,
+    manualPrices: [] as CurrencyPrice[],
     feedsUp: 0,
     isAvailable: true,
   };
@@ -98,6 +100,8 @@ export default function ProductForm({
       name: { ar: string; en: string };
       price: number;
       prices: CurrencyPrice[];
+      manualPrice: number | null;
+      manualPrices: CurrencyPrice[];
       feedsUp: number;
       isAvailable: boolean;
     }[],
@@ -153,7 +157,7 @@ export default function ProductForm({
       .then((d) => {
         if (d.success) setAllProducts(d.data.products || []);
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   useEffect(() => {
@@ -163,7 +167,7 @@ export default function ProductForm({
         if (!d.success || !Array.isArray(d.data)) return;
         setCurrencyRoundingMap(buildCurrencyRoundingMap(d.data));
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   // Initialize form data when product prop changes
@@ -197,12 +201,14 @@ export default function ProductForm({
         sizes:
           product.sizes?.length > 0
             ? product.sizes.map((s) => ({
-                name: { ar: s.name.ar || '', en: s.name.en || '' },
-                price: s.price || 0,
-                prices: s.prices || [],
-                feedsUp: s.feedsUp ?? 0,
-                isAvailable: s.isAvailable !== false,
-              }))
+              name: { ar: s.name.ar || '', en: s.name.en || '' },
+              price: s.price || 0,
+              prices: s.prices || [],
+              manualPrice: s.manualPrice ?? null,
+              manualPrices: s.manualPrices || [],
+              feedsUp: s.feedsUp ?? 0,
+              isAvailable: s.isAvailable !== false,
+            }))
             : [{ ...defaultSize }],
         workAsSacrifice: product.workAsSacrifice || false,
         sacrificeCount: product.sacrificeCount ?? 1,
@@ -324,7 +330,7 @@ export default function ProductForm({
   const updateSize = (
     index: number,
     field: string,
-    value: string | number | boolean | CurrencyPrice[],
+    value: string | number | boolean | CurrencyPrice[] | null,
   ) => {
     const updatedSizes = [...formData.sizes];
     const size = { ...updatedSizes[index] };
@@ -335,6 +341,10 @@ export default function ProductForm({
       size.name = { ...size.name, en: value as string };
     } else if (field === 'price') {
       size.price = value as number;
+    } else if (field === 'manualPrice') {
+      size.manualPrice = value as number | null;
+    } else if (field === 'manualPrices') {
+      size.manualPrices = value as CurrencyPrice[];
     } else if (field === 'prices') {
       size.prices = value as CurrencyPrice[];
     } else if (field === 'feedsUp') {
@@ -456,7 +466,7 @@ export default function ProductForm({
     if (!formData.media.length) {
       toast.error(
         t('messages.imageRequired') ||
-          'At least one product media item is required',
+        'At least one product media item is required',
       );
       return;
     }
@@ -476,7 +486,7 @@ export default function ProductForm({
     if (hasInvalidSize) {
       toast.error(
         t('messages.invalidSizeData') ||
-          'Each size must have Arabic/English names and a valid price.',
+        'Each size must have Arabic/English names and a valid price.',
       );
       return;
     }
@@ -489,7 +499,7 @@ export default function ProductForm({
       if (!minimumValues.length || hasInvalidMinimum) {
         toast.error(
           t('messages.invalidMinimumPayment') ||
-            'Valid minimum payment values are required when partial payment is enabled.',
+          'Valid minimum payment values are required when partial payment is enabled.',
         );
         return;
       }
@@ -500,7 +510,7 @@ export default function ProductForm({
       if (!Number.isFinite(discount) || discount < 0 || discount > 100) {
         toast.error(
           t('messages.invalidUpgradeDiscount') ||
-            'Upgrade discount must be between 0 and 100.',
+          'Upgrade discount must be between 0 and 100.',
         );
         return;
       }
@@ -562,9 +572,9 @@ export default function ProductForm({
       })(),
       recommendProduct: formData.recommendProduct
         ? {
-            recommend: true,
-            product: formData.recommendProductId || null,
-          }
+          recommend: true,
+          product: formData.recommendProductId || null,
+        }
         : null,
       reservationFields: formData.reservationFields,
     };
@@ -750,14 +760,14 @@ export default function ProductForm({
           mainCurrency={formData.baseCurrency}
           basePrice={formData.sizes[0]?.price ?? 0}
           prices={[]}
-          onChange={() => {}}
+          onChange={() => { }}
           onMainCurrencyChange={(currency) => {
             setFormData({
               ...formData,
               baseCurrency: currency,
             });
           }}
-          onBasePriceChange={() => {}}
+          onBasePriceChange={() => { }}
           hidePrice
         />
 
@@ -938,14 +948,37 @@ export default function ProductForm({
                   min="0"
                   step="0.01"
                 />
+                <Input
+                  label={t('form.sizeManualPrice') || 'Manual Price'}
+                  type="number"
+                  value={size.manualPrice ?? ''}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    updateSize(index, 'manualPrice', value === '' ? null : parseFloat(value) || 0);
+                  }}
+                  min="0"
+                  step="0.01"
+                  helperText={t('form.sizeManualPriceHelp') || 'Base price used for manual orders. Leave empty to use the regular price.'}
+                />
+                {size.manualPrice && size.manualPrice > 0 && (
+                  <MultiCurrencyPriceEditor
+                    mainCurrency={formData.baseCurrency}
+                    basePrice={size.manualPrice}
+                    prices={size.manualPrices || []}
+                    onChange={(prices) => updateSize(index, 'manualPrices', prices)}
+                    onMainCurrencyChange={() => { }}
+                    onBasePriceChange={() => { }}
+                    compact
+                  />
+                )}
                 {size.price > 0 && (
                   <MultiCurrencyPriceEditor
                     mainCurrency={formData.baseCurrency}
                     basePrice={size.price}
                     prices={size.prices}
                     onChange={(prices) => updateSize(index, 'prices', prices)}
-                    onMainCurrencyChange={() => {}}
-                    onBasePriceChange={() => {}}
+                    onMainCurrencyChange={() => { }}
+                    onBasePriceChange={() => { }}
                     compact
                   />
                 )}
@@ -1002,9 +1035,9 @@ export default function ProductForm({
                       formData.reservationFields.map((f) =>
                         f.key === 'intention'
                           ? {
-                              ...f,
-                              options: [...(f.options || []), aqeeqahOption],
-                            }
+                            ...f,
+                            options: [...(f.options || []), aqeeqahOption],
+                          }
                           : f,
                       );
                   }
@@ -1014,13 +1047,13 @@ export default function ProductForm({
                     formData.reservationFields.map((f) =>
                       f.key === 'intention'
                         ? {
-                            ...f,
-                            options: (f.options || []).filter(
-                              (o) =>
-                                !o.en.toLowerCase().includes('aqeeqah') &&
-                                o.ar !== 'عقيقة',
-                            ),
-                          }
+                          ...f,
+                          options: (f.options || []).filter(
+                            (o) =>
+                              !o.en.toLowerCase().includes('aqeeqah') &&
+                              o.ar !== 'عقيقة',
+                          ),
+                        }
                         : f,
                     );
                 }
@@ -1158,9 +1191,9 @@ export default function ProductForm({
               )}
             </div>
           )}
-          
+
           <hr className="border-stroke" />
-          
+
           <div className="pt-2">
             <h4 className="text-sm font-semibold text-foreground mb-2">
               {t('form.recommendProductLabel')}

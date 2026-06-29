@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { LuChevronDown, LuSearch, LuCheck } from 'react-icons/lu';
+import * as Flags from 'country-flag-icons/react/3x2';
 import { cn } from '@/lib/utils';
 import { COUNTRIES, type Country } from '@/lib/countries';
 
@@ -31,6 +32,16 @@ export default function CountrySelector({
   const t = useTranslations('countrySelector');
   const containerRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+
+  const renderFlag = (countryCode: string) => {
+    const Flag = Flags[
+      countryCode as keyof typeof Flags
+    ] as React.ComponentType<React.SVGProps<SVGSVGElement>>;
+
+    if (!Flag) return null;
+
+    return <Flag className="w-5 h-4 rounded-sm overflow-hidden shrink-0" />;
+  };
 
   // Use static countries array
   const countries = COUNTRIES;
@@ -102,6 +113,7 @@ export default function CountrySelector({
         )}
       >
         <div className="flex items-center gap-3 flex-1 min-w-0">
+          {selectedCountry && renderFlag(selectedCountry.code)}
           <span
             className={cn(
               'truncate',
@@ -183,6 +195,7 @@ export default function CountrySelector({
                       isSelected && 'bg-success/10',
                     )}
                   >
+                    {renderFlag(country.code)}
                     <div className="flex-1 min-w-0">
                       <span className="block truncate font-medium">
                         {displayName}

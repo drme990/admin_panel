@@ -1,5 +1,5 @@
 import { ReactNode, useState, useRef, useEffect } from 'react';
-import { LuChevronDown } from 'react-icons/lu';
+import { LuChevronDown, LuSearch } from 'react-icons/lu';
 import Button from './button';
 
 interface DropdownOption<T = string> {
@@ -18,6 +18,8 @@ interface DropdownProps<T = string> {
   className?: string;
   required?: boolean;
   error?: string;
+  searchable?: boolean;
+  searchPlaceholder?: string;
 }
 
 export default function Dropdown<T = string>({
@@ -30,13 +32,20 @@ export default function Dropdown<T = string>({
   className = '',
   required = false,
   error,
+  searchable = false,
+  searchPlaceholder = 'Search...',
 }: DropdownProps<T>) {
   const [isOpen, setIsOpen] = useState(false);
   const [direction, setDirection] = useState<'down' | 'up'>('down');
+  const [search, setSearch] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const selectedOption = options.find((opt) => opt.value === value);
+  const filteredOptions = searchable
+    ? options.filter((opt) => opt.label.toLowerCase().includes(search.toLowerCase()))
+    : options;
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -73,9 +82,18 @@ export default function Dropdown<T = string>({
     }
   }, [isOpen]);
 
+  useEffect(() => {
+    if (isOpen && searchable) {
+      setTimeout(() => searchInputRef.current?.focus(), 10);
+    } else {
+      setSearch('');
+    }
+  }, [isOpen, searchable]);
+
   const handleSelect = (optionValue: T) => {
     onChange(optionValue);
     setIsOpen(false);
+    setSearch('');
   };
 
   return (
@@ -115,7 +133,23 @@ export default function Dropdown<T = string>({
             : 'top-full mt-1'
             }`}
         >
-          {options.map((option, index) => (
+          {searchable && (
+            <div className="sticky top-0 z-10 px-3 py-2 bg-card-bg border-b border-stroke">
+              <div className="relative">
+                <LuSearch size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-secondary" />
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder={searchPlaceholder}
+                  className="w-full pl-8 pr-3 py-1.5 text-sm rounded-md border border-stroke bg-background text-foreground focus:outline-none focus:border-primary"
+                  onClick={(e) => e.stopPropagation()}
+                />
+              </div>
+            </div>
+          )}
+          {filteredOptions.map((option, index) => (
             <Button
               variant="custom"
               size="custom"

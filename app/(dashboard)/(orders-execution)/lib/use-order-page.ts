@@ -66,6 +66,7 @@ export interface OrderPageState {
   // Orders-specific
   blockedUserIds: Set<string>;
   blockingOrderId: string | null;
+  pendingBanOrder: Order | null;
 
   // Async action tracking
   whatsappOrderId: string | null;
@@ -110,6 +111,7 @@ export const initialOrderPageState: OrderPageState = {
   loadingOrderHistory: false,
   blockedUserIds: new Set(),
   blockingOrderId: null,
+  pendingBanOrder: null,
   whatsappOrderId: null,
   copyingPhoneOrderId: null,
   copyingMessageOrderId: null,
@@ -165,7 +167,8 @@ export type OrderPageAction =
   | { type: 'UPDATE_ORDER_IN_LIST'; payload: { orderId: string; updates: Partial<Order> } }
   | { type: 'UPDATE_ORDER_RESERVATION_DATA'; payload: { orderId: string; reservationData: Order['reservationData'] } }
   | { type: 'SET_ORDERS_ITEMS'; payload: { orderId: string; items: Order['items'] } }
-  | { type: 'TOGGLE_BLOCKED_USER'; payload: { userId: string; isBlocked: boolean } };
+  | { type: 'TOGGLE_BLOCKED_USER'; payload: { userId: string; isBlocked: boolean } }
+  | { type: 'SET_PENDING_BAN_ORDER'; payload: Order | null };
 
 export function orderPageReducer(state: OrderPageState, action: OrderPageAction): OrderPageState {
   switch (action.type) {
@@ -293,6 +296,8 @@ export function orderPageReducer(state: OrderPageState, action: OrderPageAction)
       }
       return { ...state, blockedUserIds: next };
     }
+    case 'SET_PENDING_BAN_ORDER':
+      return { ...state, pendingBanOrder: action.payload };
     default:
       return state;
   }
@@ -351,6 +356,7 @@ export function useOrderPage(options: UseOrderPageOptions) {
   const setLoadingOrderHistory = useCallback((value: boolean) => dispatch({ type: 'SET_LOADING_ORDER_HISTORY', payload: value }), []);
   const setBlockedUserIds = useCallback((ids: Set<string>) => dispatch({ type: 'SET_BLOCKED_USER_IDS', payload: ids }), []);
   const setBlockingOrderId = useCallback((value: string | null) => dispatch({ type: 'SET_BLOCKING_ORDER_ID', payload: value }), []);
+  const setPendingBanOrder = useCallback((value: Order | null) => dispatch({ type: 'SET_PENDING_BAN_ORDER', payload: value }), []);
   const setAsyncAction = useCallback(
     (payload: Partial<Pick<OrderPageState, 'whatsappOrderId' | 'copyingPhoneOrderId' | 'copyingMessageOrderId'>>) =>
       dispatch({ type: 'SET_ASYNC_ACTION', payload }),
@@ -494,7 +500,7 @@ export function useOrderPage(options: UseOrderPageOptions) {
 
   // Update status (PUT /api/orders/:id)
   const updateOrderStatus = useCallback(
-    async (status: OrderStatus, cancellationReason?: string) => {
+    async (status: OrderStatus, cancellationReason?: string, isScammer?: boolean) => {
       if (!state.selectedOrder || status === state.selectedOrder.status) {
         closeChangeStatusModal();
         return;
@@ -530,6 +536,11 @@ export function useOrderPage(options: UseOrderPageOptions) {
         });
         toast.success(t('statusUpdateSuccess') || t('changeStatusModal.success'));
         closeChangeStatusModal();
+
+        // If the order was cancelled due to scammer and the user is not a guest, prompt to ban
+        if (isScammer && status === 'cancelled' && state.selectedOrder.userId && !state.selectedOrder.isGuest) {
+          dispatch({ type: 'SET_PENDING_BAN_ORDER', payload: state.selectedOrder });
+        }
       } catch (error) {
         console.error('Error updating order status:', error);
         toast.error(t('statusUpdateFailed') || t('changeStatusModal.failed'));
@@ -550,7 +561,8 @@ export function useOrderPage(options: UseOrderPageOptions) {
         photo?: string;
         invoiceUrl?: string;
         invoiceReviewed?: boolean;
-        invoiceUrls?: Array<{ url: string; reviewed: boolean }>;
+        invoiceValue?: number;
+        invoiceUrls?: Array<{ url: string; reviewed: boolean; value: number }>;
         items?: Order['items'];
         gender?: string;
         isAlive?: string;
@@ -565,6 +577,7 @@ export function useOrderPage(options: UseOrderPageOptions) {
         if ('photo' in fields) body.photo = fields.photo;
         if ('invoiceUrl' in fields) body.invoiceUrl = fields.invoiceUrl;
         if ('invoiceReviewed' in fields) body.invoiceReviewed = fields.invoiceReviewed;
+        if ('invoiceValue' in fields) body.invoiceValue = fields.invoiceValue;
         if ('invoiceUrls' in fields) body.invoiceUrls = fields.invoiceUrls;
         if ('items' in fields) body.items = fields.items;
         if ('gender' in fields) body.gender = fields.gender;
@@ -679,7 +692,7 @@ export function useOrderPage(options: UseOrderPageOptions) {
           const alreadyExists = currentInvoices.some((invoice) => invoice.url === fields.invoiceUrl);
           const nextInvoices = alreadyExists
             ? currentInvoices
-            : [...currentInvoices, { url: fields.invoiceUrl, reviewed: fields.invoiceReviewed ?? false }];
+            : [...currentInvoices, { url: fields.invoiceUrl, reviewed: fields.invoiceReviewed ?? false, value: fields.invoiceValue ?? 0 }];
 
           dispatch({
             type: 'UPDATE_ORDER_IN_LIST',
@@ -747,6 +760,7 @@ export function useOrderPage(options: UseOrderPageOptions) {
     setLoadingOrderHistory,
     setBlockedUserIds,
     setBlockingOrderId,
+    setPendingBanOrder,
     setAsyncAction,
     // Refs
     photoUploadOrderRef,

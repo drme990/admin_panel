@@ -19,6 +19,7 @@ import { useOrderColumns } from '../components/order-table-columns';
 import OrderDetailModal from '../components/order-detail-modal';
 import ChangeStatusModal from '../components/change-status-modal';
 import CreateManualOrderModal from '../components/create-manual-order-modal';
+import OrderHistoryModal, { OrderHistoryEntry } from '../components/order-history-modal';
 import OrderStats from '../components/order-stats';
 import useOrderPage from '../lib/use-order-page';
 import { LuPlus } from 'react-icons/lu';
@@ -100,11 +101,17 @@ export default function OrderHistoryPage() {
     copyOrderWhatsappNumber,
     copyOrderWhatsappMessage,
     updateOrderStatus,
+    updateOrder,
     setBlockingOrderId,
     setBlockedUserIds,
+    setPendingBanOrder,
     setAsyncAction,
     fetchOrderDetails,
     setSelectedOrder,
+    setOrderHistoryModalOpen,
+    setOrderHistory,
+    setLoadingOrderHistory,
+    setSavingOrderId,
   } = useOrderPage({
     namespace: 'orders',
     initialState: {
@@ -152,6 +159,11 @@ export default function OrderHistoryPage() {
     copyingMessageOrderId,
     blockingOrderId,
     blockedUserIds,
+    pendingBanOrder,
+    isOrderHistoryModalOpen,
+    orderHistory,
+    loadingOrderHistory,
+    savingOrderId,
   } = state;
 
   useEffect(() => {
@@ -163,6 +175,52 @@ export default function OrderHistoryPage() {
       window.clearTimeout(timer);
     };
   }, [searchInput, setFilter]);
+
+  // When an order is cancelled with "Scammer" reason, prompt admin to ban the user
+  useEffect(() => {
+    if (!pendingBanOrder) return;
+    const order = pendingBanOrder;
+    setPendingBanOrder(null);
+
+    const isCurrentlyBanned = blockedUserIds.has(order.userId || '');
+    if (isCurrentlyBanned) return;
+
+    (async () => {
+      const confirmed = await confirm({
+        title: t('banScammerTitle'),
+        message: t('banScammerMessage'),
+        type: 'danger',
+        confirmText: t('blockCustomer'),
+        cancelText: t('changeStatusModal.cancel'),
+      });
+
+      if (!confirmed) return;
+
+      setBlockingOrderId(order._id);
+      try {
+        const res = await fetch(
+          `/api/customers/${order.source}/${order.userId}/ban`,
+          {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ isBanned: true }),
+          },
+        );
+        const data = await res.json();
+        if (!data.success) {
+          toast.error(data.error || t('blockCustomerFailed'));
+          return;
+        }
+        setBlockedUserIds(new Set([...Array.from(blockedUserIds), order.userId!]));
+        toast.success(t('blockCustomerSuccess'));
+      } catch {
+        toast.error(t('blockCustomerFailed'));
+      } finally {
+        setBlockingOrderId(null);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingBanOrder]);
 
   useEffect(() => {
     const fetchReferrals = async () => {
@@ -521,12 +579,130 @@ export default function OrderHistoryPage() {
     { label: t('status.cancelled'), value: 'cancelled' },
   ];
 
+  const handleViewHistory = async (order: Order) => {
+    dispatch({ type: 'SET_SELECTED_ORDER', payload: order });
+    setOrderHistoryModalOpen(true);
+    setLoadingOrderHistory(true);
+    setOrderHistory([], false);
+    try {
+      const res = await fetch(`/api/orders/${order._id}/history`);
+      const data = await res.json();
+      if (data.success) {
+        setOrderHistory(data.data || [], false);
+      } else {
+        toast.error(data.error || t('orderHistory.loadFailed'));
+      }
+    } catch (error) {
+      console.error('Error fetching order history:', error);
+      toast.error(t('orderHistory.loadFailed'));
+    } finally {
+      setLoadingOrderHistory(false);
+    }
+  };
+
+  const closeOrderHistoryModal = () => {
+    setOrderHistoryModalOpen(false);
+    setOrderHistory([], false);
+  };
+
+  const handleRollback = async (entry: OrderHistoryEntry) => {
+    if (!selectedOrder || !entry.previousValue) return;
+
+    // Status rollback: call PUT /api/orders/:id with the previous status
+    if (entry.changeType === 'status') {
+      const previousStatus = entry.previousValue as OrderStatus;
+      setSavingOrderId(selectedOrder._id);
+      try {
+        const res = await fetch(`/api/orders/${selectedOrder._id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: previousStatus }),
+        });
+        const data = await res.json();
+        if (!data.success) {
+          toast.error(data.error || t('statusUpdateFailed'));
+          return;
+        }
+        const updated = data.data as Order;
+        dispatch({
+          type: 'UPDATE_ORDER_IN_LIST',
+          payload: {
+            orderId: selectedOrder._id,
+            updates: {
+              status: updated.status,
+              cancellationReason: updated.cancellationReason,
+            },
+          },
+        });
+        toast.success(t('statusUpdateSuccess'));
+      } catch (error) {
+        console.error('Error rolling back status:', error);
+        toast.error(t('statusUpdateFailed'));
+      } finally {
+        setSavingOrderId(null);
+      }
+      // Refresh history
+      setLoadingOrderHistory(true);
+      try {
+        const res = await fetch(`/api/orders/${selectedOrder._id}/history`);
+        const data = await res.json();
+        if (data.success) {
+          setOrderHistory(data.data || [], false);
+        }
+      } catch (error) {
+        console.error('Error refreshing order history:', error);
+      } finally {
+        setLoadingOrderHistory(false);
+      }
+      return;
+    }
+
+    const fields: Parameters<typeof updateOrder>[1] | null = (() => {
+      if (entry.changeType === 'photo') {
+        return { photo: entry.previousValue };
+      }
+      if (entry.changeType === 'invoice') {
+        try {
+          const parsed = JSON.parse(entry.previousValue) as Array<{ url: string; reviewed: boolean; value: number }>;
+          if (Array.isArray(parsed)) {
+            return { invoiceUrls: parsed };
+          }
+        } catch {
+          return { invoiceUrls: entry.previousValue ? [{ url: entry.previousValue, reviewed: false, value: 0 }] : [] };
+        }
+      }
+      return null;
+    })();
+
+    if (!fields) {
+      toast.error('Rollback not supported for this change type');
+      return;
+    }
+
+    const success = await updateOrder(selectedOrder._id, fields);
+    if (success) {
+      setLoadingOrderHistory(true);
+      try {
+        const res = await fetch(`/api/orders/${selectedOrder._id}/history`);
+        const data = await res.json();
+        if (data.success) {
+          setOrderHistory(data.data || [], false);
+        }
+      } catch (error) {
+        console.error('Error refreshing order history:', error);
+      } finally {
+        setLoadingOrderHistory(false);
+      }
+    }
+  };
+
   const columns = useOrderColumns({
     onView: viewOrder,
     onWhatsapp: startOrderWhatsappMessage,
     onCopyPhone: copyOrderWhatsappNumber,
     onCopyMessage: copyOrderWhatsappMessage,
     onChangeStatus: handleChangeStatus,
+    onViewHistory: handleViewHistory,
     onBlock: handleBlockCustomer,
     onToggleSelect: toggleOrderSelection,
     onToggleSelectAll: toggleSelectAll,
@@ -642,6 +818,17 @@ export default function OrderHistoryPage() {
           void fetchOrders();
           void fetchStats();
         }}
+        namespace="orders"
+      />
+
+      <OrderHistoryModal
+        isOpen={isOrderHistoryModalOpen}
+        onClose={closeOrderHistoryModal}
+        orderNumber={selectedOrder?.orderNumber || ''}
+        history={orderHistory as OrderHistoryEntry[]}
+        loading={loadingOrderHistory}
+        onRollback={handleRollback}
+        updating={savingOrderId !== null}
         namespace="orders"
       />
 

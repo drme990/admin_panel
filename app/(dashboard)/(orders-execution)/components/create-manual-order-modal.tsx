@@ -19,13 +19,48 @@ import Switch from '@/components/ui/switch';
 import CustomDatePicker from '@/components/ui/custom-date-picker';
 import { uploadImageToR2, uploadInvoiceToR2, deleteOldImage } from '../../../../lib/image-upload-utils';
 
-import { LuCopy, LuCheck, LuRefreshCw, LuUpload, LuDownload, LuPlus, LuX, LuAtSign } from 'react-icons/lu';
+import { LuCopy, LuCheck, LuRefreshCw, LuUpload, LuDownload, LuPlus, LuX, LuAtSign, LuPencil } from 'react-icons/lu';
 import { FaWhatsapp } from 'react-icons/fa';
 import { isValidPhoneNumber } from 'libphonenumber-js';
 import { COUNTRIES } from '@/lib/countries';
 
 function extractDigits(value: string): string {
   return value.replace(/\D/g, '');
+}
+
+function levenshteinDistance(a: string, b: string): number {
+  const m = a.length;
+  const n = b.length;
+  if (m === 0) return n;
+  if (n === 0) return m;
+
+  const matrix: number[][] = Array.from({ length: m + 1 }, (_, i) => [i]);
+  for (let j = 1; j <= n; j++) {
+    matrix[0][j] = j;
+  }
+
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      matrix[i][j] = Math.min(
+        matrix[i - 1][j] + 1,
+        matrix[i][j - 1] + 1,
+        matrix[i - 1][j - 1] + cost,
+      );
+    }
+  }
+
+  return matrix[m][n];
+}
+
+function phoneSimilarity(a: string, b: string): number {
+  const digitsA = extractDigits(a);
+  const digitsB = extractDigits(b);
+  if (digitsA.length === 0 && digitsB.length === 0) return 1;
+  if (digitsA.length === 0 || digitsB.length === 0) return 0;
+  const distance = levenshteinDistance(digitsA, digitsB);
+  const maxLength = Math.max(digitsA.length, digitsB.length);
+  return 1 - distance / maxLength;
 }
 
 function validatePhoneNumber(phone: string, countryName: string): boolean {
@@ -62,6 +97,8 @@ interface Product {
     name?: { ar: string; en: string };
     price: number;
     prices?: Array<{ currencyCode: string; amount: number }>;
+    manualPrice?: number | null;
+    manualPrices?: Array<{ currencyCode: string; amount: number }>;
     isAvailable?: boolean;
   }>;
   reservationFields?: Array<{
@@ -171,6 +208,7 @@ interface OrderResult {
   isPartialPayment: boolean;
   currency: string;
   checkoutUrl: string | null;
+  createdUser?: { email: string; password: string } | null;
 }
 
 interface UIState {
@@ -181,17 +219,20 @@ interface UIState {
   creating: boolean;
   invoiceFile: File | null;
   invoiceReviewed: boolean;
+  invoiceValue: string;
   uploadingInvoice: boolean;
   uploadingPhoto: boolean;
   useCustomExecutionDate: boolean;
   formErrors: Record<string, string | undefined>;
   result: OrderResult | null;
   copied: boolean;
+  credentialsCopied: boolean;
   linkedUserId: string | null;
   focusedField: 'phone' | 'email' | null;
   foundUsers: UserSuggestion[];
   customPriceBlurred: number[];
   phoneWhatsappClicked: boolean;
+  priceEditIndices: number[];
 }
 
 type UIAction =
@@ -202,6 +243,7 @@ type UIAction =
   | { type: 'SET_CREATING'; creating: boolean }
   | { type: 'SET_INVOICE_FILE'; file: File | null }
   | { type: 'SET_INVOICE_REVIEWED'; reviewed: boolean }
+  | { type: 'SET_INVOICE_VALUE'; value: string }
   | { type: 'SET_UPLOADING_INVOICE'; uploading: boolean }
   | { type: 'SET_UPLOADING_PHOTO'; uploading: boolean }
   | { type: 'SET_USE_CUSTOM_EXECUTION_DATE'; checked: boolean }
@@ -210,13 +252,17 @@ type UIAction =
   | { type: 'CLEAR_FORM_ERRORS' }
   | { type: 'SET_RESULT'; result: OrderResult | null }
   | { type: 'SET_COPIED'; copied: boolean }
+  | { type: 'SET_CREDENTIALS_COPIED'; copied: boolean }
   | { type: 'SET_LINKED_USER_ID'; userId: string | null }
   | { type: 'SET_FOCUSED_FIELD'; field: 'phone' | 'email' | null }
   | { type: 'CLEAR_FOCUSED_FIELD_IF'; field: 'phone' | 'email' }
   | { type: 'SET_FOUND_USERS'; users: UserSuggestion[] }
   | { type: 'BLUR_CUSTOM_PRICE'; index: number }
   | { type: 'CLEAR_CUSTOM_PRICE_BLURRED' }
+  | { type: 'SET_CUSTOM_PRICE_BLURRED'; indices: number[] }
   | { type: 'SET_WHATSAPP_PHONE_CLICKED'; clicked: boolean }
+  | { type: 'TOGGLE_PRICE_EDIT'; index: number }
+  | { type: 'SET_PRICE_EDIT_INDICES'; indices: number[] }
   | { type: 'RESET_UI' };
 
 const UI_INITIAL_STATE: UIState = {
@@ -227,17 +273,20 @@ const UI_INITIAL_STATE: UIState = {
   creating: false,
   invoiceFile: null,
   invoiceReviewed: false,
+  invoiceValue: '',
   uploadingInvoice: false,
   uploadingPhoto: false,
   useCustomExecutionDate: false,
   formErrors: {},
   result: null,
   copied: false,
+  credentialsCopied: false,
   linkedUserId: null,
   focusedField: null,
   foundUsers: [],
   customPriceBlurred: [],
   phoneWhatsappClicked: false,
+  priceEditIndices: [],
 };
 
 function uiReducer(state: UIState, action: UIAction): UIState {
@@ -256,6 +305,8 @@ function uiReducer(state: UIState, action: UIAction): UIState {
       return { ...state, invoiceFile: action.file };
     case 'SET_INVOICE_REVIEWED':
       return { ...state, invoiceReviewed: action.reviewed };
+    case 'SET_INVOICE_VALUE':
+      return { ...state, invoiceValue: action.value };
     case 'SET_UPLOADING_INVOICE':
       return { ...state, uploadingInvoice: action.uploading };
     case 'SET_UPLOADING_PHOTO':
@@ -272,6 +323,8 @@ function uiReducer(state: UIState, action: UIAction): UIState {
       return { ...state, result: action.result };
     case 'SET_COPIED':
       return { ...state, copied: action.copied };
+    case 'SET_CREDENTIALS_COPIED':
+      return { ...state, credentialsCopied: action.copied };
     case 'SET_LINKED_USER_ID':
       return { ...state, linkedUserId: action.userId };
     case 'SET_FOCUSED_FIELD':
@@ -286,8 +339,19 @@ function uiReducer(state: UIState, action: UIAction): UIState {
         : { ...state, customPriceBlurred: [...state.customPriceBlurred, action.index] };
     case 'CLEAR_CUSTOM_PRICE_BLURRED':
       return { ...state, customPriceBlurred: [] };
+    case 'SET_CUSTOM_PRICE_BLURRED':
+      return { ...state, customPriceBlurred: action.indices };
     case 'SET_WHATSAPP_PHONE_CLICKED':
       return { ...state, phoneWhatsappClicked: action.clicked };
+    case 'TOGGLE_PRICE_EDIT':
+      return state.priceEditIndices.includes(action.index)
+        ? {
+          ...state,
+          priceEditIndices: state.priceEditIndices.filter((i) => i !== action.index),
+        }
+        : { ...state, priceEditIndices: [...state.priceEditIndices, action.index] };
+    case 'SET_PRICE_EDIT_INDICES':
+      return { ...state, priceEditIndices: action.indices };
     case 'RESET_UI':
       return UI_INITIAL_STATE;
     default:
@@ -314,17 +378,20 @@ export default function CreateManualOrderModal({
     creating,
     invoiceFile,
     invoiceReviewed,
+    invoiceValue,
     uploadingInvoice,
     uploadingPhoto,
     useCustomExecutionDate,
     formErrors,
     result,
     copied,
+    credentialsCopied,
     linkedUserId,
     focusedField,
     foundUsers,
     customPriceBlurred,
     phoneWhatsappClicked,
+    priceEditIndices,
   } = ui;
   const invoiceInputRef = useRef<HTMLInputElement | null>(null);
   const photoInputRef = useRef<HTMLInputElement | null>(null);
@@ -532,16 +599,23 @@ export default function CreateManualOrderModal({
 
   const isEasykash = form.paymentMethod === 'easykash';
 
-  const getOriginalUnitPrice = useCallback(
+  const getLoadedUnitPrice = useCallback(
     (item: OrderItemForm) => {
       if (item.type !== 'existing' || !item.productId) return 0;
       const product = getProduct(item.productId);
       if (!product) return 0;
       const size = product.sizes?.[item.sizeIndex];
       if (!size) return 0;
+      if (typeof size.manualPrice === 'number' && size.manualPrice > 0) {
+        const manualCurrencyPrice = size.manualPrices?.find(
+          (p: { currencyCode: string; amount: number }) => p.currencyCode === form.currency,
+        );
+        if (manualCurrencyPrice) return manualCurrencyPrice.amount;
+        return size.manualPrice;
+      }
       let unitPrice = size.price ?? 0;
       const currencyPrice = size.prices?.find(
-        (p) => p.currencyCode === form.currency,
+        (p: { currencyCode: string; amount: number }) => p.currencyCode === form.currency,
       );
       if (currencyPrice) unitPrice = currencyPrice.amount;
       return unitPrice;
@@ -560,14 +634,14 @@ export default function CreateManualOrderModal({
         total += price * item.quantity;
       } else {
         if (!item.productId) continue;
-        const originalPrice = getOriginalUnitPrice(item);
+        const originalPrice = getLoadedUnitPrice(item);
         const overridePrice = parseFloat(item.overridePrice);
         const unitPrice = Number.isFinite(overridePrice) && overridePrice >= 0 ? overridePrice : originalPrice;
         total += unitPrice * item.quantity;
       }
     }
     return total;
-  }, [form.items, getOriginalUnitPrice]);
+  }, [form.items, getLoadedUnitPrice]);
 
   const paidAmountNum = useMemo(() => {
     const n = parseFloat(form.paidAmount);
@@ -580,7 +654,7 @@ export default function CreateManualOrderModal({
       if (item.type !== 'existing' || !item.productId || item.quantity <= 0) return;
       const overridePrice = parseFloat(item.overridePrice);
       if (!Number.isFinite(overridePrice) || overridePrice <= 0) return;
-      const originalPrice = getOriginalUnitPrice(item);
+      const originalPrice = getLoadedUnitPrice(item);
       if (originalPrice <= 0) return;
       const deviation = Math.abs(overridePrice - originalPrice) / originalPrice;
       if (deviation > 0.05) {
@@ -593,7 +667,7 @@ export default function CreateManualOrderModal({
       }
     });
     return warnings;
-  }, [form.items, getOriginalUnitPrice, t]);
+  }, [form.items, getLoadedUnitPrice, t]);
 
   const isPartialPayment = paidAmountNum > 0 && paidAmountNum < fullOrderTotal;
   const remainingAmount = isPartialPayment
@@ -627,7 +701,13 @@ export default function CreateManualOrderModal({
       errors.currency = t('createManualOrder.errors.currencyRequired');
     }
     if (!form.billingData.fullName.trim()) {
-      errors.fullName = t('createManualOrder.errors.fullNameRequired');
+      const firstSacrificeName = form.reservationData.sacrificeFor
+        .split('\n')
+        .map((n) => n.trim())
+        .filter(Boolean)[0];
+      if (!firstSacrificeName) {
+        errors.fullName = t('createManualOrder.errors.fullNameOrSacrificeForRequired') || 'Please enter a customer name or a sacrifice-for name';
+      }
     }
     if (!form.billingData.email.trim()) {
       errors.email = t('createManualOrder.errors.emailRequired');
@@ -648,14 +728,22 @@ export default function CreateManualOrderModal({
     if (!isEasykash && !invoiceFile) {
       errors.invoice = t('createManualOrder.errors.invoiceRequired');
     }
-    if (isPartialPayment && paidAmountNum <= 0) {
-      errors.paidAmount = t('createManualOrder.errors.paidAmountRequired');
+    if (!isEasykash && invoiceFile && invoiceValue.trim() === '') {
+      errors.invoiceValue = t('createManualOrder.errors.invoiceValueRequired') || 'Invoice value is required';
+    } else if (!isEasykash && invoiceFile && !Number.isFinite(parseFloat(invoiceValue))) {
+      errors.invoiceValue = t('createManualOrder.errors.invoiceValueInvalid') || 'Invoice value must be a number';
+    } else if (!isEasykash && invoiceFile && parseFloat(invoiceValue) <= 0) {
+      errors.invoiceValue = t('createManualOrder.errors.invoiceValueInvalid') || 'Invoice value must be greater than 0';
     }
-    if (isPartialPayment && paidAmountNum >= fullOrderTotal) {
-      errors.paidAmount = t('createManualOrder.errors.paidAmountInvalid');
+    if (form.paidAmount.trim() === '' || !Number.isFinite(parseFloat(form.paidAmount))) {
+      errors.paidAmount = t('createManualOrder.errors.paidAmountRequired');
+    } else if (paidAmountNum <= 0) {
+      errors.paidAmount = t('createManualOrder.errors.paidAmountRequired');
+    } else if (paidAmountNum > fullOrderTotal) {
+      errors.paidAmount = t('createManualOrder.errors.paidAmountInvalid') || 'Paid amount must not exceed the order total';
     }
     return errors;
-  }, [form, isEasykash, invoiceFile, isPartialPayment, paidAmountNum, fullOrderTotal, phoneWhatsappClicked, t]);
+  }, [form, isEasykash, invoiceFile, paidAmountNum, fullOrderTotal, phoneWhatsappClicked, t]);
 
   const updateItem = (index: number, patch: Partial<OrderItemForm>) => {
     setForm((prev) => {
@@ -675,7 +763,16 @@ export default function CreateManualOrderModal({
       if (next.length === 0) next.push(emptyItem());
       return { ...prev, items: next };
     });
-    dispatch({ type: 'CLEAR_CUSTOM_PRICE_BLURRED' });
+    const adjustIndices = (arr: number[]) =>
+      arr.filter((i) => i !== index).map((i) => (i > index ? i - 1 : i));
+    dispatch({
+      type: 'SET_CUSTOM_PRICE_BLURRED',
+      indices: adjustIndices(customPriceBlurred),
+    });
+    dispatch({
+      type: 'SET_PRICE_EDIT_INDICES',
+      indices: adjustIndices(priceEditIndices),
+    });
   };
 
   const handleInvoiceFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -701,6 +798,7 @@ export default function CreateManualOrderModal({
     const previewUrl = file.type.startsWith('image/') ? URL.createObjectURL(file) : null;
     setInvoicePreviewUrl(previewUrl);
     dispatch({ type: 'SET_INVOICE_FILE', file });
+    dispatch({ type: 'SET_INVOICE_VALUE', value: '' });
   };
 
   const handlePhotoFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -760,8 +858,8 @@ export default function CreateManualOrderModal({
       },
     }));
     lastLookupRef.current = {
-      phone: user.phone.trim(),
-      email: user.email.trim(),
+      phone: extractDigits(user.phone),
+      email: user.email.trim().toLowerCase(),
       source: form.source,
     };
     dispatch({ type: 'SET_LINKED_USER_ID', userId: user._id });
@@ -774,15 +872,21 @@ export default function CreateManualOrderModal({
 
   const lookupUser = useCallback(async (phone: string, email: string) => {
     if (!phone && !email) return;
+    const phoneDigits = extractDigits(phone);
+    const emailNormalized = email.toLowerCase().trim();
     if (
-      lastLookupRef.current.phone === phone &&
-      lastLookupRef.current.email === email &&
+      lastLookupRef.current.phone === phoneDigits &&
+      lastLookupRef.current.email === emailNormalized &&
       lastLookupRef.current.source === form.source
     ) {
       return;
     }
 
-    lastLookupRef.current = { phone, email, source: form.source };
+    lastLookupRef.current = {
+      phone: phoneDigits,
+      email: emailNormalized,
+      source: form.source,
+    };
     try {
       const params = new URLSearchParams();
       if (phone) params.set('phone', phone);
@@ -796,15 +900,21 @@ export default function CreateManualOrderModal({
         const users = data.data as UserSuggestion[];
         const inputPhoneDigits = phone ? extractDigits(phone) : '';
         const inputEmail = email ? email.toLowerCase().trim() : '';
-        const exactMatch = users.find((u) => {
+        const PHONE_MATCH_THRESHOLD = 0.9;
+        const bestMatch = users.find((u) => {
           const userPhoneDigits = u.phone ? extractDigits(u.phone) : '';
           const userEmail = u.email ? u.email.toLowerCase().trim() : '';
-          const phoneMatch = inputPhoneDigits.length > 0 && userPhoneDigits === inputPhoneDigits;
-          const emailMatch = inputEmail.length > 0 && userEmail === inputEmail;
-          return phoneMatch || emailMatch;
+          const phoneExact = inputPhoneDigits.length > 0 && userPhoneDigits === inputPhoneDigits;
+          const emailExact = inputEmail.length > 0 && userEmail === inputEmail;
+          const phoneClose =
+            inputPhoneDigits.length > 0 &&
+            userPhoneDigits.length > 0 &&
+            phoneSimilarity(inputPhoneDigits, userPhoneDigits) >= PHONE_MATCH_THRESHOLD;
+          return phoneExact || emailExact || phoneClose;
         });
-        if (exactMatch) {
-          selectUser(exactMatch);
+
+        if (bestMatch) {
+          selectUser(bestMatch);
         } else {
           dispatch({ type: 'SET_FOUND_USERS', users });
         }
@@ -818,8 +928,8 @@ export default function CreateManualOrderModal({
   }, [t, dispatch, form.source, selectUser]);
 
   useEffect(() => {
-    const phone = form.billingData.phone.trim();
-    const email = form.billingData.email.trim();
+    const phone = extractDigits(form.billingData.phone.trim());
+    const email = form.billingData.email.trim().toLowerCase();
 
     if (!phone && !email) {
       dispatch({ type: 'SET_LINKED_USER_ID', userId: null });
@@ -838,7 +948,7 @@ export default function CreateManualOrderModal({
 
     dispatch({ type: 'SET_FOUND_USERS', users: [] });
     const timer = setTimeout(() => {
-      lookupUser(phone, email);
+      lookupUser(form.billingData.phone.trim(), form.billingData.email.trim());
     }, 800);
 
     return () => clearTimeout(timer);
@@ -913,9 +1023,10 @@ export default function CreateManualOrderModal({
           paymentMethod: form.paymentMethod,
           invoiceUrl: invoiceUrl || undefined,
           invoiceReviewed: invoiceUrl ? invoiceReviewed : undefined,
+          invoiceValue: invoiceUrl ? parseFloat(invoiceValue) || 0 : undefined,
           locale: 'ar',
           userId: linkedUserId || undefined,
-          paidAmount: isPartialPayment ? paidAmountNum : undefined,
+          paidAmount: paidAmountNum,
         }),
       });
 
@@ -935,6 +1046,7 @@ export default function CreateManualOrderModal({
           isPartialPayment: data.data.order.isPartialPayment,
           currency: data.data.order.currency,
           checkoutUrl: data.data.checkoutUrl,
+          createdUser: data.data.createdUser || null,
         },
       });
 
@@ -954,6 +1066,18 @@ export default function CreateManualOrderModal({
       await navigator.clipboard.writeText(result.checkoutUrl);
       dispatch({ type: 'SET_COPIED', copied: true });
       setTimeout(() => dispatch({ type: 'SET_COPIED', copied: false }), 2000);
+    } catch {
+      toast.error(t('createManualOrder.copyFailed'));
+    }
+  };
+
+  const handleCopyCredentials = async () => {
+    if (!result?.createdUser) return;
+    const text = `🎉 *تهانينا، لقد أنشئنا لك (حِساب مَجاني) على موقعنا الإلكتروني*\n\n🌐 استعمل هذه البيانات لتسجيل الدخول والاستفادة من خدمات الموقع. www.manasik.net\n\n* اسم المستخدم: ${result.createdUser.email}\n* كلمة المرور المؤقتة: ${result.createdUser.password}`;
+    try {
+      await navigator.clipboard.writeText(text);
+      dispatch({ type: 'SET_CREDENTIALS_COPIED', copied: true });
+      setTimeout(() => dispatch({ type: 'SET_CREDENTIALS_COPIED', copied: false }), 2000);
     } catch {
       toast.error(t('createManualOrder.copyFailed'));
     }
@@ -992,6 +1116,36 @@ export default function CreateManualOrderModal({
               )}
             </p>
           </div>
+
+          {result.createdUser && (
+            <div className="p-4 rounded-lg bg-primary/5 border border-primary/10 text-right" dir="rtl">
+              <p className="text-sm font-medium text-foreground mb-3 leading-relaxed whitespace-pre-line">
+                🎉 *تهانينا، لقد أنشئنا لك (حِساب مَجاني) على موقعنا الإلكتروني*
+                {'\n\n'}🌐 استعمل هذه البيانات لتسجيل الدخول والاستفادة من خدمات الموقع. www.manasik.net
+              </p>
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center justify-between gap-2 p-2 rounded-lg border border-stroke bg-background">
+                  <span className="text-secondary">* اسم المستخدم:</span>
+                  <span className="font-medium text-foreground ltr" dir="ltr">{result.createdUser.email}</span>
+                </div>
+                <div className="flex items-center justify-between gap-2 p-2 rounded-lg border border-stroke bg-background">
+                  <span className="text-secondary">* كلمة المرور المؤقتة:</span>
+                  <span className="font-medium text-foreground ltr" dir="ltr">{result.createdUser.password}</span>
+                </div>
+              </div>
+              <div className="mt-3 flex justify-start">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleCopyCredentials}
+                >
+                  {credentialsCopied ? <LuCheck size={16} className="me-2" /> : <LuCopy size={16} className="me-2" />}
+                  {credentialsCopied ? 'تم النسخ' : 'نسخ البيانات'}
+                </Button>
+              </div>
+            </div>
+          )}
 
           {result.checkoutUrl ? (
             <div className="flex flex-col gap-2">
@@ -1105,7 +1259,12 @@ export default function CreateManualOrderModal({
                   <Tabs
                     value={item.type}
                     options={itemTypeOptions}
-                    onChange={(val) => updateItem(index, { type: val })}
+                    onChange={(val) => {
+                      updateItem(index, { type: val });
+                      if (val === 'existing' && priceEditIndices.includes(index)) {
+                        dispatch({ type: 'TOGGLE_PRICE_EDIT', index });
+                      }
+                    }}
                     size="sm"
                   />
                   {index > 0 && (
@@ -1122,8 +1281,8 @@ export default function CreateManualOrderModal({
                 </div>
                 {item.type === 'existing' ? (
                   <>
-                    <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
-                      <div className="sm:col-span-2">
+                    <div className="grid grid-cols-2 sm:grid-cols-12 gap-3">
+                      <div className="col-span-1 sm:col-span-2">
                         <QuantityInput
                           label={index === 0 ? t('createManualOrder.quantity') : undefined}
                           value={item.quantity}
@@ -1132,49 +1291,75 @@ export default function CreateManualOrderModal({
                           error={formErrors[`item_${index}_quantity`]}
                         />
                       </div>
-                      <div className="sm:col-span-5">
+                      <div className="col-span-1 sm:col-span-5">
                         <Dropdown
                           label={index === 0 ? t('createManualOrder.product') : undefined}
                           value={item.productId}
                           options={productOptions}
-                          onChange={(val) => updateItem(index, { productId: val, sizeIndex: 0 })}
+                          onChange={(val) => {
+                            const nextItem = { ...item, productId: val, sizeIndex: 0 };
+                            const loadedPrice = getLoadedUnitPrice(nextItem);
+                            updateItem(index, {
+                              productId: val,
+                              sizeIndex: 0,
+                              overridePrice: loadedPrice > 0 ? loadedPrice.toFixed(2) : '',
+                            });
+                            if (priceEditIndices.includes(index)) {
+                              dispatch({ type: 'TOGGLE_PRICE_EDIT', index });
+                            }
+                          }}
                           placeholder={t('createManualOrder.selectProduct')}
                           disabled={loadingProducts}
                           error={formErrors[`item_${index}_product`]}
+                          searchable
+                          searchPlaceholder={t('createManualOrder.searchProduct') || 'Search products...'}
                         />
                       </div>
-                      <div className="sm:col-span-5">
+                      <div className="col-span-2 sm:col-span-5">
                         {sizeOpts.length > 1 && (
                           <Dropdown
                             label={index === 0 ? t('createManualOrder.size') : undefined}
                             value={item.sizeIndex}
                             options={sizeOpts}
-                            onChange={(val) => updateItem(index, { sizeIndex: val })}
+                            onChange={(val) => {
+                              const nextItem = { ...item, sizeIndex: val };
+                              const loadedPrice = getLoadedUnitPrice(nextItem);
+                              updateItem(index, {
+                                sizeIndex: val,
+                                overridePrice: loadedPrice > 0 ? loadedPrice.toFixed(2) : '',
+                              });
+                              if (priceEditIndices.includes(index)) {
+                                dispatch({ type: 'TOGGLE_PRICE_EDIT', index });
+                              }
+                            }}
                           />
                         )}
                       </div>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div className="flex items-center gap-2 text-sm">
-                        <span className="text-secondary">
-                          {t('createManualOrder.originalPrice') || 'Original price'}:
-                        </span>
-                        <span className="font-medium text-foreground">
-                          {getOriginalUnitPrice(item).toFixed(2)} {form.currency}
-                        </span>
-                      </div>
                       <Input
-                        label={index === 0 ? (t('createManualOrder.overridePrice') || 'Override price') : undefined}
+                        label={index === 0 ? (t('createManualOrder.price') || 'Price') : undefined}
                         type="number"
                         min={0}
                         step="0.01"
                         value={item.overridePrice}
-                        placeholder={getOriginalUnitPrice(item).toFixed(2)}
+                        placeholder={getLoadedUnitPrice(item).toFixed(2)}
                         onChange={(e) =>
                           updateItem(index, { overridePrice: e.target.value })
                         }
                         onBlur={() =>
                           dispatch({ type: 'BLUR_CUSTOM_PRICE', index })
+                        }
+                        readOnly={!priceEditIndices.includes(index)}
+                        suffix={
+                          <button
+                            type="button"
+                            onClick={() => dispatch({ type: 'TOGGLE_PRICE_EDIT', index })}
+                            className="text-secondary hover:text-foreground transition-colors"
+                            aria-label={priceEditIndices.includes(index) ? 'Lock price' : 'Edit price'}
+                          >
+                            <LuPencil size={16} />
+                          </button>
                         }
                       />
                     </div>
@@ -1186,8 +1371,8 @@ export default function CreateManualOrderModal({
                   </>
                 ) : (
                   <>
-                    <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
-                      <div className="sm:col-span-2">
+                    <div className="grid grid-cols-2 sm:grid-cols-12 gap-3">
+                      <div className="col-span-1 sm:col-span-2">
                         <QuantityInput
                           label={index === 0 ? t('createManualOrder.quantity') : undefined}
                           value={item.quantity}
@@ -1196,7 +1381,7 @@ export default function CreateManualOrderModal({
                           error={formErrors[`item_${index}_quantity`]}
                         />
                       </div>
-                      <div className="sm:col-span-5">
+                      <div className="col-span-1 sm:col-span-5">
                         <Input
                           label={index === 0 ? (t('createManualOrder.customName') || 'Custom name') : undefined}
                           value={item.customName}
@@ -1207,7 +1392,7 @@ export default function CreateManualOrderModal({
                           error={formErrors[`item_${index}_name`]}
                         />
                       </div>
-                      <div className="sm:col-span-5">
+                      <div className="col-span-2 sm:col-span-5">
                         <Input
                           label={index === 0 ? (t('createManualOrder.customSize') || 'Custom size') : undefined}
                           value={item.customSize}
@@ -1722,6 +1907,19 @@ export default function CreateManualOrderModal({
                   <span className="text-sm text-secondary">{invoiceFile.name}</span>
                 )}
               </div>
+              {invoiceFile && (
+                <Input
+                  label={t('createManualOrder.invoiceValue') || 'Invoice Value'}
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={invoiceValue}
+                  onChange={(e) =>
+                    dispatch({ type: 'SET_INVOICE_VALUE', value: e.target.value })
+                  }
+                  error={formErrors.invoiceValue}
+                />
+              )}
               {invoicePreviewUrl && (
                 <div className="w-fit">
                   <img

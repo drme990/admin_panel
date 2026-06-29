@@ -123,8 +123,6 @@ export default function OrderDetailModal({
 }: Props) {
   const t = useTranslations(namespace);
   const [copiedPaymentId, setCopiedPaymentId] = useState<string | null>(null);
-  console.log(order);
-
 
   const formatMoney = (amount: number | undefined, currency: string) =>
     `${Number(amount ?? 0).toFixed(2)} ${currency}`;

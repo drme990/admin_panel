@@ -6,6 +6,8 @@ import { useTranslations } from 'next-intl';
 import Modal from '@/components/ui/modal';
 import Button from '@/components/ui/button';
 import Loading from '@/components/ui/loading';
+import { STATUS_COLORS } from '../lib/order-status';
+import { OrderStatus } from '@/types/Order';
 
 export interface OrderHistoryEntry {
   _id: string;
@@ -19,7 +21,8 @@ export interface OrderHistoryEntry {
   | 'bulk_execution_date'
   | 'gender'
   | 'isAlive'
-  | 'intention';
+  | 'intention'
+  | 'status';
   previousValue: string | null;
   newValue: string | null;
   changedByUserName: string;
@@ -53,6 +56,7 @@ function formatChangeType(
     gender: 'orderHistory.typeGender',
     isAlive: 'orderHistory.typeIsAlive',
     intention: 'orderHistory.typeIntention',
+    status: 'orderHistory.typeStatus',
   };
   return t(keyMap[type] || 'orderHistory.typeUnknown');
 }
@@ -132,6 +136,17 @@ function TextValue({ type, value }: { type: OrderHistoryEntry['changeType']; val
   return <span className="text-foreground break-all">{value}</span>;
 }
 
+function StatusValue({ value, t }: { value: string | null; t: (key: string) => string }) {
+  if (!value) return <span className="text-secondary">-</span>;
+  const colorClass = STATUS_COLORS[value as OrderStatus] || 'bg-gray-100 text-gray-800';
+  const label = t(`status.${value}`) || value;
+  return (
+    <span className={`inline-block px-2 py-0.5 text-xs font-medium rounded-full ${colorClass}`}>
+      {label}
+    </span>
+  );
+}
+
 export default function OrderHistoryModal({
   isOpen,
   onClose,
@@ -144,6 +159,23 @@ export default function OrderHistoryModal({
 }: Props) {
   const t = useTranslations(namespace);
   const [expandedPhoto, setExpandedPhoto] = useState<string | null>(null);
+
+  // Find the index of the most recent status change (history is newest-first)
+  const latestStatusIndex = history.findIndex((e) => e.changeType === 'status');
+
+  const renderValue = (entry: OrderHistoryEntry, field: 'previousValue' | 'newValue') => {
+    const value = entry[field];
+    if (entry.changeType === 'photo') {
+      return <PhotoValue value={value} onClick={setExpandedPhoto} />;
+    }
+    if (entry.changeType === 'invoice') {
+      return <InvoiceValue value={value} onClick={setExpandedPhoto} />;
+    }
+    if (entry.changeType === 'status') {
+      return <StatusValue value={value} t={t} />;
+    }
+    return <TextValue type={entry.changeType} value={value} />;
+  };
 
   return (
     <>
@@ -170,67 +202,63 @@ export default function OrderHistoryModal({
           </div>
         ) : (
           <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
-            {history.map((entry) => (
-              <div
-                key={entry._id}
-                className="p-3 rounded-lg border border-stroke bg-background space-y-2"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-primary/10 text-primary">
-                    {formatChangeType(entry.changeType, t)}
-                  </span>
-                  <span className="text-xs text-secondary">
-                    {new Date(entry.createdAt).toLocaleString()}
-                  </span>
-                </div>
+            {history.map((entry, index) => {
+              const canRollback =
+                onRollback &&
+                entry.previousValue &&
+                ((entry.changeType === 'photo' || entry.changeType === 'invoice') ||
+                  (entry.changeType === 'status' && index === latestStatusIndex));
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
-                  <div>
-                    <span className="text-xs text-secondary block mb-1">
-                      {t('orderHistory.previous')}
+              return (
+                <div
+                  key={entry._id}
+                  className="p-3 rounded-lg border border-stroke bg-background space-y-2"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-primary/10 text-primary">
+                      {formatChangeType(entry.changeType, t)}
                     </span>
-                    {entry.changeType === 'photo' ? (
-                      <PhotoValue value={entry.previousValue} onClick={setExpandedPhoto} />
-                    ) : entry.changeType === 'invoice' ? (
-                      <InvoiceValue value={entry.previousValue} onClick={setExpandedPhoto} />
-                    ) : (
-                      <TextValue type={entry.changeType} value={entry.previousValue} />
-                    )}
-                  </div>
-                  <div>
-                    <span className="text-xs text-secondary block mb-1">
-                      {t('orderHistory.new')}
+                    <span className="text-xs text-secondary">
+                      {new Date(entry.createdAt).toLocaleString()}
                     </span>
-                    {entry.changeType === 'photo' ? (
-                      <PhotoValue value={entry.newValue} onClick={setExpandedPhoto} />
-                    ) : entry.changeType === 'invoice' ? (
-                      <InvoiceValue value={entry.newValue} onClick={setExpandedPhoto} />
-                    ) : (
-                      <TextValue type={entry.changeType} value={entry.newValue} />
-                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+                    <div>
+                      <span className="text-xs text-secondary block mb-1">
+                        {t('orderHistory.previous')}
+                      </span>
+                      {renderValue(entry, 'previousValue')}
+                    </div>
+                    <div>
+                      <span className="text-xs text-secondary block mb-1">
+                        {t('orderHistory.new')}
+                      </span>
+                      {renderValue(entry, 'newValue')}
+                    </div>
+                  </div>
+
+                  {canRollback && (
+                    <div className="pt-1 border-t border-stroke">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onRollback(entry)}
+                        disabled={updating}
+                        className="text-primary hover:text-primary/80"
+                      >
+                        {updating ? t('orderHistory.rollingBack') : t('orderHistory.rollback')}
+                      </Button>
+                    </div>
+                  )}
+
+                  <div className="text-xs text-secondary pt-1 border-t border-stroke">
+                    {t('orderHistory.by')} {entry.changedByUserName}{' '}
+                    <span className="opacity-60">({entry.changedByUserEmail})</span>
                   </div>
                 </div>
-
-                {(entry.changeType === 'photo' || entry.changeType === 'invoice') && entry.previousValue && onRollback && (
-                  <div className="pt-1 border-t border-stroke">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onRollback(entry)}
-                      disabled={updating}
-                      className="text-primary hover:text-primary/80"
-                    >
-                      {updating ? t('orderHistory.rollingBack') : t('orderHistory.rollback')}
-                    </Button>
-                  </div>
-                )}
-
-                <div className="text-xs text-secondary pt-1 border-t border-stroke">
-                  {t('orderHistory.by')} {entry.changedByUserName}{' '}
-                  <span className="opacity-60">({entry.changedByUserEmail})</span>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </Modal>

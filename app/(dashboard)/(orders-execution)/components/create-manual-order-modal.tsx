@@ -233,6 +233,7 @@ interface UIState {
   customPriceBlurred: number[];
   phoneWhatsappClicked: boolean;
   priceEditIndices: number[];
+  recentProductIds: string[];
 }
 
 type UIAction =
@@ -263,7 +264,33 @@ type UIAction =
   | { type: 'SET_WHATSAPP_PHONE_CLICKED'; clicked: boolean }
   | { type: 'TOGGLE_PRICE_EDIT'; index: number }
   | { type: 'SET_PRICE_EDIT_INDICES'; indices: number[] }
+  | { type: 'ADD_RECENT_PRODUCT'; productId: string }
+  | { type: 'SET_RECENT_PRODUCT_IDS'; productIds: string[] }
   | { type: 'RESET_UI' };
+
+const RECENT_PRODUCTS_STORAGE_KEY = 'manualOrder_recentProductIds';
+const MAX_RECENT_PRODUCTS = 10;
+
+function loadRecentProductIds(): string[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = window.localStorage.getItem(RECENT_PRODUCTS_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter((id) => typeof id === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveRecentProductIds(ids: string[]): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(RECENT_PRODUCTS_STORAGE_KEY, JSON.stringify(ids));
+  } catch {
+    // ignore
+  }
+}
 
 const UI_INITIAL_STATE: UIState = {
   products: [],
@@ -287,6 +314,7 @@ const UI_INITIAL_STATE: UIState = {
   customPriceBlurred: [],
   phoneWhatsappClicked: false,
   priceEditIndices: [],
+  recentProductIds: [],
 };
 
 function uiReducer(state: UIState, action: UIAction): UIState {
@@ -352,8 +380,15 @@ function uiReducer(state: UIState, action: UIAction): UIState {
         : { ...state, priceEditIndices: [...state.priceEditIndices, action.index] };
     case 'SET_PRICE_EDIT_INDICES':
       return { ...state, priceEditIndices: action.indices };
+    case 'ADD_RECENT_PRODUCT': {
+      const next = [action.productId, ...state.recentProductIds.filter((id) => id !== action.productId)].slice(0, MAX_RECENT_PRODUCTS);
+      saveRecentProductIds(next);
+      return { ...state, recentProductIds: next };
+    }
+    case 'SET_RECENT_PRODUCT_IDS':
+      return { ...state, recentProductIds: action.productIds };
     case 'RESET_UI':
-      return UI_INITIAL_STATE;
+      return { ...UI_INITIAL_STATE, recentProductIds: state.recentProductIds };
     default:
       return state;
   }
@@ -392,6 +427,7 @@ export default function CreateManualOrderModal({
     customPriceBlurred,
     phoneWhatsappClicked,
     priceEditIndices,
+    recentProductIds,
   } = ui;
   const invoiceInputRef = useRef<HTMLInputElement | null>(null);
   const photoInputRef = useRef<HTMLInputElement | null>(null);
@@ -407,6 +443,14 @@ export default function CreateManualOrderModal({
     lastLookupRef.current = { phone: '', email: '', source: '' };
     setInvoicePreviewUrl(null);
   }, [user]);
+
+  // Load recently used product IDs from localStorage on mount
+  useEffect(() => {
+    const ids = loadRecentProductIds();
+    if (ids.length > 0) {
+      dispatch({ type: 'SET_RECENT_PRODUCT_IDS', productIds: ids });
+    }
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -447,14 +491,20 @@ export default function CreateManualOrderModal({
     }
   }, [isOpen, t, resetForm]);
 
-  const productOptions = useMemo(
-    () =>
-      products.map((p) => ({
-        label: locale === 'ar' ? p.name.ar || p.name.en : p.name.en || p.name.ar,
-        value: p._id,
-      })),
-    [products, locale],
-  );
+  const productOptions = useMemo(() => {
+    const base = products.map((p) => ({
+      label: locale === 'ar' ? p.name.ar || p.name.en : p.name.en || p.name.ar,
+      value: p._id,
+    }));
+    // Sort so recently used products appear first
+    if (recentProductIds.length === 0) return base;
+    const recentSet = new Map(recentProductIds.map((id, i) => [id, i]));
+    return [...base].sort((a, b) => {
+      const ai = recentSet.has(a.value) ? recentSet.get(a.value)! : Infinity;
+      const bi = recentSet.has(b.value) ? recentSet.get(b.value)! : Infinity;
+      return ai - bi;
+    });
+  }, [products, locale, recentProductIds]);
 
   const getProduct = useCallback(
     (productId: string) => products.find((p) => p._id === productId) || null,
@@ -1304,6 +1354,7 @@ export default function CreateManualOrderModal({
                               sizeIndex: 0,
                               overridePrice: loadedPrice > 0 ? loadedPrice.toFixed(2) : '',
                             });
+                            if (val) dispatch({ type: 'ADD_RECENT_PRODUCT', productId: val });
                             if (priceEditIndices.includes(index)) {
                               dispatch({ type: 'TOGGLE_PRICE_EDIT', index });
                             }

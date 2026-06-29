@@ -934,54 +934,62 @@ export default function ProductForm({
                 {t('form.sizeAvailabilityHelp')}
               </p>
 
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <label className="text-xs font-medium text-secondary">
                   {t('form.sizePrice')}
                 </label>
-                <Input
-                  label={`${t('form.sizeBasePrice')} (${formData.baseCurrency})`}
-                  type="number"
-                  value={size.price || ''}
-                  onChange={(e) =>
-                    updateSize(index, 'price', parseFloat(e.target.value) || 0)
-                  }
-                  min="0"
-                  step="0.01"
-                />
-                <Input
-                  label={t('form.sizeManualPrice') || 'Manual Price'}
-                  type="number"
-                  value={size.manualPrice ?? ''}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    updateSize(index, 'manualPrice', value === '' ? null : parseFloat(value) || 0);
-                  }}
-                  min="0"
-                  step="0.01"
-                  helperText={t('form.sizeManualPriceHelp') || 'Base price used for manual orders. Leave empty to use the regular price.'}
-                />
-                {size.manualPrice && size.manualPrice > 0 && (
-                  <MultiCurrencyPriceEditor
-                    mainCurrency={formData.baseCurrency}
-                    basePrice={size.manualPrice}
-                    prices={size.manualPrices || []}
-                    onChange={(prices) => updateSize(index, 'manualPrices', prices)}
-                    onMainCurrencyChange={() => { }}
-                    onBasePriceChange={() => { }}
-                    compact
+
+                {/* Base Price section */}
+                <div className="space-y-2 p-3 rounded-lg border border-stroke bg-card-bg/50">
+                  <Input
+                    label={`${t('form.sizeBasePrice')} (${formData.baseCurrency})`}
+                    type="number"
+                    value={size.price || ''}
+                    onChange={(e) =>
+                      updateSize(index, 'price', parseFloat(e.target.value) || 0)
+                    }
+                    min="0"
+                    step="0.01"
                   />
-                )}
-                {size.price > 0 && (
-                  <MultiCurrencyPriceEditor
-                    mainCurrency={formData.baseCurrency}
-                    basePrice={size.price}
-                    prices={size.prices}
-                    onChange={(prices) => updateSize(index, 'prices', prices)}
-                    onMainCurrencyChange={() => { }}
-                    onBasePriceChange={() => { }}
-                    compact
+                  {size.price > 0 && (
+                    <MultiCurrencyPriceEditor
+                      mainCurrency={formData.baseCurrency}
+                      basePrice={size.price}
+                      prices={size.prices}
+                      onChange={(prices) => updateSize(index, 'prices', prices)}
+                      onMainCurrencyChange={() => { }}
+                      onBasePriceChange={() => { }}
+                      compact
+                    />
+                  )}
+                </div>
+
+                {/* Manual Price section */}
+                <div className="space-y-2 p-3 rounded-lg border border-stroke bg-card-bg/50">
+                  <Input
+                    label={t('form.sizeManualPrice') || 'Manual Price'}
+                    type="number"
+                    value={size.manualPrice ?? ''}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      updateSize(index, 'manualPrice', value === '' ? null : parseFloat(value) || 0);
+                    }}
+                    min="0"
+                    step="0.01"
+                    helperText={t('form.sizeManualPriceHelp') || 'Base price used for manual orders. Leave empty to use the regular price.'}
                   />
-                )}
+                  {size.manualPrice && size.manualPrice > 0 && (
+                    <MultiCurrencyPriceEditor
+                      mainCurrency={formData.baseCurrency}
+                      basePrice={size.manualPrice}
+                      prices={size.manualPrices || []}
+                      onChange={(prices) => updateSize(index, 'manualPrices', prices)}
+                      onMainCurrencyChange={() => { }}
+                      onBasePriceChange={() => { }}
+                      compact
+                    />
+                  )}
+                </div>
               </div>
 
               <Input

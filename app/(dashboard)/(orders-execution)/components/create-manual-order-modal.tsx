@@ -1167,6 +1167,23 @@ export default function CreateManualOrderModal({
             </p>
           </div>
 
+          {form.billingData.phone && (
+            <Button
+              type="button"
+              variant="custom"
+              className="w-full bg-green-500! hover:bg-green-600! text-white flex items-center justify-center gap-2"
+              onClick={() => {
+                const phoneDigits = form.billingData.phone.replace(/\D/g, '');
+                if (phoneDigits) {
+                  window.open(`https://wa.me/${phoneDigits}`, '_blank', 'noopener,noreferrer');
+                }
+              }}
+            >
+              <FaWhatsapp size={18} />
+              {t('createManualOrder.startWhatsappChat') || 'Start WhatsApp Chat'}
+            </Button>
+          )}
+
           {result.createdUser && (
             <div className="p-4 rounded-lg bg-primary/5 border border-primary/10 text-right" dir="rtl">
               <p className="text-sm font-medium text-foreground mb-3 leading-relaxed whitespace-pre-line">
@@ -1257,7 +1274,7 @@ export default function CreateManualOrderModal({
       onClose={handleClose}
       title={t('createManualOrder.title')}
       size="xl"
-      contentClassName="flex flex-col gap-4 pr-1"
+      contentClassName="flex flex-col gap-4 pr-1 px-4"
     >
       {/* Source */}
       <Dropdown
@@ -1843,7 +1860,7 @@ export default function CreateManualOrderModal({
         <div className="flex flex-col gap-4">
           {/* Order total summary */}
           {fullOrderTotal > 0 && (
-            <div className="p-3 rounded-lg bg-primary/5 border border-primary/10 flex flex-col gap-1">
+            <div className="p-3 rounded-lg bg-primary/5 border border-primary/10 flex flex-col gap-3">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-secondary">
                   {t('createManualOrder.fullAmount') || 'Full Order Total'}
@@ -1852,46 +1869,48 @@ export default function CreateManualOrderModal({
                   {fullOrderTotal.toFixed(2)} {form.currency}
                 </span>
               </div>
+
+              {/* Paid + Remaining side by side */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs font-medium text-secondary">
+                    {t('createManualOrder.paid') || 'Paid'}
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={form.paidAmount}
+                    placeholder={fullOrderTotal > 0 ? fullOrderTotal.toFixed(2) : '0.00'}
+                    onChange={(e) =>
+                      setForm((prev) => ({ ...prev, paidAmount: e.target.value }))
+                    }
+                    className="w-full px-3 py-2 rounded-lg border border-stroke bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
+                  />
+                  {formErrors.paidAmount && (
+                    <span className="text-xs text-red-500">{formErrors.paidAmount}</span>
+                  )}
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs font-medium text-secondary">
+                    {t('createManualOrder.remaining') || 'Remaining'}
+                  </label>
+                  <input
+                    type="text"
+                    readOnly
+                    value={remainingAmount > 0 ? `${remainingAmount.toFixed(2)} ${form.currency}` : ''}
+                    placeholder={`0.00 ${form.currency}`}
+                    className="w-full px-3 py-2 rounded-lg border border-stroke bg-muted/50 text-sm text-secondary cursor-not-allowed"
+                  />
+                </div>
+              </div>
+
               {isPartialPayment && (
-                <>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-secondary">
-                      {t('createManualOrder.paid') || 'Paid Amount'}
-                    </span>
-                    <span className="font-bold text-success">
-                      {paidAmountNum.toFixed(2)} {form.currency}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-secondary">
-                      {t('createManualOrder.remaining') || 'Remaining'}
-                    </span>
-                    <span className="font-bold text-orange-600 dark:text-orange-400">
-                      {remainingAmount.toFixed(2)} {form.currency}
-                    </span>
-                  </div>
-                </>
+                <p className="text-xs text-orange-600 dark:text-orange-400">
+                  {t('createManualOrder.partialPaymentHint') || 'Order will be created as partial-paid. The remaining amount can be collected later via a payment link or another invoice.'}
+                </p>
               )}
             </div>
-          )}
-
-          {/* Paid amount input — allows admin to record a partial payment */}
-          <Input
-            label={t('createManualOrder.paidAmount') || 'Paid Amount (leave empty for full payment)'}
-            type="number"
-            min={0}
-            step="0.01"
-            value={form.paidAmount}
-            placeholder={fullOrderTotal > 0 ? fullOrderTotal.toFixed(2) : '0.00'}
-            onChange={(e) =>
-              setForm((prev) => ({ ...prev, paidAmount: e.target.value }))
-            }
-            error={formErrors.paidAmount}
-          />
-          {isPartialPayment && (
-            <p className="text-xs text-orange-600 dark:text-orange-400">
-              {t('createManualOrder.partialPaymentHint') || 'Order will be created as partial-paid. The remaining amount can be collected later via a payment link or another invoice.'}
-            </p>
           )}
 
           <Dropdown

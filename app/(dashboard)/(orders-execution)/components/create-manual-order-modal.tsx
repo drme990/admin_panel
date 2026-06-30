@@ -19,7 +19,7 @@ import Switch from '@/components/ui/switch';
 import CustomDatePicker from '@/components/ui/custom-date-picker';
 import { uploadImageToR2, uploadInvoiceToR2, deleteOldImage } from '../../../../lib/image-upload-utils';
 
-import { LuCopy, LuCheck, LuRefreshCw, LuUpload, LuDownload, LuPlus, LuX, LuAtSign, LuPencil } from 'react-icons/lu';
+import { LuCopy, LuCheck, LuRefreshCw, LuUpload, LuDownload, LuPlus, LuX, LuAtSign, LuPencil, LuUserCheck } from 'react-icons/lu';
 import { FaWhatsapp } from 'react-icons/fa';
 import { isValidPhoneNumber } from 'libphonenumber-js';
 import { COUNTRIES } from '@/lib/countries';
@@ -153,6 +153,7 @@ interface FormState {
   };
   paymentMethod: PaymentMethod;
   paidAmount: string;
+  remainingAmount: string;
 }
 
 const emptyItem = (): OrderItemForm => ({
@@ -188,6 +189,7 @@ const DEFAULT_FORM: FormState = {
   },
   paymentMethod: '',
   paidAmount: '',
+  remainingAmount: '',
 };
 
 interface UserSuggestion {
@@ -220,6 +222,7 @@ interface UIState {
   invoiceFile: File | null;
   invoiceReviewed: boolean;
   invoiceValue: string;
+  invoiceCurrency: string;
   uploadingInvoice: boolean;
   uploadingPhoto: boolean;
   useCustomExecutionDate: boolean;
@@ -234,6 +237,7 @@ interface UIState {
   phoneWhatsappClicked: boolean;
   priceEditIndices: number[];
   recentProductIds: string[];
+  paymentEditField: 'paid' | 'remaining' | null;
 }
 
 type UIAction =
@@ -245,6 +249,7 @@ type UIAction =
   | { type: 'SET_INVOICE_FILE'; file: File | null }
   | { type: 'SET_INVOICE_REVIEWED'; reviewed: boolean }
   | { type: 'SET_INVOICE_VALUE'; value: string }
+  | { type: 'SET_INVOICE_CURRENCY'; currency: string }
   | { type: 'SET_UPLOADING_INVOICE'; uploading: boolean }
   | { type: 'SET_UPLOADING_PHOTO'; uploading: boolean }
   | { type: 'SET_USE_CUSTOM_EXECUTION_DATE'; checked: boolean }
@@ -266,6 +271,7 @@ type UIAction =
   | { type: 'SET_PRICE_EDIT_INDICES'; indices: number[] }
   | { type: 'ADD_RECENT_PRODUCT'; productId: string }
   | { type: 'SET_RECENT_PRODUCT_IDS'; productIds: string[] }
+  | { type: 'SET_PAYMENT_EDIT_FIELD'; field: 'paid' | 'remaining' | null }
   | { type: 'RESET_UI' };
 
 const RECENT_PRODUCTS_STORAGE_KEY = 'manualOrder_recentProductIds';
@@ -301,6 +307,7 @@ const UI_INITIAL_STATE: UIState = {
   invoiceFile: null,
   invoiceReviewed: false,
   invoiceValue: '',
+  invoiceCurrency: 'EGP',
   uploadingInvoice: false,
   uploadingPhoto: false,
   useCustomExecutionDate: false,
@@ -315,6 +322,7 @@ const UI_INITIAL_STATE: UIState = {
   phoneWhatsappClicked: false,
   priceEditIndices: [],
   recentProductIds: [],
+  paymentEditField: null,
 };
 
 function uiReducer(state: UIState, action: UIAction): UIState {
@@ -335,6 +343,8 @@ function uiReducer(state: UIState, action: UIAction): UIState {
       return { ...state, invoiceReviewed: action.reviewed };
     case 'SET_INVOICE_VALUE':
       return { ...state, invoiceValue: action.value };
+    case 'SET_INVOICE_CURRENCY':
+      return { ...state, invoiceCurrency: action.currency };
     case 'SET_UPLOADING_INVOICE':
       return { ...state, uploadingInvoice: action.uploading };
     case 'SET_UPLOADING_PHOTO':
@@ -387,6 +397,8 @@ function uiReducer(state: UIState, action: UIAction): UIState {
     }
     case 'SET_RECENT_PRODUCT_IDS':
       return { ...state, recentProductIds: action.productIds };
+    case 'SET_PAYMENT_EDIT_FIELD':
+      return { ...state, paymentEditField: action.field };
     case 'RESET_UI':
       return { ...UI_INITIAL_STATE, recentProductIds: state.recentProductIds };
     default:
@@ -414,6 +426,7 @@ export default function CreateManualOrderModal({
     invoiceFile,
     invoiceReviewed,
     invoiceValue,
+    invoiceCurrency,
     uploadingInvoice,
     uploadingPhoto,
     useCustomExecutionDate,
@@ -428,6 +441,7 @@ export default function CreateManualOrderModal({
     phoneWhatsappClicked,
     priceEditIndices,
     recentProductIds,
+    paymentEditField,
   } = ui;
   const invoiceInputRef = useRef<HTMLInputElement | null>(null);
   const photoInputRef = useRef<HTMLInputElement | null>(null);
@@ -532,6 +546,18 @@ export default function CreateManualOrderModal({
   // Global currency options: union of all currencies across all products
   const currencyOptions = useMemo(() => {
     const currencies = new Set<string>();
+    products.forEach((p) => {
+      currencies.add(p.baseCurrency);
+      p.sizes.forEach((s) => {
+        s.prices?.forEach((pr) => currencies.add(pr.currencyCode));
+      });
+    });
+    return Array.from(currencies).map((c) => ({ label: c, value: c }));
+  }, [products]);
+
+  // Invoice currency options: product currencies + common fallbacks
+  const invoiceCurrencyOptions = useMemo(() => {
+    const currencies = new Set<string>(['EGP', 'SAR', 'USD', 'EUR', 'AED', 'KWD']);
     products.forEach((p) => {
       currencies.add(p.baseCurrency);
       p.sizes.forEach((s) => {
@@ -1074,6 +1100,7 @@ export default function CreateManualOrderModal({
           invoiceUrl: invoiceUrl || undefined,
           invoiceReviewed: invoiceUrl ? invoiceReviewed : undefined,
           invoiceValue: invoiceUrl ? parseFloat(invoiceValue) || 0 : undefined,
+          invoiceCurrency: invoiceUrl ? invoiceCurrency : undefined,
           locale: 'ar',
           userId: linkedUserId || undefined,
           paidAmount: paidAmountNum,
@@ -1348,9 +1375,10 @@ export default function CreateManualOrderModal({
                 </div>
                 {item.type === 'existing' ? (
                   <>
-                    <div className="grid grid-cols-2 sm:grid-cols-12 gap-3">
-                      <div className="col-span-1 sm:col-span-2">
+                    <div className="flex flex-row gap-2 sm:gap-3">
+                      <div className="shrink-0 w-20 sm:w-28">
                         <QuantityInput
+                          compact
                           label={index === 0 ? t('createManualOrder.quantity') : undefined}
                           value={item.quantity}
                           min={0}
@@ -1358,7 +1386,7 @@ export default function CreateManualOrderModal({
                           error={formErrors[`item_${index}_quantity`]}
                         />
                       </div>
-                      <div className="col-span-1 sm:col-span-5">
+                      <div className="flex-1 min-w-0">
                         <Dropdown
                           label={index === 0 ? t('createManualOrder.product') : undefined}
                           value={item.productId}
@@ -1383,27 +1411,27 @@ export default function CreateManualOrderModal({
                           searchPlaceholder={t('createManualOrder.searchProduct') || 'Search products...'}
                         />
                       </div>
-                      <div className="col-span-2 sm:col-span-5">
-                        {sizeOpts.length > 1 && (
-                          <Dropdown
-                            label={index === 0 ? t('createManualOrder.size') : undefined}
-                            value={item.sizeIndex}
-                            options={sizeOpts}
-                            onChange={(val) => {
-                              const nextItem = { ...item, sizeIndex: val };
-                              const loadedPrice = getLoadedUnitPrice(nextItem);
-                              updateItem(index, {
-                                sizeIndex: val,
-                                overridePrice: loadedPrice > 0 ? loadedPrice.toFixed(2) : '',
-                              });
-                              if (priceEditIndices.includes(index)) {
-                                dispatch({ type: 'TOGGLE_PRICE_EDIT', index });
-                              }
-                            }}
-                          />
-                        )}
-                      </div>
                     </div>
+                    {sizeOpts.length > 1 && (
+                      <div className="mt-3">
+                        <Dropdown
+                          label={index === 0 ? t('createManualOrder.size') : undefined}
+                          value={item.sizeIndex}
+                          options={sizeOpts}
+                          onChange={(val) => {
+                            const nextItem = { ...item, sizeIndex: val };
+                            const loadedPrice = getLoadedUnitPrice(nextItem);
+                            updateItem(index, {
+                              sizeIndex: val,
+                              overridePrice: loadedPrice > 0 ? loadedPrice.toFixed(2) : '',
+                            });
+                            if (priceEditIndices.includes(index)) {
+                              dispatch({ type: 'TOGGLE_PRICE_EDIT', index });
+                            }
+                          }}
+                        />
+                      </div>
+                    )}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <Input
                         label={index === 0 ? (t('createManualOrder.price') || 'Price') : undefined}
@@ -1423,7 +1451,10 @@ export default function CreateManualOrderModal({
                           <button
                             type="button"
                             onClick={() => dispatch({ type: 'TOGGLE_PRICE_EDIT', index })}
-                            className="text-secondary hover:text-foreground transition-colors"
+                            className={`transition-colors ${priceEditIndices.includes(index)
+                              ? 'text-success hover:text-success/80'
+                              : 'text-secondary hover:text-foreground'
+                              }`}
                             aria-label={priceEditIndices.includes(index) ? 'Lock price' : 'Edit price'}
                           >
                             <LuPencil size={16} />
@@ -1439,9 +1470,10 @@ export default function CreateManualOrderModal({
                   </>
                 ) : (
                   <>
-                    <div className="grid grid-cols-2 sm:grid-cols-12 gap-3">
-                      <div className="col-span-1 sm:col-span-2">
+                    <div className="flex flex-row gap-2 sm:gap-3">
+                      <div className="shrink-0 w-20 sm:w-28">
                         <QuantityInput
+                          compact
                           label={index === 0 ? t('createManualOrder.quantity') : undefined}
                           value={item.quantity}
                           min={0}
@@ -1449,7 +1481,7 @@ export default function CreateManualOrderModal({
                           error={formErrors[`item_${index}_quantity`]}
                         />
                       </div>
-                      <div className="col-span-1 sm:col-span-5">
+                      <div className="flex-1 min-w-0">
                         <Input
                           label={index === 0 ? (t('createManualOrder.customName') || 'Custom name') : undefined}
                           value={item.customName}
@@ -1460,16 +1492,16 @@ export default function CreateManualOrderModal({
                           error={formErrors[`item_${index}_name`]}
                         />
                       </div>
-                      <div className="col-span-2 sm:col-span-5">
-                        <Input
-                          label={index === 0 ? (t('createManualOrder.customSize') || 'Custom size') : undefined}
-                          value={item.customSize}
-                          placeholder={t('createManualOrder.customSizePlaceholder') || 'Size (optional)'}
-                          onChange={(e) =>
-                            updateItem(index, { customSize: e.target.value })
-                          }
-                        />
-                      </div>
+                    </div>
+                    <div className="mt-3">
+                      <Input
+                        label={index === 0 ? (t('createManualOrder.customSize') || 'Custom size') : undefined}
+                        value={item.customSize}
+                        placeholder={t('createManualOrder.customSizePlaceholder') || 'Size (optional)'}
+                        onChange={(e) =>
+                          updateItem(index, { customSize: e.target.value })
+                        }
+                      />
                     </div>
                     <Input
                       label={index === 0 ? (t('createManualOrder.customPrice') || 'Price') : undefined}
@@ -1501,11 +1533,270 @@ export default function CreateManualOrderModal({
         </Button>
       </div>
 
-      {/* Customer Info */}
+      {/* Payment */}
       <div className="border-t border-stroke pt-4">
         <h4 className="text-sm font-semibold text-foreground mb-3">
-          {t('createManualOrder.customerInfo')}
+          {t('createManualOrder.payment')}
         </h4>
+        <div className="flex flex-col gap-4">
+          {/* Order total summary */}
+          {fullOrderTotal > 0 && (
+            <div className="p-3 rounded-lg bg-primary/5 border border-primary/10 flex flex-col gap-3">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-secondary">
+                  {t('createManualOrder.fullAmount') || 'Full Order Total'}
+                </span>
+                <span className="font-bold text-foreground">
+                  {fullOrderTotal.toFixed(2)} {form.currency}
+                </span>
+              </div>
+
+              {/* Paid + Remaining side by side */}
+              <div className="grid grid-cols-2 gap-3">
+                {/* Paid — green */}
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs font-medium text-success">
+                    {t('createManualOrder.paid') || 'Paid'}
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={form.paidAmount}
+                    placeholder={fullOrderTotal > 0 ? fullOrderTotal.toFixed(2) : '0.00'}
+                    readOnly={paymentEditField === 'remaining'}
+                    onChange={(e) => {
+                      const paid = e.target.value;
+                      const paidNum = parseFloat(paid);
+                      const rem = Number.isFinite(paidNum) && paidNum >= 0
+                        ? Math.max(0, fullOrderTotal - paidNum)
+                        : 0;
+                      setForm((prev) => ({
+                        ...prev,
+                        paidAmount: paid,
+                        remainingAmount: rem > 0 ? rem.toFixed(2) : '',
+                      }));
+                      dispatch({ type: 'SET_PAYMENT_EDIT_FIELD', field: 'paid' });
+                    }}
+                    onFocus={() => {
+                      // Swapping from remaining → paid: reset both fields
+                      if (paymentEditField === 'remaining') {
+                        setForm((prev) => ({ ...prev, paidAmount: '', remainingAmount: '' }));
+                      }
+                      dispatch({ type: 'SET_PAYMENT_EDIT_FIELD', field: 'paid' });
+                    }}
+                    className={`w-full px-3 py-2 rounded-lg border text-sm transition-colors focus:outline-none focus:ring-2 ${paymentEditField === 'remaining'
+                      ? 'border-stroke bg-muted/50 text-secondary cursor-not-allowed'
+                      : 'border-success/40 bg-success/5 text-foreground focus:ring-success/20 focus:border-success'
+                      }`}
+                  />
+                  {formErrors.paidAmount && (
+                    <span className="text-xs text-red-500">{formErrors.paidAmount}</span>
+                  )}
+                </div>
+                {/* Remaining — orange */}
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs font-medium text-warning">
+                    {t('createManualOrder.remaining') || 'Remaining'}
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={form.remainingAmount}
+                    placeholder={`0.00 ${form.currency}`}
+                    readOnly={paymentEditField === 'paid'}
+                    onChange={(e) => {
+                      const rem = e.target.value;
+                      const remNum = parseFloat(rem);
+                      const paid = Number.isFinite(remNum) && remNum >= 0
+                        ? Math.max(0, fullOrderTotal - remNum)
+                        : 0;
+                      setForm((prev) => ({
+                        ...prev,
+                        remainingAmount: rem,
+                        paidAmount: paid > 0 ? paid.toFixed(2) : '',
+                      }));
+                      dispatch({ type: 'SET_PAYMENT_EDIT_FIELD', field: 'remaining' });
+                    }}
+                    onFocus={() => {
+                      // Swapping from paid → remaining: reset both fields
+                      if (paymentEditField === 'paid') {
+                        setForm((prev) => ({ ...prev, paidAmount: '', remainingAmount: '' }));
+                      }
+                      dispatch({ type: 'SET_PAYMENT_EDIT_FIELD', field: 'remaining' });
+                    }}
+                    className={`w-full px-3 py-2 rounded-lg border text-sm transition-colors focus:outline-none focus:ring-2 ${paymentEditField === 'paid'
+                      ? 'border-stroke bg-muted/50 text-secondary cursor-not-allowed'
+                      : 'border-warning/40 bg-warning/5 text-foreground focus:ring-warning/20 focus:border-warning'
+                      }`}
+                  />
+                  {formErrors.remainingAmount && (
+                    <span className="text-xs text-red-500">{formErrors.remainingAmount}</span>
+                  )}
+                </div>
+              </div>
+
+              {isPartialPayment && (
+                <p className="text-xs text-orange-600 dark:text-orange-400">
+                  {t('createManualOrder.partialPaymentHint') || 'Order will be created as partial-paid. The remaining amount can be collected later via a payment link or another invoice.'}
+                </p>
+              )}
+            </div>
+          )}
+
+          <Dropdown
+            label={t('createManualOrder.currency')}
+            value={form.currency}
+            options={currencyOptions}
+            onChange={(val) => setForm((prev) => ({ ...prev, currency: val }))}
+            placeholder={t('createManualOrder.selectCurrency')}
+            error={formErrors.currency}
+          />
+
+          <Dropdown
+            label={t('createManualOrder.paymentMethod')}
+            value={form.paymentMethod}
+            options={paymentMethodOptions}
+            onChange={(val) =>
+              setForm((prev) => ({ ...prev, paymentMethod: val }))
+            }
+            error={formErrors.paymentMethod}
+          />
+
+          {!isEasykash && (
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-medium text-foreground">
+                {t('createManualOrder.invoiceUpload')}
+              </label>
+              <div className="flex flex-wrap items-center gap-3">
+                {uploadingInvoice ? (
+                  <span className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-stroke text-secondary">
+                    <LuRefreshCw size={16} className="animate-spin" />
+                    {t('createManualOrder.uploadingInvoice') || 'Uploading...'}
+                  </span>
+                ) : (
+                  <>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className={formErrors.invoice ? 'border-error text-error hover:text-error hover:border-error' : ''}
+                      onClick={() => {
+                        dispatch({ type: 'SET_INVOICE_REVIEWED', reviewed: true });
+                        invoiceInputRef.current?.click();
+                      }}
+                    >
+                      <LuUpload size={16} className="me-2" />
+                      {t('createManualOrder.uploadReviewedInvoice') || 'Reviewed Invoice'}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className={formErrors.invoice ? 'border-error text-error hover:text-error hover:border-error' : ''}
+                      onClick={() => {
+                        dispatch({ type: 'SET_INVOICE_REVIEWED', reviewed: false });
+                        invoiceInputRef.current?.click();
+                      }}
+                    >
+                      <LuUpload size={16} className="me-2" />
+                      {t('createManualOrder.uploadUnreviewedInvoice') || 'Unreviewed Invoice'}
+                    </Button>
+                  </>
+                )}
+                {invoiceFile && (
+                  <span className="text-sm text-secondary">{invoiceFile.name}</span>
+                )}
+              </div>
+              {invoiceFile && (
+                <div className="flex flex-row gap-2 items-end">
+                  <div className="flex-1 min-w-0">
+                    <Input
+                      label={t('createManualOrder.invoiceValue') || 'Invoice Value'}
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={invoiceValue}
+                      onChange={(e) =>
+                        dispatch({ type: 'SET_INVOICE_VALUE', value: e.target.value })
+                      }
+                      error={formErrors.invoiceValue}
+                    />
+                  </div>
+                  <div className="shrink-0 w-24">
+                    <Dropdown
+                      value={invoiceCurrency}
+                      options={invoiceCurrencyOptions}
+                      onChange={(val) =>
+                        dispatch({ type: 'SET_INVOICE_CURRENCY', currency: val })
+                      }
+                    />
+                  </div>
+                </div>
+              )}
+              {invoicePreviewUrl && (
+                <div className="w-fit">
+                  <img
+                    src={invoicePreviewUrl}
+                    alt="Invoice preview"
+                    className="h-32 rounded-lg border border-stroke object-contain bg-background"
+                  />
+                </div>
+              )}
+              {formErrors.invoice && (
+                <p className="text-xs text-error">{formErrors.invoice}</p>
+              )}
+              <input
+                ref={invoiceInputRef}
+                type="file"
+                accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
+                className="hidden"
+                onChange={handleInvoiceFileChange}
+              />
+            </div>
+          )}
+
+          {isEasykash && isPartialPayment && (
+            <p className="text-xs text-secondary">
+              {t('createManualOrder.easykashPartialHint') || 'An EasyKash payment link will be generated for the remaining amount. The paid portion will be recorded as a manual payment.'}
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* Customer Info */}
+      <div className="border-t border-stroke pt-4">
+        <div className="flex items-center justify-between mb-3">
+          <h4 className="text-sm font-semibold text-foreground">
+            {t('createManualOrder.customerInfo')}
+          </h4>
+          {linkedUserId && (
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center gap-1 text-xs font-medium text-success bg-success/10 px-2 py-1 rounded-full">
+                <LuUserCheck size={12} />
+                {t('createManualOrder.userLinked') || 'User linked'}
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  dispatch({ type: 'SET_LINKED_USER_ID', userId: null });
+                  setForm((prev) => ({
+                    ...prev,
+                    billingData: { fullName: '', email: '', phone: '', country: '' },
+                  }));
+                  dispatch({ type: 'PATCH_FORM_ERRORS', errors: { fullName: '', phone: '', email: '', country: '' } });
+                  toast.info(t('createManualOrder.userUnlinked') || 'User link removed');
+                }}
+                className="inline-flex items-center gap-1 text-xs font-medium text-error hover:text-error/80 bg-error/10 hover:bg-error/20 px-2 py-1 rounded-full transition-colors"
+                aria-label={t('createManualOrder.removeSelection') || 'Remove selection'}
+              >
+                <LuX size={12} />
+                {t('createManualOrder.removeSelection') || 'Remove'}
+              </button>
+            </div>
+          )}
+        </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Input
             placeholder={t('createManualOrder.fullNamePlaceholder')}
@@ -1849,174 +2140,6 @@ export default function CreateManualOrderModal({
               </p>
             )}
           </div>
-        </div>
-      </div>
-
-      {/* Payment */}
-      <div className="border-t border-stroke pt-4">
-        <h4 className="text-sm font-semibold text-foreground mb-3">
-          {t('createManualOrder.payment')}
-        </h4>
-        <div className="flex flex-col gap-4">
-          {/* Order total summary */}
-          {fullOrderTotal > 0 && (
-            <div className="p-3 rounded-lg bg-primary/5 border border-primary/10 flex flex-col gap-3">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-secondary">
-                  {t('createManualOrder.fullAmount') || 'Full Order Total'}
-                </span>
-                <span className="font-bold text-foreground">
-                  {fullOrderTotal.toFixed(2)} {form.currency}
-                </span>
-              </div>
-
-              {/* Paid + Remaining side by side */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="flex flex-col gap-1">
-                  <label className="text-xs font-medium text-secondary">
-                    {t('createManualOrder.paid') || 'Paid'}
-                  </label>
-                  <input
-                    type="number"
-                    min={0}
-                    step="0.01"
-                    value={form.paidAmount}
-                    placeholder={fullOrderTotal > 0 ? fullOrderTotal.toFixed(2) : '0.00'}
-                    onChange={(e) =>
-                      setForm((prev) => ({ ...prev, paidAmount: e.target.value }))
-                    }
-                    className="w-full px-3 py-2 rounded-lg border border-stroke bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
-                  />
-                  {formErrors.paidAmount && (
-                    <span className="text-xs text-red-500">{formErrors.paidAmount}</span>
-                  )}
-                </div>
-                <div className="flex flex-col gap-1">
-                  <label className="text-xs font-medium text-secondary">
-                    {t('createManualOrder.remaining') || 'Remaining'}
-                  </label>
-                  <input
-                    type="text"
-                    readOnly
-                    value={remainingAmount > 0 ? `${remainingAmount.toFixed(2)} ${form.currency}` : ''}
-                    placeholder={`0.00 ${form.currency}`}
-                    className="w-full px-3 py-2 rounded-lg border border-stroke bg-muted/50 text-sm text-secondary cursor-not-allowed"
-                  />
-                </div>
-              </div>
-
-              {isPartialPayment && (
-                <p className="text-xs text-orange-600 dark:text-orange-400">
-                  {t('createManualOrder.partialPaymentHint') || 'Order will be created as partial-paid. The remaining amount can be collected later via a payment link or another invoice.'}
-                </p>
-              )}
-            </div>
-          )}
-
-          <Dropdown
-            label={t('createManualOrder.currency')}
-            value={form.currency}
-            options={currencyOptions}
-            onChange={(val) => setForm((prev) => ({ ...prev, currency: val }))}
-            placeholder={t('createManualOrder.selectCurrency')}
-            error={formErrors.currency}
-          />
-
-          <Dropdown
-            label={t('createManualOrder.paymentMethod')}
-            value={form.paymentMethod}
-            options={paymentMethodOptions}
-            onChange={(val) =>
-              setForm((prev) => ({ ...prev, paymentMethod: val }))
-            }
-            error={formErrors.paymentMethod}
-          />
-
-          {!isEasykash && (
-            <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium text-foreground">
-                {t('createManualOrder.invoiceUpload')}
-              </label>
-              <div className="flex flex-wrap items-center gap-3">
-                {uploadingInvoice ? (
-                  <span className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-stroke text-secondary">
-                    <LuRefreshCw size={16} className="animate-spin" />
-                    {t('createManualOrder.uploadingInvoice') || 'Uploading...'}
-                  </span>
-                ) : (
-                  <>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className={formErrors.invoice ? 'border-error text-error hover:text-error hover:border-error' : ''}
-                      onClick={() => {
-                        dispatch({ type: 'SET_INVOICE_REVIEWED', reviewed: true });
-                        invoiceInputRef.current?.click();
-                      }}
-                    >
-                      <LuUpload size={16} className="me-2" />
-                      {t('createManualOrder.uploadReviewedInvoice') || 'Reviewed Invoice'}
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className={formErrors.invoice ? 'border-error text-error hover:text-error hover:border-error' : ''}
-                      onClick={() => {
-                        dispatch({ type: 'SET_INVOICE_REVIEWED', reviewed: false });
-                        invoiceInputRef.current?.click();
-                      }}
-                    >
-                      <LuUpload size={16} className="me-2" />
-                      {t('createManualOrder.uploadUnreviewedInvoice') || 'Unreviewed Invoice'}
-                    </Button>
-                  </>
-                )}
-                {invoiceFile && (
-                  <span className="text-sm text-secondary">{invoiceFile.name}</span>
-                )}
-              </div>
-              {invoiceFile && (
-                <Input
-                  label={t('createManualOrder.invoiceValue') || 'Invoice Value'}
-                  type="number"
-                  min={0}
-                  step="0.01"
-                  value={invoiceValue}
-                  onChange={(e) =>
-                    dispatch({ type: 'SET_INVOICE_VALUE', value: e.target.value })
-                  }
-                  error={formErrors.invoiceValue}
-                />
-              )}
-              {invoicePreviewUrl && (
-                <div className="w-fit">
-                  <img
-                    src={invoicePreviewUrl}
-                    alt="Invoice preview"
-                    className="h-32 rounded-lg border border-stroke object-contain bg-background"
-                  />
-                </div>
-              )}
-              {formErrors.invoice && (
-                <p className="text-xs text-error">{formErrors.invoice}</p>
-              )}
-              <input
-                ref={invoiceInputRef}
-                type="file"
-                accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
-                className="hidden"
-                onChange={handleInvoiceFileChange}
-              />
-            </div>
-          )}
-
-          {isEasykash && isPartialPayment && (
-            <p className="text-xs text-secondary">
-              {t('createManualOrder.easykashPartialHint') || 'An EasyKash payment link will be generated for the remaining amount. The paid portion will be recorded as a manual payment.'}
-            </p>
-          )}
         </div>
       </div>
 

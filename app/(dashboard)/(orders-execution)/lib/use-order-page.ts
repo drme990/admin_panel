@@ -607,7 +607,7 @@ export function useOrderPage(options: UseOrderPageOptions) {
           } else {
             nextReservationData.push({
               key: 'sacrificeFor',
-              label: { ar: 'الذبيحة لأجل', en: 'Sacrifice For' },
+              label: { ar: 'المؤدى عنه', en: 'Sacrifice For' },
               type: 'text',
               value: fields.sacrificeFor,
             });

@@ -446,6 +446,7 @@ export default function CreateManualOrderModal({
   const invoiceInputRef = useRef<HTMLInputElement | null>(null);
   const invoiceImageInputRef = useRef<HTMLInputElement | null>(null);
   const photoInputRef = useRef<HTMLInputElement | null>(null);
+  const priceInputRefs = useRef<Map<number, HTMLInputElement>>(new Map());
   const lastLookupRef = useRef<{ phone: string; email: string; source: string }>({ phone: '', email: '', source: '' });
   const skipBlurValidationRef = useRef(false);
   const [invoicePreviewUrl, setInvoicePreviewUrl] = useState<string | null>(null);
@@ -1307,7 +1308,6 @@ export default function CreateManualOrderModal({
     >
       {/* Source */}
       <Dropdown
-        label={t('createManualOrder.source')}
         value={form.source}
         options={sourceOptions}
         onChange={(val) => setForm((prev) => ({ ...prev, source: val }))}
@@ -1316,9 +1316,6 @@ export default function CreateManualOrderModal({
 
       {/* Referral */}
       <div className="flex flex-col gap-2">
-        <label className="text-sm font-medium text-foreground">
-          {t('createManualOrder.referral')}
-        </label>
         <Tabs
           value={form.referralId}
           options={referralOptions}
@@ -1381,7 +1378,6 @@ export default function CreateManualOrderModal({
                       <div className="shrink-0 w-20 sm:w-28">
                         <QuantityInput
                           compact
-                          label={index === 0 ? t('createManualOrder.quantity') : undefined}
                           value={item.quantity}
                           min={0}
                           onChange={(val) => updateItem(index, { quantity: val })}
@@ -1390,7 +1386,6 @@ export default function CreateManualOrderModal({
                       </div>
                       <div className="flex-1 min-w-0">
                         <Dropdown
-                          label={index === 0 ? t('createManualOrder.product') : undefined}
                           value={item.productId}
                           options={productOptions}
                           onChange={(val) => {
@@ -1417,7 +1412,6 @@ export default function CreateManualOrderModal({
                     {sizeOpts.length > 1 && (
                       <div className="mt-3">
                         <Dropdown
-                          label={index === 0 ? t('createManualOrder.size') : undefined}
                           value={item.sizeIndex}
                           options={sizeOpts}
                           onChange={(val) => {
@@ -1436,7 +1430,10 @@ export default function CreateManualOrderModal({
                     )}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <Input
-                        label={index === 0 ? (t('createManualOrder.price') || 'Price') : undefined}
+                        ref={(el) => {
+                          if (el) priceInputRefs.current.set(index, el);
+                          else priceInputRefs.current.delete(index);
+                        }}
                         type="number"
                         min={0}
                         step="0.01"
@@ -1449,10 +1446,21 @@ export default function CreateManualOrderModal({
                           dispatch({ type: 'BLUR_CUSTOM_PRICE', index })
                         }
                         readOnly={!priceEditIndices.includes(index)}
+                        tabIndex={priceEditIndices.includes(index) ? 0 : -1}
+                        className={priceEditIndices.includes(index)
+                          ? ''
+                          : 'focus:ring-0 focus:border-stroke cursor-default'
+                        }
                         suffix={
                           <button
                             type="button"
-                            onClick={() => dispatch({ type: 'TOGGLE_PRICE_EDIT', index })}
+                            onClick={() => {
+                              const willEdit = !priceEditIndices.includes(index);
+                              dispatch({ type: 'TOGGLE_PRICE_EDIT', index });
+                              if (willEdit) {
+                                setTimeout(() => priceInputRefs.current.get(index)?.focus(), 0);
+                              }
+                            }}
                             className={`transition-colors ${priceEditIndices.includes(index)
                               ? 'text-success hover:text-success/80'
                               : 'text-secondary hover:text-foreground'
@@ -1476,7 +1484,6 @@ export default function CreateManualOrderModal({
                       <div className="shrink-0 w-20 sm:w-28">
                         <QuantityInput
                           compact
-                          label={index === 0 ? t('createManualOrder.quantity') : undefined}
                           value={item.quantity}
                           min={0}
                           onChange={(val) => updateItem(index, { quantity: val })}
@@ -1485,7 +1492,6 @@ export default function CreateManualOrderModal({
                       </div>
                       <div className="flex-1 min-w-0">
                         <Input
-                          label={index === 0 ? (t('createManualOrder.customName') || 'Custom name') : undefined}
                           value={item.customName}
                           placeholder={t('createManualOrder.customNamePlaceholder') || 'Product name'}
                           onChange={(e) =>
@@ -1497,7 +1503,6 @@ export default function CreateManualOrderModal({
                     </div>
                     <div className="mt-3">
                       <Input
-                        label={index === 0 ? (t('createManualOrder.customSize') || 'Custom size') : undefined}
                         value={item.customSize}
                         placeholder={t('createManualOrder.customSizePlaceholder') || 'Size (optional)'}
                         onChange={(e) =>
@@ -1506,7 +1511,6 @@ export default function CreateManualOrderModal({
                       />
                     </div>
                     <Input
-                      label={index === 0 ? (t('createManualOrder.customPrice') || 'Price') : undefined}
                       type="number"
                       min={0}
                       step="0.01"
@@ -1557,15 +1561,12 @@ export default function CreateManualOrderModal({
               <div className="grid grid-cols-2 gap-3">
                 {/* Paid — green */}
                 <div className="flex flex-col gap-1">
-                  <label className="text-xs font-medium text-success">
-                    {t('createManualOrder.paid') || 'Paid'}
-                  </label>
                   <input
                     type="number"
                     min={0}
                     step="0.01"
                     value={form.paidAmount}
-                    placeholder={fullOrderTotal > 0 ? fullOrderTotal.toFixed(2) : '0.00'}
+                    placeholder={fullOrderTotal > 0 ? `${t('createManualOrder.paid') || 'Paid'}: ${fullOrderTotal.toFixed(2)}` : '0.00'}
                     readOnly={paymentEditField === 'remaining'}
                     onChange={(e) => {
                       const paid = e.target.value;
@@ -1587,20 +1588,17 @@ export default function CreateManualOrderModal({
                       }
                       dispatch({ type: 'SET_PAYMENT_EDIT_FIELD', field: 'paid' });
                     }}
-                    className={`w-full px-3 py-2 rounded-lg border text-sm transition-colors focus:outline-none focus:ring-2 ${paymentEditField === 'remaining'
+                    className={`w-full px-3 py-2 rounded-lg border text-sm font-bold transition-colors focus:outline-none focus:ring-2 ${paymentEditField === 'remaining'
                       ? 'border-stroke bg-muted/50 text-secondary cursor-not-allowed'
-                      : 'border-success/40 bg-success/5 text-foreground focus:ring-success/20 focus:border-success'
+                      : 'border-success/40 bg-success/5 text-success focus:ring-success/20 focus:border-success'
                       }`}
                   />
                   {formErrors.paidAmount && (
                     <span className="text-xs text-red-500">{formErrors.paidAmount}</span>
                   )}
                 </div>
-                {/* Remaining — orange */}
+                {/* Remaining — red */}
                 <div className="flex flex-col gap-1">
-                  <label className="text-xs font-medium text-warning">
-                    {t('createManualOrder.remaining') || 'Remaining'}
-                  </label>
                   <input
                     type="number"
                     min={0}
@@ -1628,9 +1626,9 @@ export default function CreateManualOrderModal({
                       }
                       dispatch({ type: 'SET_PAYMENT_EDIT_FIELD', field: 'remaining' });
                     }}
-                    className={`w-full px-3 py-2 rounded-lg border text-sm transition-colors focus:outline-none focus:ring-2 ${paymentEditField === 'paid'
+                    className={`w-full px-3 py-2 rounded-lg border text-sm font-bold transition-colors focus:outline-none focus:ring-2 ${paymentEditField === 'paid'
                       ? 'border-stroke bg-muted/50 text-secondary cursor-not-allowed'
-                      : 'border-warning/40 bg-warning/5 text-foreground focus:ring-warning/20 focus:border-warning'
+                      : 'border-error/40 bg-error/5 text-error focus:ring-error/20 focus:border-error'
                       }`}
                   />
                   {formErrors.remainingAmount && (
@@ -1648,7 +1646,6 @@ export default function CreateManualOrderModal({
           )}
 
           <Dropdown
-            label={t('createManualOrder.currency')}
             value={form.currency}
             options={currencyOptions}
             onChange={(val) => setForm((prev) => ({ ...prev, currency: val }))}
@@ -1657,20 +1654,17 @@ export default function CreateManualOrderModal({
           />
 
           <Dropdown
-            label={t('createManualOrder.paymentMethod')}
             value={form.paymentMethod}
             options={paymentMethodOptions}
             onChange={(val) =>
               setForm((prev) => ({ ...prev, paymentMethod: val }))
             }
+            placeholder={t('createManualOrder.paymentMethod')}
             error={formErrors.paymentMethod}
           />
 
           {!isEasykash && (
             <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium text-foreground">
-                {t('createManualOrder.invoiceUpload')}
-              </label>
               <div className="flex flex-wrap items-center gap-3">
                 {uploadingInvoice ? (
                   <span className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-stroke text-secondary">
@@ -1743,11 +1737,11 @@ export default function CreateManualOrderModal({
                 <div className="flex flex-row gap-2 items-end">
                   <div className="flex-1 min-w-0">
                     <Input
-                      label={t('createManualOrder.invoiceValue') || 'Invoice Value'}
                       type="number"
                       min={0}
                       step="0.01"
                       value={invoiceValue}
+                      placeholder={t('createManualOrder.invoiceValue') || 'Invoice Value'}
                       onChange={(e) =>
                         dispatch({ type: 'SET_INVOICE_VALUE', value: e.target.value })
                       }
@@ -1848,64 +1842,80 @@ export default function CreateManualOrderModal({
           />
 
           <div className="relative">
-            <Input
-              placeholder={t('createManualOrder.phonePlaceholder')}
-              value={form.billingData.phone}
-              onChange={(e) => {
-                setForm((prev) => ({
-                  ...prev,
-                  billingData: { ...prev.billingData, phone: e.target.value },
-                }));
-                dispatch({ type: 'SET_LINKED_USER_ID', userId: null });
-                dispatch({ type: 'PATCH_FORM_ERRORS', errors: { phone: '' } });
-                if (phoneWhatsappClicked) {
-                  dispatch({ type: 'SET_WHATSAPP_PHONE_CLICKED', clicked: false });
-                }
-              }}
-              onFocus={() => dispatch({ type: 'SET_FOCUSED_FIELD', field: 'phone' })}
-              onBlur={() => {
-                setTimeout(() => dispatch({ type: 'CLEAR_FOCUSED_FIELD_IF', field: 'phone' }), 150);
-                if (skipBlurValidationRef.current) {
-                  skipBlurValidationRef.current = false;
-                  return;
-                }
-                const phone = form.billingData.phone.trim();
-                if (!phone) {
-                  dispatch({
-                    type: 'PATCH_FORM_ERRORS',
-                    errors: { phone: t('createManualOrder.errors.phoneRequired') },
-                  });
-                } else if (!validatePhoneNumber(form.billingData.phone, form.billingData.country)) {
-                  dispatch({
-                    type: 'PATCH_FORM_ERRORS',
-                    errors: { phone: t('createManualOrder.errors.phoneInvalid') || 'Invalid phone number' },
-                  });
-                }
-              }}
-              error={formErrors.phone}
-              suffix={
-                form.billingData.phone.replace(/\D/g, '').length > 0 ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      dispatch({ type: 'SET_WHATSAPP_PHONE_CLICKED', clicked: true });
-                      dispatch({ type: 'PATCH_FORM_ERRORS', errors: { phone: '' } });
-                      window.open(
-                        `https://wa.me/${form.billingData.phone.replace(/\D/g, '')}`,
-                        '_blank',
-                      );
-                    }}
-                    className={`transition-colors ${phoneWhatsappClicked
-                      ? 'text-success'
-                      : 'text-success hover:text-foreground'
-                      }`}
-                    aria-label="Open WhatsApp chat"
-                  >
-                    <FaWhatsapp size={18} />
-                  </button>
-                ) : null
-              }
-            />
+            <div className="flex items-center gap-2">
+              <Input
+                placeholder={t('createManualOrder.phonePlaceholder')}
+                value={form.billingData.phone}
+                onChange={(e) => {
+                  setForm((prev) => ({
+                    ...prev,
+                    billingData: { ...prev.billingData, phone: e.target.value },
+                  }));
+                  dispatch({ type: 'SET_LINKED_USER_ID', userId: null });
+                  dispatch({ type: 'PATCH_FORM_ERRORS', errors: { phone: '' } });
+                  if (phoneWhatsappClicked) {
+                    dispatch({ type: 'SET_WHATSAPP_PHONE_CLICKED', clicked: false });
+                  }
+                }}
+                onFocus={() => dispatch({ type: 'SET_FOCUSED_FIELD', field: 'phone' })}
+                onBlur={() => {
+                  setTimeout(() => dispatch({ type: 'CLEAR_FOCUSED_FIELD_IF', field: 'phone' }), 150);
+                  if (skipBlurValidationRef.current) {
+                    skipBlurValidationRef.current = false;
+                    return;
+                  }
+                  const phone = form.billingData.phone.trim();
+                  if (!phone) {
+                    dispatch({
+                      type: 'PATCH_FORM_ERRORS',
+                      errors: { phone: t('createManualOrder.errors.phoneRequired') },
+                    });
+                  } else if (!validatePhoneNumber(form.billingData.phone, form.billingData.country)) {
+                    dispatch({
+                      type: 'PATCH_FORM_ERRORS',
+                      errors: { phone: t('createManualOrder.errors.phoneInvalid') || 'Invalid phone number' },
+                    });
+                  }
+                }}
+                error={formErrors.phone}
+                className="w-full"
+              />
+              <div className="flex items-center gap-1 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => {
+                    dispatch({ type: 'SET_WHATSAPP_PHONE_CLICKED', clicked: true });
+                    dispatch({ type: 'PATCH_FORM_ERRORS', errors: { phone: '' } });
+                    window.open(
+                      `https://wa.me/${form.billingData.phone.replace(/\D/g, '')}`,
+                      '_blank',
+                    );
+                  }}
+                  disabled={form.billingData.phone.replace(/\D/g, '').length === 0}
+                  className={`w-9 h-9 flex items-center justify-center rounded-lg border transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${phoneWhatsappClicked
+                    ? 'border-success text-success bg-success/5'
+                    : 'border-stroke text-success hover:bg-success/5 hover:border-success'
+                    }`}
+                  aria-label="Open WhatsApp chat"
+                >
+                  <FaWhatsapp size={18} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const phone = form.billingData.phone;
+                    if (!phone) return;
+                    navigator.clipboard.writeText(phone);
+                    toast.success(t('createManualOrder.phoneCopied') || 'Phone number copied');
+                  }}
+                  disabled={form.billingData.phone.replace(/\D/g, '').length === 0}
+                  className="w-9 h-9 flex items-center justify-center rounded-lg border border-stroke text-secondary hover:text-foreground hover:bg-muted/50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  aria-label="Copy phone number"
+                >
+                  <LuCopy size={16} />
+                </button>
+              </div>
+            </div>
             {!phoneWhatsappClicked && form.billingData.phone.replace(/\D/g, '').length > 0 && (
               <p className="text-xs text-secondary">
                 {t('createManualOrder.whatsappClickHint') || 'Click the WhatsApp icon to validate the phone number'}
@@ -2010,9 +2020,6 @@ export default function CreateManualOrderModal({
         </h4>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-foreground mb-2">
-              {t('createManualOrder.sacrificeFor')}
-            </label>
             <MultiNameInput
               value={form.reservationData.sacrificeFor}
               onChange={(value) =>
@@ -2026,7 +2033,6 @@ export default function CreateManualOrderModal({
             />
           </div>
           <Dropdown
-            label={t('createManualOrder.intention')}
             value={form.reservationData.intention}
             options={intentionOptions}
             onChange={(val) =>
@@ -2038,9 +2044,6 @@ export default function CreateManualOrderModal({
             placeholder={t('createManualOrder.selectIntention')}
           />
           <div>
-            <label className="block text-sm font-medium text-foreground mb-2">
-              {t('createManualOrder.gender')}
-            </label>
             <div className="flex flex-wrap gap-4">
               {genderOptions.map((option) => (
                 <RadioButton
@@ -2061,9 +2064,6 @@ export default function CreateManualOrderModal({
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-foreground mb-2">
-              {t('createManualOrder.isAlive')}
-            </label>
             <div className="flex flex-wrap gap-4">
               {isAliveOptions.map((option) => (
                 <RadioButton
@@ -2084,9 +2084,6 @@ export default function CreateManualOrderModal({
             </div>
           </div>
           <div className="sm:col-span-2">
-            <label className="block text-sm font-medium text-foreground mb-2">
-              {t('createManualOrder.shortDuaa')}
-            </label>
             <textarea
               value={form.reservationData.shortDuaa}
               onChange={(e) =>
@@ -2095,14 +2092,12 @@ export default function CreateManualOrderModal({
                   reservationData: { ...prev.reservationData, shortDuaa: e.target.value },
                 }))
               }
+              placeholder={t('createManualOrder.shortDuaa')}
               rows={2}
               className="w-full rounded-lg border border-stroke bg-background p-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors resize-none"
             />
           </div>
           <div className="sm:col-span-2">
-            <label className="block text-sm font-medium text-foreground mb-2">
-              {t('createManualOrder.photo') || 'Photo'}
-            </label>
             <div className="flex items-center gap-3">
               <Button
                 variant="outline"
@@ -2151,7 +2146,6 @@ export default function CreateManualOrderModal({
                   }));
                 }
               }}
-              label={t('createManualOrder.customExecutionDate')}
             />
             {useCustomExecutionDate && (
               <CustomDatePicker
@@ -2163,7 +2157,6 @@ export default function CreateManualOrderModal({
                   }))
                 }
                 locale={locale}
-                label={t('createManualOrder.executionDate')}
                 placeholder={t('createManualOrder.executionDate')}
                 minDate={(() => {
                   const today = new Date();

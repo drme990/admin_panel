@@ -1,7 +1,6 @@
 'use client';
 
 import { LuMinus, LuPlus } from 'react-icons/lu';
-import Button from '@/components/ui/button';
 
 interface QuantityInputProps {
   value: number;
@@ -34,49 +33,38 @@ export default function QuantityInput({
   const decrement = () => onChange(clamp(value - 1));
   const increment = () => onChange(clamp(value + 1));
 
-  const btnSize = compact ? 'h-6 w-6' : 'h-7 w-7';
+  const circleSize = compact ? 'w-7 h-7' : 'w-8 h-8';
   const iconSize = compact ? 14 : 16;
-  const inputPadding = compact ? 'px-7 py-2 text-sm' : 'px-10 py-2';
+  const numText = compact ? 'text-base' : 'text-xl';
+  const numWidth = compact ? 'w-4' : 'w-6';
 
   return (
-    <div className="relative">
+    <div className="flex flex-col items-center gap-2">
       {label && (
-        <label className="block text-sm font-medium text-foreground mb-2">
-          {label}
-        </label>
+        <span className="text-foreground font-medium text-sm">{label}</span>
       )}
-      <div className="relative flex items-center">
-        <Button
+      <div className="flex items-center gap-3">
+        <button
           type="button"
-          variant="ghost"
-          size="custom"
-          className={`absolute left-1.5 z-10 ${btnSize} p-0 text-secondary hover:text-foreground`}
-          onClick={decrement}
-          disabled={disabled || value <= min}
-          aria-label="Decrease quantity"
-        >
-          <LuMinus size={iconSize} />
-        </Button>
-        <input
-          type="number"
-          min={min}
-          max={max}
-          value={value}
-          disabled={disabled}
-          onChange={(e) => onChange(clamp(parseInt(e.target.value, 10) || min))}
-          className={`w-full ${inputPadding} rounded-lg border border-stroke bg-background text-foreground text-center focus:outline-none focus:ring-2 focus:ring-primary focus:border-success disabled:opacity-50 disabled:cursor-not-allowed [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`}
-        />
-        <Button
-          type="button"
-          variant="ghost"
-          size="custom"
-          className={`absolute right-1.5 z-10 ${btnSize} p-0 text-secondary hover:text-foreground`}
           onClick={increment}
           disabled={disabled || (max !== undefined && value >= max)}
           aria-label="Increase quantity"
+          className={`${circleSize} rounded-full bg-primary text-primary-text flex items-center justify-center hover:bg-primary/80 transition-colors shadow disabled:opacity-40 disabled:cursor-not-allowed`}
         >
           <LuPlus size={iconSize} />
-        </Button>
+        </button>
+        <span className={`${numText} font-bold text-foreground ${numWidth} text-center`}>
+          {value}
+        </span>
+        <button
+          type="button"
+          onClick={decrement}
+          disabled={disabled || value <= min}
+          aria-label="Decrease quantity"
+          className={`${circleSize} rounded-full bg-primary text-primary-text flex items-center justify-center hover:bg-primary/80 transition-colors shadow disabled:opacity-40 disabled:cursor-not-allowed`}
+        >
+          <LuMinus size={iconSize} />
+        </button>
       </div>
       {error && <p className="text-xs text-error mt-1">{error}</p>}
     </div>

@@ -6,6 +6,8 @@ type Props = {
   placeholder?: string;
   label?: string;
   rows?: number;
+  maxLength?: number;
+  showCount?: boolean;
 };
 
 export default function Textarea({
@@ -13,7 +15,9 @@ export default function Textarea({
   onChange,
   placeholder,
   label,
-  rows = 4
+  rows = 4,
+  maxLength,
+  showCount = false,
 }: Props) {
 
   return (
@@ -26,11 +30,22 @@ export default function Textarea({
 
       <textarea
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) => {
+          const val = maxLength ? e.target.value.slice(0, maxLength) : e.target.value;
+          onChange(val);
+        }}
         rows={rows}
-        className="w-full px-3 py-2 text-sm border border-stroke rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-success"
+        maxLength={maxLength}
+        className="w-full px-3 py-2 text-sm border border-stroke rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-success resize-none"
         placeholder={placeholder}
       />
+      {showCount && maxLength && (
+        <div className="text-right">
+          <span className={`text-xs ${value.length >= maxLength ? 'text-error' : 'text-secondary'}`}>
+            {value.length}/{maxLength}
+          </span>
+        </div>
+      )}
     </div>
   );
 }

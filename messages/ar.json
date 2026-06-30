@@ -128,8 +128,8 @@
       "items": "العناصر",
       "itemCount": "عناصر",
       "item": "عنصر",
-      "addItem": "إضافة عنصر",
-      "removeItem": "إزالة العنصر",
+      "addItem": "إضافة منتج",
+      "removeItem": "إزالة المنتج",
       "existingProduct": "موجود",
       "customProduct": "مخصص",
       "customName": "اسم مخصص",
@@ -689,8 +689,8 @@
       "items": "العناصر",
       "itemCount": "عناصر",
       "item": "عنصر",
-      "addItem": "إضافة عنصر",
-      "removeItem": "إزالة العنصر",
+      "addItem": "إضافة منتج",
+      "removeItem": "إزالة المنتج",
       "existingProduct": "موجود",
       "customProduct": "مخصص",
       "customName": "اسم مخصص",
@@ -1060,8 +1060,8 @@
           "cancelled": "ملغى"
         },
         "statusLabel": "الحالة",
-        "addItem": "إضافة صنف",
-        "removeItem": "إزالة صنف",
+        "addItem": "إضافة منتج",
+        "removeItem": "إزالة المنتج",
         "items": "الأصناف"
       },
       "payouts": {

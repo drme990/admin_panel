@@ -39,7 +39,7 @@ export default function QuantityInput({
   const numWidth = compact ? 'w-4' : 'w-6';
 
   return (
-    <div className="flex flex-col items-center gap-2">
+    <div className="flex flex-col items-center justify-center gap-2 h-full">
       {label && (
         <span className="text-foreground font-medium text-sm">{label}</span>
       )}

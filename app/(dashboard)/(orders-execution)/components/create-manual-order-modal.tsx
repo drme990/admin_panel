@@ -17,6 +17,7 @@ import RadioButton from '@/components/ui/radio-button';
 import Tabs from '@/components/ui/tabs';
 import Switch from '@/components/ui/switch';
 import CustomDatePicker from '@/components/ui/custom-date-picker';
+import Textarea from '@/components/ui/textarea';
 import { uploadImageToR2, uploadInvoiceToR2, deleteOldImage } from '../../../../lib/image-upload-utils';
 
 import { LuCopy, LuCheck, LuRefreshCw, LuUpload, LuDownload, LuPlus, LuX, LuAtSign, LuPencil, LuUserCheck, LuImage, LuFileText } from 'react-icons/lu';
@@ -702,6 +703,41 @@ export default function CreateManualOrderModal({
     [getProduct, form.currency],
   );
 
+  // Shared currency change handler — updates all auto-priced items to the new currency
+  const handleCurrencyChange = useCallback(
+    (val: string) => {
+      setForm((prev) => {
+        const updatedItems = prev.items.map((item, index) => {
+          if (item.type !== 'existing' || !item.productId) return item;
+          if (priceEditIndices.includes(index)) return item;
+          const product = getProduct(item.productId);
+          if (!product) return item;
+          const size = product.sizes?.[item.sizeIndex];
+          if (!size) return item;
+          let unitPrice = 0;
+          if (typeof size.manualPrice === 'number' && size.manualPrice > 0) {
+            const manualCurrencyPrice = size.manualPrices?.find(
+              (p: { currencyCode: string; amount: number }) => p.currencyCode === val,
+            );
+            unitPrice = manualCurrencyPrice ? manualCurrencyPrice.amount : size.manualPrice;
+          } else {
+            unitPrice = size.price ?? 0;
+            const currencyPrice = size.prices?.find(
+              (p: { currencyCode: string; amount: number }) => p.currencyCode === val,
+            );
+            if (currencyPrice) unitPrice = currencyPrice.amount;
+          }
+          return {
+            ...item,
+            overridePrice: unitPrice > 0 ? unitPrice.toFixed(2) : '',
+          };
+        });
+        return { ...prev, currency: val, items: updatedItems };
+      });
+    },
+    [getProduct, priceEditIndices],
+  );
+
   // Compute the full order total based on selected items + currency
   const fullOrderTotal = useMemo(() => {
     let total = 0;
@@ -1374,8 +1410,8 @@ export default function CreateManualOrderModal({
                 </div>
                 {item.type === 'existing' ? (
                   <>
-                    <div className="flex flex-row gap-2 sm:gap-3">
-                      <div className="shrink-0 w-20 sm:w-28">
+                    <div className="flex flex-row gap-2 sm:gap-3 items-center">
+                      <div className="shrink-0 w-20 sm:w-28 self-stretch">
                         <QuantityInput
                           compact
                           value={item.quantity}
@@ -1384,7 +1420,7 @@ export default function CreateManualOrderModal({
                           error={formErrors[`item_${index}_quantity`]}
                         />
                       </div>
-                      <div className="flex-1 min-w-0">
+                      <div className={`flex-1 min-w-0 ${locale === 'ar' ? 'mr-2' : 'ml-2'}`}>
                         <Dropdown
                           value={item.productId}
                           options={productOptions}
@@ -1428,49 +1464,59 @@ export default function CreateManualOrderModal({
                         />
                       </div>
                     )}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <Input
-                        ref={(el) => {
-                          if (el) priceInputRefs.current.set(index, el);
-                          else priceInputRefs.current.delete(index);
-                        }}
-                        type="number"
-                        min={0}
-                        step="0.01"
-                        value={item.overridePrice}
-                        placeholder={getLoadedUnitPrice(item).toFixed(2)}
-                        onChange={(e) =>
-                          updateItem(index, { overridePrice: e.target.value })
-                        }
-                        onBlur={() =>
-                          dispatch({ type: 'BLUR_CUSTOM_PRICE', index })
-                        }
-                        readOnly={!priceEditIndices.includes(index)}
-                        tabIndex={priceEditIndices.includes(index) ? 0 : -1}
-                        className={priceEditIndices.includes(index)
-                          ? ''
-                          : 'focus:ring-0 focus:border-stroke cursor-default'
-                        }
-                        suffix={
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const willEdit = !priceEditIndices.includes(index);
-                              dispatch({ type: 'TOGGLE_PRICE_EDIT', index });
-                              if (willEdit) {
-                                setTimeout(() => priceInputRefs.current.get(index)?.focus(), 0);
-                              }
-                            }}
-                            className={`transition-colors ${priceEditIndices.includes(index)
-                              ? 'text-success hover:text-success/80'
-                              : 'text-secondary hover:text-foreground'
-                              }`}
-                            aria-label={priceEditIndices.includes(index) ? 'Lock price' : 'Edit price'}
-                          >
-                            <LuPencil size={16} />
-                          </button>
-                        }
-                      />
+                    <div className="flex flex-row gap-2 sm:gap-3 items-center mt-3">
+                      <div className="flex-1 min-w-0">
+                        <Input
+                          ref={(el) => {
+                            if (el) priceInputRefs.current.set(index, el);
+                            else priceInputRefs.current.delete(index);
+                          }}
+                          type="number"
+                          min={0}
+                          step="0.01"
+                          value={item.overridePrice}
+                          placeholder={getLoadedUnitPrice(item).toFixed(2)}
+                          onChange={(e) =>
+                            updateItem(index, { overridePrice: e.target.value })
+                          }
+                          onBlur={() =>
+                            dispatch({ type: 'BLUR_CUSTOM_PRICE', index })
+                          }
+                          readOnly={!priceEditIndices.includes(index)}
+                          tabIndex={priceEditIndices.includes(index) ? 0 : -1}
+                          className={priceEditIndices.includes(index)
+                            ? ''
+                            : 'focus:ring-0 focus:border-stroke cursor-default'
+                          }
+                          suffix={
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const willEdit = !priceEditIndices.includes(index);
+                                dispatch({ type: 'TOGGLE_PRICE_EDIT', index });
+                                if (willEdit) {
+                                  setTimeout(() => priceInputRefs.current.get(index)?.focus(), 0);
+                                }
+                              }}
+                              className={`transition-colors ${priceEditIndices.includes(index)
+                                ? 'text-success hover:text-success/80'
+                                : 'text-secondary hover:text-foreground'
+                                }`}
+                              aria-label={priceEditIndices.includes(index) ? 'Lock price' : 'Edit price'}
+                            >
+                              <LuPencil size={16} />
+                            </button>
+                          }
+                        />
+                      </div>
+                      <div className="shrink-0 w-20 sm:w-24">
+                        <Dropdown
+                          value={form.currency}
+                          options={currencyOptions}
+                          onChange={handleCurrencyChange}
+                          placeholder={t('createManualOrder.selectCurrency')}
+                        />
+                      </div>
                     </div>
                     {customPriceBlurred.includes(index) && priceWarnings.find((w) => w.index === index) && (
                       <p className="text-xs text-orange-600 dark:text-orange-400 -mt-1">
@@ -1480,8 +1526,8 @@ export default function CreateManualOrderModal({
                   </>
                 ) : (
                   <>
-                    <div className="flex flex-row gap-2 sm:gap-3">
-                      <div className="shrink-0 w-20 sm:w-28">
+                    <div className="flex flex-row gap-2 sm:gap-3 items-center">
+                      <div className="shrink-0 w-20 sm:w-28 self-stretch">
                         <QuantityInput
                           compact
                           value={item.quantity}
@@ -1490,7 +1536,7 @@ export default function CreateManualOrderModal({
                           error={formErrors[`item_${index}_quantity`]}
                         />
                       </div>
-                      <div className="flex-1 min-w-0">
+                      <div className={`flex-1 min-w-0 ${locale === 'ar' ? 'mr-2' : 'ml-2'}`}>
                         <Input
                           value={item.customName}
                           placeholder={t('createManualOrder.customNamePlaceholder') || 'Product name'}
@@ -1510,17 +1556,29 @@ export default function CreateManualOrderModal({
                         }
                       />
                     </div>
-                    <Input
-                      type="number"
-                      min={0}
-                      step="0.01"
-                      value={item.customPrice}
-                      placeholder="0.00"
-                      onChange={(e) =>
-                        updateItem(index, { customPrice: e.target.value })
-                      }
-                      error={formErrors[`item_${index}_price`]}
-                    />
+                    <div className="flex flex-row gap-2 sm:gap-3 items-center mt-3">
+                      <div className="flex-1 min-w-0">
+                        <Input
+                          type="number"
+                          min={0}
+                          step="0.01"
+                          value={item.customPrice}
+                          placeholder="0.00"
+                          onChange={(e) =>
+                            updateItem(index, { customPrice: e.target.value })
+                          }
+                          error={formErrors[`item_${index}_price`]}
+                        />
+                      </div>
+                      <div className="shrink-0 w-20 sm:w-24">
+                        <Dropdown
+                          value={form.currency}
+                          options={currencyOptions}
+                          onChange={handleCurrencyChange}
+                          placeholder={t('createManualOrder.selectCurrency')}
+                        />
+                      </div>
+                    </div>
                   </>
                 )}
               </div>
@@ -1552,7 +1610,7 @@ export default function CreateManualOrderModal({
                 <span className="text-secondary">
                   {t('createManualOrder.fullAmount') || 'Full Order Total'}
                 </span>
-                <span className="font-bold text-foreground">
+                <span className="font-bold text-orange-500 dark:text-orange-400">
                   {fullOrderTotal.toFixed(2)} {form.currency}
                 </span>
               </div>
@@ -1589,7 +1647,7 @@ export default function CreateManualOrderModal({
                       dispatch({ type: 'SET_PAYMENT_EDIT_FIELD', field: 'paid' });
                     }}
                     className={`w-full px-3 py-2 rounded-lg border text-sm font-bold transition-colors focus:outline-none focus:ring-2 ${paymentEditField === 'remaining'
-                      ? 'border-stroke bg-muted/50 text-secondary cursor-not-allowed'
+                      ? 'border-success/30 bg-success/5 text-success cursor-not-allowed'
                       : 'border-success/40 bg-success/5 text-success focus:ring-success/20 focus:border-success'
                       }`}
                   />
@@ -1627,7 +1685,7 @@ export default function CreateManualOrderModal({
                       dispatch({ type: 'SET_PAYMENT_EDIT_FIELD', field: 'remaining' });
                     }}
                     className={`w-full px-3 py-2 rounded-lg border text-sm font-bold transition-colors focus:outline-none focus:ring-2 ${paymentEditField === 'paid'
-                      ? 'border-stroke bg-muted/50 text-secondary cursor-not-allowed'
+                      ? 'border-error/30 bg-error/5 text-error cursor-not-allowed'
                       : 'border-error/40 bg-error/5 text-error focus:ring-error/20 focus:border-error'
                       }`}
                   />
@@ -1645,59 +1703,15 @@ export default function CreateManualOrderModal({
             </div>
           )}
 
-          <div className="flex flex-row gap-3">
-            <div className="w-1/5 shrink-0">
-              <Dropdown
-                value={form.currency}
-                options={currencyOptions}
-                onChange={(val) => {
-                  setForm((prev) => {
-                    const updatedItems = prev.items.map((item, index) => {
-                      if (item.type !== 'existing' || !item.productId) return item;
-                      // Skip items that are being manually edited
-                      if (priceEditIndices.includes(index)) return item;
-                      // Recalculate the loaded price for the new currency
-                      const product = getProduct(item.productId);
-                      if (!product) return item;
-                      const size = product.sizes?.[item.sizeIndex];
-                      if (!size) return item;
-                      let unitPrice = 0;
-                      if (typeof size.manualPrice === 'number' && size.manualPrice > 0) {
-                        const manualCurrencyPrice = size.manualPrices?.find(
-                          (p: { currencyCode: string; amount: number }) => p.currencyCode === val,
-                        );
-                        unitPrice = manualCurrencyPrice ? manualCurrencyPrice.amount : size.manualPrice;
-                      } else {
-                        unitPrice = size.price ?? 0;
-                        const currencyPrice = size.prices?.find(
-                          (p: { currencyCode: string; amount: number }) => p.currencyCode === val,
-                        );
-                        if (currencyPrice) unitPrice = currencyPrice.amount;
-                      }
-                      return {
-                        ...item,
-                        overridePrice: unitPrice > 0 ? unitPrice.toFixed(2) : '',
-                      };
-                    });
-                    return { ...prev, currency: val, items: updatedItems };
-                  });
-                }}
-                placeholder={t('createManualOrder.selectCurrency')}
-                error={formErrors.currency}
-              />
-            </div>
-            <div className="flex-1 min-w-0">
-              <Dropdown
-                value={form.paymentMethod}
-                options={paymentMethodOptions}
-                onChange={(val) =>
-                  setForm((prev) => ({ ...prev, paymentMethod: val }))
-                }
-                placeholder={t('createManualOrder.paymentMethod')}
-                error={formErrors.paymentMethod}
-              />
-            </div>
-          </div>
+          <Dropdown
+            value={form.paymentMethod}
+            options={paymentMethodOptions}
+            onChange={(val) =>
+              setForm((prev) => ({ ...prev, paymentMethod: val }))
+            }
+            placeholder={t('createManualOrder.paymentMethod')}
+            error={formErrors.paymentMethod}
+          />
 
           {!isEasykash && (
             <div className="flex flex-col gap-2">
@@ -1829,6 +1843,168 @@ export default function CreateManualOrderModal({
               {t('createManualOrder.easykashPartialHint') || 'An EasyKash payment link will be generated for the remaining amount. The paid portion will be recorded as a manual payment.'}
             </p>
           )}
+        </div>
+      </div>
+
+      {/* Reservation Data */}
+      <div className="border-t border-stroke pt-4">
+        <h4 className="text-sm font-semibold text-foreground mb-3">
+          {t('createManualOrder.reservationData')}
+        </h4>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <MultiNameInput
+              value={form.reservationData.sacrificeFor}
+              onChange={(value) =>
+                setForm((prev) => ({
+                  ...prev,
+                  reservationData: { ...prev.reservationData, sacrificeFor: value },
+                }))
+              }
+              placeholder={t('createManualOrder.sacrificeForPlaceholder')}
+              isRTL={locale === 'ar'}
+            />
+          </div>
+          <Dropdown
+            value={form.reservationData.intention}
+            options={intentionOptions}
+            onChange={(val) =>
+              setForm((prev) => ({
+                ...prev,
+                reservationData: { ...prev.reservationData, intention: val },
+              }))
+            }
+            placeholder={t('createManualOrder.selectIntention')}
+          />
+          <div>
+            <div className="flex flex-wrap gap-4">
+              {genderOptions.map((option) => (
+                <RadioButton
+                  key={`gender-${option.value}`}
+                  id={`gender-${option.value}`}
+                  name="gender"
+                  value={option.value}
+                  label={option.label}
+                  checked={form.reservationData.gender === option.value}
+                  onChange={(val) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      reservationData: { ...prev.reservationData, gender: val },
+                    }))
+                  }
+                />
+              ))}
+            </div>
+          </div>
+          <div>
+            <div className="flex flex-wrap gap-4">
+              {isAliveOptions.map((option) => (
+                <RadioButton
+                  key={`status-${option.value}`}
+                  id={`status-${option.value}`}
+                  name="status"
+                  value={option.value}
+                  label={option.label}
+                  checked={form.reservationData.isAlive === option.value}
+                  onChange={(val) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      reservationData: { ...prev.reservationData, isAlive: val },
+                    }))
+                  }
+                />
+              ))}
+            </div>
+          </div>
+          <div className="sm:col-span-2">
+            <Textarea
+              value={form.reservationData.shortDuaa}
+              onChange={(value) =>
+                setForm((prev) => ({
+                  ...prev,
+                  reservationData: { ...prev.reservationData, shortDuaa: value },
+                }))
+              }
+              placeholder={t('createManualOrder.shortDuaa')}
+              rows={2}
+              maxLength={300}
+              showCount
+            />
+          </div>
+          <div className="sm:col-span-2">
+            <div className="flex items-center gap-3">
+              <Button
+                variant="outline"
+                size="custom"
+                className="px-3 py-2"
+                onClick={() => photoInputRef.current?.click()}
+                disabled={uploadingPhoto}
+              >
+                {uploadingPhoto ? (
+                  <LuRefreshCw size={16} className="animate-spin me-2" />
+                ) : (
+                  <LuUpload size={16} className="me-2" />
+                )}
+                {form.reservationData.photo
+                  ? t('createManualOrder.changePhoto') || 'Change Photo'
+                  : t('createManualOrder.uploadPhoto') || 'Upload Photo'}
+              </Button>
+              {form.reservationData.photo && (
+                <a
+                  href={form.reservationData.photo}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-primary hover:underline truncate max-w-50"
+                >
+                  {t('createManualOrder.viewPhoto') || 'View Photo'}
+                </a>
+              )}
+            </div>
+            <input
+              ref={photoInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handlePhotoFileChange}
+            />
+          </div>
+          <div className="flex flex-col gap-3">
+            <Switch
+              checked={useCustomExecutionDate}
+              onChange={(checked) => {
+                dispatch({ type: 'SET_USE_CUSTOM_EXECUTION_DATE', checked });
+                if (!checked) {
+                  setForm((prev) => ({
+                    ...prev,
+                    reservationData: { ...prev.reservationData, executionDate: '' },
+                  }));
+                }
+              }}
+              label={t('createManualOrder.customExecutionDate')}
+            />
+            {useCustomExecutionDate && (
+              <CustomDatePicker
+                value={form.reservationData.executionDate}
+                onChange={(val) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    reservationData: { ...prev.reservationData, executionDate: val },
+                  }))
+                }
+                locale={locale}
+                placeholder={t('createManualOrder.executionDate')}
+                minDate={(() => {
+                  const today = new Date();
+                  return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+                })()}
+              />
+            )}
+            {!useCustomExecutionDate && (
+              <p className="text-sm text-secondary">
+                {t('createManualOrder.defaultExecutionDateHint')}
+              </p>
+            )}
+          </div>
         </div>
       </div>
 
@@ -1975,49 +2151,49 @@ export default function CreateManualOrderModal({
             )}
           </div>
           <div className="relative">
-            <Input
-              placeholder={t('createManualOrder.emailPlaceholder')}
-              type="email"
-              value={form.billingData.email}
-              onChange={(e) => {
-                setForm((prev) => ({
-                  ...prev,
-                  billingData: { ...prev.billingData, email: e.target.value },
-                }));
-                dispatch({ type: 'SET_LINKED_USER_ID', userId: null });
-              }}
-              onFocus={() => dispatch({ type: 'SET_FOCUSED_FIELD', field: 'email' })}
-              onBlur={() => {
-                setTimeout(() => dispatch({ type: 'CLEAR_FOCUSED_FIELD_IF', field: 'email' }), 150);
-                if (skipBlurValidationRef.current) {
-                  skipBlurValidationRef.current = false;
-                  return;
-                }
-              }}
-              error={formErrors.email}
-              suffix={
-                !form.billingData.email.trim() && form.billingData.phone.trim() ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setForm((prev) => ({
-                        ...prev,
-                        billingData: {
-                          ...prev.billingData,
-                          email: `${extractDigits(prev.billingData.phone)}@gmail.com`,
-                        },
-                      }));
-                      dispatch({ type: 'SET_LINKED_USER_ID', userId: null });
-                      dispatch({ type: 'SET_FOUND_USERS', users: [] });
-                    }}
-                    className="text-secondary hover:text-foreground transition-colors"
-                    aria-label="Use phone as Gmail"
-                  >
-                    <LuAtSign size={16} />
-                  </button>
-                ) : null
-              }
-            />
+            <div className="flex items-center gap-2">
+              <Input
+                placeholder={t('createManualOrder.emailPlaceholder')}
+                type="email"
+                value={form.billingData.email}
+                onChange={(e) => {
+                  setForm((prev) => ({
+                    ...prev,
+                    billingData: { ...prev.billingData, email: e.target.value },
+                  }));
+                  dispatch({ type: 'SET_LINKED_USER_ID', userId: null });
+                }}
+                onFocus={() => dispatch({ type: 'SET_FOCUSED_FIELD', field: 'email' })}
+                onBlur={() => {
+                  setTimeout(() => dispatch({ type: 'CLEAR_FOCUSED_FIELD_IF', field: 'email' }), 150);
+                  if (skipBlurValidationRef.current) {
+                    skipBlurValidationRef.current = false;
+                    return;
+                  }
+                }}
+                error={formErrors.email}
+                className="w-full"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  setForm((prev) => ({
+                    ...prev,
+                    billingData: {
+                      ...prev.billingData,
+                      email: `${extractDigits(prev.billingData.phone)}@gmail.com`,
+                    },
+                  }));
+                  dispatch({ type: 'SET_LINKED_USER_ID', userId: null });
+                  dispatch({ type: 'SET_FOUND_USERS', users: [] });
+                }}
+                disabled={!(!form.billingData.email.trim() && form.billingData.phone.trim())}
+                className="w-9 h-9 shrink-0 flex items-center justify-center rounded-lg border border-stroke text-secondary hover:text-foreground hover:bg-muted/50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                aria-label="Use phone as Gmail"
+              >
+                <LuAtSign size={16} />
+              </button>
+            </div>
             {focusedField === 'email' && foundUsers.length > 0 && (
               <div className="absolute z-20 left-0 right-0 top-full mt-1 rounded-lg border border-stroke bg-card-bg shadow-xl max-h-60 overflow-y-auto p-1">
                 {foundUsers.map((user) => (
@@ -2046,166 +2222,6 @@ export default function CreateManualOrderModal({
             placeholder={t('createManualOrder.countryPlaceholder')}
             error={formErrors.country}
           />
-        </div>
-      </div>
-
-      {/* Reservation Data */}
-      <div className="border-t border-stroke pt-4">
-        <h4 className="text-sm font-semibold text-foreground mb-3">
-          {t('createManualOrder.reservationData')}
-        </h4>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <MultiNameInput
-              value={form.reservationData.sacrificeFor}
-              onChange={(value) =>
-                setForm((prev) => ({
-                  ...prev,
-                  reservationData: { ...prev.reservationData, sacrificeFor: value },
-                }))
-              }
-              placeholder={t('createManualOrder.sacrificeForPlaceholder')}
-              isRTL={locale === 'ar'}
-            />
-          </div>
-          <Dropdown
-            value={form.reservationData.intention}
-            options={intentionOptions}
-            onChange={(val) =>
-              setForm((prev) => ({
-                ...prev,
-                reservationData: { ...prev.reservationData, intention: val },
-              }))
-            }
-            placeholder={t('createManualOrder.selectIntention')}
-          />
-          <div>
-            <div className="flex flex-wrap gap-4">
-              {genderOptions.map((option) => (
-                <RadioButton
-                  key={`gender-${option.value}`}
-                  id={`gender-${option.value}`}
-                  name="gender"
-                  value={option.value}
-                  label={option.label}
-                  checked={form.reservationData.gender === option.value}
-                  onChange={(val) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      reservationData: { ...prev.reservationData, gender: val },
-                    }))
-                  }
-                />
-              ))}
-            </div>
-          </div>
-          <div>
-            <div className="flex flex-wrap gap-4">
-              {isAliveOptions.map((option) => (
-                <RadioButton
-                  key={`status-${option.value}`}
-                  id={`status-${option.value}`}
-                  name="status"
-                  value={option.value}
-                  label={option.label}
-                  checked={form.reservationData.isAlive === option.value}
-                  onChange={(val) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      reservationData: { ...prev.reservationData, isAlive: val },
-                    }))
-                  }
-                />
-              ))}
-            </div>
-          </div>
-          <div className="sm:col-span-2">
-            <textarea
-              value={form.reservationData.shortDuaa}
-              onChange={(e) =>
-                setForm((prev) => ({
-                  ...prev,
-                  reservationData: { ...prev.reservationData, shortDuaa: e.target.value },
-                }))
-              }
-              placeholder={t('createManualOrder.shortDuaa')}
-              rows={2}
-              className="w-full rounded-lg border border-stroke bg-background p-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors resize-none"
-            />
-          </div>
-          <div className="sm:col-span-2">
-            <div className="flex items-center gap-3">
-              <Button
-                variant="outline"
-                size="custom"
-                className="px-3 py-2"
-                onClick={() => photoInputRef.current?.click()}
-                disabled={uploadingPhoto}
-              >
-                {uploadingPhoto ? (
-                  <LuRefreshCw size={16} className="animate-spin me-2" />
-                ) : (
-                  <LuUpload size={16} className="me-2" />
-                )}
-                {form.reservationData.photo
-                  ? t('createManualOrder.changePhoto') || 'Change Photo'
-                  : t('createManualOrder.uploadPhoto') || 'Upload Photo'}
-              </Button>
-              {form.reservationData.photo && (
-                <a
-                  href={form.reservationData.photo}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sm text-primary hover:underline truncate max-w-50"
-                >
-                  {t('createManualOrder.viewPhoto') || 'View Photo'}
-                </a>
-              )}
-            </div>
-            <input
-              ref={photoInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={handlePhotoFileChange}
-            />
-          </div>
-          <div className="flex flex-col gap-3">
-            <Switch
-              checked={useCustomExecutionDate}
-              onChange={(checked) => {
-                dispatch({ type: 'SET_USE_CUSTOM_EXECUTION_DATE', checked });
-                if (!checked) {
-                  setForm((prev) => ({
-                    ...prev,
-                    reservationData: { ...prev.reservationData, executionDate: '' },
-                  }));
-                }
-              }}
-            />
-            {useCustomExecutionDate && (
-              <CustomDatePicker
-                value={form.reservationData.executionDate}
-                onChange={(val) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    reservationData: { ...prev.reservationData, executionDate: val },
-                  }))
-                }
-                locale={locale}
-                placeholder={t('createManualOrder.executionDate')}
-                minDate={(() => {
-                  const today = new Date();
-                  return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-                })()}
-              />
-            )}
-            {!useCustomExecutionDate && (
-              <p className="text-sm text-secondary">
-                {t('createManualOrder.defaultExecutionDateHint')}
-              </p>
-            )}
-          </div>
         </div>
       </div>
 

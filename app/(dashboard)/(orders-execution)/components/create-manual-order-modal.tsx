@@ -1645,54 +1645,59 @@ export default function CreateManualOrderModal({
             </div>
           )}
 
-          <Dropdown
-            value={form.currency}
-            options={currencyOptions}
-            onChange={(val) => {
-              setForm((prev) => {
-                const updatedItems = prev.items.map((item, index) => {
-                  if (item.type !== 'existing' || !item.productId) return item;
-                  // Skip items that are being manually edited
-                  if (priceEditIndices.includes(index)) return item;
-                  // Recalculate the loaded price for the new currency
-                  const product = getProduct(item.productId);
-                  if (!product) return item;
-                  const size = product.sizes?.[item.sizeIndex];
-                  if (!size) return item;
-                  let unitPrice = 0;
-                  if (typeof size.manualPrice === 'number' && size.manualPrice > 0) {
-                    const manualCurrencyPrice = size.manualPrices?.find(
-                      (p: { currencyCode: string; amount: number }) => p.currencyCode === val,
-                    );
-                    unitPrice = manualCurrencyPrice ? manualCurrencyPrice.amount : size.manualPrice;
-                  } else {
-                    unitPrice = size.price ?? 0;
-                    const currencyPrice = size.prices?.find(
-                      (p: { currencyCode: string; amount: number }) => p.currencyCode === val,
-                    );
-                    if (currencyPrice) unitPrice = currencyPrice.amount;
-                  }
-                  return {
-                    ...item,
-                    overridePrice: unitPrice > 0 ? unitPrice.toFixed(2) : '',
-                  };
-                });
-                return { ...prev, currency: val, items: updatedItems };
-              });
-            }}
-            placeholder={t('createManualOrder.selectCurrency')}
-            error={formErrors.currency}
-          />
-
-          <Dropdown
-            value={form.paymentMethod}
-            options={paymentMethodOptions}
-            onChange={(val) =>
-              setForm((prev) => ({ ...prev, paymentMethod: val }))
-            }
-            placeholder={t('createManualOrder.paymentMethod')}
-            error={formErrors.paymentMethod}
-          />
+          <div className="flex flex-row gap-3">
+            <div className="w-1/5 shrink-0">
+              <Dropdown
+                value={form.currency}
+                options={currencyOptions}
+                onChange={(val) => {
+                  setForm((prev) => {
+                    const updatedItems = prev.items.map((item, index) => {
+                      if (item.type !== 'existing' || !item.productId) return item;
+                      // Skip items that are being manually edited
+                      if (priceEditIndices.includes(index)) return item;
+                      // Recalculate the loaded price for the new currency
+                      const product = getProduct(item.productId);
+                      if (!product) return item;
+                      const size = product.sizes?.[item.sizeIndex];
+                      if (!size) return item;
+                      let unitPrice = 0;
+                      if (typeof size.manualPrice === 'number' && size.manualPrice > 0) {
+                        const manualCurrencyPrice = size.manualPrices?.find(
+                          (p: { currencyCode: string; amount: number }) => p.currencyCode === val,
+                        );
+                        unitPrice = manualCurrencyPrice ? manualCurrencyPrice.amount : size.manualPrice;
+                      } else {
+                        unitPrice = size.price ?? 0;
+                        const currencyPrice = size.prices?.find(
+                          (p: { currencyCode: string; amount: number }) => p.currencyCode === val,
+                        );
+                        if (currencyPrice) unitPrice = currencyPrice.amount;
+                      }
+                      return {
+                        ...item,
+                        overridePrice: unitPrice > 0 ? unitPrice.toFixed(2) : '',
+                      };
+                    });
+                    return { ...prev, currency: val, items: updatedItems };
+                  });
+                }}
+                placeholder={t('createManualOrder.selectCurrency')}
+                error={formErrors.currency}
+              />
+            </div>
+            <div className="flex-1 min-w-0">
+              <Dropdown
+                value={form.paymentMethod}
+                options={paymentMethodOptions}
+                onChange={(val) =>
+                  setForm((prev) => ({ ...prev, paymentMethod: val }))
+                }
+                placeholder={t('createManualOrder.paymentMethod')}
+                error={formErrors.paymentMethod}
+              />
+            </div>
+          </div>
 
           {!isEasykash && (
             <div className="flex flex-col gap-2">

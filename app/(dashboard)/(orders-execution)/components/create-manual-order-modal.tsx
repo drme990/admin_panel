@@ -19,7 +19,7 @@ import Switch from '@/components/ui/switch';
 import CustomDatePicker from '@/components/ui/custom-date-picker';
 import { uploadImageToR2, uploadInvoiceToR2, deleteOldImage } from '../../../../lib/image-upload-utils';
 
-import { LuCopy, LuCheck, LuRefreshCw, LuUpload, LuDownload, LuPlus, LuX, LuAtSign, LuPencil, LuUserCheck } from 'react-icons/lu';
+import { LuCopy, LuCheck, LuRefreshCw, LuUpload, LuDownload, LuPlus, LuX, LuAtSign, LuPencil, LuUserCheck, LuImage, LuFileText } from 'react-icons/lu';
 import { FaWhatsapp } from 'react-icons/fa';
 import { isValidPhoneNumber } from 'libphonenumber-js';
 import { COUNTRIES } from '@/lib/countries';
@@ -444,10 +444,12 @@ export default function CreateManualOrderModal({
     paymentEditField,
   } = ui;
   const invoiceInputRef = useRef<HTMLInputElement | null>(null);
+  const invoiceImageInputRef = useRef<HTMLInputElement | null>(null);
   const photoInputRef = useRef<HTMLInputElement | null>(null);
   const lastLookupRef = useRef<{ phone: string; email: string; source: string }>({ phone: '', email: '', source: '' });
   const skipBlurValidationRef = useRef(false);
   const [invoicePreviewUrl, setInvoicePreviewUrl] = useState<string | null>(null);
+  const [pendingInvoiceReviewed, setPendingInvoiceReviewed] = useState<boolean | null>(null);
 
   const resetForm = useCallback(() => {
     const initialReferralId =
@@ -1675,6 +1677,40 @@ export default function CreateManualOrderModal({
                     <LuRefreshCw size={16} className="animate-spin" />
                     {t('createManualOrder.uploadingInvoice') || 'Uploading...'}
                   </span>
+                ) : pendingInvoiceReviewed !== null ? (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        dispatch({ type: 'SET_INVOICE_REVIEWED', reviewed: pendingInvoiceReviewed });
+                        setPendingInvoiceReviewed(null);
+                        invoiceImageInputRef.current?.click();
+                      }}
+                      className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-stroke hover:border-primary hover:text-primary transition-colors text-sm"
+                    >
+                      <LuImage size={16} />
+                      {t('createManualOrder.uploadAsImage') || 'Image'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        dispatch({ type: 'SET_INVOICE_REVIEWED', reviewed: pendingInvoiceReviewed });
+                        setPendingInvoiceReviewed(null);
+                        invoiceInputRef.current?.click();
+                      }}
+                      className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-stroke hover:border-primary hover:text-primary transition-colors text-sm"
+                    >
+                      <LuFileText size={16} />
+                      {t('createManualOrder.uploadAsFile') || 'File'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPendingInvoiceReviewed(null)}
+                      className="inline-flex items-center gap-1 px-2 py-2 rounded-lg text-secondary hover:text-foreground transition-colors text-sm"
+                    >
+                      <LuX size={16} />
+                    </button>
+                  </div>
                 ) : (
                   <>
                     <Button
@@ -1682,10 +1718,7 @@ export default function CreateManualOrderModal({
                       variant="outline"
                       size="sm"
                       className={formErrors.invoice ? 'border-error text-error hover:text-error hover:border-error' : ''}
-                      onClick={() => {
-                        dispatch({ type: 'SET_INVOICE_REVIEWED', reviewed: true });
-                        invoiceInputRef.current?.click();
-                      }}
+                      onClick={() => setPendingInvoiceReviewed(true)}
                     >
                       <LuUpload size={16} className="me-2" />
                       {t('createManualOrder.uploadReviewedInvoice') || 'Reviewed Invoice'}
@@ -1695,10 +1728,7 @@ export default function CreateManualOrderModal({
                       variant="outline"
                       size="sm"
                       className={formErrors.invoice ? 'border-error text-error hover:text-error hover:border-error' : ''}
-                      onClick={() => {
-                        dispatch({ type: 'SET_INVOICE_REVIEWED', reviewed: false });
-                        invoiceInputRef.current?.click();
-                      }}
+                      onClick={() => setPendingInvoiceReviewed(false)}
                     >
                       <LuUpload size={16} className="me-2" />
                       {t('createManualOrder.uploadUnreviewedInvoice') || 'Unreviewed Invoice'}
@@ -1750,7 +1780,14 @@ export default function CreateManualOrderModal({
               <input
                 ref={invoiceInputRef}
                 type="file"
-                accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
+                accept="application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
+                className="hidden"
+                onChange={handleInvoiceFileChange}
+              />
+              <input
+                ref={invoiceImageInputRef}
+                type="file"
+                accept="image/*"
                 className="hidden"
                 onChange={handleInvoiceFileChange}
               />

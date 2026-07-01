@@ -988,6 +988,21 @@ export default function CreateManualOrderModal({
     }
   };
 
+  const handleRemovePhoto = async () => {
+    const photoUrl = form.reservationData.photo;
+    if (!photoUrl) return;
+
+    setForm((prev) => ({
+      ...prev,
+      reservationData: { ...prev.reservationData, photo: '' },
+    }));
+
+    // Delete from R2 storage
+    deleteOldImage(photoUrl).catch((error: unknown) => {
+      console.warn('Failed to delete customer photo from R2:', error);
+    });
+  };
+
   const selectUser = useCallback((user: {
     _id: string;
     name: string;
@@ -1861,7 +1876,7 @@ export default function CreateManualOrderModal({
                         </div>
                       )}
                       {/* Value + currency */}
-                      <div className="flex flex-row gap-2 items-end">
+                      <div className="flex flex-row gap-2 items-start">
                         <div className="flex-1 min-w-0">
                           <Input
                             type="number"
@@ -1875,7 +1890,7 @@ export default function CreateManualOrderModal({
                             error={formErrors[`invoice_${index}_value`]}
                           />
                         </div>
-                        <div className="shrink-0 w-24">
+                        <div className="shrink-0 w-24 pt-px">
                           <Dropdown
                             value={invoice.currency}
                             options={invoiceCurrencyOptions}
@@ -2005,8 +2020,9 @@ export default function CreateManualOrderModal({
               showCount
             />
           </div>
-          <div className="sm:col-span-2">
-            <div className="flex items-center gap-3">
+
+          <div className="sm:col-span-2 mb-3">
+            <div className="flex items-center gap-3 flex-wrap">
               <Button
                 variant="outline"
                 size="custom"
@@ -2023,62 +2039,86 @@ export default function CreateManualOrderModal({
                   ? t('createManualOrder.changePhoto') || 'Change Photo'
                   : t('createManualOrder.uploadPhoto') || 'Upload Photo'}
               </Button>
+
               {form.reservationData.photo && (
-                <a
-                  href={form.reservationData.photo}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sm text-primary hover:underline truncate max-w-50"
+                <button
+                  type="button"
+                  onClick={handleRemovePhoto}
+                  className="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-error/30 text-error hover:bg-error/10 transition-colors shrink-0"
+                  title={t('createManualOrder.removePhoto') || 'Remove Photo'}
                 >
-                  {t('createManualOrder.viewPhoto') || 'View Photo'}
-                </a>
+                  <LuX size={16} />
+                </button>
               )}
             </div>
-            <input
-              ref={photoInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={handlePhotoFileChange}
-            />
-          </div>
-          <div className="flex flex-col gap-3">
-            <Switch
-              checked={useCustomExecutionDate}
-              onChange={(checked) => {
-                dispatch({ type: 'SET_USE_CUSTOM_EXECUTION_DATE', checked });
-                if (!checked) {
-                  setForm((prev) => ({
-                    ...prev,
-                    reservationData: { ...prev.reservationData, executionDate: '' },
-                  }));
-                }
-              }}
-              label={t('createManualOrder.customExecutionDate')}
-            />
-            {useCustomExecutionDate && (
-              <CustomDatePicker
-                value={form.reservationData.executionDate}
-                onChange={(val) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    reservationData: { ...prev.reservationData, executionDate: val },
-                  }))
-                }
-                locale={locale}
-                placeholder={t('createManualOrder.executionDate')}
-                minDate={(() => {
-                  const today = new Date();
-                  return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-                })()}
-              />
-            )}
-            {!useCustomExecutionDate && (
-              <p className="text-sm text-secondary">
-                {t('createManualOrder.defaultExecutionDateHint')}
-              </p>
+
+            {form.reservationData.photo && (
+              <div className="mt-3">
+                <div className="relative w-64 h-64 rounded-lg overflow-hidden border border-stroke shrink-0 group">
+                  <img
+                    src={form.reservationData.photo}
+                    alt="User photo"
+                    className="w-full h-full object-cover"
+                  />
+                  <a
+                    href={form.reservationData.photo}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="absolute inset-0 bg-black/0 group-hover:bg-black/30 flex items-center justify-center transition-colors"
+                    title={t('createManualOrder.viewPhoto') || 'View Photo'}
+                  >
+                    <LuImage size={32} className="text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </a>
+                </div>
+              </div>
             )}
           </div>
+
+          <input
+            ref={photoInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handlePhotoFileChange}
+          />
+        </div>
+
+        <div className="flex flex-col gap-3">
+          <Switch
+            checked={useCustomExecutionDate}
+            onChange={(checked) => {
+              dispatch({ type: 'SET_USE_CUSTOM_EXECUTION_DATE', checked });
+              if (!checked) {
+                setForm((prev) => ({
+                  ...prev,
+                  reservationData: { ...prev.reservationData, executionDate: '' },
+                }));
+              }
+            }}
+            label={t('createManualOrder.customExecutionDate')}
+          />
+          {useCustomExecutionDate && (
+            <CustomDatePicker
+              value={form.reservationData.executionDate}
+              onChange={(val) =>
+                setForm((prev) => ({
+                  ...prev,
+                  reservationData: { ...prev.reservationData, executionDate: val },
+                }))
+              }
+              locale={locale}
+              placeholder={t('createManualOrder.executionDate')}
+              minDate={(() => {
+                const today = new Date();
+                return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+              })()}
+            />
+          )}
+          {!useCustomExecutionDate && (
+            <p className="text-sm text-secondary">
+              {t('createManualOrder.defaultExecutionDateHint')}
+            </p>
+          )}
         </div>
       </div>
 
@@ -2128,7 +2168,7 @@ export default function CreateManualOrderModal({
           />
 
           <div className="relative">
-            <div className="flex items-center gap-2">
+            <div className="flex items-start gap-2">
               <Input
                 placeholder={t('createManualOrder.phonePlaceholder')}
                 value={form.billingData.phone}
@@ -2166,7 +2206,7 @@ export default function CreateManualOrderModal({
                 error={formErrors.phone}
                 className="w-full"
               />
-              <div className="flex items-center gap-1 shrink-0">
+              <div className="flex items-center gap-1 shrink-0 pt-1">
                 <button
                   type="button"
                   onClick={() => {
@@ -2225,7 +2265,7 @@ export default function CreateManualOrderModal({
             )}
           </div>
           <div className="relative">
-            <div className="flex items-center gap-2">
+            <div className="flex items-start gap-2">
               <Input
                 placeholder={t('createManualOrder.emailPlaceholder')}
                 type="email"
@@ -2262,7 +2302,7 @@ export default function CreateManualOrderModal({
                   dispatch({ type: 'SET_FOUND_USERS', users: [] });
                 }}
                 disabled={!(!form.billingData.email.trim() && form.billingData.phone.trim())}
-                className="w-9 h-9 shrink-0 flex items-center justify-center rounded-lg border border-stroke text-secondary hover:text-foreground hover:bg-muted/50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                className="w-9 h-9 shrink-0 flex items-center justify-center rounded-lg border border-stroke text-secondary hover:text-foreground hover:bg-muted/50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed mt-px"
                 aria-label="Use phone as Gmail"
               >
                 <LuAtSign size={16} />

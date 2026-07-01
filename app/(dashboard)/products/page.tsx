@@ -1,16 +1,18 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { Product, getPrimaryProductImageUrl } from '@/types/Product';
 import Image from 'next/image';
 import Table from '@/components/ui/table';
+import Tabs from '@/components/ui/tabs';
 import Modal from '@/components/ui/modal';
 import Tooltip from '@/components/ui/tooltip';
 import ConfirmModal, { useConfirmModal } from '@/components/ui/confirm-modal';
 import Button from '@/components/ui/button';
 import Switch from '@/components/ui/switch';
+import ManualPricesTab from './components/manual-prices-tab';
 
 import { toast } from 'react-toastify';
 
@@ -29,6 +31,8 @@ import {
 export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [labelFilter, setLabelFilter] = useState<string>('all');
+  const [activeTab, setActiveTab] = useState<'normal' | 'manual'>('normal');
   const [duplicatingProductId, setDuplicatingProductId] = useState<
     string | null
   >(null);
@@ -39,8 +43,10 @@ export default function ProductsPage() {
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const router = useRouter();
   const t = useTranslations('admin.products');
+  const locale = useLocale();
+  const isRTL = locale === 'ar';
   const { confirm, modalProps } = useConfirmModal();
-  const ToolTipPositions = useLocale() === 'ar' ? 'right' : 'left';
+  const ToolTipPositions = isRTL ? 'right' : 'left';
 
   useEffect(() => {
     fetchProducts();
@@ -70,6 +76,31 @@ export default function ProductsPage() {
       setLoading(false);
     }
   };
+
+  // Collect unique labels from products
+  const uniqueLabels = useMemo(() => {
+    const labelMap = new Map<string, { ar: string; en: string }>();
+    for (const product of products) {
+      if (product.label) {
+        const key = product.label.en;
+        if (!labelMap.has(key)) {
+          labelMap.set(key, product.label);
+        }
+      }
+    }
+    return Array.from(labelMap.values());
+  }, [products]);
+
+  // Filter products by selected label
+  const filteredProducts = useMemo(() => {
+    if (labelFilter === 'all') return products;
+    if (labelFilter === 'none') {
+      return products.filter((p) => !p.label);
+    }
+    return products.filter(
+      (p) => p.label && (p.label.en === labelFilter || p.label.ar === labelFilter),
+    );
+  }, [products, labelFilter]);
 
   const handleDelete = async (id: string) => {
     const confirmed = await confirm({
@@ -233,11 +264,10 @@ export default function ProductsPage() {
       header: t('table.inStock'),
       accessor: (product: Product) => (
         <span
-          className={`px-2 py-1 rounded-full text-xs font-medium ${
-            product.inStock
-              ? 'bg-success/10 text-success'
-              : 'bg-error/10 text-error'
-          }`}
+          className={`px-2 py-1 rounded-full text-xs font-medium ${product.inStock
+            ? 'bg-success/10 text-success'
+            : 'bg-error/10 text-error'
+            }`}
         >
           {product.inStock ? t('status.inStock') : t('status.outOfStock')}
         </span>
@@ -360,12 +390,77 @@ export default function ProductsPage() {
         </div>
       </div>
 
-      <Table
-        columns={columns}
-        data={products}
-        loading={loading}
-        emptyMessage={t('emptyMessage')}
+      {/* Tabs */}
+      <Tabs
+        value={activeTab}
+        onChange={(val) => setActiveTab(val as 'normal' | 'manual')}
+        options={[
+          { value: 'normal', label: t('tabs.normal', { defaultValue: 'Products' }) },
+          { value: 'manual', label: t('tabs.manual', { defaultValue: 'Manual Prices' }) },
+        ]}
+        size="md"
       />
+
+      {activeTab === 'normal' && (
+        <>
+          {/* Label filter */}
+          {uniqueLabels.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setLabelFilter('all')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${labelFilter === 'all'
+                  ? 'bg-primary text-primary-text'
+                  : 'bg-muted/50 text-secondary hover:bg-muted hover:text-foreground border border-stroke'
+                  }`}
+              >
+                {t('filterAll', { defaultValue: 'All' })}
+              </button>
+              <button
+                type="button"
+                onClick={() => setLabelFilter('none')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${labelFilter === 'none'
+                  ? 'bg-primary text-primary-text'
+                  : 'bg-muted/50 text-secondary hover:bg-muted hover:text-foreground border border-stroke'
+                  }`}
+              >
+                {t('filterNoLabel', { defaultValue: 'No label' })}
+              </button>
+              {uniqueLabels.map((label) => {
+                const key = label.en;
+                const isActive = labelFilter === key;
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setLabelFilter(key)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${isActive
+                      ? 'bg-primary text-primary-text'
+                      : 'bg-muted/50 text-secondary hover:bg-muted hover:text-foreground border border-stroke'
+                      }`}
+                  >
+                    {isRTL ? label.ar : label.en}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          <Table
+            columns={columns}
+            data={filteredProducts}
+            loading={loading}
+            emptyMessage={t('emptyMessage')}
+          />
+        </>
+      )}
+
+      {activeTab === 'manual' && (
+        <ManualPricesTab
+          products={products}
+          onProductsChange={setProducts}
+        />
+      )}
 
       <Modal
         isOpen={reorderOpen}

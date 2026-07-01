@@ -1176,6 +1176,29 @@
       "description": "Manage your products",
       "addProduct": "Add Product",
       "reorderButton": "Reorder Products",
+      "filterAll": "All",
+      "filterNoLabel": "Daily",
+      "tabs": {
+        "normal": "Products",
+        "manual": "Manual Prices"
+      },
+      "manualPrices": {
+        "description": "Edit manual order prices directly. Click any price to edit it inline.",
+        "baseCurrencyHint": "The first column is the base manual price. Other columns are per-currency manual prices.",
+        "size": "Size",
+        "basePrice": "Base Price",
+        "saved": "Price saved",
+        "invalidValue": "Please enter a valid number",
+        "save": "Save Changes",
+        "allSaved": "All manual prices saved",
+        "noChanges": "No changes to save",
+        "unsavedChanges": "You have unsaved changes. Click Save to persist them.",
+        "expandAll": "Expand All",
+        "collapseAll": "Collapse All",
+        "sizes": "sizes",
+        "regularPrice": "Regular",
+        "baseManualPrice": "Manual Base Price"
+      },
       "reorderModal": {
         "title": "Reorder Products",
         "description": "Use the arrows to set the display order, then save.",

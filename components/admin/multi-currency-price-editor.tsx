@@ -28,6 +28,7 @@ interface Country {
   name: { ar: string; en: string };
   isActive: boolean;
   roundingRule?: 'nearest-ten' | 'nearest-five' | 'ceil';
+  currencyOrder?: number | null;
 }
 
 interface MultiCurrencyPriceEditorProps {
@@ -286,10 +287,17 @@ export default function MultiCurrencyPriceEditor({
     return price?.isManual || false;
   };
 
-  // Get unique currencies sorted A→Z
+  // Get unique currencies sorted by currencyOrder (if set), then alphabetically as fallback
   const availableCurrencies = [
     ...new Set(countries.map((c) => c.currencyCode)),
-  ].sort((a, b) => a.localeCompare(b));
+  ].sort((a, b) => {
+    const aOrder = countries.find((c) => c.currencyCode === a)?.currencyOrder ?? null;
+    const bOrder = countries.find((c) => c.currencyCode === b)?.currencyOrder ?? null;
+    const aSort = aOrder ?? Infinity;
+    const bSort = bOrder ?? Infinity;
+    if (aSort !== bSort) return aSort - bSort;
+    return a.localeCompare(b);
+  });
 
   const applyManualState = (manual: boolean) => {
     const updatedPrices: CurrencyPrice[] = availableCurrencies.map((code) => {
@@ -481,9 +489,8 @@ export default function MultiCurrencyPriceEditor({
                       onChange={(e) =>
                         handlePriceChange(code, parseFloat(e.target.value) || 0)
                       }
-                      className={`flex-1 px-2 py-1 text-sm bg-background border rounded text-foreground focus:outline-none focus:ring-1 focus:ring-success/20 focus:border-success ${
-                        isManual ? 'border-success' : 'border-stroke'
-                      }`}
+                      className={`flex-1 px-2 py-1 text-sm bg-background border rounded text-foreground focus:outline-none focus:ring-1 focus:ring-success/20 focus:border-success ${isManual ? 'border-success' : 'border-stroke'
+                        }`}
                       placeholder="0.00"
                     />
                   </div>

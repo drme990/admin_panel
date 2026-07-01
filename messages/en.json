@@ -1422,10 +1422,20 @@
       "emptyMessage": "No countries found. Run the seed script to populate.",
       "emptyActive": "No active countries to reorder.",
       "loadingCountries": "Loading countries...",
-      "reorderButton": "Reorder Currencies",
+      "reorderButton": "Reorder Countries",
       "reorderModal": {
+        "title": "Reorder",
+        "description": "Set the display order of countries in the Manasik / Ghadaq apps.",
+        "save": "Save Order",
+        "cancel": "Cancel",
+        "tabs": {
+          "apps": "Apps",
+          "admin": "Admin Panel"
+        }
+      },
+      "currencyReorderModal": {
         "title": "Reorder Currencies",
-        "description": "Use the arrows to set the display order in the currency selector, then save.",
+        "description": "Set the display order of currencies in the admin panel's multi-currency price editor. Currencies shared by multiple countries move together.",
         "save": "Save Order",
         "cancel": "Cancel"
       },
@@ -1497,8 +1507,10 @@
         "saveRounding": "Save",
         "saveRoundingChanges": "Save Rounding Changes",
         "orderSaved": "Currency order saved successfully",
-        "reorderSuccess": "Currency order saved successfully",
-        "reorderFailed": "Failed to save currency order",
+        "reorderSuccess": "Country order saved successfully",
+        "reorderFailed": "Failed to save country order",
+        "currencyReorderSuccess": "Currency order saved successfully",
+        "currencyReorderFailed": "Failed to save currency order",
         "visibilityUpdateSuccess": "Visibility settings saved successfully",
         "visibilityUpdateFailed": "Failed to save visibility settings",
         "visibilityConflictingPriceMode": "A country can only be in one price mode (Real Price or Exchange price).",

@@ -15,6 +15,7 @@ import Table from '@/components/ui/table';
 import Modal from '@/components/ui/modal';
 import Switch from '@/components/ui/switch';
 import Button from '@/components/ui/button';
+import Tabs from '@/components/ui/tabs';
 import { toast } from 'react-toastify';
 import VisibilitySettingsModal from './components/visibility-settings-modal';
 
@@ -30,17 +31,18 @@ interface Country {
   currencyCode: string;
   currencySymbol: string;
   roundingRule?:
-    | 'nearest-ten'
-    | 'nearest-five'
-    | 'nearest-fifty'
-    | 'nearest-hundred'
-    | 'ceil';
+  | 'nearest-ten'
+  | 'nearest-five'
+  | 'nearest-fifty'
+  | 'nearest-hundred'
+  | 'ceil';
   flagEmoji: string;
   isActive: boolean;
   sortOrder: number | null;
+  currencyOrder?: number | null;
   region?: string;
   visibilityMode?: 'all' | 'custom';
-  countriesToSee ?: Record<
+  countriesToSee?: Record<
     string,
     {
       realPrice?: boolean;
@@ -79,6 +81,9 @@ export default function CountriesPage() {
   const [reorderOpen, setReorderOpen] = useState(false);
   const [reorderList, setReorderList] = useState<Country[]>([]);
   const [reorderSaving, setReorderSaving] = useState(false);
+  const [reorderTab, setReorderTab] = useState<'apps' | 'admin'>('apps');
+  const [currencyReorderList, setCurrencyReorderList] = useState<string[]>([]);
+  const [currencyReorderSaving, setCurrencyReorderSaving] = useState(false);
 
   // Visibility settings modal state
   const [visibilityOpen, setVisibilityOpen] = useState(false);
@@ -239,8 +244,8 @@ export default function CountriesPage() {
           return ao !== bo
             ? ao - bo
             : (locale === 'ar' ? a.name.ar : a.name.en).localeCompare(
-                locale === 'ar' ? b.name.ar : b.name.en,
-              );
+              locale === 'ar' ? b.name.ar : b.name.en,
+            );
         }),
     [countries, locale],
   );
@@ -468,6 +473,21 @@ export default function CountriesPage() {
 
   const openReorderModal = () => {
     setReorderList([...activeCountries]);
+    // Build unique currency list from active countries, sorted by current currencyOrder then alphabetical
+    const seen = new Map<string, { code: string; order: number | null }>();
+    for (const c of activeCountries) {
+      if (!seen.has(c.currencyCode)) {
+        seen.set(c.currencyCode, { code: c.currencyCode, order: c.currencyOrder ?? null });
+      }
+    }
+    const list = Array.from(seen.values()).sort((a, b) => {
+      const ao = a.order ?? Infinity;
+      const bo = b.order ?? Infinity;
+      if (ao !== bo) return ao - bo;
+      return a.code.localeCompare(b.code);
+    });
+    setCurrencyReorderList(list.map((x) => x.code));
+    setReorderTab('apps');
     setReorderOpen(true);
   };
 
@@ -501,6 +521,38 @@ export default function CountriesPage() {
       toast.error(t('messages.reorderFailed'));
     } finally {
       setReorderSaving(false);
+    }
+  };
+
+  // --- Currency reorder ---
+  const moveCurrencyInModal = (index: number, direction: 'up' | 'down') => {
+    const newList = [...currencyReorderList];
+    const swapIndex = direction === 'up' ? index - 1 : index + 1;
+    if (swapIndex < 0 || swapIndex >= newList.length) return;
+    [newList[index], newList[swapIndex]] = [newList[swapIndex], newList[index]];
+    setCurrencyReorderList(newList);
+  };
+
+  const saveCurrencyReorder = async () => {
+    setCurrencyReorderSaving(true);
+    try {
+      const res = await fetch('/api/currencies/reorder', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderedCurrencies: currencyReorderList }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        await fetchCountries();
+        setReorderOpen(false);
+        toast.success(t('messages.currencyReorderSuccess'));
+      } else {
+        toast.error(data.error || t('messages.currencyReorderFailed'));
+      }
+    } catch {
+      toast.error(t('messages.currencyReorderFailed'));
+    } finally {
+      setCurrencyReorderSaving(false);
     }
   };
 
@@ -590,8 +642,8 @@ export default function CountriesPage() {
     setVisibilitySaving(true);
     const previousSettings = {
       visibilityMode: visibilityCountry.visibilityMode ?? 'all',
-      countriesToSee : normalizeVisibilityMap(
-        visibilityCountry.countriesToSee ,
+      countriesToSee: normalizeVisibilityMap(
+        visibilityCountry.countriesToSee,
       ),
     };
 
@@ -603,10 +655,10 @@ export default function CountriesPage() {
       prev.map((country) =>
         country._id === visibilityCountry._id
           ? {
-              ...country,
-              visibilityMode,
-              countriesToSee : normalizeVisibilityMap(countriesToSeeToSend),
-            }
+            ...country,
+            visibilityMode,
+            countriesToSee: normalizeVisibilityMap(countriesToSeeToSend),
+          }
           : country,
       ),
     );
@@ -617,7 +669,7 @@ export default function CountriesPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           visibilityMode,
-          countriesToSee : countriesToSeeToSend,
+          countriesToSee: countriesToSeeToSend,
         }),
       });
 
@@ -649,7 +701,7 @@ export default function CountriesPage() {
     if (!sourceCountry || !visibilityCountry) return;
 
     const copiedSettings = normalizeVisibilityMap(sourceCountry.countriesToSee);
-    
+
     // Add the current country to the visibility settings as well
     const currentCountryCode = visibilityCountry.code.toUpperCase();
     copiedSettings[currentCountryCode] = {
@@ -910,11 +962,11 @@ export default function CountriesPage() {
         emptyMessage={search.trim() ? t('noResults') : t('emptyMessage')}
       />
 
-      {/* Reorder Modal */}
+      {/* Reorder Modal — tabbed: Apps (countries) + Admin Panel (currencies) */}
       <Modal
         isOpen={reorderOpen}
         onClose={() => {
-          if (!reorderSaving) setReorderOpen(false);
+          if (!reorderSaving && !currencyReorderSaving) setReorderOpen(false);
         }}
         title={t('reorderModal.title')}
         size="md"
@@ -923,58 +975,125 @@ export default function CountriesPage() {
             <Button
               variant="outline"
               onClick={() => setReorderOpen(false)}
-              disabled={reorderSaving}
+              disabled={reorderSaving || currencyReorderSaving}
             >
               {t('reorderModal.cancel')}
             </Button>
-            <Button onClick={saveReorder} disabled={reorderSaving}>
-              {reorderSaving ? '...' : t('reorderModal.save')}
-            </Button>
+            {reorderTab === 'apps' ? (
+              <Button onClick={saveReorder} disabled={reorderSaving}>
+                {reorderSaving ? '...' : t('reorderModal.save')}
+              </Button>
+            ) : (
+              <Button onClick={saveCurrencyReorder} disabled={currencyReorderSaving}>
+                {currencyReorderSaving ? '...' : t('currencyReorderModal.save')}
+              </Button>
+            )}
           </div>
         }
       >
-        <p className="text-secondary text-sm mb-4">
-          {t('reorderModal.description')}
-        </p>
-        <div className="space-y-2 max-h-105 overflow-y-auto pe-1">
-          {reorderList.map((country, index) => (
-            <div
-              key={country._id}
-              className="flex items-center gap-3 p-3 bg-muted/30 border border-stroke rounded-lg"
-            >
-              <span className="text-sm font-semibold text-secondary w-6 text-center shrink-0">
-                {index + 1}
-              </span>
-              <div className="w-8 h-6 rounded-sm overflow-hidden shrink-0">
-                {getFlagComponent(country.code)}
-              </div>
-              <span className="flex-1 font-medium text-foreground text-sm">
-                {locale === 'ar' ? country.name.ar : country.name.en}
-              </span>
-              <span className="text-xs text-secondary font-mono shrink-0">
-                {country.currencyCode}
-              </span>
-              <div className="flex flex-col gap-0.5 shrink-0">
-                <Button
-                  variant="icon-primary"
-                  size="custom"
-                  onClick={() => moveInModal(index, 'up')}
-                  disabled={index === 0}
+        <Tabs
+          value={reorderTab}
+          onChange={(val) => setReorderTab(val as 'apps' | 'admin')}
+          options={[
+            { value: 'apps', label: t('reorderModal.tabs.apps') },
+            { value: 'admin', label: t('reorderModal.tabs.admin') },
+          ]}
+          className="mb-4"
+        />
+
+        {reorderTab === 'apps' ? (
+          <>
+            <p className="text-secondary text-sm mb-4">
+              {t('reorderModal.description')}
+            </p>
+            <div className="space-y-2 max-h-105 overflow-y-auto pe-1">
+              {reorderList.map((country, index) => (
+                <div
+                  key={country._id}
+                  className="flex items-center gap-3 p-3 bg-muted/30 border border-stroke rounded-lg"
                 >
-                  <ArrowUp size={14} />
-                </Button>
-                <Button
-                  variant="icon-primary"
-                  size="custom"
-                  onClick={() => moveInModal(index, 'down')}
-                  disabled={index === reorderList.length - 1}
-                >
-                  <ArrowDown size={14} />
-                </Button>
-              </div>
+                  <span className="text-sm font-semibold text-secondary w-6 text-center shrink-0">
+                    {index + 1}
+                  </span>
+                  <div className="w-8 h-6 rounded-sm overflow-hidden shrink-0">
+                    {getFlagComponent(country.code)}
+                  </div>
+                  <span className="flex-1 font-medium text-foreground text-sm">
+                    {locale === 'ar' ? country.name.ar : country.name.en}
+                  </span>
+                  <span className="text-xs text-secondary font-mono shrink-0">
+                    {country.currencyCode}
+                  </span>
+                  <div className="flex flex-col gap-0.5 shrink-0">
+                    <Button
+                      variant="icon-primary"
+                      size="custom"
+                      onClick={() => moveInModal(index, 'up')}
+                      disabled={index === 0}
+                    >
+                      <ArrowUp size={14} />
+                    </Button>
+                    <Button
+                      variant="icon-primary"
+                      size="custom"
+                      onClick={() => moveInModal(index, 'down')}
+                      disabled={index === reorderList.length - 1}
+                    >
+                      <ArrowDown size={14} />
+                    </Button>
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          </>
+        ) : (
+          <>
+            <p className="text-secondary text-sm mb-4">
+              {t('currencyReorderModal.description')}
+            </p>
+            <div className="space-y-2 max-h-105 overflow-y-auto pe-1">
+              {currencyReorderList.map((currencyCode, index) => {
+                const symbol = countries.find((c) => c.currencyCode === currencyCode)?.currencySymbol || '';
+                return (
+                  <div
+                    key={currencyCode}
+                    className="flex items-center gap-3 p-3 bg-muted/30 border border-stroke rounded-lg"
+                  >
+                    <span className="text-sm font-semibold text-secondary w-6 text-center shrink-0">
+                      {index + 1}
+                    </span>
+                    <div className="flex-1 flex items-center gap-2">
+                      <span className="font-medium text-foreground text-sm font-mono">
+                        {currencyCode}
+                      </span>
+                      {symbol && (
+                        <span className="text-xs text-secondary">({symbol})</span>
+                      )}
+                    </div>
+                    <div className="flex flex-col gap-0.5 shrink-0">
+                      <Button
+                        variant="icon-primary"
+                        size="custom"
+                        onClick={() => moveCurrencyInModal(index, 'up')}
+                        disabled={index === 0}
+                      >
+                        <ArrowUp size={14} />
+                      </Button>
+                      <Button
+                        variant="icon-primary"
+                        size="custom"
+                        onClick={() => moveCurrencyInModal(index, 'down')}
+                        disabled={index === currencyReorderList.length - 1}
+                      >
+                        <ArrowDown size={14} />
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
       </Modal>
 
       {/* Visibility Settings Modal */}
@@ -986,7 +1105,7 @@ export default function CountriesPage() {
         setVisibilityMode={setVisibilityMode}
         visibilityTab={visibilityTab}
         setVisibilityTab={setVisibilityTab}
-        countriesToSee ={countriesToSee }
+        countriesToSee={countriesToSee}
         toggleVisibleToCountry={toggleVisibleToCountry}
         selectAllCountries={selectAllCountries}
         clearAllCountries={clearAllCountries}

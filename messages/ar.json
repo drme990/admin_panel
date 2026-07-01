@@ -1423,10 +1423,20 @@
       "emptyMessage": "لا توجد بلدان. قم بتشغيل سكريبت التهيئة لإضافة البلدان.",
       "emptyActive": "لا توجد عملات نشطة لإعادة الترتيب.",
       "loadingCountries": "جاري تحميل البلدان...",
-      "reorderButton": "ترتيب العملات",
+      "reorderButton": "ترتيب البلدان",
       "reorderModal": {
+        "title": "إعادة الترتيب",
+        "description": "حدد ترتيب عرض البلدان في تطبيقات مناسك / غداق.",
+        "save": "حفظ الترتيب",
+        "cancel": "إلغاء",
+        "tabs": {
+          "apps": "التطبيقات",
+          "admin": "لوحة التحكم"
+        }
+      },
+      "currencyReorderModal": {
         "title": "ترتيب العملات",
-        "description": "استخدم الأسهم لتحديد ترتيب العرض في قائمة العملات، ثم احفظ.",
+        "description": "حدد ترتيب عرض العملات في محرر الأسعار متعدد العملات في لوحة التحكم. العملات المشتركة بين عدة بلدان تتحرك معاً.",
         "save": "حفظ الترتيب",
         "cancel": "إلغاء"
       },
@@ -1498,8 +1508,10 @@
         "saveRounding": "حفظ",
         "saveRoundingChanges": "حفظ تغييرات التقريب",
         "orderSaved": "تم حفظ ترتيب العملات بنجاح",
-        "reorderSuccess": "تم حفظ ترتيب العملات بنجاح",
-        "reorderFailed": "فشل حفظ ترتيب العملات",
+        "reorderSuccess": "تم حفظ ترتيب البلدان بنجاح",
+        "reorderFailed": "فشل حفظ ترتيب البلدان",
+        "currencyReorderSuccess": "تم حفظ ترتيب العملات بنجاح",
+        "currencyReorderFailed": "فشل حفظ ترتيب العملات",
         "visibilityUpdateSuccess": "تم حفظ إعدادات الظهور بنجاح",
         "visibilityUpdateFailed": "فشل حفظ إعدادات الظهور",
         "visibilityConflictingPriceMode": "لا يمكن إضافة نفس البلد في وضعي السعر الحقيقي وسعر الصرف معًا.",

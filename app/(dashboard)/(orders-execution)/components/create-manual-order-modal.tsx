@@ -132,6 +132,14 @@ interface OrderItemForm {
   customPrice: string;
 }
 
+interface InvoiceEntry {
+  file: File;
+  reviewed: boolean;
+  value: string;
+  currency: string;
+  previewUrl: string | null;
+}
+
 interface FormState {
   source: Source;
   items: OrderItemForm[];
@@ -220,10 +228,7 @@ interface UIState {
   referrals: Referral[];
   loadingReferrals: boolean;
   creating: boolean;
-  invoiceFile: File | null;
-  invoiceReviewed: boolean;
-  invoiceValue: string;
-  invoiceCurrency: string;
+  invoices: InvoiceEntry[];
   uploadingInvoice: boolean;
   uploadingPhoto: boolean;
   useCustomExecutionDate: boolean;
@@ -247,10 +252,9 @@ type UIAction =
   | { type: 'SET_REFERRALS'; referrals: Referral[] }
   | { type: 'SET_LOADING_REFERRALS'; loading: boolean }
   | { type: 'SET_CREATING'; creating: boolean }
-  | { type: 'SET_INVOICE_FILE'; file: File | null }
-  | { type: 'SET_INVOICE_REVIEWED'; reviewed: boolean }
-  | { type: 'SET_INVOICE_VALUE'; value: string }
-  | { type: 'SET_INVOICE_CURRENCY'; currency: string }
+  | { type: 'ADD_INVOICE'; invoice: InvoiceEntry }
+  | { type: 'REMOVE_INVOICE'; index: number }
+  | { type: 'UPDATE_INVOICE'; index: number; patch: Partial<InvoiceEntry> }
   | { type: 'SET_UPLOADING_INVOICE'; uploading: boolean }
   | { type: 'SET_UPLOADING_PHOTO'; uploading: boolean }
   | { type: 'SET_USE_CUSTOM_EXECUTION_DATE'; checked: boolean }
@@ -305,10 +309,7 @@ const UI_INITIAL_STATE: UIState = {
   referrals: [],
   loadingReferrals: false,
   creating: false,
-  invoiceFile: null,
-  invoiceReviewed: false,
-  invoiceValue: '',
-  invoiceCurrency: 'EGP',
+  invoices: [],
   uploadingInvoice: false,
   uploadingPhoto: false,
   useCustomExecutionDate: false,
@@ -338,14 +339,20 @@ function uiReducer(state: UIState, action: UIAction): UIState {
       return { ...state, loadingReferrals: action.loading };
     case 'SET_CREATING':
       return { ...state, creating: action.creating };
-    case 'SET_INVOICE_FILE':
-      return { ...state, invoiceFile: action.file };
-    case 'SET_INVOICE_REVIEWED':
-      return { ...state, invoiceReviewed: action.reviewed };
-    case 'SET_INVOICE_VALUE':
-      return { ...state, invoiceValue: action.value };
-    case 'SET_INVOICE_CURRENCY':
-      return { ...state, invoiceCurrency: action.currency };
+    case 'ADD_INVOICE':
+      return { ...state, invoices: [...state.invoices, action.invoice] };
+    case 'REMOVE_INVOICE': {
+      const removed = state.invoices[action.index];
+      if (removed?.previewUrl) URL.revokeObjectURL(removed.previewUrl);
+      return { ...state, invoices: state.invoices.filter((_, i) => i !== action.index) };
+    }
+    case 'UPDATE_INVOICE':
+      return {
+        ...state,
+        invoices: state.invoices.map((inv, i) =>
+          i === action.index ? { ...inv, ...action.patch } : inv,
+        ),
+      };
     case 'SET_UPLOADING_INVOICE':
       return { ...state, uploadingInvoice: action.uploading };
     case 'SET_UPLOADING_PHOTO':
@@ -424,10 +431,7 @@ export default function CreateManualOrderModal({
     referrals,
     loadingReferrals,
     creating,
-    invoiceFile,
-    invoiceReviewed,
-    invoiceValue,
-    invoiceCurrency,
+    invoices,
     uploadingInvoice,
     uploadingPhoto,
     useCustomExecutionDate,
@@ -450,16 +454,24 @@ export default function CreateManualOrderModal({
   const priceInputRefs = useRef<Map<number, HTMLInputElement>>(new Map());
   const lastLookupRef = useRef<{ phone: string; email: string; source: string }>({ phone: '', email: '', source: '' });
   const skipBlurValidationRef = useRef(false);
-  const [invoicePreviewUrl, setInvoicePreviewUrl] = useState<string | null>(null);
+  const pendingInvoiceReviewedRef = useRef<boolean | null>(null);
   const [pendingInvoiceReviewed, setPendingInvoiceReviewed] = useState<boolean | null>(null);
+
+  const invoicesRef = useRef<InvoiceEntry[]>([]);
+  invoicesRef.current = invoices;
 
   const resetForm = useCallback(() => {
     const initialReferralId =
       user?.role !== 'super_admin' && user?.ref ? user.ref : '';
     setForm({ ...DEFAULT_FORM, referralId: initialReferralId });
+    // Revoke any invoice preview URLs before resetting
+    invoicesRef.current.forEach((inv) => {
+      if (inv.previewUrl) URL.revokeObjectURL(inv.previewUrl);
+    });
     dispatch({ type: 'RESET_UI' });
     lastLookupRef.current = { phone: '', email: '', source: '' };
-    setInvoicePreviewUrl(null);
+    pendingInvoiceReviewedRef.current = null;
+    setPendingInvoiceReviewed(null);
   }, [user]);
 
   // Load recently used product IDs from localStorage on mount
@@ -472,11 +484,11 @@ export default function CreateManualOrderModal({
 
   useEffect(() => {
     return () => {
-      if (invoicePreviewUrl) {
-        URL.revokeObjectURL(invoicePreviewUrl);
-      }
+      invoices.forEach((inv) => {
+        if (inv.previewUrl) URL.revokeObjectURL(inv.previewUrl);
+      });
     };
-  }, [invoicePreviewUrl]);
+  }, [invoices]);
 
   useEffect(() => {
     if (isOpen) {
@@ -840,15 +852,19 @@ export default function CreateManualOrderModal({
     if (!form.paymentMethod) {
       errors.paymentMethod = t('createManualOrder.errors.paymentMethodRequired') || 'Payment method is required';
     }
-    if (!isEasykash && !invoiceFile) {
+    if (!isEasykash && invoices.length === 0) {
       errors.invoice = t('createManualOrder.errors.invoiceRequired');
     }
-    if (!isEasykash && invoiceFile && invoiceValue.trim() === '') {
-      errors.invoiceValue = t('createManualOrder.errors.invoiceValueRequired') || 'Invoice value is required';
-    } else if (!isEasykash && invoiceFile && !Number.isFinite(parseFloat(invoiceValue))) {
-      errors.invoiceValue = t('createManualOrder.errors.invoiceValueInvalid') || 'Invoice value must be a number';
-    } else if (!isEasykash && invoiceFile && parseFloat(invoiceValue) <= 0) {
-      errors.invoiceValue = t('createManualOrder.errors.invoiceValueInvalid') || 'Invoice value must be greater than 0';
+    if (!isEasykash) {
+      invoices.forEach((invoice, index) => {
+        if (invoice.value.trim() === '') {
+          errors[`invoice_${index}_value`] = t('createManualOrder.errors.invoiceValueRequired') || 'Invoice value is required';
+        } else if (!Number.isFinite(parseFloat(invoice.value))) {
+          errors[`invoice_${index}_value`] = t('createManualOrder.errors.invoiceValueInvalid') || 'Invoice value must be a number';
+        } else if (parseFloat(invoice.value) <= 0) {
+          errors[`invoice_${index}_value`] = t('createManualOrder.errors.invoiceValueInvalid') || 'Invoice value must be greater than 0';
+        }
+      });
     }
     if (form.paidAmount.trim() === '' || !Number.isFinite(parseFloat(form.paidAmount))) {
       errors.paidAmount = t('createManualOrder.errors.paidAmountRequired');
@@ -858,7 +874,7 @@ export default function CreateManualOrderModal({
       errors.paidAmount = t('createManualOrder.errors.paidAmountInvalid') || 'Paid amount must not exceed the order total';
     }
     return errors;
-  }, [form, isEasykash, invoiceFile, paidAmountNum, fullOrderTotal, phoneWhatsappClicked, t]);
+  }, [form, isEasykash, invoices, paidAmountNum, fullOrderTotal, phoneWhatsappClicked, t]);
 
   const updateItem = (index: number, patch: Partial<OrderItemForm>) => {
     setForm((prev) => {
@@ -891,8 +907,10 @@ export default function CreateManualOrderModal({
   };
 
   const handleInvoiceFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const reviewed = pendingInvoiceReviewedRef.current ?? false;
 
     const allowedTypes = [
       'image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif',
@@ -901,19 +919,34 @@ export default function CreateManualOrderModal({
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       'text/plain',
     ];
-    if (!allowedTypes.includes(file.type)) {
-      toast.error(t('editOrder.invalidInvoice'));
-      return;
-    }
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error(t('editOrder.invoiceTooLarge'));
-      return;
+
+    for (const file of Array.from(files)) {
+      if (!allowedTypes.includes(file.type)) {
+        toast.error(t('editOrder.invalidInvoice'));
+        continue;
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error(t('editOrder.invoiceTooLarge'));
+        continue;
+      }
+
+      const previewUrl = file.type.startsWith('image/') ? URL.createObjectURL(file) : null;
+      dispatch({
+        type: 'ADD_INVOICE',
+        invoice: {
+          file,
+          reviewed,
+          value: '',
+          currency: 'EGP',
+          previewUrl,
+        },
+      });
     }
 
-    const previewUrl = file.type.startsWith('image/') ? URL.createObjectURL(file) : null;
-    setInvoicePreviewUrl(previewUrl);
-    dispatch({ type: 'SET_INVOICE_FILE', file });
-    dispatch({ type: 'SET_INVOICE_VALUE', value: '' });
+    pendingInvoiceReviewedRef.current = null;
+    setPendingInvoiceReviewed(null);
+    if (invoiceInputRef.current) invoiceInputRef.current.value = '';
+    if (invoiceImageInputRef.current) invoiceImageInputRef.current.value = '';
   };
 
   const handlePhotoFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1079,10 +1112,21 @@ export default function CreateManualOrderModal({
     dispatch({ type: 'CLEAR_FORM_ERRORS' });
     dispatch({ type: 'SET_CREATING', creating: true });
     try {
-      let invoiceUrl = '';
-      if (!isEasykash && invoiceFile) {
+      let invoiceUrls: { url: string; reviewed: boolean; value: number; currency: string }[] = [];
+      if (!isEasykash && invoices.length > 0) {
         dispatch({ type: 'SET_UPLOADING_INVOICE', uploading: true });
-        invoiceUrl = await uploadInvoiceToR2(invoiceFile);
+        const uploaded = await Promise.all(
+          invoices.map(async (inv) => {
+            const url = await uploadInvoiceToR2(inv.file);
+            return {
+              url,
+              reviewed: inv.reviewed,
+              value: parseFloat(inv.value) || 0,
+              currency: inv.currency || 'EGP',
+            };
+          }),
+        );
+        invoiceUrls = uploaded;
         dispatch({ type: 'SET_UPLOADING_INVOICE', uploading: false });
       }
 
@@ -1136,10 +1180,7 @@ export default function CreateManualOrderModal({
           billingData: form.billingData,
           reservationData,
           paymentMethod: form.paymentMethod,
-          invoiceUrl: invoiceUrl || undefined,
-          invoiceReviewed: invoiceUrl ? invoiceReviewed : undefined,
-          invoiceValue: invoiceUrl ? parseFloat(invoiceValue) || 0 : undefined,
-          invoiceCurrency: invoiceUrl ? invoiceCurrency : undefined,
+          invoiceUrls: invoiceUrls.length > 0 ? invoiceUrls : undefined,
           locale: 'ar',
           userId: linkedUserId || undefined,
           paidAmount: paidAmountNum,
@@ -1662,7 +1703,7 @@ export default function CreateManualOrderModal({
                     min={0}
                     step="0.01"
                     value={form.remainingAmount}
-                    placeholder={`0.00 ${form.currency}`}
+                    placeholder={fullOrderTotal > 0 ? `${t('createManualOrder.remaining') || 'Remaining'}: ${(fullOrderTotal - paidAmountNum).toFixed(2)}` : `0.00 ${form.currency}`}
                     readOnly={paymentEditField === 'paid'}
                     onChange={(e) => {
                       const rem = e.target.value;
@@ -1714,7 +1755,8 @@ export default function CreateManualOrderModal({
           />
 
           {!isEasykash && (
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-3">
+              {/* Upload buttons */}
               <div className="flex flex-wrap items-center gap-3">
                 {uploadingInvoice ? (
                   <span className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-stroke text-secondary">
@@ -1726,8 +1768,6 @@ export default function CreateManualOrderModal({
                     <button
                       type="button"
                       onClick={() => {
-                        dispatch({ type: 'SET_INVOICE_REVIEWED', reviewed: pendingInvoiceReviewed });
-                        setPendingInvoiceReviewed(null);
                         invoiceImageInputRef.current?.click();
                       }}
                       className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-stroke hover:border-primary hover:text-primary transition-colors text-sm"
@@ -1738,8 +1778,6 @@ export default function CreateManualOrderModal({
                     <button
                       type="button"
                       onClick={() => {
-                        dispatch({ type: 'SET_INVOICE_REVIEWED', reviewed: pendingInvoiceReviewed });
-                        setPendingInvoiceReviewed(null);
                         invoiceInputRef.current?.click();
                       }}
                       className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-stroke hover:border-primary hover:text-primary transition-colors text-sm"
@@ -1749,7 +1787,10 @@ export default function CreateManualOrderModal({
                     </button>
                     <button
                       type="button"
-                      onClick={() => setPendingInvoiceReviewed(null)}
+                      onClick={() => {
+                        pendingInvoiceReviewedRef.current = null;
+                        setPendingInvoiceReviewed(null);
+                      }}
                       className="inline-flex items-center gap-1 px-2 py-2 rounded-lg text-secondary hover:text-foreground transition-colors text-sm"
                     >
                       <LuX size={16} />
@@ -1762,7 +1803,10 @@ export default function CreateManualOrderModal({
                       variant="outline"
                       size="sm"
                       className={formErrors.invoice ? 'border-error text-error hover:text-error hover:border-error' : ''}
-                      onClick={() => setPendingInvoiceReviewed(true)}
+                      onClick={() => {
+                        pendingInvoiceReviewedRef.current = true;
+                        setPendingInvoiceReviewed(true);
+                      }}
                     >
                       <LuUpload size={16} className="me-2" />
                       {t('createManualOrder.uploadReviewedInvoice') || 'Reviewed Invoice'}
@@ -1772,58 +1816,87 @@ export default function CreateManualOrderModal({
                       variant="outline"
                       size="sm"
                       className={formErrors.invoice ? 'border-error text-error hover:text-error hover:border-error' : ''}
-                      onClick={() => setPendingInvoiceReviewed(false)}
+                      onClick={() => {
+                        pendingInvoiceReviewedRef.current = false;
+                        setPendingInvoiceReviewed(false);
+                      }}
                     >
                       <LuUpload size={16} className="me-2" />
                       {t('createManualOrder.uploadUnreviewedInvoice') || 'Unreviewed Invoice'}
                     </Button>
                   </>
                 )}
-                {invoiceFile && (
-                  <span className="text-sm text-secondary">{invoiceFile.name}</span>
-                )}
               </div>
-              {invoiceFile && (
-                <div className="flex flex-row gap-2 items-end">
-                  <div className="flex-1 min-w-0">
-                    <Input
-                      type="number"
-                      min={0}
-                      step="0.01"
-                      value={invoiceValue}
-                      placeholder={t('createManualOrder.invoiceValue') || 'Invoice Value'}
-                      onChange={(e) =>
-                        dispatch({ type: 'SET_INVOICE_VALUE', value: e.target.value })
-                      }
-                      error={formErrors.invoiceValue}
-                    />
-                  </div>
-                  <div className="shrink-0 w-24">
-                    <Dropdown
-                      value={invoiceCurrency}
-                      options={invoiceCurrencyOptions}
-                      onChange={(val) =>
-                        dispatch({ type: 'SET_INVOICE_CURRENCY', currency: val })
-                      }
-                    />
-                  </div>
+
+              {/* Invoice list */}
+              {invoices.length > 0 && (
+                <div className="flex flex-col gap-3">
+                  {invoices.map((invoice, index) => (
+                    <div key={index} className="rounded-lg border border-stroke p-3 flex flex-col gap-2 bg-background">
+                      {/* File info + remove */}
+                      <div className="flex items-center gap-2">
+                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${invoice.reviewed ? 'text-success bg-success/10' : 'text-warning bg-warning/10'}`}>
+                          {invoice.reviewed
+                            ? (t('createManualOrder.uploadReviewedInvoice') || 'Reviewed')
+                            : (t('createManualOrder.uploadUnreviewedInvoice') || 'Unreviewed')}
+                        </span>
+                        <span className="text-sm text-foreground truncate flex-1 min-w-0">{invoice.file.name}</span>
+                        <button
+                          type="button"
+                          onClick={() => dispatch({ type: 'REMOVE_INVOICE', index })}
+                          className="shrink-0 w-7 h-7 flex items-center justify-center rounded-lg text-error hover:bg-error/10 transition-colors"
+                          aria-label="Remove invoice"
+                        >
+                          <LuX size={16} />
+                        </button>
+                      </div>
+                      {/* Preview */}
+                      {invoice.previewUrl && (
+                        <div className="w-fit">
+                          <img
+                            src={invoice.previewUrl}
+                            alt="Invoice preview"
+                            className="h-24 rounded-lg border border-stroke object-contain bg-background"
+                          />
+                        </div>
+                      )}
+                      {/* Value + currency */}
+                      <div className="flex flex-row gap-2 items-end">
+                        <div className="flex-1 min-w-0">
+                          <Input
+                            type="number"
+                            min={0}
+                            step="0.01"
+                            value={invoice.value}
+                            placeholder={t('createManualOrder.invoiceValue') || 'Invoice Value'}
+                            onChange={(e) =>
+                              dispatch({ type: 'UPDATE_INVOICE', index, patch: { value: e.target.value } })
+                            }
+                            error={formErrors[`invoice_${index}_value`]}
+                          />
+                        </div>
+                        <div className="shrink-0 w-24">
+                          <Dropdown
+                            value={invoice.currency}
+                            options={invoiceCurrencyOptions}
+                            onChange={(val) =>
+                              dispatch({ type: 'UPDATE_INVOICE', index, patch: { currency: val } })
+                            }
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
-              {invoicePreviewUrl && (
-                <div className="w-fit">
-                  <img
-                    src={invoicePreviewUrl}
-                    alt="Invoice preview"
-                    className="h-32 rounded-lg border border-stroke object-contain bg-background"
-                  />
-                </div>
-              )}
+
               {formErrors.invoice && (
                 <p className="text-xs text-error">{formErrors.invoice}</p>
               )}
               <input
                 ref={invoiceInputRef}
                 type="file"
+                multiple
                 accept="application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
                 className="hidden"
                 onChange={handleInvoiceFileChange}
@@ -1831,6 +1904,7 @@ export default function CreateManualOrderModal({
               <input
                 ref={invoiceImageInputRef}
                 type="file"
+                multiple
                 accept="image/*"
                 className="hidden"
                 onChange={handleInvoiceFileChange}

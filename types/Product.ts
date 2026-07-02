@@ -20,10 +20,8 @@ export interface ProductSize {
   price: number;
   /** Multi-currency converted / manually-set prices */
   prices: CurrencyPrice[];
-  /** Manual order base price (optional) */
+  /** Manual order price in EGP (single currency). Null = use regular price. */
   manualPrice?: number | null;
-  /** Manual order per-currency prices (optional) */
-  manualPrices?: CurrencyPrice[];
   /** How many people / slots this size feeds / covers */
   feedsUp?: number;
   /** Whether this size is available to customers */

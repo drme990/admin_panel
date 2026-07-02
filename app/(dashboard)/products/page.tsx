@@ -401,51 +401,51 @@ export default function ProductsPage() {
         size="md"
       />
 
+      {/* Label filter — shared across both tabs */}
+      {uniqueLabels.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setLabelFilter('all')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${labelFilter === 'all'
+              ? 'bg-primary text-primary-text'
+              : 'bg-muted/50 text-secondary hover:bg-muted hover:text-foreground border border-stroke'
+              }`}
+          >
+            {t('filterAll', { defaultValue: 'All' })}
+          </button>
+          <button
+            type="button"
+            onClick={() => setLabelFilter('none')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${labelFilter === 'none'
+              ? 'bg-primary text-primary-text'
+              : 'bg-muted/50 text-secondary hover:bg-muted hover:text-foreground border border-stroke'
+              }`}
+          >
+            {t('filterNoLabel', { defaultValue: 'No label' })}
+          </button>
+          {uniqueLabels.map((label) => {
+            const key = label.en;
+            const isActive = labelFilter === key;
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setLabelFilter(key)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${isActive
+                  ? 'bg-primary text-primary-text'
+                  : 'bg-muted/50 text-secondary hover:bg-muted hover:text-foreground border border-stroke'
+                  }`}
+              >
+                {isRTL ? label.ar : label.en}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {activeTab === 'normal' && (
         <>
-          {/* Label filter */}
-          {uniqueLabels.length > 0 && (
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setLabelFilter('all')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${labelFilter === 'all'
-                  ? 'bg-primary text-primary-text'
-                  : 'bg-muted/50 text-secondary hover:bg-muted hover:text-foreground border border-stroke'
-                  }`}
-              >
-                {t('filterAll', { defaultValue: 'All' })}
-              </button>
-              <button
-                type="button"
-                onClick={() => setLabelFilter('none')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${labelFilter === 'none'
-                  ? 'bg-primary text-primary-text'
-                  : 'bg-muted/50 text-secondary hover:bg-muted hover:text-foreground border border-stroke'
-                  }`}
-              >
-                {t('filterNoLabel', { defaultValue: 'No label' })}
-              </button>
-              {uniqueLabels.map((label) => {
-                const key = label.en;
-                const isActive = labelFilter === key;
-                return (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => setLabelFilter(key)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${isActive
-                      ? 'bg-primary text-primary-text'
-                      : 'bg-muted/50 text-secondary hover:bg-muted hover:text-foreground border border-stroke'
-                      }`}
-                  >
-                    {isRTL ? label.ar : label.en}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-
           <Table
             columns={columns}
             data={filteredProducts}
@@ -457,7 +457,7 @@ export default function ProductsPage() {
 
       {activeTab === 'manual' && (
         <ManualPricesTab
-          products={products}
+          products={filteredProducts}
           onProductsChange={setProducts}
         />
       )}

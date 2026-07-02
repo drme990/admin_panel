@@ -3,26 +3,17 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import Image from 'next/image';
-import { Product, getPrimaryProductImageUrl, CurrencyPrice } from '@/types/Product';
-import MultiCurrencyPriceEditor from '@/components/admin/multi-currency-price-editor';
+import { Product, getPrimaryProductImageUrl } from '@/types/Product';
 import Button from '@/components/ui/button';
 import { toast } from 'react-toastify';
 import {
   LuCheck as Check,
   LuLoaderCircle as LoaderCircle,
-  LuChevronDown as ChevronDown,
-  LuChevronUp as ChevronUp,
 } from 'react-icons/lu';
 
 interface ManualPricesTabProps {
   products: Product[];
   onProductsChange: (products: Product[]) => void;
-}
-
-/** Local editable state for a single size's manual prices */
-interface SizeEditState {
-  manualPrice: number;
-  manualPrices: CurrencyPrice[];
 }
 
 export default function ManualPricesTab({
@@ -34,41 +25,22 @@ export default function ManualPricesTab({
   const isRTL = locale === 'ar';
 
   // Track local edits per product+size before saving
-  // Key: `${productId}__${sizeId}`
-  const [edits, setEdits] = useState<Record<string, SizeEditState>>({});
-  const [expandedProducts, setExpandedProducts] = useState<Set<string>>(new Set());
+  // Key: `${productId}__${sizeId}`, value: manualPrice (EGP)
+  const [edits, setEdits] = useState<Record<string, number>>({});
   const [saving, setSaving] = useState(false);
 
   const getKey = (productId: string, sizeId: string) => `${productId}__${sizeId}`;
 
-  const getEditState = (productId: string, sizeId: string, product: Product, size: Product['sizes'][number]): SizeEditState => {
+  const getEditValue = (productId: string, sizeId: string, size: Product['sizes'][number]): number => {
     const key = getKey(productId, sizeId);
-    if (edits[key]) return edits[key];
-    return {
-      manualPrice: size.manualPrice ?? 0,
-      manualPrices: size.manualPrices ?? [],
-    };
+    if (key in edits) return edits[key];
+    return size.manualPrice ?? 0;
   };
 
-  const updateEditState = (productId: string, sizeId: string, partial: Partial<SizeEditState>) => {
+  const updateEditValue = (productId: string, sizeId: string, value: number) => {
     const key = getKey(productId, sizeId);
-    setEdits((prev) => ({
-      ...prev,
-      [key]: { ...getEditState(productId, sizeId, products.find(p => p._id === productId)!, products.find(p => p._id === productId)!.sizes.find(s => (s._id ?? s.name.en) === sizeId)!), ...partial },
-    }));
+    setEdits((prev) => ({ ...prev, [key]: value }));
   };
-
-  const toggleProduct = (productId: string) => {
-    setExpandedProducts((prev) => {
-      const next = new Set(prev);
-      if (next.has(productId)) next.delete(productId);
-      else next.add(productId);
-      return next;
-    });
-  };
-
-  const expandAll = () => setExpandedProducts(new Set(products.map((p) => p._id)));
-  const collapseAll = () => setExpandedProducts(new Set());
 
   const hasEdits = Object.keys(edits).length > 0;
 
@@ -83,7 +55,7 @@ export default function ManualPricesTab({
     const productUpdates = new Map<string, Product['sizes']>();
 
     // Group edits by product
-    for (const [key, state] of Object.entries(edits)) {
+    for (const [key, manualPrice] of Object.entries(edits)) {
       const [productId, sizeId] = key.split('__');
       const product = updatedProducts.find((p) => p._id === productId);
       if (!product) continue;
@@ -96,8 +68,7 @@ export default function ManualPricesTab({
 
       updatedSizes[sizeIndex] = {
         ...updatedSizes[sizeIndex],
-        manualPrice: state.manualPrice,
-        manualPrices: state.manualPrices,
+        manualPrice: manualPrice > 0 ? manualPrice : null,
       };
       productUpdates.set(productId, updatedSizes);
     }
@@ -144,15 +115,7 @@ export default function ManualPricesTab({
   return (
     <div className="space-y-4">
       {/* Header with save button */}
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={expandAll}>
-            {t('manualPrices.expandAll', { defaultValue: 'Expand All' })}
-          </Button>
-          <Button variant="outline" size="sm" onClick={collapseAll}>
-            {t('manualPrices.collapseAll', { defaultValue: 'Collapse All' })}
-          </Button>
-        </div>
+      <div className="flex items-center justify-end gap-3 flex-wrap">
         <Button
           variant="primary"
           onClick={saveAll}
@@ -175,11 +138,10 @@ export default function ManualPricesTab({
         </p>
       )}
 
-      {/* Product list */}
+      {/* Product list — always expanded */}
       <div className="space-y-2">
         {products.map((product) => {
           const img = getPrimaryProductImageUrl(product);
-          const isExpanded = expandedProducts.has(product._id);
 
           return (
             <div
@@ -187,11 +149,7 @@ export default function ManualPricesTab({
               className="rounded-lg border border-stroke bg-card-bg overflow-hidden"
             >
               {/* Product header row */}
-              <button
-                type="button"
-                onClick={() => toggleProduct(product._id)}
-                className="w-full flex items-center gap-3 p-3 hover:bg-muted/30 transition-colors"
-              >
+              <div className="w-full flex items-center gap-3 p-3 bg-muted/20">
                 {img ? (
                   <div className="relative w-10 h-10 rounded-lg overflow-hidden shrink-0">
                     <Image
@@ -213,77 +171,50 @@ export default function ManualPricesTab({
                     {product.sizes.length} {t('manualPrices.sizes', { defaultValue: 'sizes' })}
                   </span>
                 </div>
-                {isExpanded ? (
-                  <ChevronUp size={18} className="text-secondary shrink-0" />
-                ) : (
-                  <ChevronDown size={18} className="text-secondary shrink-0" />
-                )}
-              </button>
+              </div>
 
-              {/* Expanded: per-size editors */}
-              {isExpanded && (
-                <div className="border-t border-stroke p-4 space-y-6 bg-background/50">
-                  {product.sizes.map((size) => {
-                    const sizeId = size._id ?? size.name.en;
-                    const editState = getEditState(product._id, sizeId, product, size);
+              {/* Per-size EGP manual price inputs */}
+              <div className="border-t border-stroke p-4 space-y-4 bg-background/50">
+                {product.sizes.map((size) => {
+                  const sizeId = size._id ?? size.name.en;
+                  const editValue = getEditValue(product._id, sizeId, size);
 
-                    return (
-                      <div
-                        key={sizeId}
-                        className="space-y-3"
-                      >
-                        <div className="flex items-center gap-2 pb-2 border-b border-stroke">
-                          <h4 className="text-sm font-semibold text-foreground">
-                            {isRTL ? size.name.ar : size.name.en}
-                          </h4>
-                          <span className="text-xs text-secondary">
-                            ({t('manualPrices.regularPrice', { defaultValue: 'Regular' })}: {size.price} {product.baseCurrency})
-                          </span>
+                  return (
+                    <div
+                      key={sizeId}
+                      className="flex items-center gap-3 p-3 bg-card-bg rounded-lg border border-stroke"
+                    >
+                      {/* Size name + regular price */}
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-foreground text-sm">
+                          {isRTL ? size.name.ar : size.name.en}
                         </div>
-
-                        {/* Base manual price input */}
-                        <div className="p-3 bg-card-bg rounded-lg border border-stroke">
-                          <label className="text-xs font-medium text-secondary block mb-1.5">
-                            {t('manualPrices.baseManualPrice', { defaultValue: 'Manual Base Price' })} ({product.baseCurrency})
-                          </label>
-                          <input
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            value={editState.manualPrice || ''}
-                            onChange={(e) =>
-                              updateEditState(product._id, sizeId, {
-                                manualPrice: parseFloat(e.target.value) || 0,
-                              })
-                            }
-                            placeholder="0.00"
-                            className="w-full px-3 py-2 text-sm bg-background border border-stroke rounded text-foreground focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
-                          />
+                        <div className="text-xs text-secondary">
+                          {t('manualPrices.regularPrice', { defaultValue: 'Regular' })}: {size.price} {product.baseCurrency}
                         </div>
+                      </div>
 
-                        {/* Multi-currency manual prices editor */}
-                        <MultiCurrencyPriceEditor
-                          mainCurrency={product.baseCurrency}
-                          basePrice={editState.manualPrice}
-                          prices={editState.manualPrices}
-                          compact
-                          onChange={(newPrices) =>
-                            updateEditState(product._id, sizeId, {
-                              manualPrices: newPrices,
-                            })
+                      {/* Manual price input (EGP only) */}
+                      <div className="shrink-0 w-40">
+                        <label className="text-xs font-medium text-secondary block mb-1">
+                          {t('manualPrices.baseManualPrice', { defaultValue: 'Manual Price' })} (EGP)
+                        </label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={editValue || ''}
+                          onChange={(e) =>
+                            updateEditValue(product._id, sizeId, parseFloat(e.target.value) || 0)
                           }
-                          onMainCurrencyChange={() => { }}
-                          onBasePriceChange={(price) =>
-                            updateEditState(product._id, sizeId, {
-                              manualPrice: price,
-                            })
-                          }
+                          placeholder="0.00"
+                          className="w-full px-3 py-2 text-sm bg-background border border-stroke rounded text-foreground focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
                         />
                       </div>
-                    );
-                  })}
-                </div>
-              )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           );
         })}

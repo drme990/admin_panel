@@ -70,7 +70,6 @@ export default function ProductForm({
     price: 0,
     prices: [] as CurrencyPrice[],
     manualPrice: null as number | null,
-    manualPrices: [] as CurrencyPrice[],
     feedsUp: 0,
     isAvailable: true,
   };
@@ -101,7 +100,6 @@ export default function ProductForm({
       price: number;
       prices: CurrencyPrice[];
       manualPrice: number | null;
-      manualPrices: CurrencyPrice[];
       feedsUp: number;
       isAvailable: boolean;
     }[],
@@ -205,7 +203,6 @@ export default function ProductForm({
               price: s.price || 0,
               prices: s.prices || [],
               manualPrice: s.manualPrice ?? null,
-              manualPrices: s.manualPrices || [],
               feedsUp: s.feedsUp ?? 0,
               isAvailable: s.isAvailable !== false,
             }))
@@ -343,8 +340,6 @@ export default function ProductForm({
       size.price = value as number;
     } else if (field === 'manualPrice') {
       size.manualPrice = value as number | null;
-    } else if (field === 'manualPrices') {
-      size.manualPrices = value as CurrencyPrice[];
     } else if (field === 'prices') {
       size.prices = value as CurrencyPrice[];
     } else if (field === 'feedsUp') {
@@ -967,7 +962,7 @@ export default function ProductForm({
                 {/* Manual Price section */}
                 <div className="space-y-2 p-3 rounded-lg border border-stroke bg-card-bg/50">
                   <Input
-                    label={t('form.sizeManualPrice') || 'Manual Price'}
+                    label={`${t('form.sizeManualPrice') || 'Manual Price'} (EGP)`}
                     type="number"
                     value={size.manualPrice ?? ''}
                     onChange={(e) => {
@@ -976,19 +971,8 @@ export default function ProductForm({
                     }}
                     min="0"
                     step="0.01"
-                    helperText={t('form.sizeManualPriceHelp') || 'Base price used for manual orders. Leave empty to use the regular price.'}
+                    helperText={t('form.sizeManualPriceHelp') || 'Price in EGP used for manual orders. Leave empty to use the regular price.'}
                   />
-                  {size.manualPrice && size.manualPrice > 0 && (
-                    <MultiCurrencyPriceEditor
-                      mainCurrency={formData.baseCurrency}
-                      basePrice={size.manualPrice}
-                      prices={size.manualPrices || []}
-                      onChange={(prices) => updateSize(index, 'manualPrices', prices)}
-                      onMainCurrencyChange={() => { }}
-                      onBasePriceChange={() => { }}
-                      compact
-                    />
-                  )}
                 </div>
               </div>
 

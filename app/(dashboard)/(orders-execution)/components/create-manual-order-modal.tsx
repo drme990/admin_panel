@@ -99,7 +99,6 @@ interface Product {
     price: number;
     prices?: Array<{ currencyCode: string; amount: number }>;
     manualPrice?: number | null;
-    manualPrices?: Array<{ currencyCode: string; amount: number }>;
     isAvailable?: boolean;
   }>;
   reservationFields?: Array<{
@@ -698,11 +697,9 @@ export default function CreateManualOrderModal({
       if (!product) return 0;
       const size = product.sizes?.[item.sizeIndex];
       if (!size) return 0;
-      if (typeof size.manualPrice === 'number' && size.manualPrice > 0) {
-        const manualCurrencyPrice = size.manualPrices?.find(
-          (p: { currencyCode: string; amount: number }) => p.currencyCode === form.currency,
-        );
-        if (manualCurrencyPrice) return manualCurrencyPrice.amount;
+      // Manual price is EGP-only — use it when currency is EGP,
+      // otherwise fall back to the regular multi-currency price.
+      if (typeof size.manualPrice === 'number' && size.manualPrice > 0 && form.currency === 'EGP') {
         return size.manualPrice;
       }
       let unitPrice = size.price ?? 0;
@@ -727,11 +724,10 @@ export default function CreateManualOrderModal({
           const size = product.sizes?.[item.sizeIndex];
           if (!size) return item;
           let unitPrice = 0;
-          if (typeof size.manualPrice === 'number' && size.manualPrice > 0) {
-            const manualCurrencyPrice = size.manualPrices?.find(
-              (p: { currencyCode: string; amount: number }) => p.currencyCode === val,
-            );
-            unitPrice = manualCurrencyPrice ? manualCurrencyPrice.amount : size.manualPrice;
+          // Manual price is EGP-only — use it when currency is EGP,
+          // otherwise fall back to the regular multi-currency price.
+          if (typeof size.manualPrice === 'number' && size.manualPrice > 0 && val === 'EGP') {
+            unitPrice = size.manualPrice;
           } else {
             unitPrice = size.price ?? 0;
             const currencyPrice = size.prices?.find(
@@ -2016,7 +2012,7 @@ export default function CreateManualOrderModal({
               }
               placeholder={t('createManualOrder.shortDuaa')}
               rows={2}
-              maxLength={300}
+              maxLength={250}
               showCount
             />
           </div>

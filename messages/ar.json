@@ -979,10 +979,13 @@
       "rejectionReasonTitle": "سبب الرفض",
       "rejectionReasonHint": "يرجى تقديم سبب رفض هذه الفاتورة.",
       "status": {
+        "all": "الكل",
         "confirmed": "مؤكد",
         "waiting": "بانتظار التأكيد",
         "pending": "معلق",
-        "rejected": "مرفوض"
+        "rejected": "مرفوض",
+        "paid": "خالص",
+        "partial-paid": "باقي حساب"
       },
       "bulkAction": {
         "apply": "تطبيق",
@@ -998,8 +1001,13 @@
         "yesterday": "أمس",
         "last7Days": "آخر 7 أيام",
         "fromDate": "من تاريخ",
-        "toDate": "إلى تاريخ"
+        "toDate": "إلى تاريخ",
+        "allIntentions": "كل النيات",
+        "intention": "النية",
+        "allReferrals": "كل الإحالات",
+        "allCategories": "كل الفئات"
       },
+      "totalCount": "{count} فاتورة",
       "header": {
         "invoices": "الفواتير",
         "today": "اليوم",

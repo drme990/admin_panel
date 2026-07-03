@@ -3,6 +3,17 @@
 import { type ReactNode } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { toast } from 'react-toastify';
+
+import Button from '@/components/ui/button';
+import Tooltip from '@/components/ui/tooltip';
+import Checkbox from '@/components/ui/checkbox';
+import { Order, InvoiceStatus } from '@/types/Order';
+import { getPaymentMethodLabel } from '@/lib/order';
+
+import type { InvoiceRow } from '../lib/invoice-utils';
+import { isImageUrl, copyToClipboard, getNameLines, getReservationValue } from '../lib/invoice-utils';
+import InvoiceStatusCell, { STATUS_TEXT_COLORS } from './invoice-status-cell';
+
 import {
   LuEye,
   LuPhone,
@@ -15,18 +26,10 @@ import {
   LuFileText,
   LuDownload,
   LuUpload,
+  LuFileArchive,
 } from 'react-icons/lu';
 import { FaWhatsapp } from 'react-icons/fa6';
 
-import Button from '@/components/ui/button';
-import Tooltip from '@/components/ui/tooltip';
-import Checkbox from '@/components/ui/checkbox';
-import { Order, InvoiceStatus } from '@/types/Order';
-import { PAYMENT_METHOD_LABELS, getPaymentMethodLabel } from '@/lib/order';
-
-import type { InvoiceRow } from '../lib/invoice-utils';
-import { isImageUrl, copyToClipboard, getNameLines, getReservationValue } from '../lib/invoice-utils';
-import InvoiceStatusCell from './invoice-status-cell';
 
 interface ColumnCallbacks {
   onEdit: (invoice: InvoiceRow) => void;
@@ -79,7 +82,6 @@ export function useInvoiceColumns(callbacks: ColumnCallbacks) {
     onUploadInvoice,
     uploadingInvoiceId,
     tooltipPos,
-    formatDate,
     whatsappOrderId,
     copyingPhoneOrderId,
     copyingMessageOrderId,
@@ -203,13 +205,14 @@ export function useInvoiceColumns(callbacks: ColumnCallbacks) {
       header: t('colValue'),
       accessor: (row: InvoiceRow) => {
         const pmLabel = getPaymentMethodLabel(row.paymentMethod, locale as 'ar' | 'en');
+        const statusColor = STATUS_TEXT_COLORS[row.invoiceStatus as InvoiceStatus] ?? 'text-foreground';
         return (
           <div className="flex flex-col gap-0.5 whitespace-nowrap">
-            <span className="text-sm font-bold text-foreground">
+            <span className={`text-lg font-bold ${statusColor}`}>
               {row.value.toFixed(2)} {row.invoiceCurrency}
             </span>
-            <div className="flex items-center gap-1">
-              <span className="text-xs text-secondary">
+            <div className="flex items-center gap-1 border border-stroke rounded-xl px-2 py-1 w-fit">
+              <span className={`text-xs ${statusColor}`}>
                 {pmLabel || t('noPaymentMethod')}
               </span>
               <Tooltip position={tooltipPos} content={t('editPaymentMethod')}>
@@ -298,7 +301,6 @@ export function useInvoiceColumns(callbacks: ColumnCallbacks) {
       accessor: (row: InvoiceRow) => {
         const items = row.items || [];
         if (items.length === 0) return <span className="text-secondary">-</span>;
-        const totalQty = items.reduce((sum, item) => sum + (item.quantity || 1), 0);
         return (
           <div className="flex flex-col gap-1 min-w-52">
             {items.map((item, i) => {
@@ -310,10 +312,7 @@ export function useInvoiceColumns(callbacks: ColumnCallbacks) {
                 </span>
               );
             })}
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-secondary">
-                {t('itemsCount', { count: totalQty })}
-              </span>
+            <div className="">
               <Tooltip position={tooltipPos} content={t('copyItems')}>
                 <Button
                   variant="ghost"
@@ -480,7 +479,7 @@ export function useInvoiceColumns(callbacks: ColumnCallbacks) {
                   onClick={(e) => { e.stopPropagation(); onEdit(row); }}
                   aria-label={t('edit')}
                 >
-                  <LuPencilLine size={16} />
+                  <LuFileArchive size={16} />
                 </Button>
               </Tooltip>
             </div>

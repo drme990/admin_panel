@@ -14,6 +14,7 @@ import {
   LuFileText,
   LuDownload,
   LuUpload,
+  LuFileArchive,
 } from 'react-icons/lu';
 import { FaWhatsapp } from 'react-icons/fa6';
 
@@ -30,7 +31,7 @@ import {
   getNameLines,
   getReservationValue,
 } from '../lib/invoice-utils';
-import InvoiceStatusCell from './invoice-status-cell';
+import InvoiceStatusCell, { STATUS_TEXT_COLORS } from './invoice-status-cell';
 import Image from 'next/image';
 
 interface InvoiceCardViewProps {
@@ -169,6 +170,7 @@ export default function InvoiceCardView({
           row.paymentMethod,
           locale as 'ar' | 'en',
         );
+        const statusColor = STATUS_TEXT_COLORS[row.invoiceStatus as InvoiceStatus] ?? 'text-foreground';
 
         return (
           <div key={row._id} className="flex flex-col">
@@ -259,11 +261,11 @@ export default function InvoiceCardView({
 
               {/* Value + payment method */}
               <div className="px-2 py-3 flex items-center justify-between gap-2 border-y-2 rounded-b-xl border-success">
-                <span className="text-base font-bold text-foreground whitespace-nowrap">
+                <span className={`text-base font-bold whitespace-nowrap ${statusColor}`}>
                   {row.value.toFixed(2)} {row.invoiceCurrency}
                 </span>
                 <div className="flex items-center gap-1">
-                  <span className="text-sm text-foreground">
+                  <span className={`text-sm ${statusColor}`}>
                     {pmLabel || t('noPaymentMethod')}
                   </span>
                   <Tooltip
@@ -495,7 +497,7 @@ export default function InvoiceCardView({
                   }}
                   aria-label={t('edit')}
                 >
-                  <LuPencilLine size={16} />
+                  <LuFileArchive size={16} />
                 </Button>
               </Tooltip>
             </div>

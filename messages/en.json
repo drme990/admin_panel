@@ -978,10 +978,13 @@
       "rejectionReasonTitle": "Rejection Reason",
       "rejectionReasonHint": "Please provide a reason for rejecting this invoice.",
       "status": {
+        "all": "All",
         "confirmed": "Confirmed",
         "waiting": "Waiting",
         "pending": "Pending",
-        "rejected": "Rejected"
+        "rejected": "Rejected",
+        "paid": "Paid",
+        "partial-paid": "Partial Paid"
       },
       "bulkAction": {
         "apply": "Apply",
@@ -997,8 +1000,13 @@
         "yesterday": "Yesterday",
         "last7Days": "Last 7 Days",
         "fromDate": "From Date",
-        "toDate": "To Date"
+        "toDate": "To Date",
+        "allIntentions": "All Intentions",
+        "intention": "Intention",
+        "allReferrals": "All Referrals",
+        "allCategories": "All Categories"
       },
+      "totalCount": "{count} invoices",
       "header": {
         "invoices": "Invoices",
         "today": "Today",

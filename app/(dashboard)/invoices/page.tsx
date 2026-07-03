@@ -12,6 +12,8 @@ import ConfirmModal, { useConfirmModal } from '@/components/ui/confirm-modal';
 import { LuList, LuLayoutGrid } from 'react-icons/lu';
 
 import { Order, OrderStatus, PaymentMethod, InvoiceStatus } from '@/types/Order';
+import { Category } from '@/types/Category';
+import { Referral } from '@/types/Referral';
 
 import InvoiceFilters from './components/invoice-filters';
 import InvoiceEditModal from './components/invoice-edit-modal';
@@ -65,6 +67,13 @@ export default function InvoicesPage() {
     const [paymentMethodFilter, setPaymentMethodFilter] = useState<string>('all');
     const [fromDateFilter, setFromDateFilter] = useState(today);
     const [toDateFilter, setToDateFilter] = useState(today);
+    const [referralFilter, setReferralFilter] = useState('');
+    const [categoryFilter, setCategoryFilter] = useState('all');
+    const [statusFilter, setStatusFilter] = useState<OrderStatus | 'all'>('all');
+    const [intentionFilter, setIntentionFilter] = useState('all');
+    const [categories, setCategories] = useState<Category[]>([]);
+    const [referrals, setReferrals] = useState<Referral[]>([]);
+    const [totalInvoices, setTotalInvoices] = useState(0);
 
     // Edit modal state
     const [editingInvoice, setEditingInvoice] = useState<InvoiceRow | null>(null);
@@ -127,6 +136,10 @@ export default function InvoicesPage() {
                 tzOffsetMinutes: String(new Date().getTimezoneOffset()),
             });
             if (searchQuery) params.set('search', searchQuery);
+            if (statusFilter !== 'all') params.set('status', statusFilter);
+            if (referralFilter) params.set('referralId', referralFilter);
+            if (categoryFilter && categoryFilter !== 'all') params.set('category', categoryFilter);
+            if (intentionFilter && intentionFilter !== 'all') params.set('intention', intentionFilter);
 
             const normalizedRange = normalizeDateRange(fromDateFilter, toDateFilter);
             if (normalizedRange.fromDate) params.set('fromDate', normalizedRange.fromDate);
@@ -188,6 +201,7 @@ export default function InvoicesPage() {
 
             setInvoices(rows);
             setTotalPages(Math.max(1, Math.ceil(rows.length / pageSize)));
+            setTotalInvoices(rows.length);
         } catch (error) {
             if ((error as { name?: string })?.name === 'AbortError') {
                 return;
@@ -199,7 +213,7 @@ export default function InvoicesPage() {
                 setLoading(false);
             }
         }
-    }, [pageSize, reviewFilter, sourceFilter, paymentMethodFilter, searchQuery, fromDateFilter, toDateFilter, t]);
+    }, [pageSize, reviewFilter, sourceFilter, paymentMethodFilter, searchQuery, fromDateFilter, toDateFilter, statusFilter, referralFilter, categoryFilter, intentionFilter, t]);
 
     useEffect(() => {
         const controller = new AbortController();
@@ -218,6 +232,37 @@ export default function InvoicesPage() {
         }, 250);
         return () => window.clearTimeout(timer);
     }, [searchInput]);
+
+    // Fetch categories and referrals for filters
+    useEffect(() => {
+        const fetchCategories = async () => {
+            try {
+                const res = await fetch('/api/categories');
+                const data = await res.json();
+                if (data.success) {
+                    setCategories(data.data.categories);
+                }
+            } catch (err) {
+                console.error('Error fetching categories:', err);
+            }
+        };
+        fetchCategories();
+    }, []);
+
+    useEffect(() => {
+        const fetchReferrals = async () => {
+            try {
+                const res = await fetch('/api/referrals?limit=100', { cache: 'no-store' });
+                const data = await res.json();
+                if (data.success) {
+                    setReferrals(data.data.referrals);
+                }
+            } catch (err) {
+                console.error('Error fetching referrals:', err);
+            }
+        };
+        fetchReferrals();
+    }, []);
 
     // ---------- Date filter helpers ----------
 
@@ -925,13 +970,33 @@ export default function InvoicesPage() {
                 activeDatePreset={activeDatePreset}
                 onDatePreset={applyDatePreset}
                 locale={locale}
+                referralFilter={referralFilter}
+                onReferralChange={(val) => {
+                    setReferralFilter(val);
+                    setPage(1);
+                }}
+                referrals={referrals}
+                categoryFilter={categoryFilter}
+                onCategoryChange={(val) => {
+                    setCategoryFilter(val);
+                    setPage(1);
+                }}
+                categories={categories}
+                statusFilter={statusFilter}
+                onStatusChange={(val) => {
+                    setStatusFilter(val);
+                    setPage(1);
+                }}
+                intentionFilter={intentionFilter}
+                onIntentionChange={(val) => {
+                    setIntentionFilter(val);
+                    setPage(1);
+                }}
+                totalInvoices={totalInvoices}
             />
 
-            {/* Total + view switcher */}
-            <div className="flex items-center justify-between gap-4">
-                <span className="text-sm text-secondary">
-                    {t('total')}: {invoices.length}
-                </span>
+            {/* View switcher */}
+            <div className="flex items-center justify-end gap-4">
                 <Tabs<'list' | 'card'>
                     value={viewMode}
                     options={[

@@ -36,7 +36,7 @@ function statusIcon(status: InvoiceStatus, size: number = 28): React.ReactNode {
   }
 }
 
-const STATUS_TEXT_COLORS: Record<InvoiceStatus, string> = {
+export const STATUS_TEXT_COLORS: Record<InvoiceStatus, string> = {
   confirmed: 'text-green-700 dark:text-green-300',
   waiting: 'text-orange-700 dark:text-orange-300',
   pending: 'text-blue-700 dark:text-blue-300',

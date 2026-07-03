@@ -16,6 +16,7 @@ export interface OrderWhatsappData {
   reservationMap: Map<ReservationFieldKey, ReservationOrderField>;
   referralId?: string | null;
   source?: Order['source'];
+  createdAt: string;
 }
 
 function getDefaultReferralCode(source?: Order['source']): string {
@@ -142,18 +143,20 @@ function formatExecutionDate(value: string): string {
   return `${weekday} ${day}/${month}/${year}`;
 }
 
-function isNextDayExecutionDate(value: string): boolean {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+function isNextDayExecutionDate(executionDateValue: string, createdAt: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(executionDateValue)) return false;
+  if (!createdAt) return false;
 
-  const [year, month, day] = value.split('-').map(Number);
+  const [year, month, day] = executionDateValue.split('-').map(Number);
   const executionDate = new Date(year, month - 1, day);
   executionDate.setHours(0, 0, 0, 0);
 
-  const tomorrow = new Date();
-  tomorrow.setHours(0, 0, 0, 0);
-  tomorrow.setDate(tomorrow.getDate() + 1);
+  const createdDate = new Date(createdAt);
+  createdDate.setHours(0, 0, 0, 0);
+  const nextDay = new Date(createdDate);
+  nextDay.setDate(nextDay.getDate() + 1);
 
-  return executionDate.getTime() === tomorrow.getTime();
+  return executionDate.getTime() === nextDay.getTime();
 }
 
 export function buildOrderWhatsappMessage(data: OrderWhatsappData): string {
@@ -248,7 +251,7 @@ export function buildOrderWhatsappMessage(data: OrderWhatsappData): string {
   lines.push(remainingLine);
   lines.push(DIVIDER);
 
-  if (executionDate && !isNextDayExecutionDate(executionDate)) {
+  if (executionDate && !isNextDayExecutionDate(executionDate, data.createdAt)) {
     lines.push(`🗓️  *تنفيذ ${formatExecutionDate(executionDate)}*`);
     lines.push(DIVIDER);
   }
@@ -292,6 +295,7 @@ export function buildOrderWhatsappMessageFromOrder(order: Order): string {
     reservationMap,
     referralId: order.referralId || null,
     source: order.source,
+    createdAt: order.createdAt,
   });
 }
 

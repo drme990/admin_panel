@@ -1,5 +1,6 @@
 import { type ReactNode, useState } from 'react';
 import { useTranslations } from 'next-intl';
+import { toast } from 'react-toastify';
 
 import Modal from '@/components/ui/modal';
 import Button from '@/components/ui/button';
@@ -7,6 +8,8 @@ import Tooltip from '@/components/ui/tooltip';
 import { Order, OrderPayment } from '@/types/Order';
 import { STATUS_COLORS, PAYMENT_STATUS_COLORS } from '../lib/order-status';
 import { isImageUrl } from '../lib/order-utils';
+import { getPaymentMethodLabel } from '@/lib/order';
+import { downloadFile } from '@/lib/download-utils';
 import {
   LuCreditCard,
   LuCalendar,
@@ -22,6 +25,7 @@ import {
   LuCopy,
   LuCheck,
   LuX,
+  LuClock,
   LuRotateCw,
 } from 'react-icons/lu';
 
@@ -346,7 +350,7 @@ export default function OrderDetailModal({
                               <InfoRow
                                 icon={<LuCreditCard size={14} />}
                                 label={t('paymentTimeline.method')}
-                                value={payment.paymentMethod || 'N/A'}
+                                value={getPaymentMethodLabel(payment.paymentMethod, locale as 'ar' | 'en') || 'N/A'}
                               />
                               <InfoRow
                                 icon={<LuCalendar size={14} />}
@@ -476,39 +480,58 @@ export default function OrderDetailModal({
                         {invoices.length > 1 ? t('table.invoices') || t('table.invoice') : t('table.invoice')}
                       </h3>
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                        {invoices.map((invoice) => (
-                          <a
-                            key={invoice.url}
-                            href={invoice.url}
-                            download
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="relative flex flex-col items-center gap-2 p-3 rounded-lg bg-background border border-stroke hover:border-primary transition-colors"
-                          >
-                            <span
-                              className={`absolute top-2 left-2 inline-flex items-center justify-center w-7 h-7 rounded-full ${invoice.reviewed ? 'bg-success' : 'bg-error'
-                                }`}
-                              title={invoice.reviewed ? t('table.reviewedInvoice') || 'Reviewed' : t('table.unreviewedInvoice') || 'Unreviewed'}
+                        {invoices.map((invoice) => {
+                          const invoiceStatus = invoice.invoiceStatus ?? (invoice.reviewed ? 'confirmed' : 'waiting');
+                          const statusConfig = {
+                            confirmed: { bg: 'bg-success', icon: <LuCheck size={16} />, label: t('table.reviewedInvoice') || 'Confirmed' },
+                            rejected: { bg: 'bg-error', icon: <LuX size={16} />, label: t('table.rejectedInvoice') || 'Rejected' },
+                            waiting: { bg: 'bg-warning', icon: <LuClock size={16} />, label: t('table.unreviewedInvoice') || 'Waiting' },
+                            pending: { bg: 'bg-warning', icon: <LuClock size={16} />, label: t('table.unreviewedInvoice') || 'Pending' },
+                          } as const;
+                          const config = statusConfig[invoiceStatus as keyof typeof statusConfig] || statusConfig.waiting;
+
+                          return (
+                            <button
+                              key={invoice.url}
+                              type="button"
+                              onClick={async () => {
+                                try {
+                                  await downloadFile(invoice.url, `invoice-${order.orderNumber}`);
+                                } catch {
+                                  toast.error(t('messages.downloadFailed') || 'Failed to download invoice');
+                                }
+                              }}
+                              className="relative flex flex-col items-center gap-2 p-3 rounded-lg bg-background border border-stroke hover:border-primary transition-colors text-left"
                             >
-                              {invoice.reviewed ? <LuCheck size={16} /> : <LuX size={16} />}
-                            </span>
-                            {isImageUrl(invoice.url) ? (
-                              <img
-                                src={invoice.url}
-                                alt="Invoice"
-                                className="w-full h-24 object-cover rounded-md"
-                                loading="lazy"
-                              />
-                            ) : (
-                              <span className="inline-flex items-center justify-center p-2 text-primary h-24">
-                                <LuFileText size={32} />
+                              <span
+                                className={`absolute top-2 left-2 inline-flex items-center justify-center w-7 h-7 rounded-full ${config.bg}`}
+                                title={config.label}
+                              >
+                                {config.icon}
                               </span>
-                            )}
-                            <span className="text-xs text-primary font-medium truncate max-w-full">
-                              {t('table.downloadInvoice')}
-                            </span>
-                          </a>
-                        ))}
+                              {isImageUrl(invoice.url) ? (
+                                <img
+                                  src={invoice.url}
+                                  alt="Invoice"
+                                  className="w-full h-24 object-cover rounded-md"
+                                  loading="lazy"
+                                />
+                              ) : (
+                                <span className="inline-flex items-center justify-center p-2 text-primary h-24">
+                                  <LuFileText size={32} />
+                                </span>
+                              )}
+                              <span className="text-xs text-primary font-medium truncate max-w-full">
+                                {t('table.downloadInvoice')}
+                              </span>
+                              {invoiceStatus === 'rejected' && invoice.rejectionReason && (
+                                <span className="text-xs text-error text-center line-clamp-2">
+                                  {invoice.rejectionReason}
+                                </span>
+                              )}
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
                   );

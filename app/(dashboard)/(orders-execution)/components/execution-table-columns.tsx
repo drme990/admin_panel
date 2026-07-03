@@ -29,7 +29,8 @@ import Tooltip from '@/components/ui/tooltip';
 import { Order } from '@/types/Order';
 import { STATUS_COLORS } from '../lib/order-status';
 import { isImageUrl } from '../lib/order-utils';
-import { InvoiceUploadMenu } from './invoic-upload-menu';
+import { downloadFile } from '@/lib/download-utils';
+import { InvoiceUploadMenu, type UploadInvoiceStatus } from './invoic-upload-menu';
 
 function getReservationValue(order: Order, key: string): string | undefined {
   return order.reservationData?.find((f) => f.key === key)?.value;
@@ -65,22 +66,6 @@ async function copyToClipboard(text: string): Promise<void> {
   });
 }
 
-async function downloadImageDirectly(url: string, filename: string): Promise<void> {
-  const response = await fetch(url, { mode: 'cors' });
-  if (!response.ok) {
-    throw new Error(`Failed to download image: ${response.status} ${response.statusText}`);
-  }
-  const blob = await response.blob();
-  const blobUrl = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = blobUrl;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(blobUrl);
-}
-
 interface ColumnCallbacks {
   onView: (order: Order) => void;
   onWhatsapp: (order: Order) => void;
@@ -90,7 +75,7 @@ interface ColumnCallbacks {
   onEditField: (order: Order, field: 'name' | 'items' | 'duaa') => void;
   onUploadPhoto: (order: Order) => void;
   onCopyPhotoUrl: (order: Order) => void;
-  onUploadInvoice: (order: Order, reviewed: boolean) => void;
+  onUploadInvoice: (order: Order, invoiceStatus: UploadInvoiceStatus) => void;
   onDownloadInvoice: (order: Order) => void;
   onChangeStatus: (order: Order) => void;
   onViewHistory: (order: Order) => void;
@@ -338,7 +323,7 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
                   onClick={(e) => {
                     e.stopPropagation();
                     if (photoUrl) {
-                      void downloadImageDirectly(photoUrl, `photo-${order.orderNumber}`)
+                      void downloadFile(photoUrl, `photo-${order.orderNumber}`)
                         .then(() => toast.success(t('table.downloaded')))
                         .catch(() => toast.error(t('messages.downloadFailed')));
                     }
@@ -464,7 +449,10 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
       accessor: (order: Order) => {
         const invoices = order.invoiceUrls || [];
         const hasInvoice = invoices.length > 0;
-        const hasUnreviewedInvoice = invoices.some((inv) => !inv.reviewed);
+        const hasUnreviewedInvoice = invoices.some((inv) => {
+          const status = inv.invoiceStatus ?? (inv.reviewed ? 'confirmed' : 'waiting');
+          return status !== 'confirmed';
+        });
         const partialPaid = order.status === 'partial-paid';
         const iconColor = hasInvoice
           ? (partialPaid ? 'text-orange-600 dark:text-orange-400' : 'text-primary')
@@ -487,13 +475,13 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
                 </span>
               ) : (
                 <InvoiceUploadMenu
-                  onUpload={(reviewed) => onUploadInvoice(order, reviewed)}
+                  onUpload={(status) => onUploadInvoice(order, status)}
                   disabled={uploadingInvoiceOrderId === order._id}
                   tooltipPos={tooltipPos}
                   labels={{
                     tooltip: t('table.uploadInvoice') || 'Upload invoice',
-                    uploadReviewed: t('table.uploadReviewedInvoice') || 'Upload reviewed',
-                    uploadUnreviewed: t('table.uploadUnreviewedInvoice') || 'Upload unreviewed',
+                    uploadConfirmed: t('table.uploadConfirmedInvoice') || 'Upload confirmed',
+                    uploadWaiting: t('table.uploadWaitingInvoice') || 'Upload waiting',
                   }}
                 />
               )}

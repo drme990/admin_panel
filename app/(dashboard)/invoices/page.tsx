@@ -1,128 +1,158 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { toast } from 'react-toastify';
 
 import Table from '@/components/ui/table';
 import Pagination from '@/components/ui/pagination';
-import Button from '@/components/ui/button';
-import Input from '@/components/ui/input';
-import Dropdown from '@/components/ui/dropdown';
-import Tabs from '@/components/ui/tabs';
-import Tooltip from '@/components/ui/tooltip';
-import Modal from '@/components/ui/modal';
+import BulkAction from '@/components/ui/bulk-action';
+import ConfirmModal, { useConfirmModal } from '@/components/ui/confirm-modal';
 
-import { Order } from '@/types/Order';
+import { Order, OrderStatus, PaymentMethod, InvoiceStatus } from '@/types/Order';
 
+import InvoiceFilters from './components/invoice-filters';
+import InvoiceEditModal from './components/invoice-edit-modal';
+import InvoicePreviewModal from './components/invoice-preview-modal';
+import InvoicePaymentMethodModal from './components/invoice-payment-method-modal';
+import InvoiceRejectionModal from './components/invoice-rejection-modal';
+import InvoiceTitle from './components/invoice-title';
+import { useInvoiceColumns } from './components/invoice-table-columns';
+import OrderDetailModal from '../(orders-execution)/components/order-detail-modal';
+import ChangeStatusModal from '../(orders-execution)/components/change-status-modal';
+import OrderHistoryModal, { OrderHistoryEntry } from '../(orders-execution)/components/order-history-modal';
 import {
-    LuSearch,
-    LuCheck,
-    LuClock,
-    LuSave,
-    LuExternalLink,
-    LuFileText,
-} from 'react-icons/lu';
+    normalizeWhatsappPhone,
+    copyToClipboard,
+} from '../(orders-execution)/lib/order-utils';
+import { buildOrderWhatsappMessageFromOrder } from '@/lib/order-whatsapp';
+import type {
+    InvoiceEntry,
+    InvoiceRow,
+    ReviewFilter,
+} from './lib/invoice-utils';
+import {
+    getRelativeIsoDate,
+    normalizeDateRange,
+    addDaysToIsoDate,
+    downloadInvoiceFile,
+} from './lib/invoice-utils';
+import { uploadInvoiceToR2 } from '@/lib/image-upload-utils';
 
-interface InvoiceEntry {
-    url: string;
-    reviewed: boolean;
-    value: number;
-    currency?: string;
-}
-
-interface InvoiceRow {
-    _id: string;
-    orderId: string;
-    orderNumber: string;
-    invoiceIndex: number;
-    url: string;
-    reviewed: boolean;
-    value: number;
-    currency: string;
-    invoiceCurrency: string;
-    orderStatus: string;
-    customerName: string;
-    customerEmail: string;
-    customerPhone: string;
-    source: string;
-    createdAt: string;
-    updatedAt: string;
-}
-
-type ReviewFilter = 'all' | 'reviewed' | 'unreviewed';
-
-function isImageUrl(url: string): boolean {
-    return /\.(jpg|jpeg|png|webp|gif)(\?.*)?$/i.test(url);
-}
+type DateQuickPreset = 'today' | 'yesterday' | 'last7Days' | 'all';
 
 export default function InvoicesPage() {
     const t = useTranslations('admin.invoices');
     const locale = useLocale();
     const isAr = locale === 'ar';
+    const { confirm, modalProps } = useConfirmModal();
+
+    const today = getRelativeIsoDate(0);
 
     const [invoices, setInvoices] = useState<InvoiceRow[]>([]);
     const [loading, setLoading] = useState(true);
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(20);
-    const [totalInvoices, setTotalInvoices] = useState(0);
     const [totalPages, setTotalPages] = useState(1);
 
     const [searchInput, setSearchInput] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
     const [reviewFilter, setReviewFilter] = useState<ReviewFilter>('all');
     const [sourceFilter, setSourceFilter] = useState('all');
+    const [paymentMethodFilter, setPaymentMethodFilter] = useState<string>('all');
+    const [fromDateFilter, setFromDateFilter] = useState(today);
+    const [toDateFilter, setToDateFilter] = useState(today);
 
     // Edit modal state
     const [editingInvoice, setEditingInvoice] = useState<InvoiceRow | null>(null);
-    const [editValue, setEditValue] = useState('');
-    const [editReviewed, setEditReviewed] = useState(false);
-    const [editCurrency, setEditCurrency] = useState('EGP');
     const [saving, setSaving] = useState(false);
 
     // Preview modal state
-    const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+    const [previewInvoice, setPreviewInvoice] = useState<InvoiceRow | null>(null);
 
-    // Stats
-    const [stats, setStats] = useState({ total: 0, reviewed: 0, unreviewed: 0, totalValue: 0 });
+    // Payment method edit modal state
+    const [editingPaymentMethodInvoice, setEditingPaymentMethodInvoice] = useState<InvoiceRow | null>(null);
+    const [savingPaymentMethod, setSavingPaymentMethod] = useState(false);
 
-    const fetchInvoices = useCallback(async () => {
+    // Invoice status rejection reason modal state
+    const [statusChangeInvoice, setStatusChangeInvoice] = useState<InvoiceRow | null>(null);
+    const [statusChangeTarget, setStatusChangeTarget] = useState<InvoiceStatus | null>(null);
+    const [savingStatus, setSavingStatus] = useState(false);
+
+    // Invoice upload
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [uploadInvoiceTarget, setUploadInvoiceTarget] = useState<InvoiceRow | null>(null);
+    const [uploadingInvoiceId, setUploadingInvoiceId] = useState<string | null>(null);
+
+    // Order detail modal
+    const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+    const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
+    const [loadingOrderDetails, setLoadingOrderDetails] = useState(false);
+
+    // Change status modal
+    const [isChangeStatusModalOpen, setIsChangeStatusModalOpen] = useState(false);
+    const [updatingStatus, setUpdatingStatus] = useState(false);
+
+    // Order history modal
+    const [isOrderHistoryModalOpen, setIsOrderHistoryModalOpen] = useState(false);
+    const [orderHistory, setOrderHistory] = useState<OrderHistoryEntry[]>([]);
+    const [loadingOrderHistory, setLoadingOrderHistory] = useState(false);
+
+    // Async action tracking (by orderId)
+    const [whatsappOrderId, setWhatsappOrderId] = useState<string | null>(null);
+    const [copyingPhoneOrderId, setCopyingPhoneOrderId] = useState<string | null>(null);
+    const [copyingMessageOrderId, setCopyingMessageOrderId] = useState<string | null>(null);
+    const [blockedUserIds, setBlockedUserIds] = useState<Set<string>>(new Set());
+    const [blockingOrderId, setBlockingOrderId] = useState<string | null>(null);
+
+    // Bulk selection
+    const [selectedInvoiceIds, setSelectedInvoiceIds] = useState<string[]>([]);
+    const [bulkStatusValue, setBulkStatusValue] = useState<string>('');
+    const [bulkUpdating, setBulkUpdating] = useState(false);
+
+    const fetchInvoices = useCallback(async (signal?: AbortSignal) => {
         setLoading(true);
         try {
-            // Fetch orders (backend doesn't support invoice-specific filters,
-            // so we filter client-side). Pull a large batch to cover filtering.
             const params = new URLSearchParams({
                 page: '1',
                 limit: '200',
+                view: 'table',
                 source: sourceFilter,
+                tzOffsetMinutes: String(new Date().getTimezoneOffset()),
             });
             if (searchQuery) params.set('search', searchQuery);
 
-            const res = await fetch(`/api/orders?view=table&${params.toString()}`, {
+            const normalizedRange = normalizeDateRange(fromDateFilter, toDateFilter);
+            if (normalizedRange.fromDate) params.set('fromDate', normalizedRange.fromDate);
+            if (normalizedRange.toDate) params.set('toDate', normalizedRange.toDate);
+
+            const res = await fetch(`/api/orders?${params.toString()}`, {
                 cache: 'no-store',
+                signal,
             });
             const data = await res.json();
             if (!data.success) {
-                toast.error(data.error || t('loadFailed'));
+                if (!signal?.aborted) toast.error(data.error || t('loadFailed'));
                 return;
             }
 
-            // Flatten orders → invoice rows, then apply review filter
             const rows: InvoiceRow[] = [];
-            let reviewedCount = 0;
-            let unreviewedCount = 0;
-            let totalValue = 0;
 
             for (const order of data.data.orders as Order[]) {
                 const invoiceUrls = (order.invoiceUrls || []) as InvoiceEntry[];
-                invoiceUrls.forEach((inv, idx) => {
-                    if (inv.reviewed) reviewedCount++;
-                    else unreviewedCount++;
-                    totalValue += inv.value || 0;
+                // Derive payment method from the latest paid payment
+                const payments = order.payments || [];
+                const paidPayment = [...payments]
+                    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                    .find((p) => p.status === 'paid');
+                const paymentMethod = paidPayment?.paymentMethod || order.paymentMethod;
 
-                    // Apply review filter
-                    if (reviewFilter === 'reviewed' && !inv.reviewed) return;
-                    if (reviewFilter === 'unreviewed' && inv.reviewed) return;
+                invoiceUrls.forEach((inv, idx) => {
+                    const invoiceStatus: string =
+                        inv.invoiceStatus ?? (inv.reviewed ? 'confirmed' : 'waiting');
+
+                    if (reviewFilter !== 'all' && invoiceStatus !== reviewFilter) return;
+                    if (paymentMethodFilter !== 'all' && paymentMethod !== paymentMethodFilter) return;
 
                     rows.push({
                         _id: `${order._id}_${idx}`,
@@ -130,7 +160,8 @@ export default function InvoicesPage() {
                         orderNumber: order.orderNumber,
                         invoiceIndex: idx,
                         url: inv.url,
-                        reviewed: inv.reviewed,
+                        invoiceStatus,
+                        rejectionReason: inv.rejectionReason || '',
                         value: inv.value || 0,
                         currency: order.currency || '',
                         invoiceCurrency: inv.currency || 'EGP',
@@ -139,6 +170,11 @@ export default function InvoicesPage() {
                         customerEmail: order.billingData?.email || '',
                         customerPhone: order.billingData?.phone || '',
                         source: order.source || '',
+                        paymentMethod,
+                        reservationData: order.reservationData,
+                        items: order.items || [],
+                        userId: order.userId,
+                        isGuest: order.isGuest,
                         createdAt: order.createdAt,
                         updatedAt: order.updatedAt,
                     });
@@ -146,24 +182,27 @@ export default function InvoicesPage() {
             }
 
             setInvoices(rows);
-            setTotalInvoices(rows.length);
             setTotalPages(Math.max(1, Math.ceil(rows.length / pageSize)));
-            setStats({
-                total: reviewedCount + unreviewedCount,
-                reviewed: reviewedCount,
-                unreviewed: unreviewedCount,
-                totalValue,
-            });
         } catch (error) {
+            if ((error as { name?: string })?.name === 'AbortError') {
+                return;
+            }
             console.error('Error fetching invoices:', error);
             toast.error(t('loadFailed'));
         } finally {
-            setLoading(false);
+            if (!signal?.aborted) {
+                setLoading(false);
+            }
         }
-    }, [pageSize, reviewFilter, sourceFilter, searchQuery, t]);
+    }, [pageSize, reviewFilter, sourceFilter, paymentMethodFilter, searchQuery, fromDateFilter, toDateFilter, t]);
 
     useEffect(() => {
-        fetchInvoices();
+        const controller = new AbortController();
+        void fetchInvoices(controller.signal);
+
+        return () => {
+            controller.abort();
+        };
     }, [fetchInvoices]);
 
     // Debounced search
@@ -171,29 +210,69 @@ export default function InvoicesPage() {
         const timer = window.setTimeout(() => {
             setSearchQuery(searchInput.trim());
             setPage(1);
-        }, 300);
+        }, 250);
         return () => window.clearTimeout(timer);
     }, [searchInput]);
 
-    const handleOpenEdit = (invoice: InvoiceRow) => {
-        setEditingInvoice(invoice);
-        setEditValue(String(invoice.value || ''));
-        setEditReviewed(invoice.reviewed);
-        setEditCurrency(invoice.invoiceCurrency || 'EGP');
+    // ---------- Date filter helpers ----------
+
+    const yesterday = getRelativeIsoDate(-1);
+    const lastSevenDaysStart = getRelativeIsoDate(-6);
+    const normalizedSelectedRange = normalizeDateRange(fromDateFilter, toDateFilter);
+
+    const activeDatePreset: DateQuickPreset | 'custom' =
+        !normalizedSelectedRange.fromDate && !normalizedSelectedRange.toDate
+            ? 'all'
+            : normalizedSelectedRange.fromDate === today && normalizedSelectedRange.toDate === today
+                ? 'today'
+                : normalizedSelectedRange.fromDate === yesterday && normalizedSelectedRange.toDate === yesterday
+                    ? 'yesterday'
+                    : normalizedSelectedRange.fromDate === lastSevenDaysStart && normalizedSelectedRange.toDate === today
+                        ? 'last7Days'
+                        : 'custom';
+
+    const applyDatePreset = (preset: DateQuickPreset) => {
+        if (preset === 'all') {
+            setFromDateFilter('');
+            setToDateFilter('');
+            return;
+        }
+        if (preset === 'today') {
+            setFromDateFilter(today);
+            setToDateFilter(today);
+            return;
+        }
+        if (preset === 'yesterday') {
+            setFromDateFilter(yesterday);
+            setToDateFilter(yesterday);
+            return;
+        }
+        setFromDateFilter(lastSevenDaysStart);
+        setToDateFilter(today);
     };
+
+    const handleFromDateChange = (value: string) => {
+        const r = normalizeDateRange(value, toDateFilter);
+        setFromDateFilter(r.fromDate);
+        setToDateFilter(r.toDate);
+    };
+
+    const handleToDateChange = (value: string) => {
+        const r = normalizeDateRange(fromDateFilter, value);
+        setFromDateFilter(r.fromDate);
+        setToDateFilter(r.toDate);
+    };
+
+    // ---------- Invoice edit ----------
 
     const handleCloseEdit = () => {
         setEditingInvoice(null);
-        setEditValue('');
-        setEditReviewed(false);
-        setEditCurrency('EGP');
     };
 
-    const handleSaveEdit = async () => {
+    const handleSaveEdit = async (value: number, currency: string) => {
         if (!editingInvoice) return;
         setSaving(true);
         try {
-            // Fetch the full order to get all invoice URLs
             const fetchRes = await fetch(`/api/orders/${editingInvoice.orderId}`, {
                 cache: 'no-store',
             });
@@ -206,10 +285,9 @@ export default function InvoicesPage() {
             const order = fetchData.data as Order;
             const currentInvoices = (order.invoiceUrls || []) as InvoiceEntry[];
 
-            // Update the specific invoice at the matching URL
             const updatedInvoices = currentInvoices.map((inv) =>
                 inv.url === editingInvoice.url
-                    ? { ...inv, value: parseFloat(editValue) || 0, reviewed: editReviewed, currency: editCurrency }
+                    ? { ...inv, value, currency }
                     : inv,
             );
 
@@ -225,11 +303,10 @@ export default function InvoicesPage() {
                 return;
             }
 
-            // Update local state
             setInvoices((prev) =>
                 prev.map((inv) =>
                     inv._id === editingInvoice._id
-                        ? { ...inv, value: parseFloat(editValue) || 0, reviewed: editReviewed, invoiceCurrency: editCurrency }
+                        ? { ...inv, value, invoiceCurrency: currency }
                         : inv,
                 ),
             );
@@ -244,8 +321,99 @@ export default function InvoicesPage() {
         }
     };
 
-    const handleQuickToggleReviewed = async (invoice: InvoiceRow) => {
-        const newReviewed = !invoice.reviewed;
+    // ---------- Payment method edit ----------
+
+    const handleClosePaymentMethodEdit = () => {
+        setEditingPaymentMethodInvoice(null);
+    };
+
+    const handleSavePaymentMethod = async (invoice: InvoiceRow, paymentMethod: PaymentMethod) => {
+        setSavingPaymentMethod(true);
+        try {
+            const fetchRes = await fetch(`/api/orders/${invoice.orderId}`, {
+                cache: 'no-store',
+            });
+            const fetchData = await fetchRes.json();
+            if (!fetchData.success) {
+                toast.error(t('updateFailed'));
+                return;
+            }
+
+            const order = fetchData.data as Order;
+            const payments = (order.payments || []).map((p) => ({ ...p }));
+            const paidPaymentIndex = payments.findIndex((p) => p.status === 'paid');
+            if (paidPaymentIndex >= 0) {
+                payments[paidPaymentIndex] = {
+                    ...payments[paidPaymentIndex],
+                    paymentMethod,
+                };
+            }
+
+            const patchBody: Record<string, unknown> = { paymentMethod };
+            if (paidPaymentIndex >= 0) {
+                patchBody.payments = payments;
+            }
+
+            const patchRes = await fetch(`/api/orders/${invoice.orderId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(patchBody),
+            });
+            const patchData = await patchRes.json();
+
+            if (!patchData.success) {
+                toast.error(patchData.error || t('updateFailed'));
+                return;
+            }
+
+            setInvoices((prev) =>
+                prev.map((inv) =>
+                    inv.orderId === invoice.orderId
+                        ? { ...inv, paymentMethod }
+                        : inv,
+                ),
+            );
+
+            toast.success(t('updateSuccess'));
+            handleClosePaymentMethodEdit();
+        } catch (error) {
+            console.error('Error updating payment method:', error);
+            toast.error(t('updateFailed'));
+        } finally {
+            setSavingPaymentMethod(false);
+        }
+    };
+
+    // ---------- Invoice status change ----------
+
+    const handleStatusChange = (invoice: InvoiceRow, status: InvoiceStatus) => {
+        if (status === 'rejected') {
+            setStatusChangeInvoice(invoice);
+            setStatusChangeTarget(status);
+            return;
+        }
+        void applyInvoiceStatusChange(invoice, status, '');
+    };
+
+    const handleCloseStatusChange = () => {
+        setStatusChangeInvoice(null);
+        setStatusChangeTarget(null);
+    };
+
+    const handleStatusChangeWithReason = async (
+        invoice: InvoiceRow,
+        status: InvoiceStatus,
+        reason: string,
+    ) => {
+        await applyInvoiceStatusChange(invoice, status, reason);
+    };
+
+    const applyInvoiceStatusChange = async (
+        invoice: InvoiceRow,
+        status: InvoiceStatus,
+        rejectionReason: string,
+    ) => {
+        setSavingStatus(true);
         try {
             const fetchRes = await fetch(`/api/orders/${invoice.orderId}`, {
                 cache: 'no-store',
@@ -259,7 +427,9 @@ export default function InvoicesPage() {
             const order = fetchData.data as Order;
             const currentInvoices = (order.invoiceUrls || []) as InvoiceEntry[];
             const updatedInvoices = currentInvoices.map((inv) =>
-                inv.url === invoice.url ? { ...inv, reviewed: newReviewed } : inv,
+                inv.url === invoice.url
+                    ? { ...inv, invoiceStatus: status, rejectionReason }
+                    : inv,
             );
 
             const patchRes = await fetch(`/api/orders/${invoice.orderId}`, {
@@ -276,16 +446,300 @@ export default function InvoicesPage() {
 
             setInvoices((prev) =>
                 prev.map((inv) =>
-                    inv._id === invoice._id ? { ...inv, reviewed: newReviewed } : inv,
+                    inv._id === invoice._id
+                        ? { ...inv, invoiceStatus: status, rejectionReason }
+                        : inv,
                 ),
             );
 
-            toast.success(newReviewed ? t('markedReviewed') : t('markedUnreviewed'));
+            toast.success(t('statusUpdated'));
+            handleCloseStatusChange();
         } catch (error) {
-            console.error('Error toggling reviewed:', error);
+            console.error('Error updating invoice status:', error);
             toast.error(t('updateFailed'));
+        } finally {
+            setSavingStatus(false);
         }
     };
+
+    // ---------- Invoice preview actions ----------
+
+    const handleDownloadInvoice = async (invoice: InvoiceRow) => {
+        try {
+            await downloadInvoiceFile(invoice.url, `invoice-${invoice.orderNumber}`);
+        } catch (error) {
+            console.error('Error downloading invoice:', error);
+            toast.error(t('downloadFailed') || 'Failed to download invoice');
+        }
+    };
+
+    const handleUploadInvoiceClick = (invoice: InvoiceRow) => {
+        setUploadInvoiceTarget(invoice);
+        fileInputRef.current?.click();
+    };
+
+    const handleUploadInvoiceFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file || !uploadInvoiceTarget) return;
+
+        const allowedTypes = [
+            'image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif',
+            'application/pdf',
+            'application/msword',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'text/plain',
+        ];
+        if (!allowedTypes.includes(file.type)) {
+            toast.error(t('invalidInvoice'));
+            if (fileInputRef.current) fileInputRef.current.value = '';
+            return;
+        }
+        if (file.size > 10 * 1024 * 1024) {
+            toast.error(t('invoiceTooLarge'));
+            if (fileInputRef.current) fileInputRef.current.value = '';
+            return;
+        }
+
+        setUploadingInvoiceId(uploadInvoiceTarget._id);
+        try {
+            const newUrl = await uploadInvoiceToR2(file);
+            const fetchRes = await fetch(`/api/orders/${uploadInvoiceTarget.orderId}`, { cache: 'no-store' });
+            const fetchData = await fetchRes.json();
+            if (!fetchData.success) {
+                throw new Error(fetchData.error || t('updateFailed'));
+            }
+
+            const order = fetchData.data as Order;
+            const currentInvoices = (order.invoiceUrls || []) as InvoiceEntry[];
+            const updatedInvoices = currentInvoices.map((inv) =>
+                inv.url === uploadInvoiceTarget.url
+                    ? { ...inv, url: newUrl }
+                    : inv,
+            );
+
+            const patchRes = await fetch(`/api/orders/${uploadInvoiceTarget.orderId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ invoiceUrls: updatedInvoices }),
+            });
+            const patchData = await patchRes.json();
+            if (!patchData.success) {
+                throw new Error(patchData.error || t('updateFailed'));
+            }
+
+            setInvoices((prev) =>
+                prev.map((inv) =>
+                    inv._id === uploadInvoiceTarget._id
+                        ? { ...inv, url: newUrl }
+                        : inv,
+                ),
+            );
+
+            toast.success(t('updateSuccess'));
+        } catch (error) {
+            console.error('Error replacing invoice:', error);
+            toast.error(t('updateFailed'));
+        } finally {
+            setUploadingInvoiceId(null);
+            setUploadInvoiceTarget(null);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+        }
+    };
+
+    // ---------- Order actions (matching orders/execution page) ----------
+
+    const handleViewOrder = async (order: Order) => {
+        setSelectedOrder(order);
+        setIsOrderModalOpen(true);
+        setLoadingOrderDetails(true);
+        try {
+            const res = await fetch(`/api/orders/${order._id}`, { cache: 'no-store' });
+            const data = await res.json();
+            if (data.success) {
+                setSelectedOrder(data.data as Order);
+            }
+        } catch (error) {
+            console.error('Error fetching order details:', error);
+        } finally {
+            setLoadingOrderDetails(false);
+        }
+    };
+
+    const closeModal = () => {
+        setIsOrderModalOpen(false);
+        setSelectedOrder(null);
+    };
+
+    const startOrderWhatsappMessage = (order: Order) => {
+        const phone = normalizeWhatsappPhone(order.billingData?.phone);
+        if (!phone) {
+            toast.error(t('copyFailed'));
+            return;
+        }
+        setWhatsappOrderId(order._id);
+        try {
+            const message = buildOrderWhatsappMessageFromOrder(order);
+            const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+            window.open(url, '_blank', 'noopener,noreferrer');
+        } catch {
+            toast.error(t('copyFailed'));
+        } finally {
+            setWhatsappOrderId(null);
+        }
+    };
+
+    const copyOrderWhatsappNumber = async (order: Order) => {
+        const phone = normalizeWhatsappPhone(order.billingData?.phone, true);
+        if (!phone) {
+            toast.error(t('copyFailed'));
+            return;
+        }
+        setCopyingPhoneOrderId(order._id);
+        try {
+            await copyToClipboard(phone);
+            toast.success(t('copied'));
+        } catch {
+            toast.error(t('copyFailed'));
+        } finally {
+            setCopyingPhoneOrderId(null);
+        }
+    };
+
+    const copyOrderWhatsappMessage = async (order: Order) => {
+        setCopyingMessageOrderId(order._id);
+        try {
+            const message = buildOrderWhatsappMessageFromOrder(order);
+            await copyToClipboard(message);
+            toast.success(t('copied'));
+        } catch {
+            toast.error(t('copyFailed'));
+        } finally {
+            setCopyingMessageOrderId(null);
+        }
+    };
+
+    const handleChangeStatus = (order: Order) => {
+        setSelectedOrder(order);
+        setIsChangeStatusModalOpen(true);
+    };
+
+    const closeChangeStatusModal = () => {
+        setIsChangeStatusModalOpen(false);
+    };
+
+    const updateOrderStatus = async (
+        status: OrderStatus,
+        cancellationReason?: string,
+        _isScammer?: boolean,
+    ) => {
+        if (!selectedOrder) return;
+        setUpdatingStatus(true);
+        try {
+            const res = await fetch(`/api/orders/${selectedOrder._id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status, cancellationReason }),
+            });
+            const data = await res.json();
+            if (!data.success) {
+                toast.error(data.error || t('updateFailed'));
+                return;
+            }
+            const updated = data.data as Order;
+            setInvoices((prev) =>
+                prev.map((inv) =>
+                    inv.orderId === selectedOrder._id
+                        ? { ...inv, orderStatus: updated.status }
+                        : inv,
+                ),
+            );
+            toast.success(t('statusUpdated'));
+            closeChangeStatusModal();
+        } catch (error) {
+            console.error('Error updating order status:', error);
+            toast.error(t('updateFailed'));
+        } finally {
+            setUpdatingStatus(false);
+        }
+    };
+
+    const handleViewHistory = async (order: Order) => {
+        setSelectedOrder(order);
+        setIsOrderHistoryModalOpen(true);
+        setLoadingOrderHistory(true);
+        setOrderHistory([]);
+        try {
+            const res = await fetch(`/api/orders/${order._id}/history`);
+            const data = await res.json();
+            if (data.success) {
+                setOrderHistory(data.data || []);
+            } else {
+                toast.error(data.error || t('updateFailed'));
+            }
+        } catch (error) {
+            console.error('Error fetching order history:', error);
+            toast.error(t('updateFailed'));
+        } finally {
+            setLoadingOrderHistory(false);
+        }
+    };
+
+    const closeOrderHistoryModal = () => {
+        setIsOrderHistoryModalOpen(false);
+        setOrderHistory([]);
+    };
+
+    const handleBlockCustomer = async (order: Order) => {
+        if (order.isGuest || !order.userId || !order.source) {
+            toast.error(t('blockCustomer'));
+            return;
+        }
+
+        const isCurrentlyBanned = blockedUserIds.has(order.userId);
+
+        const confirmed = await confirm({
+            title: isCurrentlyBanned ? t('unblockCustomer') : t('blockCustomer'),
+            message: isCurrentlyBanned ? t('unblockCustomer') : t('blockCustomer'),
+            type: isCurrentlyBanned ? 'info' : 'danger',
+            confirmText: isCurrentlyBanned ? t('unblockCustomer') : t('blockCustomer'),
+            cancelText: t('cancel'),
+        });
+
+        if (!confirmed) return;
+
+        setBlockingOrderId(order._id);
+        try {
+            const res = await fetch(
+                `/api/customers/${order.source}/${order.userId}/ban`,
+                {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ isBanned: !isCurrentlyBanned }),
+                },
+            );
+
+            const data = await res.json();
+            if (!data.success) {
+                toast.error(data.error || t('updateFailed'));
+                return;
+            }
+
+            setBlockedUserIds(
+                new Set(
+                    isCurrentlyBanned
+                        ? Array.from(blockedUserIds).filter((id) => id !== order.userId)
+                        : [...Array.from(blockedUserIds), order.userId],
+                ),
+            );
+            toast.success(t('statusUpdated'));
+        } catch {
+            toast.error(t('updateFailed'));
+        } finally {
+            setBlockingOrderId(null);
+        }
+    };
+
+    // ---------- Format helpers ----------
 
     const formatDate = (dateStr: string) => {
         if (!dateStr) return '-';
@@ -298,238 +752,203 @@ export default function InvoicesPage() {
         });
     };
 
-    const sourceOptions = useMemo(
-        () => [
-            { label: t('allSources'), value: 'all' },
-            { label: 'Manasik', value: 'manasik' },
-            { label: 'Ghadaq', value: 'ghadaq' },
-        ],
-        [t],
-    );
-
-    const currencyOptions = useMemo(
-        () => ['EGP', 'SAR', 'USD', 'EUR', 'AED', 'KWD'].map((c) => ({ label: c, value: c })),
-        [],
-    );
-
-    const reviewTabs = useMemo(
-        () => [
-            { label: t('filterAll'), value: 'all' as ReviewFilter },
-            { label: t('filterReviewed'), value: 'reviewed' as ReviewFilter },
-            { label: t('filterUnreviewed'), value: 'unreviewed' as ReviewFilter },
-        ],
-        [t],
-    );
-
-    const columns = useMemo(
-        () => [
-            {
-                header: t('colOrderNumber'),
-                accessor: (row: InvoiceRow) => (
-                    <span className="font-medium text-foreground whitespace-nowrap">
-                        {row.orderNumber}
-                    </span>
-                ),
-                className: 'min-w-32',
-            },
-            {
-                header: t('colPreview'),
-                accessor: (row: InvoiceRow) => (
-                    <button
-                        type="button"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            setPreviewUrl(row.url);
-                        }}
-                        className="flex items-center justify-center w-10 h-10 rounded-lg border border-stroke bg-background hover:bg-foreground/5 transition-colors"
-                        aria-label={t('preview')}
-                    >
-                        {isImageUrl(row.url) ? (
-                            <img
-                                src={row.url}
-                                alt="Invoice"
-                                className="w-8 h-8 object-cover rounded"
-                                onError={(e) => {
-                                    (e.target as HTMLImageElement).style.display = 'none';
-                                }}
-                            />
-                        ) : (
-                            <LuFileText size={18} className="text-secondary" />
-                        )}
-                    </button>
-                ),
-                className: 'w-16',
-            },
-            {
-                header: t('colCustomer'),
-                accessor: (row: InvoiceRow) => (
-                    <div className="flex flex-col gap-0.5 min-w-32">
-                        <span className="text-sm text-foreground truncate">{row.customerName || '-'}</span>
-                        {row.customerPhone && (
-                            <span className="text-xs text-secondary truncate" dir="ltr">{row.customerPhone}</span>
-                        )}
-                    </div>
-                ),
-            },
-            {
-                header: t('colSource'),
-                accessor: (row: InvoiceRow) => (
-                    <span className="text-xs font-medium px-2 py-0.5 rounded bg-primary/10 text-primary capitalize">
-                        {row.source || '-'}
-                    </span>
-                ),
-                className: 'w-24',
-            },
-            {
-                header: t('colValue'),
-                accessor: (row: InvoiceRow) => (
-                    <div className="flex flex-col gap-0.5 whitespace-nowrap">
-                        <span className="text-sm font-medium text-foreground">
-                            {row.value.toFixed(2)} {row.invoiceCurrency}
-                        </span>
-                        {row.invoiceCurrency !== row.currency && row.currency && (
-                            <span className="text-xs text-secondary">
-                                {t('orderCurrency')}: {row.currency}
-                            </span>
-                        )}
-                    </div>
-                ),
-                className: 'w-28',
-            },
-            {
-                header: t('colStatus'),
-                accessor: (row: InvoiceRow) => (
-                    <button
-                        type="button"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            handleQuickToggleReviewed(row);
-                        }}
-                        className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full transition-colors ${row.reviewed
-                            ? 'bg-success/10 text-success hover:bg-success/20'
-                            : 'bg-warning/10 text-warning hover:bg-warning/20'
-                            }`}
-                        title={row.reviewed ? t('markUnreviewed') : t('markReviewed')}
-                    >
-                        {row.reviewed ? <LuCheck size={12} /> : <LuClock size={12} />}
-                        {row.reviewed ? t('reviewed') : t('unreviewed')}
-                    </button>
-                ),
-                className: 'w-32',
-            },
-            {
-                header: t('colDate'),
-                accessor: (row: InvoiceRow) => (
-                    <span className="text-xs text-secondary whitespace-nowrap">
-                        {formatDate(row.createdAt)}
-                    </span>
-                ),
-                className: 'w-36',
-            },
-            {
-                header: t('colActions'),
-                accessor: (row: InvoiceRow) => (
-                    <div className="flex items-center gap-1">
-                        <Tooltip position={isAr ? 'right' : 'left'} content={t('edit')}>
-                            <Button
-                                variant="icon-primary"
-                                size="custom"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleOpenEdit(row);
-                                }}
-                                aria-label={t('edit')}
-                            >
-                                <LuSave size={16} />
-                            </Button>
-                        </Tooltip>
-                        <Tooltip position={isAr ? 'right' : 'left'} content={t('openUrl')}>
-                            <Button
-                                variant="icon-primary"
-                                size="custom"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    window.open(row.url, '_blank', 'noopener,noreferrer');
-                                }}
-                                aria-label={t('openUrl')}
-                            >
-                                <LuExternalLink size={16} />
-                            </Button>
-                        </Tooltip>
-                    </div>
-                ),
-                className: 'w-24',
-            },
-        ],
-        [t, isAr],
-    );
-
     // Paginate locally (invoices are flattened from orders)
     const paginatedInvoices = useMemo(() => {
         const start = (page - 1) * pageSize;
         return invoices.slice(start, start + pageSize);
     }, [invoices, page, pageSize]);
 
+    // ---------- Bulk selection & actions ----------
+
+    const toggleInvoiceSelection = (invoiceId: string) => {
+        setSelectedInvoiceIds((prev) =>
+            prev.includes(invoiceId)
+                ? prev.filter((id) => id !== invoiceId)
+                : [...prev, invoiceId],
+        );
+    };
+
+    const allVisibleSelected =
+        paginatedInvoices.length > 0 &&
+        paginatedInvoices.every((invoice) => selectedInvoiceIds.includes(invoice._id));
+
+    const toggleSelectAll = () => {
+        const paginatedIds = paginatedInvoices.map((invoice) => invoice._id);
+        if (allVisibleSelected) {
+            setSelectedInvoiceIds((prev) => prev.filter((id) => !paginatedIds.includes(id)));
+        } else {
+            setSelectedInvoiceIds((prev) => Array.from(new Set([...prev, ...paginatedIds])));
+        }
+    };
+
+    const clearSelection = () => {
+        setSelectedInvoiceIds([]);
+        setBulkStatusValue('');
+    };
+
+    const applyBulkInvoiceStatus = async () => {
+        if (selectedInvoiceIds.length === 0 || !bulkStatusValue) return;
+        const selected = invoices.filter((inv) => selectedInvoiceIds.includes(inv._id));
+        if (selected.length === 0) return;
+
+        setBulkUpdating(true);
+        try {
+            await Promise.all(
+                selected.map(async (invoice) => {
+                    const fetchRes = await fetch(`/api/orders/${invoice.orderId}`, {
+                        cache: 'no-store',
+                    });
+                    const fetchData = await fetchRes.json();
+                    if (!fetchData.success) {
+                        throw new Error(fetchData.error || t('updateFailed'));
+                    }
+
+                    const order = fetchData.data as Order;
+                    const currentInvoices = (order.invoiceUrls || []) as InvoiceEntry[];
+                    const updatedInvoices = currentInvoices.map((inv) =>
+                        inv.url === invoice.url
+                            ? { ...inv, invoiceStatus: bulkStatusValue, rejectionReason: '' }
+                            : inv,
+                    );
+
+                    const patchRes = await fetch(`/api/orders/${invoice.orderId}`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ invoiceUrls: updatedInvoices }),
+                    });
+                    const patchData = await patchRes.json();
+                    if (!patchData.success) {
+                        throw new Error(patchData.error || t('updateFailed'));
+                    }
+                }),
+            );
+
+            setInvoices((prev) =>
+                prev.map((inv) =>
+                    selectedInvoiceIds.includes(inv._id)
+                        ? { ...inv, invoiceStatus: bulkStatusValue, rejectionReason: '' }
+                        : inv,
+                ),
+            );
+
+            toast.success(t('statusUpdated'));
+            clearSelection();
+        } catch (error) {
+            console.error('Error bulk updating invoice statuses:', error);
+            toast.error(t('updateFailed'));
+        } finally {
+            setBulkUpdating(false);
+        }
+    };
+
+    const bulkStatusOptions = [
+        { label: t('status.confirmed'), value: 'confirmed' },
+        { label: t('status.waiting'), value: 'waiting' },
+        { label: t('status.pending'), value: 'pending' },
+        { label: t('status.rejected'), value: 'rejected' },
+    ];
+
+    // ---------- Columns ----------
+
+    const columns = useInvoiceColumns({
+        onEdit: (invoice) => setEditingInvoice(invoice),
+        onPreview: (invoice) => setPreviewInvoice(invoice),
+        onViewOrder: handleViewOrder,
+        onWhatsapp: startOrderWhatsappMessage,
+        onCopyPhone: copyOrderWhatsappNumber,
+        onCopyMessage: copyOrderWhatsappMessage,
+        onChangeStatus: handleChangeStatus,
+        onViewHistory: handleViewHistory,
+        onBlock: handleBlockCustomer,
+        onToggleSelect: toggleInvoiceSelection,
+        onToggleSelectAll: toggleSelectAll,
+        selectedInvoiceIds,
+        allVisibleSelected,
+        onEditPaymentMethod: (invoice) => setEditingPaymentMethodInvoice(invoice),
+        onStatusChange: handleStatusChange,
+        onDownloadInvoice: handleDownloadInvoice,
+        onUploadInvoice: handleUploadInvoiceClick,
+        uploadingInvoiceId,
+        tooltipPos: isAr ? 'right' : 'left',
+        formatDate,
+        whatsappOrderId,
+        copyingPhoneOrderId,
+        copyingMessageOrderId,
+        blockingOrderId,
+        blockedUserIds,
+    });
+
     return (
         <div className="space-y-6">
-            <h1 className="text-2xl font-bold text-foreground">{t('pageTitle')}</h1>
-
-            {/* Stats */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <div className="p-3 rounded-lg border border-stroke bg-card-bg">
-                    <p className="text-xs text-secondary">{t('statsTotal')}</p>
-                    <p className="text-xl font-bold text-foreground">{stats.total}</p>
-                </div>
-                <div className="p-3 rounded-lg border border-stroke bg-card-bg">
-                    <p className="text-xs text-secondary">{t('statsReviewed')}</p>
-                    <p className="text-xl font-bold text-success">{stats.reviewed}</p>
-                </div>
-                <div className="p-3 rounded-lg border border-stroke bg-card-bg">
-                    <p className="text-xs text-secondary">{t('statsUnreviewed')}</p>
-                    <p className="text-xl font-bold text-warning">{stats.unreviewed}</p>
-                </div>
-                <div className="p-3 rounded-lg border border-stroke bg-card-bg">
-                    <p className="text-xs text-secondary">{t('statsTotalValue')}</p>
-                    <p className="text-xl font-bold text-foreground">{stats.totalValue.toFixed(2)}</p>
-                </div>
+            {/* Header */}
+            <div className="flex items-center justify-between">
+                <h1 className="text-2xl font-bold text-foreground">{t('pageTitle')}</h1>
             </div>
 
             {/* Filters */}
-            <div className="flex flex-col sm:flex-row gap-3">
-                <div className="flex-1 relative">
-                    <LuSearch
-                        size={16}
-                        className={`absolute top-1/2 -translate-y-1/2 text-secondary pointer-events-none z-10 ${isAr ? 'right-3' : 'left-3'}`}
-                    />
-                    <Input
-                        type="text"
-                        value={searchInput}
-                        onChange={(e) => setSearchInput(e.target.value)}
-                        placeholder={t('searchPlaceholder')}
-                        className={isAr ? 'pr-10' : 'pl-10'}
-                    />
-                </div>
-                <div className="sm:w-48">
-                    <Dropdown
-                        value={sourceFilter}
-                        options={sourceOptions}
-                        onChange={(val) => {
-                            setSourceFilter(val);
-                            setPage(1);
-                        }}
-                    />
-                </div>
-            </div>
-
-            {/* Review filter tabs */}
-            <Tabs
-                value={reviewFilter}
-                options={reviewTabs}
-                onChange={(val) => {
-                    setReviewFilter(val as ReviewFilter);
+            <InvoiceFilters
+                searchInput={searchInput}
+                onSearchChange={setSearchInput}
+                sourceFilter={sourceFilter}
+                onSourceChange={(val) => {
+                    setSourceFilter(val);
                     setPage(1);
                 }}
-                size="sm"
+                reviewFilter={reviewFilter}
+                onReviewChange={(val) => {
+                    setReviewFilter(val);
+                    setPage(1);
+                }}
+                paymentMethodFilter={paymentMethodFilter}
+                onPaymentMethodChange={(val) => {
+                    setPaymentMethodFilter(val);
+                    setPage(1);
+                }}
+                onRefresh={() => void fetchInvoices()}
+                fromDateFilter={fromDateFilter}
+                toDateFilter={toDateFilter}
+                onFromDateChange={handleFromDateChange}
+                onToDateChange={handleToDateChange}
+                activeDatePreset={activeDatePreset}
+                onDatePreset={applyDatePreset}
+                locale={locale}
+                totalInvoices={invoices.length}
+            />
+
+            {/* Date title (only when a single day is selected) */}
+            {fromDateFilter && fromDateFilter === toDateFilter && (
+                <InvoiceTitle
+                    date={fromDateFilter}
+                    locale={locale}
+                    onPrevDay={() => {
+                        const prev = addDaysToIsoDate(fromDateFilter, -1);
+                        setFromDateFilter(prev);
+                        setToDateFilter(prev);
+                    }}
+                    onNextDay={() => {
+                        const next = addDaysToIsoDate(fromDateFilter, 1);
+                        setFromDateFilter(next);
+                        setToDateFilter(next);
+                    }}
+                />
+            )}
+
+            {/* Bulk action */}
+            <BulkAction
+                selectedCount={selectedInvoiceIds.length}
+                value={bulkStatusValue}
+                options={bulkStatusOptions}
+                onValueChange={setBulkStatusValue}
+                onApply={applyBulkInvoiceStatus}
+                onClear={clearSelection}
+                applyLabel={t('bulkAction.apply')}
+                applyingLabel={t('bulkAction.applying')}
+                clearLabel={t('bulkAction.clear')}
+                selectionLabel={t('bulkAction.selectedCount', { count: selectedInvoiceIds.length })}
+                dropdownLabel={t('bulkAction.statusLabel')}
+                locale={locale}
+                disabled={!bulkStatusValue}
+                loading={bulkUpdating}
             />
 
             {/* Table */}
@@ -552,129 +971,80 @@ export default function InvoicesPage() {
                 pageSize={pageSize}
             />
 
+            {/* Hidden file input for invoice upload */}
+            <input
+                type="file"
+                ref={fileInputRef}
+                className="hidden"
+                accept="image/*,application/pdf,.doc,.docx,.txt"
+                onChange={handleUploadInvoiceFile}
+            />
+
             {/* Edit Modal */}
-            <Modal
-                isOpen={!!editingInvoice}
+            <InvoiceEditModal
+                invoice={editingInvoice}
+                saving={saving}
                 onClose={handleCloseEdit}
-                title={t('editTitle')}
-                size="sm"
-            >
-                {editingInvoice && (
-                    <div className="flex flex-col gap-4">
-                        {/* Preview */}
-                        <div className="flex justify-center">
-                            {isImageUrl(editingInvoice.url) ? (
-                                <img
-                                    src={editingInvoice.url}
-                                    alt="Invoice"
-                                    className="max-h-48 object-contain rounded-lg border border-stroke"
-                                />
-                            ) : (
-                                <div className="flex flex-col items-center gap-2 p-6 rounded-lg border border-stroke bg-card-bg">
-                                    <LuFileText size={32} className="text-secondary" />
-                                    <a
-                                        href={editingInvoice.url}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="text-sm text-primary hover:underline"
-                                    >
-                                        {t('openUrl')}
-                                    </a>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Order info */}
-                        <div className="text-sm text-secondary space-y-1">
-                            <p><span className="font-medium text-foreground">{t('colOrderNumber')}:</span> {editingInvoice.orderNumber}</p>
-                            <p><span className="font-medium text-foreground">{t('colCustomer')}:</span> {editingInvoice.customerName || '-'}</p>
-                        </div>
-
-                        {/* Value input with currency selector */}
-                        <div className="flex flex-row gap-2 items-end">
-                            <div className="flex-1 min-w-0">
-                                <Input
-                                    label={t('colValue')}
-                                    type="number"
-                                    min={0}
-                                    step="0.01"
-                                    value={editValue}
-                                    onChange={(e) => setEditValue(e.target.value)}
-                                    placeholder="0.00"
-                                />
-                            </div>
-                            <div className="shrink-0 w-24">
-                                <Dropdown
-                                    value={editCurrency}
-                                    options={currencyOptions}
-                                    onChange={(val) => setEditCurrency(val)}
-                                />
-                            </div>
-                        </div>
-
-                        {/* Reviewed toggle */}
-                        <label className="flex items-center gap-3 cursor-pointer">
-                            <button
-                                type="button"
-                                onClick={() => setEditReviewed(!editReviewed)}
-                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${editReviewed ? 'bg-success' : 'bg-stroke'
-                                    }`}
-                            >
-                                <span
-                                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${editReviewed ? 'translate-x-6' : 'translate-x-1'
-                                        }`}
-                                />
-                            </button>
-                            <span className="text-sm text-foreground">
-                                {editReviewed ? t('reviewed') : t('unreviewed')}
-                            </span>
-                        </label>
-
-                        {/* Actions */}
-                        <div className="flex gap-2 justify-end pt-2">
-                            <Button variant="outline" onClick={handleCloseEdit} disabled={saving}>
-                                {t('cancel')}
-                            </Button>
-                            <Button
-                                variant="primary"
-                                onClick={handleSaveEdit}
-                                disabled={saving}
-                            >
-                                {saving ? t('saving') : t('save')}
-                            </Button>
-                        </div>
-                    </div>
-                )}
-            </Modal>
+                onSave={handleSaveEdit}
+            />
 
             {/* Preview lightbox */}
-            {previewUrl && (
-                <div
-                    className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
-                    onClick={() => setPreviewUrl(null)}
-                >
-                    {isImageUrl(previewUrl) ? (
-                        <img
-                            src={previewUrl}
-                            alt="Invoice preview"
-                            className="max-w-full max-h-[90vh] object-contain rounded-lg"
-                        />
-                    ) : (
-                        <div className="bg-card-bg rounded-lg p-8 flex flex-col items-center gap-4">
-                            <LuFileText size={48} className="text-secondary" />
-                            <a
-                                href={previewUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-primary hover:underline"
-                                onClick={(e) => e.stopPropagation()}
-                            >
-                                {t('openUrl')}
-                            </a>
-                        </div>
-                    )}
-                </div>
-            )}
+            <InvoicePreviewModal
+                url={previewInvoice?.url || null}
+                onClose={() => setPreviewInvoice(null)}
+            />
+
+            {/* Payment Method Modal */}
+            <InvoicePaymentMethodModal
+                invoice={editingPaymentMethodInvoice}
+                isOpen={!!editingPaymentMethodInvoice}
+                onClose={handleClosePaymentMethodEdit}
+                onSave={handleSavePaymentMethod}
+                saving={savingPaymentMethod}
+            />
+
+            {/* Rejection Reason Modal */}
+            <InvoiceRejectionModal
+                invoice={statusChangeInvoice}
+                status={statusChangeTarget}
+                isOpen={!!statusChangeInvoice && !!statusChangeTarget}
+                onClose={handleCloseStatusChange}
+                onConfirm={handleStatusChangeWithReason}
+                loading={savingStatus}
+            />
+
+            {/* Order Detail Modal */}
+            <OrderDetailModal
+                isOpen={isOrderModalOpen}
+                onClose={closeModal}
+                order={selectedOrder}
+                loadingDetails={loadingOrderDetails}
+                formatDate={formatDate}
+                locale={locale}
+                namespace="orders"
+            />
+
+            {/* Change Status Modal */}
+            <ChangeStatusModal
+                isOpen={isChangeStatusModalOpen}
+                onClose={closeChangeStatusModal}
+                currentStatus={selectedOrder?.status ?? 'paid'}
+                onUpdateStatus={updateOrderStatus}
+                updating={updatingStatus}
+                namespace="orders"
+            />
+
+            {/* Order History Modal */}
+            <OrderHistoryModal
+                isOpen={isOrderHistoryModalOpen}
+                onClose={closeOrderHistoryModal}
+                orderNumber={selectedOrder?.orderNumber || ''}
+                history={orderHistory}
+                loading={loadingOrderHistory}
+                namespace="orders"
+            />
+
+            <ConfirmModal {...modalProps} />
         </div>
     );
 }

@@ -24,6 +24,8 @@ import { LuCopy, LuCheck, LuRefreshCw, LuUpload, LuDownload, LuPlus, LuX, LuAtSi
 import { FaWhatsapp } from 'react-icons/fa';
 import { isValidPhoneNumber } from 'libphonenumber-js';
 import { COUNTRIES } from '@/lib/countries';
+import { MANUAL_PAYMENT_METHODS, EASYKASH_PAYMENT_METHOD } from '@/lib/order';
+import type { PaymentMethod } from '@/types/Order';
 
 function extractDigits(value: string): string {
   return value.replace(/\D/g, '');
@@ -117,7 +119,7 @@ interface Props {
   namespace?: 'orders' | 'execution';
 }
 
-type PaymentMethod = 'easykash' | 'insta_pay' | 'vodafone_cash' | 'bank_transfer' | 'paypal' | 'binance' | '';
+type ManualPaymentMethod = PaymentMethod | '';
 type Source = 'manasik' | 'ghadaq';
 
 interface OrderItemForm {
@@ -133,7 +135,7 @@ interface OrderItemForm {
 
 interface InvoiceEntry {
   file: File;
-  reviewed: boolean;
+  invoiceStatus: 'confirmed' | 'waiting';
   value: string;
   currency: string;
   previewUrl: string | null;
@@ -159,7 +161,7 @@ interface FormState {
     executionDate: string;
     photo: string;
   };
-  paymentMethod: PaymentMethod;
+  paymentMethod: ManualPaymentMethod;
   paidAmount: string;
   remainingAmount: string;
 }
@@ -453,8 +455,8 @@ export default function CreateManualOrderModal({
   const priceInputRefs = useRef<Map<number, HTMLInputElement>>(new Map());
   const lastLookupRef = useRef<{ phone: string; email: string; source: string }>({ phone: '', email: '', source: '' });
   const skipBlurValidationRef = useRef(false);
-  const pendingInvoiceReviewedRef = useRef<boolean | null>(null);
-  const [pendingInvoiceReviewed, setPendingInvoiceReviewed] = useState<boolean | null>(null);
+  const pendingInvoiceStatusRef = useRef<'confirmed' | 'waiting' | null>(null);
+  const [pendingInvoiceStatus, setPendingInvoiceStatus] = useState<'confirmed' | 'waiting' | null>(null);
 
   const invoicesRef = useRef<InvoiceEntry[]>([]);
   invoicesRef.current = invoices;
@@ -469,8 +471,8 @@ export default function CreateManualOrderModal({
     });
     dispatch({ type: 'RESET_UI' });
     lastLookupRef.current = { phone: '', email: '', source: '' };
-    pendingInvoiceReviewedRef.current = null;
-    setPendingInvoiceReviewed(null);
+    pendingInvoiceStatusRef.current = null;
+    setPendingInvoiceStatus(null);
   }, [user]);
 
   // Load recently used product IDs from localStorage on mount
@@ -640,13 +642,21 @@ export default function CreateManualOrderModal({
 
   const paymentMethodOptions = useMemo(
     () => [
-      { label: t('createManualPayment.selectPaymentMethod') || 'Select payment method', value: '' as PaymentMethod },
-      { label: t('createManualPayment.instaPay'), value: 'insta_pay' as PaymentMethod },
-      { label: t('createManualPayment.vodafoneCash'), value: 'vodafone_cash' as PaymentMethod },
-      { label: t('createManualPayment.bankTransfer'), value: 'bank_transfer' as PaymentMethod },
-      { label: t('createManualPayment.paypal'), value: 'paypal' as PaymentMethod },
-      { label: t('createManualPayment.binance'), value: 'binance' as PaymentMethod },
-      { label: t('createManualPayment.easykash'), value: 'easykash' as PaymentMethod },
+      { label: t('createManualPayment.selectPaymentMethod') || 'Select payment method', value: '' as ManualPaymentMethod },
+      ...MANUAL_PAYMENT_METHODS.map((method) => {
+        const keyMap = {
+          easykash: 'createManualPayment.easykash',
+          insta_pay: 'createManualPayment.instaPay',
+          vodafone_cash: 'createManualPayment.vodafoneCash',
+          bank_transfer: 'createManualPayment.bankTransfer',
+          paypal: 'createManualPayment.paypal',
+          binance: 'createManualPayment.binance',
+        } as const;
+        return {
+          label: t(keyMap[method as keyof typeof keyMap]),
+          value: method as ManualPaymentMethod,
+        };
+      }),
     ],
     [t],
   );
@@ -688,7 +698,7 @@ export default function CreateManualOrderModal({
     [t],
   );
 
-  const isEasykash = form.paymentMethod === 'easykash';
+  const isEasykash = form.paymentMethod === EASYKASH_PAYMENT_METHOD;
 
   const getLoadedUnitPrice = useCallback(
     (item: OrderItemForm) => {
@@ -906,7 +916,7 @@ export default function CreateManualOrderModal({
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    const reviewed = pendingInvoiceReviewedRef.current ?? false;
+    const invoiceStatus = pendingInvoiceStatusRef.current ?? 'waiting';
 
     const allowedTypes = [
       'image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif',
@@ -931,7 +941,7 @@ export default function CreateManualOrderModal({
         type: 'ADD_INVOICE',
         invoice: {
           file,
-          reviewed,
+          invoiceStatus,
           value: '',
           currency: 'EGP',
           previewUrl,
@@ -939,8 +949,8 @@ export default function CreateManualOrderModal({
       });
     }
 
-    pendingInvoiceReviewedRef.current = null;
-    setPendingInvoiceReviewed(null);
+    pendingInvoiceStatusRef.current = null;
+    setPendingInvoiceStatus(null);
     if (invoiceInputRef.current) invoiceInputRef.current.value = '';
     if (invoiceImageInputRef.current) invoiceImageInputRef.current.value = '';
   };
@@ -1123,7 +1133,7 @@ export default function CreateManualOrderModal({
     dispatch({ type: 'CLEAR_FORM_ERRORS' });
     dispatch({ type: 'SET_CREATING', creating: true });
     try {
-      let invoiceUrls: { url: string; reviewed: boolean; value: number; currency: string }[] = [];
+      let invoiceUrls: { url: string; reviewed: boolean; invoiceStatus: string; value: number; currency: string }[] = [];
       if (!isEasykash && invoices.length > 0) {
         dispatch({ type: 'SET_UPLOADING_INVOICE', uploading: true });
         const uploaded = await Promise.all(
@@ -1131,7 +1141,8 @@ export default function CreateManualOrderModal({
             const url = await uploadInvoiceToR2(inv.file);
             return {
               url,
-              reviewed: inv.reviewed,
+              reviewed: inv.invoiceStatus === 'confirmed',
+              invoiceStatus: inv.invoiceStatus,
               value: parseFloat(inv.value) || 0,
               currency: inv.currency || 'EGP',
             };
@@ -1774,7 +1785,7 @@ export default function CreateManualOrderModal({
                     <LuRefreshCw size={16} className="animate-spin" />
                     {t('createManualOrder.uploadingInvoice') || 'Uploading...'}
                   </span>
-                ) : pendingInvoiceReviewed !== null ? (
+                ) : pendingInvoiceStatus !== null ? (
                   <div className="flex flex-wrap items-center gap-2">
                     <button
                       type="button"
@@ -1799,8 +1810,8 @@ export default function CreateManualOrderModal({
                     <button
                       type="button"
                       onClick={() => {
-                        pendingInvoiceReviewedRef.current = null;
-                        setPendingInvoiceReviewed(null);
+                        pendingInvoiceStatusRef.current = null;
+                        setPendingInvoiceStatus(null);
                       }}
                       className="inline-flex items-center gap-1 px-2 py-2 rounded-lg text-secondary hover:text-foreground transition-colors text-sm"
                     >
@@ -1815,12 +1826,12 @@ export default function CreateManualOrderModal({
                       size="sm"
                       className={formErrors.invoice ? 'border-error text-error hover:text-error hover:border-error' : ''}
                       onClick={() => {
-                        pendingInvoiceReviewedRef.current = true;
-                        setPendingInvoiceReviewed(true);
+                        pendingInvoiceStatusRef.current = 'confirmed';
+                        setPendingInvoiceStatus('confirmed');
                       }}
                     >
                       <LuUpload size={16} className="me-2" />
-                      {t('createManualOrder.uploadReviewedInvoice') || 'Reviewed Invoice'}
+                      {t('createManualOrder.uploadConfirmedInvoice') || 'Confirmed Invoice'}
                     </Button>
                     <Button
                       type="button"
@@ -1828,12 +1839,12 @@ export default function CreateManualOrderModal({
                       size="sm"
                       className={formErrors.invoice ? 'border-error text-error hover:text-error hover:border-error' : ''}
                       onClick={() => {
-                        pendingInvoiceReviewedRef.current = false;
-                        setPendingInvoiceReviewed(false);
+                        pendingInvoiceStatusRef.current = 'waiting';
+                        setPendingInvoiceStatus('waiting');
                       }}
                     >
                       <LuUpload size={16} className="me-2" />
-                      {t('createManualOrder.uploadUnreviewedInvoice') || 'Unreviewed Invoice'}
+                      {t('createManualOrder.uploadWaitingInvoice') || 'Waiting Invoice'}
                     </Button>
                   </>
                 )}
@@ -1846,10 +1857,10 @@ export default function CreateManualOrderModal({
                     <div key={index} className="rounded-lg border border-stroke p-3 flex flex-col gap-2 bg-background">
                       {/* File info + remove */}
                       <div className="flex items-center gap-2">
-                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${invoice.reviewed ? 'text-success bg-success/10' : 'text-warning bg-warning/10'}`}>
-                          {invoice.reviewed
-                            ? (t('createManualOrder.uploadReviewedInvoice') || 'Reviewed')
-                            : (t('createManualOrder.uploadUnreviewedInvoice') || 'Unreviewed')}
+                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${invoice.invoiceStatus === 'confirmed' ? 'text-success bg-success/10' : 'text-warning bg-warning/10'}`}>
+                          {invoice.invoiceStatus === 'confirmed'
+                            ? (t('createManualOrder.uploadConfirmedInvoice') || 'Confirmed')
+                            : (t('createManualOrder.uploadWaitingInvoice') || 'Waiting')}
                         </span>
                         <span className="text-sm text-foreground truncate flex-1 min-w-0">{invoice.file.name}</span>
                         <button

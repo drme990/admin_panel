@@ -8,6 +8,8 @@ export type OrderStatus =
   | 'refunded'
   | 'cancelled';
 
+export type InvoiceStatus = 'confirmed' | 'waiting' | 'pending' | 'rejected';
+
 export type PaymentMethod =
   | 'card'
   | 'wallet'
@@ -141,11 +143,19 @@ export interface Order {
   // Referral
   referralId?: string;
   cancellationReason?: string;
-  invoiceUrls?: Array<{ url: string; reviewed: boolean; value: number; currency?: string }>;
+  invoiceUrls?: Array<{
+    url: string;
+    reviewed?: boolean;
+    invoiceStatus?: InvoiceStatus;
+    rejectionReason?: string;
+    value: number;
+    currency?: string;
+  }>;
   statusUpdateTime: string;
   // Terms
   termsAgreedAt?: string;
   reservationData?: ReservationOrderField[];
+  paymentMethod?: PaymentMethod;
   payments?: OrderPayment[];
   paymentAttempts?: PaymentAttempt[];
   source?: 'manasik' | 'ghadaq';

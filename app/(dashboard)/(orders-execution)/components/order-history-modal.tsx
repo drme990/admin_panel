@@ -2,12 +2,14 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
+import { LuFileText } from 'react-icons/lu';
 
 import Modal from '@/components/ui/modal';
 import Button from '@/components/ui/button';
 import Loading from '@/components/ui/loading';
 import { STATUS_COLORS } from '../lib/order-status';
 import { OrderStatus } from '@/types/Order';
+import InvoicePreviewModal from '../../invoices/components/invoice-preview-modal';
 
 export interface OrderHistoryEntry {
   _id: string;
@@ -17,6 +19,9 @@ export interface OrderHistoryEntry {
   | 'duaa'
   | 'photo'
   | 'invoice'
+  | 'invoiceImage'
+  | 'invoiceStatus'
+  | 'invoiceValue'
   | 'executionDate'
   | 'bulk_execution_date'
   | 'gender'
@@ -51,6 +56,9 @@ function formatChangeType(
     duaa: 'orderHistory.typeDuaa',
     photo: 'orderHistory.typePhoto',
     invoice: 'orderHistory.typeInvoice',
+    invoiceImage: 'orderHistory.typeInvoiceImage',
+    invoiceStatus: 'orderHistory.typeInvoiceStatus',
+    invoiceValue: 'orderHistory.typeInvoiceValue',
     executionDate: 'orderHistory.typeExecutionDate',
     bulk_execution_date: 'orderHistory.typeBulkExecutionDate',
     gender: 'orderHistory.typeGender',
@@ -64,6 +72,56 @@ function formatChangeType(
 function isImageUrl(value: string | null): boolean {
   if (!value) return false;
   return value.startsWith('http') && /\.(jpg|jpeg|png|webp|gif)(\?.*)?$/i.test(value);
+}
+
+function extractInvoiceUrl(value: string | null): string | null {
+  if (!value) return null;
+  if (value.startsWith('http')) return value;
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    if (Array.isArray(parsed)) {
+      const first = parsed[0] as { url?: unknown } | undefined;
+      if (first && typeof first.url === 'string') return first.url;
+    }
+    if (parsed && typeof parsed === 'object') {
+      const url = (parsed as { url?: unknown }).url;
+      if (typeof url === 'string') return url;
+    }
+  } catch {
+    // ignore
+  }
+  return null;
+}
+
+function extractInvoiceStatus(value: string | null): string | null {
+  if (!value) return null;
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    if (Array.isArray(parsed)) {
+      const first = parsed[0] as { invoiceStatus?: unknown } | undefined;
+      if (first && typeof first.invoiceStatus === 'string') return first.invoiceStatus;
+    }
+    if (parsed && typeof parsed === 'object') {
+      const invoiceStatus = (parsed as { invoiceStatus?: unknown }).invoiceStatus;
+      if (typeof invoiceStatus === 'string') return invoiceStatus;
+    }
+  } catch {
+    // ignore
+  }
+  return null;
+}
+
+function parseInvoiceFieldValue(value: string | null): Record<string, unknown> | null {
+  if (!value) return null;
+  try {
+    const parsed = JSON.parse(value);
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      return parsed as Record<string, unknown>;
+    }
+  } catch {
+    // ignore
+  }
+  return null;
 }
 
 function PhotoValue({ value, onClick }: { value: string | null; onClick?: (url: string) => void }) {
@@ -90,27 +148,118 @@ function PhotoValue({ value, onClick }: { value: string | null; onClick?: (url: 
 }
 
 function InvoiceValue({ value, onClick }: { value: string | null; onClick?: (url: string) => void }) {
+  const url = extractInvoiceUrl(value);
+  const status = extractInvoiceStatus(value);
+  const displayUrl = url || value || '';
+  const statusLabel = status ? `(${status})` : '';
+
   if (!value) return <span className="text-secondary">-</span>;
-  if (isImageUrl(value)) {
-    return (
-      <img
-        src={value}
-        alt="Invoice"
-        className="w-16 h-16 object-cover rounded cursor-pointer hover:opacity-80 transition-opacity"
-        onClick={() => onClick?.(value)}
-      />
-    );
-  }
   return (
-    <a
-      href={value}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="text-primary hover:underline break-all text-sm"
-      onClick={(e) => e.stopPropagation()}
+    <button
+      type="button"
+      onClick={() => url && onClick?.(url)}
+      disabled={!url}
+      className="flex items-center gap-2 text-primary hover:underline text-sm disabled:opacity-60 disabled:cursor-default"
     >
-      {value}
-    </a>
+      {url && isImageUrl(url) ? (
+        <img
+          src={url}
+          alt="Invoice"
+          className="w-16 h-16 object-cover rounded hover:opacity-80 transition-opacity"
+        />
+      ) : (
+        <>
+          <span className="inline-flex items-center justify-center p-2 rounded-lg border border-stroke bg-background">
+            <LuFileText size={24} />
+          </span>
+          <span className="break-all max-w-50">
+            {displayUrl.length > 40 ? `${displayUrl.slice(0, 40)}...` : displayUrl}
+            {statusLabel && <span className="ml-1 text-xs text-secondary">{statusLabel}</span>}
+          </span>
+        </>
+      )}
+    </button>
+  );
+}
+
+function InvoiceImageValue({ value, onClick }: { value: string | null; onClick?: (url: string) => void }) {
+  const t = useTranslations('admin.invoices');
+  const parsed = parseInvoiceFieldValue(value);
+  let url = value;
+  if (parsed && typeof parsed.url === 'string') {
+    url = parsed.url;
+  }
+
+  if (!value) return <span className="text-secondary">-</span>;
+  if (!url) return <span className="text-secondary">-</span>;
+
+  return (
+    <button
+      type="button"
+      onClick={() => onClick?.(url)}
+      className="flex items-center gap-2 text-primary hover:underline text-sm"
+    >
+      {isImageUrl(url) ? (
+        <img
+          src={url}
+          alt={t('preview')}
+          className="w-16 h-16 object-cover rounded hover:opacity-80 transition-opacity"
+        />
+      ) : (
+        <>
+          <span className="inline-flex items-center justify-center p-2 rounded-lg border border-stroke bg-background">
+            <LuFileText size={24} />
+          </span>
+          <span className="break-all max-w-50">{url.length > 40 ? `${url.slice(0, 40)}...` : url}</span>
+        </>
+      )}
+    </button>
+  );
+}
+
+function InvoiceStatusValue({ value }: { value: string | null }) {
+  const tInvoices = useTranslations('admin.invoices');
+  const parsed = parseInvoiceFieldValue(value);
+  let status = value;
+  if (parsed && typeof parsed.invoiceStatus === 'string') {
+    status = parsed.invoiceStatus;
+  }
+  const rejectionReason = parsed && typeof parsed.rejectionReason === 'string' ? parsed.rejectionReason : null;
+
+  if (!status) return <span className="text-secondary">-</span>;
+
+  const statusColors: Record<string, string> = {
+    confirmed: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+    waiting: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300',
+    pending: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
+    rejected: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
+  };
+
+  const label = tInvoices(`status.${status}`) || status;
+
+  return (
+    <div className="flex flex-col gap-1">
+      <span className={`inline-block w-fit px-2 py-0.5 text-xs font-medium rounded-full ${statusColors[status] || 'bg-gray-100 text-gray-800'}`}>
+        {label}
+      </span>
+      {rejectionReason && (
+        <span className="text-xs text-error">{rejectionReason}</span>
+      )}
+    </div>
+  );
+}
+
+function InvoiceValueValue({ value }: { value: string | null }) {
+  const parsed = parseInvoiceFieldValue(value);
+  const amount = typeof parsed?.value === 'number' ? parsed.value : null;
+  const currency = typeof parsed?.currency === 'string' ? parsed.currency : null;
+
+  if (amount === null) return <span className="text-secondary">-</span>;
+
+  return (
+    <span className="text-foreground font-medium">
+      {amount.toFixed(2)} {currency || ''}
+    </span>
   );
 }
 
@@ -158,7 +307,7 @@ export default function OrderHistoryModal({
   namespace = 'execution',
 }: Props) {
   const t = useTranslations(namespace);
-  const [expandedPhoto, setExpandedPhoto] = useState<string | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   // Find the index of the most recent status change (history is newest-first)
   const latestStatusIndex = history.findIndex((e) => e.changeType === 'status');
@@ -166,10 +315,19 @@ export default function OrderHistoryModal({
   const renderValue = (entry: OrderHistoryEntry, field: 'previousValue' | 'newValue') => {
     const value = entry[field];
     if (entry.changeType === 'photo') {
-      return <PhotoValue value={value} onClick={setExpandedPhoto} />;
+      return <PhotoValue value={value} onClick={setPreviewUrl} />;
     }
     if (entry.changeType === 'invoice') {
-      return <InvoiceValue value={value} onClick={setExpandedPhoto} />;
+      return <InvoiceValue value={value} onClick={setPreviewUrl} />;
+    }
+    if (entry.changeType === 'invoiceImage') {
+      return <InvoiceImageValue value={value} onClick={setPreviewUrl} />;
+    }
+    if (entry.changeType === 'invoiceStatus') {
+      return <InvoiceStatusValue value={value} />;
+    }
+    if (entry.changeType === 'invoiceValue') {
+      return <InvoiceValueValue value={value} />;
     }
     if (entry.changeType === 'status') {
       return <StatusValue value={value} t={t} />;
@@ -206,7 +364,11 @@ export default function OrderHistoryModal({
               const canRollback =
                 onRollback &&
                 entry.previousValue &&
-                ((entry.changeType === 'photo' || entry.changeType === 'invoice') ||
+                ((entry.changeType === 'photo' ||
+                  entry.changeType === 'invoice' ||
+                  entry.changeType === 'invoiceImage' ||
+                  entry.changeType === 'invoiceStatus' ||
+                  entry.changeType === 'invoiceValue') ||
                   (entry.changeType === 'status' && index === latestStatusIndex));
 
               return (
@@ -263,19 +425,7 @@ export default function OrderHistoryModal({
         )}
       </Modal>
 
-      {/* Expanded photo lightbox */}
-      {expandedPhoto && (
-        <div
-          className="fixed inset-0 z-60 bg-black/80 flex items-center justify-center p-4"
-          onClick={() => setExpandedPhoto(null)}
-        >
-          <img
-            src={expandedPhoto}
-            alt="Expanded"
-            className="max-w-full max-h-[90vh] object-contain rounded-lg"
-          />
-        </div>
-      )}
+      <InvoicePreviewModal url={previewUrl} onClose={() => setPreviewUrl(null)} />
     </>
   );
 }

@@ -1,22 +1,23 @@
 import Button from "@/components/ui/button";
 import Tooltip from "@/components/ui/tooltip";
 import { useEffect, useRef, useState } from "react";
-import { LuUpload } from "react-icons/lu";
+import { LuUpload, LuCheck, LuClock } from "react-icons/lu";
+
+export type UploadInvoiceStatus = 'confirmed' | 'waiting';
 
 export interface InvoiceUploadMenuProps {
-    onUpload: (reviewed: boolean) => void;
+    onUpload: (invoiceStatus: UploadInvoiceStatus) => void;
     disabled?: boolean;
     tooltipPos?: 'left' | 'right';
     labels: {
         tooltip?: string;
-        uploadReviewed: string;
-        uploadUnreviewed: string;
+        uploadConfirmed: string;
+        uploadWaiting: string;
     };
     variant?: 'icon' | 'outline';
     buttonLabel?: string;
     className?: string;
 }
-
 
 export function InvoiceUploadMenu({ onUpload, disabled, tooltipPos, labels, variant = 'icon', buttonLabel, className }: InvoiceUploadMenuProps) {
     const [isOpen, setIsOpen] = useState(false);
@@ -32,9 +33,9 @@ export function InvoiceUploadMenu({ onUpload, disabled, tooltipPos, labels, vari
         return () => document.removeEventListener('mousedown', handleOutsideClick);
     }, []);
 
-    const handleSelect = (reviewed: boolean) => {
+    const handleSelect = (status: UploadInvoiceStatus) => {
         setIsOpen(false);
-        onUpload(reviewed);
+        onUpload(status);
     };
 
     const trigger = variant === 'outline' ? (
@@ -74,30 +75,32 @@ export function InvoiceUploadMenu({ onUpload, disabled, tooltipPos, labels, vari
         <div className="relative" ref={rootRef}>
             {trigger}
             {isOpen && (
-                <div className="absolute z-30 mt-1 w-40 rounded-site border border-stroke bg-card-bg p-1 shadow-xl">
+                <div className="absolute z-30 mt-1 w-44 rounded-site border border-stroke bg-card-bg p-1 shadow-xl">
                     <Button
                         variant="custom"
                         size="custom"
                         type="button"
-                        className="w-full px-2 py-1.5 text-start text-sm hover:bg-background rounded-lg transition-colors"
+                        className="w-full px-2 py-1.5 text-start text-sm hover:bg-background rounded-lg transition-colors flex items-center gap-2"
                         onClick={(e) => {
                             e.stopPropagation();
-                            handleSelect(true);
+                            handleSelect('confirmed');
                         }}
                     >
-                        {labels.uploadReviewed}
+                        <LuCheck size={14} className="text-success" />
+                        {labels.uploadConfirmed}
                     </Button>
                     <Button
                         variant="custom"
                         size="custom"
                         type="button"
-                        className="w-full px-2 py-1.5 text-start text-sm hover:bg-background rounded-lg transition-colors"
+                        className="w-full px-2 py-1.5 text-start text-sm hover:bg-background rounded-lg transition-colors flex items-center gap-2"
                         onClick={(e) => {
                             e.stopPropagation();
-                            handleSelect(false);
+                            handleSelect('waiting');
                         }}
                     >
-                        {labels.uploadUnreviewed}
+                        <LuClock size={14} className="text-warning" />
+                        {labels.uploadWaiting}
                     </Button>
                 </div>
             )}

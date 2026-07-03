@@ -561,8 +561,16 @@ export function useOrderPage(options: UseOrderPageOptions) {
         photo?: string;
         invoiceUrl?: string;
         invoiceReviewed?: boolean;
+        invoiceStatus?: 'confirmed' | 'waiting' | 'pending' | 'rejected';
         invoiceValue?: number;
-        invoiceUrls?: Array<{ url: string; reviewed: boolean; value: number }>;
+        invoiceUrls?: Array<{
+          url: string;
+          reviewed?: boolean;
+          invoiceStatus?: 'confirmed' | 'waiting' | 'pending' | 'rejected';
+          rejectionReason?: string;
+          value: number;
+          currency?: string;
+        }>;
         items?: Order['items'];
         gender?: string;
         isAlive?: string;
@@ -577,6 +585,7 @@ export function useOrderPage(options: UseOrderPageOptions) {
         if ('photo' in fields) body.photo = fields.photo;
         if ('invoiceUrl' in fields) body.invoiceUrl = fields.invoiceUrl;
         if ('invoiceReviewed' in fields) body.invoiceReviewed = fields.invoiceReviewed;
+        if ('invoiceStatus' in fields) body.invoiceStatus = fields.invoiceStatus;
         if ('invoiceValue' in fields) body.invoiceValue = fields.invoiceValue;
         if ('invoiceUrls' in fields) body.invoiceUrls = fields.invoiceUrls;
         if ('items' in fields) body.items = fields.items;
@@ -690,9 +699,10 @@ export function useOrderPage(options: UseOrderPageOptions) {
           const currentOrder = state.orders.find((o) => o._id === orderId);
           const currentInvoices = currentOrder?.invoiceUrls || [];
           const alreadyExists = currentInvoices.some((invoice) => invoice.url === fields.invoiceUrl);
+          const invoiceStatus = fields.invoiceStatus ?? (fields.invoiceReviewed ? 'confirmed' : 'waiting');
           const nextInvoices = alreadyExists
             ? currentInvoices
-            : [...currentInvoices, { url: fields.invoiceUrl, reviewed: fields.invoiceReviewed ?? false, value: fields.invoiceValue ?? 0 }];
+            : [...currentInvoices, { url: fields.invoiceUrl, reviewed: fields.invoiceReviewed ?? false, invoiceStatus, rejectionReason: '', value: fields.invoiceValue ?? 0 }];
 
           dispatch({
             type: 'UPDATE_ORDER_IN_LIST',

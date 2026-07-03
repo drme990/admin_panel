@@ -657,20 +657,102 @@ export default function OrderHistoryPage() {
       return;
     }
 
+    const currentInvoices = selectedOrder?.invoiceUrls || [];
+    type InvoiceEntry = NonNullable<typeof currentInvoices>[number];
+
     const fields: Parameters<typeof updateOrder>[1] | null = (() => {
       if (entry.changeType === 'photo') {
-        return { photo: entry.previousValue };
+        return { photo: entry.previousValue || '' };
       }
-      if (entry.changeType === 'invoice') {
+
+      if (entry.changeType === 'invoiceImage') {
         try {
-          const parsed = JSON.parse(entry.previousValue) as Array<{ url: string; reviewed: boolean; value: number }>;
-          if (Array.isArray(parsed)) {
-            return { invoiceUrls: parsed };
+          const previous = JSON.parse(entry.previousValue || '') as { url?: string };
+          const current = JSON.parse(entry.newValue || '') as { url?: string };
+          const previousUrl = previous.url;
+          const currentUrl = current.url;
+          if (previousUrl && currentUrl) {
+            const invoiceUrls: InvoiceEntry[] = currentInvoices.map((inv) =>
+              inv.url === currentUrl ? { ...inv, url: previousUrl } : inv
+            );
+            return { invoiceUrls };
           }
         } catch {
-          return { invoiceUrls: entry.previousValue ? [{ url: entry.previousValue, reviewed: false, value: 0 }] : [] };
+          // ignore
         }
       }
+
+      if (entry.changeType === 'invoiceStatus') {
+        try {
+          const parsed = JSON.parse(entry.previousValue || '') as { url?: string; invoiceStatus?: string; rejectionReason?: string };
+          const parsedUrl = parsed.url;
+          const parsedStatus = parsed.invoiceStatus as InvoiceEntry['invoiceStatus'] | undefined;
+          if (parsedUrl && parsedStatus) {
+            const invoiceUrls: InvoiceEntry[] = currentInvoices.map((inv) =>
+              inv.url === parsedUrl
+                ? { ...inv, invoiceStatus: parsedStatus, rejectionReason: parsed.rejectionReason || '' }
+                : inv
+            );
+            return { invoiceUrls };
+          }
+        } catch {
+          // ignore
+        }
+      }
+
+      if (entry.changeType === 'invoiceValue') {
+        try {
+          const parsed = JSON.parse(entry.previousValue || '') as { url?: string; value?: number; currency?: string };
+          const parsedUrl = parsed.url;
+          const parsedValue = parsed.value;
+          if (parsedUrl && typeof parsedValue === 'number') {
+            const invoiceUrls: InvoiceEntry[] = currentInvoices.map((inv) =>
+              inv.url === parsedUrl
+                ? { ...inv, value: parsedValue, currency: parsed.currency || 'EGP' }
+                : inv
+            );
+            return { invoiceUrls };
+          }
+        } catch {
+          // ignore
+        }
+      }
+
+      if (entry.changeType === 'invoice') {
+        try {
+          const parsedRaw = JSON.parse(entry.previousValue || '') as unknown;
+          if (Array.isArray(parsedRaw)) {
+            const invoiceUrls: InvoiceEntry[] = parsedRaw as InvoiceEntry[];
+            return { invoiceUrls };
+          }
+          const parsed = parsedRaw as {
+            url?: string;
+            reviewed?: boolean;
+            invoiceStatus?: string;
+            rejectionReason?: string;
+            value?: number;
+            currency?: string;
+          };
+          const parsedUrl = parsed.url;
+          if (parsed && typeof parsed === 'object' && parsedUrl && !currentInvoices.some((inv) => inv.url === parsedUrl)) {
+            const newInvoice: InvoiceEntry = {
+              url: parsedUrl,
+              reviewed: typeof parsed.reviewed === 'boolean' ? parsed.reviewed : false,
+              invoiceStatus: (parsed.invoiceStatus as InvoiceEntry['invoiceStatus']) || 'waiting',
+              rejectionReason: typeof parsed.rejectionReason === 'string' ? parsed.rejectionReason : '',
+              value: typeof parsed.value === 'number' ? parsed.value : 0,
+              currency: typeof parsed.currency === 'string' ? parsed.currency : 'EGP',
+            };
+            return { invoiceUrls: [...currentInvoices, newInvoice] };
+          }
+        } catch {
+          // fallback: treat as legacy single URL
+          const previousUrl = entry.previousValue;
+          const invoiceUrls: InvoiceEntry[] = previousUrl ? [{ url: previousUrl, reviewed: false, value: 0 }] : [];
+          return { invoiceUrls };
+        }
+      }
+
       return null;
     })();
 

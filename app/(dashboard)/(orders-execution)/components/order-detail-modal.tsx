@@ -481,7 +481,7 @@ export default function OrderDetailModal({
                       </h3>
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                         {invoices.map((invoice) => {
-                          const invoiceStatus = invoice.invoiceStatus ?? (invoice.reviewed ? 'confirmed' : 'waiting');
+                          const invoiceStatus = invoice.invoiceStatus ?? 'waiting';
                           const statusConfig = {
                             confirmed: { bg: 'bg-success', icon: <LuCheck size={16} />, label: t('table.reviewedInvoice') || 'Confirmed' },
                             rejected: { bg: 'bg-error', icon: <LuX size={16} />, label: t('table.rejectedInvoice') || 'Rejected' },

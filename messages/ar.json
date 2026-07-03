@@ -593,6 +593,7 @@
       "dateModeRange": "نطاق تاريخ",
       "specificDate": "تاريخ محدد",
       "today": "اليوم",
+      "tomorrow": "غداً",
       "yesterday": "أمس",
       "last7Days": "آخر 7 أيام",
       "fromDate": "من تاريخ",
@@ -993,6 +994,7 @@
       "filters": {
         "dateModeAll": "كل الفترات",
         "today": "اليوم",
+        "tomorrow": "غداً",
         "yesterday": "أمس",
         "last7Days": "آخر 7 أيام",
         "fromDate": "من تاريخ",
@@ -1006,6 +1008,10 @@
         "prevDay": "اليوم السابق",
         "nextDay": "اليوم التالي",
         "todayDate": "تاريخ اليوم"
+      },
+      "view": {
+        "list": "قائمة",
+        "card": "بطاقة"
       }
     },
     "refTracker": {

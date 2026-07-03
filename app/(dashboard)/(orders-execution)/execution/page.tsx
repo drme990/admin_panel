@@ -680,7 +680,6 @@ export default function ExecutionPage() {
           }
           const parsed = parsedRaw as {
             url?: string;
-            reviewed?: boolean;
             invoiceStatus?: string;
             rejectionReason?: string;
             value?: number;
@@ -690,7 +689,6 @@ export default function ExecutionPage() {
           if (parsed && typeof parsed === 'object' && parsedUrl && !currentInvoices.some((inv) => inv.url === parsedUrl)) {
             const newInvoice: InvoiceEntry = {
               url: parsedUrl,
-              reviewed: typeof parsed.reviewed === 'boolean' ? parsed.reviewed : false,
               invoiceStatus: (parsed.invoiceStatus as InvoiceEntry['invoiceStatus']) || 'waiting',
               rejectionReason: typeof parsed.rejectionReason === 'string' ? parsed.rejectionReason : '',
               value: typeof parsed.value === 'number' ? parsed.value : 0,
@@ -701,7 +699,7 @@ export default function ExecutionPage() {
         } catch {
           // fallback: treat as legacy single URL
           const previousUrl = entry.previousValue;
-          const invoiceUrls: InvoiceEntry[] = previousUrl ? [{ url: previousUrl, reviewed: false, value: 0 }] : [];
+          const invoiceUrls: InvoiceEntry[] = previousUrl ? [{ url: previousUrl, invoiceStatus: 'waiting', value: 0 }] : [];
           return { invoiceUrls };
         }
       }

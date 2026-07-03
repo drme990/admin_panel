@@ -11,7 +11,7 @@ import { LuSearch, LuRefreshCw } from 'react-icons/lu';
 import { PAYMENT_METHODS, PAYMENT_METHOD_LABELS } from '@/lib/order';
 import type { ReviewFilter } from '../lib/invoice-utils';
 
-type DateQuickPreset = 'today' | 'yesterday' | 'last7Days' | 'all';
+type DateQuickPreset = 'today' | 'tomorrow' | 'yesterday' | 'last7Days' | 'all';
 
 interface Props {
   searchInput: string;
@@ -30,7 +30,6 @@ interface Props {
   activeDatePreset: DateQuickPreset | 'custom';
   onDatePreset: (preset: DateQuickPreset) => void;
   locale: string;
-  totalInvoices: number;
 }
 
 export default function InvoiceFilters({
@@ -50,7 +49,6 @@ export default function InvoiceFilters({
   activeDatePreset,
   onDatePreset,
   locale,
-  totalInvoices,
 }: Props) {
   const t = useTranslations('admin.invoices');
 
@@ -72,6 +70,7 @@ export default function InvoiceFilters({
   const datePresetOptions: Array<{ label: string; value: DateQuickPreset }> = [
     { label: t('filters.dateModeAll'), value: 'all' },
     { label: t('filters.today'), value: 'today' },
+    { label: t('filters.tomorrow'), value: 'tomorrow' },
     { label: t('filters.yesterday'), value: 'yesterday' },
     { label: t('filters.last7Days'), value: 'last7Days' },
   ];
@@ -191,12 +190,6 @@ export default function InvoiceFilters({
         />
       </div>
 
-      {/* Total count */}
-      <div className="flex items-center gap-2 text-sm text-secondary">
-        <span>
-          {t('total')}: {totalInvoices}
-        </span>
-      </div>
     </div>
   );
 }

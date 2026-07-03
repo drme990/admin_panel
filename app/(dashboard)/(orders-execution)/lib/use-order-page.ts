@@ -560,12 +560,10 @@ export function useOrderPage(options: UseOrderPageOptions) {
         shortDuaa?: string;
         photo?: string;
         invoiceUrl?: string;
-        invoiceReviewed?: boolean;
         invoiceStatus?: 'confirmed' | 'waiting' | 'pending' | 'rejected';
         invoiceValue?: number;
         invoiceUrls?: Array<{
           url: string;
-          reviewed?: boolean;
           invoiceStatus?: 'confirmed' | 'waiting' | 'pending' | 'rejected';
           rejectionReason?: string;
           value: number;
@@ -584,7 +582,6 @@ export function useOrderPage(options: UseOrderPageOptions) {
         if ('shortDuaa' in fields) body.shortDuaa = fields.shortDuaa;
         if ('photo' in fields) body.photo = fields.photo;
         if ('invoiceUrl' in fields) body.invoiceUrl = fields.invoiceUrl;
-        if ('invoiceReviewed' in fields) body.invoiceReviewed = fields.invoiceReviewed;
         if ('invoiceStatus' in fields) body.invoiceStatus = fields.invoiceStatus;
         if ('invoiceValue' in fields) body.invoiceValue = fields.invoiceValue;
         if ('invoiceUrls' in fields) body.invoiceUrls = fields.invoiceUrls;
@@ -699,10 +696,10 @@ export function useOrderPage(options: UseOrderPageOptions) {
           const currentOrder = state.orders.find((o) => o._id === orderId);
           const currentInvoices = currentOrder?.invoiceUrls || [];
           const alreadyExists = currentInvoices.some((invoice) => invoice.url === fields.invoiceUrl);
-          const invoiceStatus = fields.invoiceStatus ?? (fields.invoiceReviewed ? 'confirmed' : 'waiting');
+          const invoiceStatus = fields.invoiceStatus ?? 'waiting';
           const nextInvoices = alreadyExists
             ? currentInvoices
-            : [...currentInvoices, { url: fields.invoiceUrl, reviewed: fields.invoiceReviewed ?? false, invoiceStatus, rejectionReason: '', value: fields.invoiceValue ?? 0 }];
+            : [...currentInvoices, { url: fields.invoiceUrl, invoiceStatus, rejectionReason: '', value: fields.invoiceValue ?? 0 }];
 
           dispatch({
             type: 'UPDATE_ORDER_IN_LIST',

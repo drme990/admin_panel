@@ -71,6 +71,7 @@ export default function InvoiceStatusCell({ invoice, onStatusChange }: Props) {
           e.stopPropagation();
           setIsOpen((prev) => !prev);
         }}
+        aria-label={label}
         className={cn(
           'flex flex-col items-center justify-center gap-1 px-2 py-1.5 rounded-lg',
           'border border-stroke bg-background hover:bg-foreground/5 transition-colors',
@@ -85,7 +86,7 @@ export default function InvoiceStatusCell({ invoice, onStatusChange }: Props) {
       </button>
 
       {isOpen && (
-        <div className="absolute top-full mt-1 z-30 min-w-35 rounded-lg border border-stroke bg-card-bg shadow-lg p-1">
+        <div className="  absolute top-full mt-1 z-30 min-w-35 rounded-lg border border-stroke bg-card-bg shadow-lg p-1">
           {STATUS_LIST.map((s) => (
             <button
               key={s}
@@ -102,8 +103,7 @@ export default function InvoiceStatusCell({ invoice, onStatusChange }: Props) {
                   : 'text-foreground hover:bg-foreground/5'
               )}
             >
-              <span className="shrink-0">{statusIcon(s, 18)}</span>
-              <span>{t(`status.${s}`)}</span>
+              <span className={STATUS_TEXT_COLORS[s]}>{t(`status.${s}`)}</span>
             </button>
           ))}
         </div>

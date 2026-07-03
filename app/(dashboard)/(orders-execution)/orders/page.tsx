@@ -42,7 +42,7 @@ interface OrdersResponse {
 
 type StatusTabValue = 'all' | OrderStatus;
 type WhatsappFilterValue = 'all' | 'clicked' | 'not-clicked' | 'no-need-to-click';
-type DateQuickPreset = 'today' | 'yesterday' | 'last7Days' | 'all';
+type DateQuickPreset = 'today' | 'tomorrow' | 'yesterday' | 'last7Days' | 'all';
 
 const STATUS_TAB_VALUES: StatusTabValue[] = [
   'all', 'pending', 'processing', 'partial-paid',
@@ -524,6 +524,7 @@ export default function OrderHistoryPage() {
   };
 
   const today = getRelativeIsoDate(0);
+  const tomorrow = getRelativeIsoDate(1);
   const yesterday = getRelativeIsoDate(-1);
   const lastSevenDaysStart = getRelativeIsoDate(-6);
   const normalizedSelectedRange = normalizeDateRange(fromDateFilter, toDateFilter);
@@ -533,11 +534,13 @@ export default function OrderHistoryPage() {
       ? 'all'
       : normalizedSelectedRange.fromDate === today && normalizedSelectedRange.toDate === today
         ? 'today'
-        : normalizedSelectedRange.fromDate === yesterday && normalizedSelectedRange.toDate === yesterday
-          ? 'yesterday'
-          : normalizedSelectedRange.fromDate === lastSevenDaysStart && normalizedSelectedRange.toDate === today
-            ? 'last7Days'
-            : 'custom';
+        : normalizedSelectedRange.fromDate === tomorrow && normalizedSelectedRange.toDate === tomorrow
+          ? 'tomorrow'
+          : normalizedSelectedRange.fromDate === yesterday && normalizedSelectedRange.toDate === yesterday
+            ? 'yesterday'
+            : normalizedSelectedRange.fromDate === lastSevenDaysStart && normalizedSelectedRange.toDate === today
+              ? 'last7Days'
+              : 'custom';
 
   const applyDatePreset = (preset: DateQuickPreset) => {
     if (preset === 'all') {
@@ -546,6 +549,10 @@ export default function OrderHistoryPage() {
     }
     if (preset === 'today') {
       setDateRange({ fromDateFilter: today, toDateFilter: today });
+      return;
+    }
+    if (preset === 'tomorrow') {
+      setDateRange({ fromDateFilter: tomorrow, toDateFilter: tomorrow });
       return;
     }
     if (preset === 'yesterday') {
@@ -727,7 +734,6 @@ export default function OrderHistoryPage() {
           }
           const parsed = parsedRaw as {
             url?: string;
-            reviewed?: boolean;
             invoiceStatus?: string;
             rejectionReason?: string;
             value?: number;
@@ -737,7 +743,6 @@ export default function OrderHistoryPage() {
           if (parsed && typeof parsed === 'object' && parsedUrl && !currentInvoices.some((inv) => inv.url === parsedUrl)) {
             const newInvoice: InvoiceEntry = {
               url: parsedUrl,
-              reviewed: typeof parsed.reviewed === 'boolean' ? parsed.reviewed : false,
               invoiceStatus: (parsed.invoiceStatus as InvoiceEntry['invoiceStatus']) || 'waiting',
               rejectionReason: typeof parsed.rejectionReason === 'string' ? parsed.rejectionReason : '',
               value: typeof parsed.value === 'number' ? parsed.value : 0,
@@ -748,7 +753,7 @@ export default function OrderHistoryPage() {
         } catch {
           // fallback: treat as legacy single URL
           const previousUrl = entry.previousValue;
-          const invoiceUrls: InvoiceEntry[] = previousUrl ? [{ url: previousUrl, reviewed: false, value: 0 }] : [];
+          const invoiceUrls: InvoiceEntry[] = previousUrl ? [{ url: previousUrl, invoiceStatus: 'waiting', value: 0 }] : [];
           return { invoiceUrls };
         }
       }

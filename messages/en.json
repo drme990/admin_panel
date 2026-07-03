@@ -592,6 +592,7 @@
       "dateModeRange": "Date Range",
       "specificDate": "Specific Date",
       "today": "Today",
+      "tomorrow": "Tomorrow",
       "yesterday": "Yesterday",
       "last7Days": "Last 7 Days",
       "fromDate": "From Date",
@@ -991,6 +992,7 @@
       "filters": {
         "dateModeAll": "All Time",
         "today": "Today",
+        "tomorrow": "Tomorrow",
         "yesterday": "Yesterday",
         "last7Days": "Last 7 Days",
         "fromDate": "From Date",
@@ -1004,6 +1006,10 @@
         "prevDay": "Previous Day",
         "nextDay": "Next Day",
         "todayDate": "Today's Date"
+      },
+      "view": {
+        "list": "List",
+        "card": "Card"
       }
     },
     "refTracker": {

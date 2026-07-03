@@ -450,7 +450,7 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
         const invoices = order.invoiceUrls || [];
         const hasInvoice = invoices.length > 0;
         const hasUnreviewedInvoice = invoices.some((inv) => {
-          const status = inv.invoiceStatus ?? (inv.reviewed ? 'confirmed' : 'waiting');
+          const status = inv.invoiceStatus ?? 'waiting';
           return status !== 'confirmed';
         });
         const partialPaid = order.status === 'partial-paid';

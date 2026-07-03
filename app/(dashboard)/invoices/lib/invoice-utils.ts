@@ -2,7 +2,6 @@ import type { OrderItem, PaymentMethod, ReservationOrderField } from '@/types/Or
 
 export interface InvoiceEntry {
   url: string;
-  reviewed?: boolean;
   invoiceStatus?: string;
   rejectionReason?: string;
   value: number;

@@ -7,7 +7,9 @@ import { toast } from 'react-toastify';
 import Table from '@/components/ui/table';
 import Pagination from '@/components/ui/pagination';
 import BulkAction from '@/components/ui/bulk-action';
+import Tabs from '@/components/ui/tabs';
 import ConfirmModal, { useConfirmModal } from '@/components/ui/confirm-modal';
+import { LuList, LuLayoutGrid } from 'react-icons/lu';
 
 import { Order, OrderStatus, PaymentMethod, InvoiceStatus } from '@/types/Order';
 
@@ -18,6 +20,7 @@ import InvoicePaymentMethodModal from './components/invoice-payment-method-modal
 import InvoiceRejectionModal from './components/invoice-rejection-modal';
 import InvoiceTitle from './components/invoice-title';
 import { useInvoiceColumns } from './components/invoice-table-columns';
+import InvoiceCardView from './components/invoice-card-view';
 import OrderDetailModal from '../(orders-execution)/components/order-detail-modal';
 import ChangeStatusModal from '../(orders-execution)/components/change-status-modal';
 import OrderHistoryModal, { OrderHistoryEntry } from '../(orders-execution)/components/order-history-modal';
@@ -39,7 +42,7 @@ import {
 } from './lib/invoice-utils';
 import { uploadInvoiceToR2 } from '@/lib/image-upload-utils';
 
-type DateQuickPreset = 'today' | 'yesterday' | 'last7Days' | 'all';
+type DateQuickPreset = 'today' | 'tomorrow' | 'yesterday' | 'last7Days' | 'all';
 
 export default function InvoicesPage() {
     const t = useTranslations('admin.invoices');
@@ -110,6 +113,9 @@ export default function InvoicesPage() {
     const [bulkStatusValue, setBulkStatusValue] = useState<string>('');
     const [bulkUpdating, setBulkUpdating] = useState(false);
 
+    // View mode: list or card
+    const [viewMode, setViewMode] = useState<'list' | 'card'>('list');
+
     const fetchInvoices = useCallback(async (signal?: AbortSignal) => {
         setLoading(true);
         try {
@@ -148,8 +154,7 @@ export default function InvoicesPage() {
                 const paymentMethod = paidPayment?.paymentMethod || order.paymentMethod;
 
                 invoiceUrls.forEach((inv, idx) => {
-                    const invoiceStatus: string =
-                        inv.invoiceStatus ?? (inv.reviewed ? 'confirmed' : 'waiting');
+                    const invoiceStatus: string = inv.invoiceStatus ?? 'waiting';
 
                     if (reviewFilter !== 'all' && invoiceStatus !== reviewFilter) return;
                     if (paymentMethodFilter !== 'all' && paymentMethod !== paymentMethodFilter) return;
@@ -216,6 +221,7 @@ export default function InvoicesPage() {
 
     // ---------- Date filter helpers ----------
 
+    const tomorrow = getRelativeIsoDate(1);
     const yesterday = getRelativeIsoDate(-1);
     const lastSevenDaysStart = getRelativeIsoDate(-6);
     const normalizedSelectedRange = normalizeDateRange(fromDateFilter, toDateFilter);
@@ -225,11 +231,13 @@ export default function InvoicesPage() {
             ? 'all'
             : normalizedSelectedRange.fromDate === today && normalizedSelectedRange.toDate === today
                 ? 'today'
-                : normalizedSelectedRange.fromDate === yesterday && normalizedSelectedRange.toDate === yesterday
-                    ? 'yesterday'
-                    : normalizedSelectedRange.fromDate === lastSevenDaysStart && normalizedSelectedRange.toDate === today
-                        ? 'last7Days'
-                        : 'custom';
+                : normalizedSelectedRange.fromDate === tomorrow && normalizedSelectedRange.toDate === tomorrow
+                    ? 'tomorrow'
+                    : normalizedSelectedRange.fromDate === yesterday && normalizedSelectedRange.toDate === yesterday
+                        ? 'yesterday'
+                        : normalizedSelectedRange.fromDate === lastSevenDaysStart && normalizedSelectedRange.toDate === today
+                            ? 'last7Days'
+                            : 'custom';
 
     const applyDatePreset = (preset: DateQuickPreset) => {
         if (preset === 'all') {
@@ -240,6 +248,11 @@ export default function InvoicesPage() {
         if (preset === 'today') {
             setFromDateFilter(today);
             setToDateFilter(today);
+            return;
+        }
+        if (preset === 'tomorrow') {
+            setFromDateFilter(tomorrow);
+            setToDateFilter(tomorrow);
             return;
         }
         if (preset === 'yesterday') {
@@ -912,8 +925,23 @@ export default function InvoicesPage() {
                 activeDatePreset={activeDatePreset}
                 onDatePreset={applyDatePreset}
                 locale={locale}
-                totalInvoices={invoices.length}
             />
+
+            {/* Total + view switcher */}
+            <div className="flex items-center justify-between gap-4">
+                <span className="text-sm text-secondary">
+                    {t('total')}: {invoices.length}
+                </span>
+                <Tabs<'list' | 'card'>
+                    value={viewMode}
+                    options={[
+                        { value: 'list', label: <LuList size={16} />, ariaLabel: t('view.list') },
+                        { value: 'card', label: <LuLayoutGrid size={16} />, ariaLabel: t('view.card') },
+                    ]}
+                    onChange={setViewMode}
+                    size="sm"
+                />
+            </div>
 
             {/* Date title (only when a single day is selected) */}
             {fromDateFilter && fromDateFilter === toDateFilter && (
@@ -951,13 +979,46 @@ export default function InvoicesPage() {
                 loading={bulkUpdating}
             />
 
-            {/* Table */}
-            <Table
-                columns={columns}
-                data={paginatedInvoices}
-                loading={loading}
-                emptyMessage={t('empty')}
-            />
+            {/* List view */}
+            {viewMode === 'list' && (
+                <Table
+                    columns={columns}
+                    data={paginatedInvoices}
+                    loading={loading}
+                    emptyMessage={t('empty')}
+                />
+            )}
+
+            {/* Card view */}
+            {viewMode === 'card' && (
+                <InvoiceCardView
+                    invoices={paginatedInvoices}
+                    loading={loading}
+                    emptyMessage={t('empty')}
+                    onEdit={(invoice) => setEditingInvoice(invoice)}
+                    onPreview={(invoice) => setPreviewInvoice(invoice)}
+                    onViewOrder={handleViewOrder}
+                    onWhatsapp={startOrderWhatsappMessage}
+                    onCopyPhone={copyOrderWhatsappNumber}
+                    onCopyMessage={copyOrderWhatsappMessage}
+                    onChangeStatus={handleChangeStatus}
+                    onViewHistory={handleViewHistory}
+                    onBlock={handleBlockCustomer}
+                    onToggleSelect={toggleInvoiceSelection}
+                    selectedInvoiceIds={selectedInvoiceIds}
+                    onEditPaymentMethod={(invoice) => setEditingPaymentMethodInvoice(invoice)}
+                    onStatusChange={handleStatusChange}
+                    onDownloadInvoice={handleDownloadInvoice}
+                    onUploadInvoice={handleUploadInvoiceClick}
+                    uploadingInvoiceId={uploadingInvoiceId}
+                    tooltipPos={isAr ? 'right' : 'left'}
+                    whatsappOrderId={whatsappOrderId}
+                    copyingPhoneOrderId={copyingPhoneOrderId}
+                    copyingMessageOrderId={copyingMessageOrderId}
+                    blockingOrderId={blockingOrderId}
+                    blockedUserIds={blockedUserIds}
+                />
+            )}
 
             {/* Pagination */}
             <Pagination

@@ -145,7 +145,6 @@ export interface Order {
   cancellationReason?: string;
   invoiceUrls?: Array<{
     url: string;
-    reviewed?: boolean;
     invoiceStatus?: InvoiceStatus;
     rejectionReason?: string;
     value: number;

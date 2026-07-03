@@ -1133,7 +1133,7 @@ export default function CreateManualOrderModal({
     dispatch({ type: 'CLEAR_FORM_ERRORS' });
     dispatch({ type: 'SET_CREATING', creating: true });
     try {
-      let invoiceUrls: { url: string; reviewed: boolean; invoiceStatus: string; value: number; currency: string }[] = [];
+      let invoiceUrls: { url: string; invoiceStatus: string; value: number; currency: string }[] = [];
       if (!isEasykash && invoices.length > 0) {
         dispatch({ type: 'SET_UPLOADING_INVOICE', uploading: true });
         const uploaded = await Promise.all(
@@ -1141,7 +1141,6 @@ export default function CreateManualOrderModal({
             const url = await uploadInvoiceToR2(inv.file);
             return {
               url,
-              reviewed: inv.invoiceStatus === 'confirmed',
               invoiceStatus: inv.invoiceStatus,
               value: parseFloat(inv.value) || 0,
               currency: inv.currency || 'EGP',

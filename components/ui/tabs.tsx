@@ -2,11 +2,14 @@
 
 import { cn } from '@/lib/utils';
 
+import type { ReactNode } from 'react';
+
 type TabValue = string;
 
 interface TabsOption<T extends TabValue> {
   value: T;
-  label: string;
+  label: ReactNode;
+  ariaLabel?: string;
   className?: string;
   activeClassName?: string;
 }
@@ -50,6 +53,7 @@ export default function Tabs<T extends TabValue>({
             type="button"
             role="tab"
             aria-selected={active}
+            aria-label={option.ariaLabel}
             onClick={() => onChange(option.value)}
             className={cn(
               'rounded-lg font-medium transition',

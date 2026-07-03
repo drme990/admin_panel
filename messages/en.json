@@ -104,6 +104,7 @@
       "downloadInvoice": "Download Invoice",
       "reviewedInvoice": "Reviewed Invoice",
       "unreviewedInvoice": "Unreviewed Invoice",
+      "rejectedInvoice": "Rejected Invoice",
       "copyPaymentLink": "Copy Payment Link",
       "regeneratePaymentLink": "Regenerate Link",
       "editName": "Edit Name",

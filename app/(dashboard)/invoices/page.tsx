@@ -62,7 +62,7 @@ export default function InvoicesPage() {
 
     const [searchInput, setSearchInput] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
-    const [reviewFilter, setReviewFilter] = useState<ReviewFilter>('all');
+    const [reviewFilter, setReviewFilter] = useState<ReviewFilter>('waiting');
     const [sourceFilter, setSourceFilter] = useState('all');
     const [paymentMethodFilter, setPaymentMethodFilter] = useState<string>('all');
     const [fromDateFilter, setFromDateFilter] = useState(today);
@@ -992,11 +992,13 @@ export default function InvoicesPage() {
                     setIntentionFilter(val);
                     setPage(1);
                 }}
-                totalInvoices={totalInvoices}
             />
 
-            {/* View switcher */}
-            <div className="flex items-center justify-end gap-4">
+            {/* Total + view switcher */}
+            <div className="flex items-center justify-between gap-4">
+                <span className="text-sm text-secondary">
+                    {t('totalCount', { count: totalInvoices })}
+                </span>
                 <Tabs<'list' | 'card'>
                     value={viewMode}
                     options={[

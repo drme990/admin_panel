@@ -14,7 +14,7 @@ interface Props {
 
 const STATUS_LIST: InvoiceStatus[] = ['confirmed', 'waiting', 'pending', 'rejected'];
 
-function statusIcon(status: InvoiceStatus, size: number = 28): React.ReactNode {
+function statusIcon(status: InvoiceStatus, size: number = 24): React.ReactNode {
   const colorClass = {
     confirmed: 'text-green-600 dark:text-green-400',
     waiting: 'text-orange-500 dark:text-orange-400',
@@ -37,10 +37,10 @@ function statusIcon(status: InvoiceStatus, size: number = 28): React.ReactNode {
 }
 
 export const STATUS_TEXT_COLORS: Record<InvoiceStatus, string> = {
-  confirmed: 'text-green-700 dark:text-green-300',
-  waiting: 'text-orange-700 dark:text-orange-300',
-  pending: 'text-blue-700 dark:text-blue-300',
-  rejected: 'text-red-700 dark:text-red-300',
+  confirmed: 'text-success',
+  waiting: 'text-warning',
+  pending: 'text-info',
+  rejected: 'text-error',
 };
 
 export default function InvoiceStatusCell({ invoice, onStatusChange }: Props) {
@@ -73,20 +73,20 @@ export default function InvoiceStatusCell({ invoice, onStatusChange }: Props) {
         }}
         aria-label={label}
         className={cn(
-          'flex flex-col items-center justify-center gap-1 px-2 py-1.5 rounded-lg',
+          'flex flex-col items-center justify-center gap-0.5 sm:gap-1 px-1.5 sm:px-2 py-1 sm:py-1.5 rounded-lg',
           'border border-stroke bg-background hover:bg-foreground/5 transition-colors',
-          'min-w-20'
+          'min-w-18 sm:min-w-20'
         )}
       >
-        {statusIcon(status)}
-        <span className={cn('text-xs font-medium', STATUS_TEXT_COLORS[status])}>
+        <span className="scale-90 sm:scale-100">{statusIcon(status)}</span>
+        <span className={cn('text-[10px] sm:text-xs font-medium', STATUS_TEXT_COLORS[status])}>
           {label}
         </span>
-        <LuChevronDown size={14} className="text-secondary" />
+        <LuChevronDown className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-secondary" />
       </button>
 
       {isOpen && (
-        <div className="  absolute top-full mt-1 z-30 min-w-35 rounded-lg border border-stroke bg-card-bg shadow-lg p-1">
+        <div className="absolute top-full mt-1 z-30 min-w-32 sm:min-w-35 rounded-lg border border-stroke bg-card-bg shadow-lg p-1">
           {STATUS_LIST.map((s) => (
             <button
               key={s}

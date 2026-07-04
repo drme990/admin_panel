@@ -44,7 +44,6 @@ interface Props {
   onStatusChange: (value: OrderStatus | 'all') => void;
   intentionFilter: string;
   onIntentionChange: (value: string) => void;
-  totalInvoices: number;
 }
 
 export default function InvoiceFilters({
@@ -74,7 +73,6 @@ export default function InvoiceFilters({
   onStatusChange,
   intentionFilter,
   onIntentionChange,
-  totalInvoices,
 }: Props) {
   const t = useTranslations('admin.invoices');
 
@@ -324,13 +322,6 @@ export default function InvoiceFilters({
           onChange={onReviewChange}
           className="min-w-max"
         />
-      </div>
-
-      {/* Total count */}
-      <div className="flex items-center justify-end">
-        <span className="text-sm text-secondary">
-          {t('totalCount', { count: totalInvoices })}
-        </span>
       </div>
 
     </div>

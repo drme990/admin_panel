@@ -123,23 +123,32 @@ export default function InvoiceCardView({
 
   if (loading && invoices.length === 0) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
         {Array.from({ length: 8 }).map((_, i) => (
           <div
             key={i}
-            className="rounded-lg border border-stroke bg-background p-4 animate-pulse"
+            className="h-full flex flex-col"
           >
-            <div className="relative aspect-video rounded-lg bg-foreground/10">
-              <div className="absolute top-2 inset-s-2 flex flex-col gap-1">
-                <div className="w-7 h-7 rounded-md bg-foreground/10" />
-                <div className="w-7 h-7 rounded-md bg-foreground/10" />
-                <div className="w-7 h-7 rounded-md bg-foreground/10" />
+            <div className="rounded-lg border-2 border-success bg-card-bg animate-pulse flex flex-col overflow-hidden h-full">
+              <div className="relative aspect-square rounded-t-lg bg-foreground/10 shrink-0">
+                <div className="absolute top-2 inset-s-2 flex flex-row gap-1">
+                  <div className="w-7 h-7 rounded-md bg-foreground/10" />
+                  <div className="w-7 h-7 rounded-md bg-foreground/10" />
+                  <div className="w-7 h-7 rounded-md bg-foreground/10" />
+                </div>
+                <div className="absolute top-2 inset-e-2 w-7 h-7 rounded bg-foreground/10" />
               </div>
-              <div className="absolute top-2 inset-s-2 w-5 h-5 rounded bg-foreground/10" />
+              <div className="px-2 py-2 sm:py-3 h-12 sm:h-14 border-y-2 border-success bg-foreground/5 shrink-0" />
+              <div className="px-2 py-2 sm:py-3 flex flex-col gap-2 flex-1">
+                <div className="h-4 w-24 rounded bg-foreground/10" />
+                <div className="h-4 w-32 rounded bg-foreground/10" />
+              </div>
             </div>
-            <div className="mt-3 h-4 w-24 rounded bg-foreground/10" />
-            <div className="mt-2 h-4 w-32 rounded bg-foreground/10" />
-            <div className="mt-3 h-8 rounded bg-foreground/10" />
+            <div className="w-full grid grid-cols-4 gap-2 p-2 sm:p-3">
+              {Array.from({ length: 8 }).map((_, j) => (
+                <div key={j} className="h-8 sm:h-9 rounded bg-foreground/10" />
+              ))}
+            </div>
           </div>
         ))}
       </div>
@@ -155,7 +164,7 @@ export default function InvoiceCardView({
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+    <div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
       {invoices.map((row) => {
         const order = buildOrderFromInvoice(row);
         const isUploading = uploadingInvoiceId === row._id;
@@ -173,21 +182,22 @@ export default function InvoiceCardView({
         const statusColor = STATUS_TEXT_COLORS[row.invoiceStatus as InvoiceStatus] ?? 'text-foreground';
 
         return (
-          <div key={row._id} className="flex flex-col">
+          <div key={row._id} className="flex flex-col h-full">
             {/* Card body */}
-            <div className="relative rounded-lg border-2 border-success bg-card-bg flex flex-col">
+            <div className="relative rounded-lg border-2 border-success bg-card-bg flex flex-col h-full">
               {/* Preview with absolute icons and checkbox */}
-              <div className="overflow-hidden aspect-2/2 rounded-t-lg">
+              <div className="overflow-hidden aspect-square rounded-t-lg shrink-0">
                 {isImageUrl(row.url) ? (
                   <Image
                     src={row.url}
                     alt="Invoice"
-                    className="object-cover object-center aspect-2/2"
+                    className="object-cover object-center w-full h-full"
                     onError={(e) => {
                       (e.target as HTMLImageElement).style.display = 'none';
                     }}
                     width={400}
-                    height={600}
+                    height={400}
+                    sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
                   />
                 ) : (
                   <LuFileText size={48} className="text-secondary" />
@@ -199,7 +209,7 @@ export default function InvoiceCardView({
                     <Button
                       variant="ghost"
                       size="custom"
-                      className="h-7 w-7 p-0 rounded-md bg-background/80 backdrop-blur-sm text-secondary hover:text-foreground border border-stroke"
+                      className="h-6 w-6 sm:h-7 sm:w-7 p-0 rounded-md bg-background/80 backdrop-blur-sm text-secondary hover:text-foreground border border-stroke"
                       onClick={(e) => {
                         e.stopPropagation();
                         onDownloadInvoice(row);
@@ -213,7 +223,7 @@ export default function InvoiceCardView({
                     <Button
                       variant="ghost"
                       size="custom"
-                      className="h-7 w-7 p-0 rounded-md bg-background/80 backdrop-blur-sm text-secondary hover:text-foreground border border-stroke"
+                      className="h-6 w-6 sm:h-7 sm:w-7 p-0 rounded-md bg-background/80 backdrop-blur-sm text-secondary hover:text-foreground border border-stroke"
                       onClick={(e) => {
                         e.stopPropagation();
                         onUploadInvoice(row);
@@ -232,7 +242,7 @@ export default function InvoiceCardView({
                     <Button
                       variant="ghost"
                       size="custom"
-                      className="h-7 w-7 p-0 rounded-md bg-background/80 backdrop-blur-sm text-secondary hover:text-foreground border border-stroke"
+                      className="h-6 w-6 sm:h-7 sm:w-7 p-0 rounded-md bg-background/80 backdrop-blur-sm text-secondary hover:text-foreground border border-stroke"
                       onClick={(e) => {
                         e.stopPropagation();
                         onPreview(row);
@@ -260,12 +270,12 @@ export default function InvoiceCardView({
               </div>
 
               {/* Value + payment method */}
-              <div className="px-2 py-3 flex items-center justify-between gap-2 border-y-2 rounded-b-xl border-success">
-                <span className={`text-base font-bold whitespace-nowrap ${statusColor}`}>
+              <div className="px-2 py-2 sm:py-3 flex items-center justify-between gap-2 border-y-2 rounded-b-xl border-success shrink-0">
+                <span className={`text-sm sm:text-base font-bold whitespace-nowrap ${statusColor}`}>
                   {row.value.toFixed(2)} {row.invoiceCurrency}
                 </span>
-                <div className="flex items-center gap-1">
-                  <span className={`text-sm ${statusColor}`}>
+                <div className="flex items-center gap-1 min-w-0">
+                  <span className={`text-xs sm:text-sm truncate ${statusColor}`}>
                     {pmLabel || t('noPaymentMethod')}
                   </span>
                   <Tooltip
@@ -275,7 +285,7 @@ export default function InvoiceCardView({
                     <Button
                       variant="ghost"
                       size="custom"
-                      className="h-5 w-5 p-0 text-foreground hover:text-success"
+                      className="h-5 w-5 p-0 text-foreground hover:text-success shrink-0"
                       onClick={(e) => {
                         e.stopPropagation();
                         onEditPaymentMethod(row);
@@ -289,14 +299,14 @@ export default function InvoiceCardView({
               </div>
 
               {/* Status + name + order number */}
-              <div className="flex items-center justify-between gap-2 px-2 py-3">
+              <div className="flex items-center justify-between gap-2 px-2 py-2 sm:py-3 flex-1">
                 <InvoiceStatusCell
                   invoice={row}
                   onStatusChange={onStatusChange}
                 />
-                <div className="flex flex-col gap-1">
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-medium leading-snug text-foreground text-sm truncate">
+                <div className="flex flex-col gap-0.5 sm:gap-1 min-w-0 items-end">
+                  <div className="flex items-center gap-1.5 max-w-full">
+                    <span className="font-medium leading-snug text-foreground text-xs sm:text-sm line-clamp-2">
                       {firstName}
                     </span>
                     {names.length > 0 && (
@@ -317,7 +327,7 @@ export default function InvoiceCardView({
                     )}
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <span className="font-semibold whitespace-nowrap text-sm text-foreground">
+                    <span className="font-semibold whitespace-nowrap text-xs sm:text-sm text-foreground">
                       {row.orderNumber}
                     </span>
                     <Tooltip
@@ -343,11 +353,12 @@ export default function InvoiceCardView({
             </div>
 
             {/* Actions footer: down the card, separated from the body */}
-            <div className="w-52 grid grid-cols-4 self-center gap-2 p-3">
+            <div className="w-full grid grid-cols-4 gap-2 p-2 sm:p-3">
               <Tooltip position={tooltipPos} content={t('copyPhone')}>
                 <Button
                   variant="icon-primary"
                   size="custom"
+                  className="h-8 w-full sm:h-9"
                   onClick={(e) => {
                     e.stopPropagation();
                     void onCopyPhone(order);
@@ -367,6 +378,7 @@ export default function InvoiceCardView({
                 <Button
                   variant="icon-primary"
                   size="custom"
+                  className="h-8 w-full sm:h-9"
                   onClick={(e) => {
                     e.stopPropagation();
                     void onCopyMessage(order);
@@ -386,6 +398,7 @@ export default function InvoiceCardView({
                 <Button
                   variant="icon-primary"
                   size="custom"
+                  className="h-8 w-full sm:h-9"
                   onClick={(e) => {
                     e.stopPropagation();
                     onWhatsapp(order);
@@ -406,6 +419,7 @@ export default function InvoiceCardView({
                   <Button
                     variant="icon-danger"
                     size="custom"
+                    className="h-8 w-full sm:h-9"
                     onClick={(e) => {
                       e.stopPropagation();
                       onBlock(order);
@@ -425,6 +439,7 @@ export default function InvoiceCardView({
                   <Button
                     variant="icon-primary"
                     size="custom"
+                    className="h-8 w-full sm:h-9"
                     onClick={(e) => {
                       e.stopPropagation();
                       onBlock(order);
@@ -449,6 +464,7 @@ export default function InvoiceCardView({
                 <Button
                   variant="icon-primary"
                   size="custom"
+                  className="h-8 w-full sm:h-9"
                   onClick={(e) => {
                     e.stopPropagation();
                     onViewOrder(order);
@@ -463,6 +479,7 @@ export default function InvoiceCardView({
                 <Button
                   variant="icon-primary"
                   size="custom"
+                  className="h-8 w-full sm:h-9"
                   onClick={(e) => {
                     e.stopPropagation();
                     onChangeStatus(order);
@@ -477,6 +494,7 @@ export default function InvoiceCardView({
                 <Button
                   variant="icon-primary"
                   size="custom"
+                  className="h-8 w-full sm:h-9"
                   onClick={(e) => {
                     e.stopPropagation();
                     onViewHistory(order);
@@ -491,6 +509,7 @@ export default function InvoiceCardView({
                 <Button
                   variant="icon-primary"
                   size="custom"
+                  className="h-8 w-full sm:h-9"
                   onClick={(e) => {
                     e.stopPropagation();
                     onEdit(row);

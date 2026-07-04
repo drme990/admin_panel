@@ -91,7 +91,7 @@ export default function AccountTransactionsModal({
     {
       header: t('transactions.notes'),
       accessor: (row: AccountTransaction) => (
-        <span className="text-sm text-secondary truncate max-w-[200px]">
+        <span className="text-sm text-secondary truncate max-w-50">
           {row.notes || '—'}
         </span>
       ),

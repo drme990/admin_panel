@@ -129,7 +129,7 @@ export default function InvoiceCardView({
             key={i}
             className="h-full flex flex-col"
           >
-            <div className="rounded-lg border-2 border-success bg-card-bg animate-pulse flex flex-col overflow-hidden h-full">
+            <div className="rounded-lg border-2 border-stroke bg-card-bg animate-pulse flex flex-col overflow-hidden h-full">
               <div className="relative aspect-square rounded-t-lg bg-foreground/10 shrink-0">
                 <div className="absolute top-2 inset-s-2 flex flex-row gap-1">
                   <div className="w-7 h-7 rounded-md bg-foreground/10" />
@@ -138,7 +138,7 @@ export default function InvoiceCardView({
                 </div>
                 <div className="absolute top-2 inset-e-2 w-7 h-7 rounded bg-foreground/10" />
               </div>
-              <div className="px-2 py-2 sm:py-3 h-12 sm:h-14 border-y-2 border-success bg-foreground/5 shrink-0" />
+              <div className="px-2 py-2 sm:py-3 h-12 sm:h-14 border-y-2 border-stroke bg-foreground/5 shrink-0" />
               <div className="px-2 py-2 sm:py-3 flex flex-col gap-2 flex-1">
                 <div className="h-4 w-24 rounded bg-foreground/10" />
                 <div className="h-4 w-32 rounded bg-foreground/10" />
@@ -184,7 +184,7 @@ export default function InvoiceCardView({
         return (
           <div key={row._id} className="flex flex-col h-full">
             {/* Card body */}
-            <div className="relative rounded-lg border-2 border-success bg-card-bg flex flex-col h-full">
+            <div className="relative rounded-lg border-2 border-stroke bg-card-bg flex flex-col h-full">
               {/* Preview with absolute icons and checkbox */}
               <div className="overflow-hidden aspect-square rounded-t-lg shrink-0">
                 {isImageUrl(row.url) ? (
@@ -270,7 +270,7 @@ export default function InvoiceCardView({
               </div>
 
               {/* Value + payment method */}
-              <div className="px-2 py-2 sm:py-3 flex items-center justify-between gap-2 border-y-2 rounded-b-xl border-success shrink-0">
+              <div className="px-2 py-2 sm:py-3 flex items-center justify-between gap-2 border-y-2 rounded-b-xl border-stroke shrink-0">
                 <span className={`text-sm sm:text-base font-bold whitespace-nowrap ${statusColor}`}>
                   {row.value.toFixed(2)} {row.invoiceCurrency}
                 </span>

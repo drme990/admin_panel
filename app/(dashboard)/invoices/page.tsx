@@ -1124,6 +1124,7 @@ export default function InvoicesPage() {
 
             {/* Payment Method Modal */}
             <InvoicePaymentMethodModal
+                key={editingPaymentMethodInvoice?._id ?? 'closed'}
                 invoice={editingPaymentMethodInvoice}
                 isOpen={!!editingPaymentMethodInvoice}
                 onClose={handleClosePaymentMethodEdit}

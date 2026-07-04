@@ -1,4 +1,4 @@
-import { type ReactNode, useState } from 'react';
+import { type ReactNode, useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { toast } from 'react-toastify';
 
@@ -28,6 +28,7 @@ import {
   LuClock,
   LuRotateCw,
 } from 'react-icons/lu';
+import Image from 'next/image';
 
 interface Props {
   isOpen: boolean;
@@ -43,7 +44,8 @@ interface Props {
 
 function isOrderGuest(order: Pick<Order, 'userId' | 'isGuest'>): boolean {
   if (typeof order.isGuest === 'boolean') return order.isGuest;
-  const hasUserId = typeof order.userId === 'string' && order.userId.trim().length > 0;
+  const hasUserId =
+    typeof order.userId === 'string' && order.userId.trim().length > 0;
   return !hasUserId;
 }
 
@@ -58,14 +60,21 @@ function normalizeSizeText(value: string | undefined): string | null {
 type LocalizedText = { ar?: string; en?: string };
 type SizeValue = string | LocalizedText;
 
-function resolveLocalizedSizeValue(value: SizeValue | undefined, locale: string): string | null {
+function resolveLocalizedSizeValue(
+  value: SizeValue | undefined,
+  locale: string,
+): string | null {
   if (typeof value === 'string') return normalizeSizeText(value);
   if (!value) return null;
-  if (locale === 'ar') return normalizeSizeText(value.ar) ?? normalizeSizeText(value.en);
+  if (locale === 'ar')
+    return normalizeSizeText(value.ar) ?? normalizeSizeText(value.en);
   return normalizeSizeText(value.en) ?? normalizeSizeText(value.ar);
 }
 
-function resolveOrderItemSizeLabel(item: Order['items'][number], locale: string): string | null {
+function resolveOrderItemSizeLabel(
+  item: Order['items'][number],
+  locale: string,
+): string | null {
   if (item.customSize) return item.customSize;
   const directSize =
     resolveLocalizedSizeValue(item.sizeName, locale) ??
@@ -79,7 +88,8 @@ function resolveOrderItemSizeLabel(item: Order['items'][number], locale: string)
     !Array.isArray(item.sizes) ||
     resolvedIndex < 0 ||
     resolvedIndex >= item.sizes.length
-  ) return null;
+  )
+    return null;
 
   const sizeOption = item.sizes[resolvedIndex];
   return (
@@ -89,13 +99,25 @@ function resolveOrderItemSizeLabel(item: Order['items'][number], locale: string)
   );
 }
 
-function getOrderItemDisplayName(item: Order['items'][number], locale: string): string {
-  const productName = locale === 'ar' ? item.productName.ar : item.productName.en;
+function getOrderItemDisplayName(
+  item: Order['items'][number],
+  locale: string,
+): string {
+  const productName =
+    locale === 'ar' ? item.productName.ar : item.productName.en;
   const sizeLabel = resolveOrderItemSizeLabel(item, locale);
   return sizeLabel ? `${productName} - ${sizeLabel}` : productName;
 }
 
-function InfoRow({ icon, label, value }: { icon: ReactNode; label: string; value: ReactNode }) {
+function InfoRow({
+  icon,
+  label,
+  value,
+}: {
+  icon: ReactNode;
+  label: string;
+  value: ReactNode;
+}) {
   return (
     <div className="flex items-center gap-2 py-2 px-3 rounded-lg bg-background border border-stroke">
       <span className="text-secondary shrink-0">{icon}</span>
@@ -127,6 +149,13 @@ export default function OrderDetailModal({
 }: Props) {
   const t = useTranslations(namespace);
   const [copiedPaymentId, setCopiedPaymentId] = useState<string | null>(null);
+  const [now, setNow] = useState<number>(() => Date.now());
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [isOpen, order?._id]);
 
   const formatMoney = (amount: number | undefined, currency: string) =>
     `${Number(amount ?? 0).toFixed(2)} ${currency}`;
@@ -149,8 +178,8 @@ export default function OrderDetailModal({
   };
 
   const isPaymentLinkExpired = (payment: OrderPayment) => {
-    if (!payment.expiresAt) return false;
-    return new Date(payment.expiresAt).getTime() < Date.now();
+    if (!payment.expiresAt || !now) return false;
+    return new Date(payment.expiresAt).getTime() < now;
   };
 
   const hasPaymentLink = (payment: OrderPayment) =>
@@ -160,13 +189,20 @@ export default function OrderDetailModal({
     locale === 'ar' ? label.ar : label.en;
 
   const getReservationValues = (value: string) =>
-    value.split('\n').map((entry) => entry.trim()).filter(Boolean);
+    value
+      .split('\n')
+      .map((entry) => entry.trim())
+      .filter(Boolean);
 
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={order ? `${t('orderDetails')} - ${order.orderNumber}` : t('orderDetails')}
+      title={
+        order
+          ? `${t('orderDetails')} - ${order.orderNumber}`
+          : t('orderDetails')
+      }
       size="lg"
     >
       {order && loadingDetails ? (
@@ -177,11 +213,19 @@ export default function OrderDetailModal({
         <div className="flex flex-col gap-6">
           {(() => {
             const paymentTimeline = getPaymentTimeline(order);
-            const latestPaidPayment = [...paymentTimeline].reverse().find((p) => p.status === 'paid');
+            const latestPaidPayment = [...paymentTimeline]
+              .reverse()
+              .find((p) => p.status === 'paid');
             const currentTransactionAmount =
-              latestPaidPayment?.orderAmount ?? latestPaidPayment?.amount ?? order.totalAmount;
+              latestPaidPayment?.orderAmount ??
+              latestPaidPayment?.amount ??
+              order.totalAmount;
 
-            const remaining = order.remainingAmount ?? (order.fullAmount ? order.fullAmount - (order.paidAmount ?? 0) : 0);
+            const remaining =
+              order.remainingAmount ??
+              (order.fullAmount
+                ? order.fullAmount - (order.paidAmount ?? 0)
+                : 0);
             const hasRemaining = order.isPartialPayment && remaining > 0.001;
 
             return (
@@ -189,16 +233,21 @@ export default function OrderDetailModal({
                 {/* Status + date */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <span className={`px-3 py-1 text-sm font-medium rounded-full ${STATUS_COLORS[order.status] || ''}`}>
+                    <span
+                      className={`px-3 py-1 text-sm font-medium rounded-full ${STATUS_COLORS[order.status] || ''}`}
+                    >
                       {t(`status.${order.status}`)}
                     </span>
-                    {order.cancellationReason && order.status === 'cancelled' && (
-                      <span className="text-xs text-secondary truncate max-w-50">
-                        {order.cancellationReason}
-                      </span>
-                    )}
+                    {order.cancellationReason &&
+                      order.status === 'cancelled' && (
+                        <span className="text-xs text-secondary truncate max-w-50">
+                          {order.cancellationReason}
+                        </span>
+                      )}
                   </div>
-                  <span className="text-sm text-secondary">{formatDate(order.statusUpdateTime)}</span>
+                  <span className="text-sm text-secondary">
+                    {formatDate(order.statusUpdateTime)}
+                  </span>
                 </div>
 
                 {/* Total amount hero */}
@@ -208,7 +257,8 @@ export default function OrderDetailModal({
                   </p>
                   {hasRemaining && (
                     <p className="mt-1 text-sm font-medium text-orange-600 dark:text-orange-400">
-                      {t('totals.remainingAmount')}: {remaining.toFixed(2)} {order.currency}
+                      {t('totals.remainingAmount')}: {remaining.toFixed(2)}{' '}
+                      {order.currency}
                     </p>
                   )}
                 </div>
@@ -220,25 +270,38 @@ export default function OrderDetailModal({
                     <InfoRow
                       icon={<LuCreditCard size={14} />}
                       label={t('totals.totalPaidNow')}
-                      value={formatMoney(currentTransactionAmount, order.currency)}
+                      value={formatMoney(
+                        currentTransactionAmount,
+                        order.currency,
+                      )}
                     />
                     <InfoRow
                       icon={<LuCreditCard size={14} />}
                       label={t('totals.fullAmount')}
-                      value={formatMoney(order.fullAmount ?? order.totalAmount, order.currency)}
+                      value={formatMoney(
+                        order.fullAmount ?? order.totalAmount,
+                        order.currency,
+                      )}
                     />
                     <InfoRow
                       icon={<LuCreditCard size={14} />}
                       label={t('totals.paidAmount')}
-                      value={formatMoney(order.paidAmount ?? order.totalAmount, order.currency)}
+                      value={formatMoney(
+                        order.paidAmount ?? order.totalAmount,
+                        order.currency,
+                      )}
                     />
                     <InfoRow
                       icon={<LuCreditCard size={14} />}
                       label={t('totals.remainingAmount')}
                       value={
-                        hasRemaining
-                          ? formatMoney(remaining, order.currency)
-                          : <span className="inline-block px-2 py-0.5 text-xs font-medium rounded-full bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">{t('status.paid')}</span>
+                        hasRemaining ? (
+                          formatMoney(remaining, order.currency)
+                        ) : (
+                          <span className="inline-block px-2 py-0.5 text-xs font-medium rounded-full bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                            {t('status.paid')}
+                          </span>
+                        )
                       }
                     />
                     <InfoRow
@@ -253,7 +316,11 @@ export default function OrderDetailModal({
                     />
                     {order.isUpgrade && (
                       <>
-                        <InfoRow icon={<LuTag size={14} />} label={t('totals.isUpgrade')} value={t('yes')} />
+                        <InfoRow
+                          icon={<LuTag size={14} />}
+                          label={t('totals.isUpgrade')}
+                          value={t('yes')}
+                        />
                         <InfoRow
                           icon={<LuTag size={14} />}
                           label={t('totals.upgradeDiscount')}
@@ -274,15 +341,26 @@ export default function OrderDetailModal({
                 {/* Payment timeline */}
                 <div>
                   <div className="flex items-center justify-between mb-3">
-                    <h3 className="font-semibold">{t('paymentTimeline.title')}</h3>
+                    <h3 className="font-semibold">
+                      {t('paymentTimeline.title')}
+                    </h3>
                     {canCreatePaymentLink && (
-                      <Tooltip position={locale === 'ar' ? 'right' : 'left'} content={t('paymentTimeline.createLink') || 'Create payment link'}>
+                      <Tooltip
+                        position={locale === 'ar' ? 'right' : 'left'}
+                        content={
+                          t('paymentTimeline.createLink') ||
+                          'Create payment link'
+                        }
+                      >
                         <Button
                           variant="icon-primary"
                           size="custom"
                           onClick={() => onCreatePaymentLink?.(order)}
                           disabled={isCreatingPaymentLink}
-                          aria-label={t('paymentTimeline.createLink') || 'Create payment link'}
+                          aria-label={
+                            t('paymentTimeline.createLink') ||
+                            'Create payment link'
+                          }
                         >
                           {isCreatingPaymentLink ? (
                             <LuRotateCw size={18} className="animate-spin" />
@@ -298,7 +376,8 @@ export default function OrderDetailModal({
                       {paymentTimeline.map((payment, index) => {
                         const paymentStatus = payment.status || 'pending';
                         const customerReference =
-                          typeof payment.easykashResponse?.customerReference === 'string'
+                          typeof payment.easykashResponse?.customerReference ===
+                            'string'
                             ? payment.easykashResponse.customerReference
                             : undefined;
 
@@ -309,27 +388,49 @@ export default function OrderDetailModal({
                           >
                             <div className="flex items-center justify-between mb-2">
                               <span className="text-sm font-semibold text-foreground">
-                                {t('paymentTimeline.paymentLabel', { index: index + 1 })}
+                                {t('paymentTimeline.paymentLabel', {
+                                  index: index + 1,
+                                })}
                               </span>
                               <div className="flex items-center gap-2">
                                 {hasPaymentLink(payment) && (
-                                  <Tooltip position={locale === 'ar' ? 'right' : 'left'} content={t('paymentTimeline.copyLink') || 'Copy payment link'}>
+                                  <Tooltip
+                                    position={
+                                      locale === 'ar' ? 'right' : 'left'
+                                    }
+                                    content={
+                                      t('paymentTimeline.copyLink') ||
+                                      'Copy payment link'
+                                    }
+                                  >
                                     <Button
                                       variant="icon-primary"
                                       size="custom"
-                                      onClick={() => handleCopyPaymentLink(payment)}
-                                      aria-label={t('paymentTimeline.copyLink') || 'Copy payment link'}
+                                      onClick={() =>
+                                        handleCopyPaymentLink(payment)
+                                      }
+                                      aria-label={
+                                        t('paymentTimeline.copyLink') ||
+                                        'Copy payment link'
+                                      }
                                     >
                                       {copiedPaymentId === payment.paymentId ? (
-                                        <LuCheck size={16} className="text-success" />
+                                        <LuCheck
+                                          size={16}
+                                          className="text-success"
+                                        />
                                       ) : (
                                         <LuCopy size={16} />
                                       )}
                                     </Button>
                                   </Tooltip>
                                 )}
-                                <span className={`inline-block px-2 py-0.5 text-xs font-medium rounded-full ${PAYMENT_STATUS_COLORS[paymentStatus] || ''}`}>
-                                  {t(`paymentTimeline.statuses.${paymentStatus}`)}
+                                <span
+                                  className={`inline-block px-2 py-0.5 text-xs font-medium rounded-full ${PAYMENT_STATUS_COLORS[paymentStatus] || ''}`}
+                                >
+                                  {t(
+                                    `paymentTimeline.statuses.${paymentStatus}`,
+                                  )}
                                 </span>
                               </div>
                             </div>
@@ -338,19 +439,30 @@ export default function OrderDetailModal({
                               <InfoRow
                                 icon={<LuCreditCard size={14} />}
                                 label={t('paymentTimeline.orderAmount')}
-                                value={formatMoney(payment.orderAmount ?? payment.amount, payment.currency || order.currency)}
+                                value={formatMoney(
+                                  payment.orderAmount ?? payment.amount,
+                                  payment.currency || order.currency,
+                                )}
                               />
                               {typeof payment.gatewayAmount === 'number' && (
                                 <InfoRow
                                   icon={<LuCreditCard size={14} />}
                                   label={t('paymentTimeline.gatewayAmount')}
-                                  value={formatMoney(payment.gatewayAmount, payment.gatewayCurrency || payment.currency)}
+                                  value={formatMoney(
+                                    payment.gatewayAmount,
+                                    payment.gatewayCurrency || payment.currency,
+                                  )}
                                 />
                               )}
                               <InfoRow
                                 icon={<LuCreditCard size={14} />}
                                 label={t('paymentTimeline.method')}
-                                value={getPaymentMethodLabel(payment.paymentMethod, locale as 'ar' | 'en') || 'N/A'}
+                                value={
+                                  getPaymentMethodLabel(
+                                    payment.paymentMethod,
+                                    locale as 'ar' | 'en',
+                                  ) || 'N/A'
+                                }
                               />
                               <InfoRow
                                 icon={<LuCalendar size={14} />}
@@ -404,7 +516,12 @@ export default function OrderDetailModal({
                   </h3>
                   <div className="mb-3 text-xs text-secondary">
                     {t('table.itemCount', { count: order.items.length })} •{' '}
-                    {t('table.quantityTotal', { count: order.items.reduce((sum, item) => sum + Number(item.quantity || 0), 0) })}
+                    {t('table.quantityTotal', {
+                      count: order.items.reduce(
+                        (sum, item) => sum + Number(item.quantity || 0),
+                        0,
+                      ),
+                    })}
                   </div>
                   <div className="flex flex-col gap-2">
                     {order.items.map((item, i) => (
@@ -417,24 +534,38 @@ export default function OrderDetailModal({
                             {getOrderItemDisplayName(item, locale)}
                           </p>
                           <div className="flex items-center gap-2 text-xs text-secondary">
-                            <span>{t('table.quantityTotal', { count: item.quantity })}</span>
-                            <span>{(item.price ?? 0).toFixed(2)} {item.currency}</span>
+                            <span>
+                              {t('table.quantityTotal', {
+                                count: item.quantity,
+                              })}
+                            </span>
+                            <span>
+                              {(item.price ?? 0).toFixed(2)} {item.currency}
+                            </span>
                           </div>
                           {!item.isCustom && (
                             <div className="text-[11px] text-secondary font-mono">
-                              <span>{t('productId')}: {item.productId}</span>
+                              <span>
+                                {t('productId')}: {item.productId}
+                              </span>
                               {item.productSlug && (
-                                <span className="ms-2">{t('productSlug')}: {item.productSlug}</span>
+                                <span className="ms-2">
+                                  {t('productSlug')}: {item.productSlug}
+                                </span>
                               )}
                             </div>
                           )}
                         </div>
                         <div className="text-end shrink-0">
                           <p className="font-bold text-sm text-success">
-                            {((item.price ?? 0) * (item.quantity ?? 0)).toFixed(2)} {item.currency}
+                            {((item.price ?? 0) * (item.quantity ?? 0)).toFixed(
+                              2,
+                            )}{' '}
+                            {item.currency}
                           </p>
                           <p className="text-[11px] text-secondary">
-                            {item.quantity ?? 0} x {(item.price ?? 0).toFixed(2)}
+                            {item.quantity ?? 0} x{' '}
+                            {(item.price ?? 0).toFixed(2)}
                           </p>
                         </div>
                       </div>
@@ -446,26 +577,70 @@ export default function OrderDetailModal({
                 <div>
                   <h3 className="font-semibold mb-3">{t('customerInfo')}</h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <InfoRow icon={<LuHash size={14} />} label={t('table.orderNumber')} value={order.orderNumber} />
-                    <InfoRow icon={<LuPackage size={14} />} label={t('source')} value={order.source || 'manasik'} />
+                    <InfoRow
+                      icon={<LuHash size={14} />}
+                      label={t('table.orderNumber')}
+                      value={order.orderNumber}
+                    />
+                    <InfoRow
+                      icon={<LuPackage size={14} />}
+                      label={t('source')}
+                      value={order.source || 'manasik'}
+                    />
                     <InfoRow
                       icon={<LuHash size={14} />}
                       label={t('customerType.label')}
-                      value={isOrderGuest(order) ? t('customerType.guest') : t('customerType.registered')}
+                      value={
+                        isOrderGuest(order)
+                          ? t('customerType.guest')
+                          : t('customerType.registered')
+                      }
                     />
-                    <InfoRow icon={<LuMail size={14} />} label={t('email')} value={order.billingData.email} />
-                    <InfoRow icon={<LuPhone size={14} />} label={t('phone')} value={order.billingData.phone} />
-                    <InfoRow icon={<LuGlobe size={14} />} label={t('country')} value={order.billingData.country} />
-                    <InfoRow icon={<LuCalendar size={14} />} label={t('table.date')} value={formatDate(order.statusUpdateTime)} />
-                    <InfoRow icon={<LuHash size={14} />} label={t('locale')} value={order.locale || 'N/A'} />
+                    <InfoRow
+                      icon={<LuMail size={14} />}
+                      label={t('email')}
+                      value={order.billingData.email}
+                    />
+                    <InfoRow
+                      icon={<LuPhone size={14} />}
+                      label={t('phone')}
+                      value={order.billingData.phone}
+                    />
+                    <InfoRow
+                      icon={<LuGlobe size={14} />}
+                      label={t('country')}
+                      value={order.billingData.country}
+                    />
+                    <InfoRow
+                      icon={<LuCalendar size={14} />}
+                      label={t('table.date')}
+                      value={formatDate(order.statusUpdateTime)}
+                    />
+                    <InfoRow
+                      icon={<LuHash size={14} />}
+                      label={t('locale')}
+                      value={order.locale || 'N/A'}
+                    />
                     <InfoRow
                       icon={<LuHash size={14} />}
                       label={t('termsAgreedAt')}
-                      value={order.termsAgreedAt ? formatDate(order.termsAgreedAt) : 'N/A'}
+                      value={
+                        order.termsAgreedAt
+                          ? formatDate(order.termsAgreedAt)
+                          : 'N/A'
+                      }
                     />
-                    <InfoRow icon={<LuHash size={14} />} label={t('updatedAt')} value={formatDate(order.statusUpdateTime)} />
+                    <InfoRow
+                      icon={<LuHash size={14} />}
+                      label={t('updatedAt')}
+                      value={formatDate(order.statusUpdateTime)}
+                    />
                     {order.referralId && (
-                      <InfoRow icon={<LuUserRoundPlus size={14} />} label={t('referral')} value={order.referralId} />
+                      <InfoRow
+                        icon={<LuUserRoundPlus size={14} />}
+                        label={t('referral')}
+                        value={order.referralId}
+                      />
                     )}
                   </div>
                 </div>
@@ -477,18 +652,40 @@ export default function OrderDetailModal({
                   return (
                     <div>
                       <h3 className="font-semibold mb-3">
-                        {invoices.length > 1 ? t('table.invoices') || t('table.invoice') : t('table.invoice')}
+                        {invoices.length > 1
+                          ? t('table.invoices') || t('table.invoice')
+                          : t('table.invoice')}
                       </h3>
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                         {invoices.map((invoice) => {
-                          const invoiceStatus = invoice.invoiceStatus ?? 'waiting';
+                          const invoiceStatus =
+                            invoice.invoiceStatus ?? 'waiting';
                           const statusConfig = {
-                            confirmed: { bg: 'bg-success', icon: <LuCheck size={16} />, label: t('table.reviewedInvoice') || 'Confirmed' },
-                            rejected: { bg: 'bg-error', icon: <LuX size={16} />, label: t('table.rejectedInvoice') || 'Rejected' },
-                            waiting: { bg: 'bg-warning', icon: <LuClock size={16} />, label: t('table.unreviewedInvoice') || 'Waiting' },
-                            pending: { bg: 'bg-warning', icon: <LuClock size={16} />, label: t('table.unreviewedInvoice') || 'Pending' },
+                            confirmed: {
+                              bg: 'bg-success',
+                              icon: <LuCheck size={16} />,
+                              label: t('table.confirmedInvoice') || 'Confirmed',
+                            },
+                            rejected: {
+                              bg: 'bg-error',
+                              icon: <LuX size={16} />,
+                              label: t('table.rejectedInvoice') || 'Rejected',
+                            },
+                            waiting: {
+                              bg: 'bg-warning',
+                              icon: <LuClock size={16} />,
+                              label: t('table.waitingInvoice') || 'Waiting',
+                            },
+                            pending: {
+                              bg: 'bg-info',
+                              icon: <LuClock size={16} />,
+                              label: t('table.pendingInvoice') || 'Pending',
+                            },
                           } as const;
-                          const config = statusConfig[invoiceStatus as keyof typeof statusConfig] || statusConfig.waiting;
+                          const config =
+                            statusConfig[
+                            invoiceStatus as keyof typeof statusConfig
+                            ] || statusConfig.waiting;
 
                           return (
                             <button
@@ -496,9 +693,15 @@ export default function OrderDetailModal({
                               type="button"
                               onClick={async () => {
                                 try {
-                                  await downloadFile(invoice.url, `invoice-${order.orderNumber}`);
+                                  await downloadFile(
+                                    invoice.url,
+                                    `invoice-${order.orderNumber}`,
+                                  );
                                 } catch {
-                                  toast.error(t('messages.downloadFailed') || 'Failed to download invoice');
+                                  toast.error(
+                                    t('messages.downloadFailed') ||
+                                    'Failed to download invoice',
+                                  );
                                 }
                               }}
                               className="relative flex flex-col items-center gap-2 p-3 rounded-lg bg-background border border-stroke hover:border-primary transition-colors text-left"
@@ -510,11 +713,13 @@ export default function OrderDetailModal({
                                 {config.icon}
                               </span>
                               {isImageUrl(invoice.url) ? (
-                                <img
+                                <Image
                                   src={invoice.url}
                                   alt="Invoice"
                                   className="w-full h-24 object-cover rounded-md"
                                   loading="lazy"
+                                  width={200}
+                                  height={96}
                                 />
                               ) : (
                                 <span className="inline-flex items-center justify-center p-2 text-primary h-24">
@@ -524,11 +729,12 @@ export default function OrderDetailModal({
                               <span className="text-xs text-primary font-medium truncate max-w-full">
                                 {t('table.downloadInvoice')}
                               </span>
-                              {invoiceStatus === 'rejected' && invoice.rejectionReason && (
-                                <span className="text-xs text-error text-center line-clamp-2">
-                                  {invoice.rejectionReason}
-                                </span>
-                              )}
+                              {invoiceStatus === 'rejected' &&
+                                invoice.rejectionReason && (
+                                  <span className="text-xs text-error text-center line-clamp-2">
+                                    {invoice.rejectionReason}
+                                  </span>
+                                )}
                             </button>
                           );
                         })}
@@ -540,7 +746,9 @@ export default function OrderDetailModal({
                 {/* Reservation data */}
                 {order.reservationData?.length ? (
                   <div>
-                    <h3 className="font-semibold mb-3">{t('reservationData.title')}</h3>
+                    <h3 className="font-semibold mb-3">
+                      {t('reservationData.title')}
+                    </h3>
                     <div className="flex flex-col gap-2">
                       {order.reservationData.map((field, index) => {
                         const values = getReservationValues(field.value);
@@ -552,10 +760,12 @@ export default function OrderDetailModal({
                               className="flex flex-col items-center gap-3 p-4 rounded-lg bg-background border border-stroke"
                             >
                               <div className="overflow-hidden">
-                                <img
+                                <Image
                                   src={field.value}
                                   alt={getReservationLabel(field.label)}
                                   className="w-full max-w-50 h-auto object-cover rounded"
+                                  width={200}
+                                  height={96}
                                 />
                               </div>
                               <a
@@ -576,7 +786,9 @@ export default function OrderDetailModal({
                             key={`${field.key}-${index}`}
                             className="py-2 px-3 rounded-lg bg-background border border-stroke"
                           >
-                            <p className="text-xs text-secondary mb-1">{getReservationLabel(field.label)}</p>
+                            <p className="text-xs text-secondary mb-1">
+                              {getReservationLabel(field.label)}
+                            </p>
                             <div className="flex flex-wrap gap-1">
                               {values.length > 0 ? (
                                 values.map((entry, valueIndex) => (
@@ -588,7 +800,9 @@ export default function OrderDetailModal({
                                   </span>
                                 ))
                               ) : (
-                                <span className="text-sm text-secondary">-</span>
+                                <span className="text-sm text-secondary">
+                                  -
+                                </span>
                               )}
                             </div>
                           </div>

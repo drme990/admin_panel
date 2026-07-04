@@ -2,11 +2,12 @@
 
 import { useEffect } from 'react';
 import { useTranslations } from 'next-intl';
-import { LuFileText, LuDownload, LuExternalLink } from 'react-icons/lu';
+import { LuFileText, LuDownload, LuExternalLink, LuX } from 'react-icons/lu';
 
 import Button from '@/components/ui/button';
 import { downloadFile } from '@/lib/download-utils';
 import { isImageUrl } from '../lib/invoice-utils';
+import Image from 'next/image';
 
 interface Props {
   url: string | null;
@@ -34,14 +35,23 @@ export default function InvoicePreviewModal({ url, onClose }: Props) {
       onClick={onClose}
     >
       <div
-        className="flex flex-col items-center max-w-full max-h-full"
+        className="relative flex flex-col items-center max-w-full max-h-full"
         onClick={(e) => e.stopPropagation()}
       >
+        <button
+          onClick={onClose}
+          className="absolute top-2 right-2 z-10 rounded-full bg-black/70 p-2 text-white shadow-lg hover:bg-black/90 transition-colors"
+          aria-label={t('close')}
+        >
+          <LuX size={20} />
+        </button>
         {isImageUrl(url) ? (
-          <img
+          <Image
             src={url}
             alt="Invoice preview"
             className="max-w-full max-h-[80vh] object-contain rounded-lg"
+            width={800}
+            height={600}
           />
         ) : (
           <div className="bg-card-bg rounded-lg p-8 flex flex-col items-center gap-4">
@@ -55,7 +65,8 @@ export default function InvoicePreviewModal({ url, onClose }: Props) {
                 size="sm"
                 onClick={() => {
                   try {
-                    const filename = new URL(url).pathname.split('/').pop() || 'invoice';
+                    const filename =
+                      new URL(url).pathname.split('/').pop() || 'invoice';
                     void downloadFile(url, filename);
                   } catch {
                     void downloadFile(url, 'invoice');
@@ -68,7 +79,9 @@ export default function InvoicePreviewModal({ url, onClose }: Props) {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => window.open(url, '_blank', 'noopener,noreferrer')}
+                onClick={() =>
+                  window.open(url, '_blank', 'noopener,noreferrer')
+                }
               >
                 <LuExternalLink size={16} className="mr-1" />
                 {t('openUrl')}

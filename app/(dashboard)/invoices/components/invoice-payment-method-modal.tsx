@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { LuRefreshCw } from 'react-icons/lu';
 
@@ -28,19 +28,16 @@ export default function InvoicePaymentMethodModal({
 }: Props) {
   const t = useTranslations('admin.invoices');
   const locale = useLocale();
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | ''>('');
-
-  useEffect(() => {
-    if (invoice) {
-      setPaymentMethod(invoice.paymentMethod || '');
-    } else {
-      setPaymentMethod('');
-    }
-  }, [invoice]);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | ''>(
+    invoice?.paymentMethod || '',
+  );
 
   const options = PAYMENT_METHODS.map((method) => ({
     value: method,
-    label: locale === 'ar' ? PAYMENT_METHOD_LABELS[method].ar : PAYMENT_METHOD_LABELS[method].en,
+    label:
+      locale === 'ar'
+        ? PAYMENT_METHOD_LABELS[method].ar
+        : PAYMENT_METHOD_LABELS[method].en,
   }));
 
   const handleSave = () => {
@@ -53,7 +50,11 @@ export default function InvoicePaymentMethodModal({
       <Button variant="ghost" onClick={onClose} disabled={saving}>
         {t('cancel')}
       </Button>
-      <Button variant="primary" onClick={handleSave} disabled={!paymentMethod || saving}>
+      <Button
+        variant="primary"
+        onClick={handleSave}
+        disabled={!paymentMethod || saving}
+      >
         {saving ? (
           <>
             <LuRefreshCw size={16} className="animate-spin" />
@@ -73,6 +74,8 @@ export default function InvoicePaymentMethodModal({
       title={t('editPaymentMethod')}
       size="sm"
       footer={footer}
+      className="overflow-visible"
+      contentClassName="overflow-visible"
     >
       <Dropdown
         label={t('paymentMethod')}

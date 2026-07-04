@@ -284,16 +284,6 @@ export default function InvoiceFilters({
         </div>
       </div>
 
-      {/* Order status tabs */}
-      <div className="overflow-x-auto pb-1">
-        <Tabs<OrderStatus | 'all'>
-          value={statusFilter}
-          options={statusTabOptions}
-          onChange={onStatusChange}
-          className="min-w-max"
-        />
-      </div>
-
       {/* Category tabs */}
       <div className="overflow-x-auto pb-1">
         <Tabs<string>
@@ -310,6 +300,16 @@ export default function InvoiceFilters({
           value={referralFilter}
           options={referralTabOptions}
           onChange={onReferralChange}
+          className="min-w-max"
+        />
+      </div>
+
+      {/* Order status tabs */}
+      <div className="overflow-x-auto pb-1">
+        <Tabs<OrderStatus | 'all'>
+          value={statusFilter}
+          options={statusTabOptions}
+          onChange={onStatusChange}
           className="min-w-max"
         />
       </div>

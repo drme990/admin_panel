@@ -13,7 +13,6 @@ import {
   LuHistory,
   LuFileText,
   LuDownload,
-  LuUpload,
   LuFileArchive,
 } from 'react-icons/lu';
 import { FaWhatsapp } from 'react-icons/fa6';
@@ -23,6 +22,7 @@ import Tooltip from '@/components/ui/tooltip';
 import Checkbox from '@/components/ui/checkbox';
 import { Order, InvoiceStatus } from '@/types/Order';
 import { getPaymentMethodLabel } from '@/lib/order';
+import { cn } from '@/lib/utils';
 
 import type { InvoiceRow } from '../lib/invoice-utils';
 import {
@@ -32,6 +32,7 @@ import {
   getReservationValue,
 } from '../lib/invoice-utils';
 import InvoiceStatusCell, { STATUS_TEXT_COLORS } from './invoice-status-cell';
+import { InvoiceUploadTypeMenu, type UploadFileType } from './invoice-upload-type-menu';
 import Image from 'next/image';
 
 interface InvoiceCardViewProps {
@@ -52,7 +53,7 @@ interface InvoiceCardViewProps {
   onEditPaymentMethod: (invoice: InvoiceRow) => void;
   onStatusChange: (invoice: InvoiceRow, status: InvoiceStatus) => void;
   onDownloadInvoice: (invoice: InvoiceRow) => void;
-  onUploadInvoice: (invoice: InvoiceRow) => void;
+  onUploadInvoice: (invoice: InvoiceRow, type: UploadFileType) => void;
   uploadingInvoiceId: string | null;
   tooltipPos: 'left' | 'right';
   whatsappOrderId: string | null;
@@ -165,7 +166,7 @@ export default function InvoiceCardView({
 
   return (
     <div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
-      {invoices.map((row) => {
+      {invoices.map((row, index) => {
         const order = buildOrderFromInvoice(row);
         const isUploading = uploadingInvoiceId === row._id;
         const isSelected = selectedInvoiceIds.includes(row._id);
@@ -184,26 +185,40 @@ export default function InvoiceCardView({
         return (
           <div key={row._id} className="flex flex-col h-full">
             {/* Card body */}
-            <div className="relative rounded-lg border-2 border-stroke bg-card-bg flex flex-col h-full">
+            <div className="rounded-lg border-2 border-stroke bg-card-bg flex flex-col h-full">
               {/* Preview with absolute icons and checkbox */}
-              <div className="overflow-hidden aspect-square rounded-t-lg shrink-0">
-                {isImageUrl(row.url) ? (
-                  <Image
-                    src={row.url}
-                    alt="Invoice"
-                    className="object-cover object-center w-full h-full"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).style.display = 'none';
+              <div className='relative'>
+                <div className="overflow-hidden aspect-square rounded-t-lg shrink-0">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onPreview(row);
                     }}
-                    width={400}
-                    height={400}
-                    sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                  />
-                ) : (
-                  <LuFileText size={48} className="text-secondary" />
-                )}
+                    className="w-full h-full cursor-pointer"
+                    aria-label={t('preview')}
+                  >
+                    {isImageUrl(row.url) ? (
+                      <Image
+                        src={row.url}
+                        alt="Invoice"
+                        className="object-cover object-center w-full h-full"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = 'none';
+                        }}
+                        width={400}
+                        height={400}
+                        sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <LuFileText size={48} className="text-secondary" />
+                      </div>
+                    )}
+                  </button>
+                </div>
 
-                {/* 3 icons on the leading side of the image */}
+                {/* 2 icons on the leading side of the image */}
                 <div className="absolute top-2 inset-s-2 flex flex-row gap-1">
                   <Tooltip position={tooltipPos} content={t('download')}>
                     <Button
@@ -219,39 +234,23 @@ export default function InvoiceCardView({
                       <LuDownload size={14} />
                     </Button>
                   </Tooltip>
-                  <Tooltip position={tooltipPos} content={t('upload')}>
-                    <Button
-                      variant="ghost"
-                      size="custom"
-                      className="h-6 w-6 sm:h-7 sm:w-7 p-0 rounded-md bg-background/80 backdrop-blur-sm text-secondary hover:text-foreground border border-stroke"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onUploadInvoice(row);
-                      }}
-                      aria-label={t('upload')}
+                  {isUploading ? (
+                    <span className="inline-flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center rounded-md bg-background/80 backdrop-blur-sm border border-stroke">
+                      <LuRefreshCw size={14} className="animate-spin text-secondary" />
+                    </span>
+                  ) : (
+                    <InvoiceUploadTypeMenu
+                      onUpload={(type) => onUploadInvoice(row, type)}
                       disabled={isUploading}
-                    >
-                      {isUploading ? (
-                        <LuRefreshCw size={14} className="animate-spin" />
-                      ) : (
-                        <LuUpload size={14} />
-                      )}
-                    </Button>
-                  </Tooltip>
-                  <Tooltip position={tooltipPos} content={t('preview')}>
-                    <Button
-                      variant="ghost"
-                      size="custom"
-                      className="h-6 w-6 sm:h-7 sm:w-7 p-0 rounded-md bg-background/80 backdrop-blur-sm text-secondary hover:text-foreground border border-stroke"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onPreview(row);
+                      tooltipPos={tooltipPos}
+                      labels={{
+                        tooltip: t('upload'),
+                        uploadImage: t('uploadImage'),
+                        uploadFile: t('uploadFile'),
                       }}
-                      aria-label={t('preview')}
-                    >
-                      <LuEye size={14} />
-                    </Button>
-                  </Tooltip>
+                      className="h-6 w-6 sm:h-7 sm:w-7 rounded-md bg-background/80 backdrop-blur-sm border border-stroke"
+                    />
+                  )}
                 </div>
 
                 {/* Checkbox on the trailing side of the image */}
@@ -259,95 +258,102 @@ export default function InvoiceCardView({
                   className="absolute top-2 inset-e-2"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <div className="rounded-md bg-background/80 backdrop-blur-sm border border-stroke p-1">
-                    <Checkbox
-                      checked={isSelected}
-                      onChange={() => onToggleSelect(row._id)}
-                      aria-label={`Select ${row.orderNumber}`}
-                    />
-                  </div>
+                  <Checkbox
+                    checked={isSelected}
+                    onChange={() => onToggleSelect(row._id)}
+                    aria-label={`Select ${row.orderNumber}`}
+                  />
+                </div>
+
+                {/* Status */}
+                <div className='absolute bottom-0 left-0 z-10'>
+                  <InvoiceStatusCell
+                    invoice={row}
+                    onStatusChange={onStatusChange}
+                  />
+                </div>
+
+                {/* Counter */}
+                <div className="absolute bottom-2 right-2 z-10 flex h-6 min-w-6 items-center justify-center rounded-full bg-background/80 backdrop-blur-sm border border-stroke px-1.5 text-xs font-bold text-foreground">
+                  {index + 1}
                 </div>
               </div>
 
               {/* Value + payment method */}
-              <div className="px-2 py-2 sm:py-3 flex items-center justify-between gap-2 border-y-2 rounded-b-xl border-stroke shrink-0">
-                <span className={`text-sm sm:text-base font-bold whitespace-nowrap ${statusColor}`}>
+              <div className="px-3 py-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-y border-stroke bg-background/50 shrink-0">
+                <span className={cn('text-base sm:text-xl font-bold whitespace-nowrap', statusColor)}>
                   {row.value.toFixed(2)} {row.invoiceCurrency}
                 </span>
-                <div className="flex items-center gap-1 min-w-0">
-                  <span className={`text-xs sm:text-sm truncate ${statusColor}`}>
+                <div className="flex items-center gap-2 min-w-0">
+                  <span
+                    className={cn(
+                      'inline-flex items-center px-2 py-1 rounded-full text-xs sm:text-sm font-medium border border-stroke bg-card-bg truncate',
+                      statusColor,
+                    )}
+                  >
                     {pmLabel || t('noPaymentMethod')}
                   </span>
-                  <Tooltip
-                    position={tooltipPos}
-                    content={t('editPaymentMethod')}
-                  >
+                  <Tooltip position={tooltipPos} content={t('editPaymentMethod')}>
                     <Button
                       variant="ghost"
                       size="custom"
-                      className="h-5 w-5 p-0 text-foreground hover:text-success shrink-0"
+                      className="h-6 w-6 p-0 text-secondary hover:text-success shrink-0"
                       onClick={(e) => {
                         e.stopPropagation();
                         onEditPaymentMethod(row);
                       }}
                       aria-label={t('editPaymentMethod')}
                     >
-                      <LuPencilLine size={12} />
+                      <LuPencilLine size={14} />
                     </Button>
                   </Tooltip>
                 </div>
               </div>
 
-              {/* Status + name + order number */}
-              <div className="flex items-center justify-between gap-2 px-2 py-2 sm:py-3 flex-1">
-                <InvoiceStatusCell
-                  invoice={row}
-                  onStatusChange={onStatusChange}
-                />
-                <div className="flex flex-col gap-0.5 sm:gap-1 min-w-0 items-end">
-                  <div className="flex items-center gap-1.5 max-w-full">
-                    <span className="font-medium leading-snug text-foreground text-xs sm:text-sm line-clamp-2">
-                      {firstName}
-                    </span>
-                    {names.length > 0 && (
-                      <Tooltip position={tooltipPos} content={t('copyName')}>
-                        <Button
-                          variant="ghost"
-                          size="custom"
-                          className="h-5 w-5 p-0 text-secondary hover:text-foreground shrink-0"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleCopy(names.join(', '), t('copied'));
-                          }}
-                          aria-label={t('copyName')}
-                        >
-                          <LuCopy size={12} />
-                        </Button>
-                      </Tooltip>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-semibold whitespace-nowrap text-xs sm:text-sm text-foreground">
-                      {row.orderNumber}
-                    </span>
-                    <Tooltip
-                      position={tooltipPos}
-                      content={t('copyOrderNumber')}
-                    >
+              {/* name + order number */}
+              <div className="flex flex-col gap-2 px-2 py-2 sm:py-3 flex-1">
+                <div className="flex items-center gap-1.5 max-w-full">
+                  <span className="font-medium leading-snug text-foreground text-xs sm:text-sm line-clamp-2">
+                    {firstName}
+                  </span>
+                  {names.length > 0 && (
+                    <Tooltip position={tooltipPos} content={t('copyName')}>
                       <Button
                         variant="ghost"
                         size="custom"
                         className="h-5 w-5 p-0 text-secondary hover:text-foreground shrink-0"
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleCopy(row.orderNumber, t('copied'));
+                          handleCopy(names.join(', '), t('copied'));
                         }}
-                        aria-label={t('copyOrderNumber')}
+                        aria-label={t('copyName')}
                       >
                         <LuCopy size={12} />
                       </Button>
                     </Tooltip>
-                  </div>
+                  )}
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="font-semibold whitespace-nowrap text-xs sm:text-sm text-foreground">
+                    {row.orderNumber}
+                  </span>
+                  <Tooltip
+                    position={tooltipPos}
+                    content={t('copyOrderNumber')}
+                  >
+                    <Button
+                      variant="ghost"
+                      size="custom"
+                      className="h-5 w-5 p-0 text-secondary hover:text-foreground shrink-0"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleCopy(row.orderNumber, t('copied'));
+                      }}
+                      aria-label={t('copyOrderNumber')}
+                    >
+                      <LuCopy size={12} />
+                    </Button>
+                  </Tooltip>
                 </div>
               </div>
             </div>

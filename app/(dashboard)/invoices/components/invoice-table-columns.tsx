@@ -12,7 +12,9 @@ import { getPaymentMethodLabel } from '@/lib/order';
 
 import type { InvoiceRow } from '../lib/invoice-utils';
 import { isImageUrl, copyToClipboard, getNameLines, getReservationValue } from '../lib/invoice-utils';
+import type { UploadFileType } from './invoice-upload-type-menu';
 import InvoiceStatusCell, { STATUS_TEXT_COLORS } from './invoice-status-cell';
+import { InvoiceUploadTypeMenu } from './invoice-upload-type-menu';
 
 import {
   LuEye,
@@ -25,7 +27,6 @@ import {
   LuHistory,
   LuFileText,
   LuDownload,
-  LuUpload,
   LuFileArchive,
 } from 'react-icons/lu';
 import { FaWhatsapp } from 'react-icons/fa6';
@@ -48,7 +49,7 @@ interface ColumnCallbacks {
   onEditPaymentMethod: (invoice: InvoiceRow) => void;
   onStatusChange: (invoice: InvoiceRow, status: InvoiceStatus) => void;
   onDownloadInvoice: (invoice: InvoiceRow) => void;
-  onUploadInvoice: (invoice: InvoiceRow) => void;
+  onUploadInvoice: (invoice: InvoiceRow, type: UploadFileType) => void;
   uploadingInvoiceId: string | null;
   tooltipPos: 'left' | 'right';
   formatDate: (dateStr: string) => string;
@@ -125,14 +126,30 @@ export function useInvoiceColumns(callbacks: ColumnCallbacks) {
       ),
       className: 'w-12',
     },
-    // 3. Invoice preview
+    // 3. Invoice status
+    {
+      header: t('colStatus'),
+      accessor: (row: InvoiceRow) => (
+        <InvoiceStatusCell invoice={row} onStatusChange={onStatusChange} />
+      ),
+      className: 'w-24',
+    },
+    // 4. Invoice preview
     {
       header: t('colPreview'),
       accessor: (row: InvoiceRow) => {
         const isUploading = uploadingInvoiceId === row._id;
         return (
           <div className="flex flex-col items-center gap-1.5">
-            <div className="flex items-center justify-center w-10 h-10 rounded-lg border border-stroke bg-background">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onPreview(row);
+              }}
+              className="flex items-center justify-center w-10 h-10 rounded-lg border border-stroke bg-background cursor-pointer hover:border-primary transition-colors"
+              aria-label={t('preview')}
+            >
               {isImageUrl(row.url) ? (
                 <img
                   src={row.url}
@@ -145,7 +162,7 @@ export function useInvoiceColumns(callbacks: ColumnCallbacks) {
               ) : (
                 <LuFileText size={18} className="text-secondary" />
               )}
-            </div>
+            </button>
             <div className="flex items-center gap-1">
               <Tooltip position={tooltipPos} content={t('download')}>
                 <Button
@@ -161,46 +178,29 @@ export function useInvoiceColumns(callbacks: ColumnCallbacks) {
                   <LuDownload size={14} />
                 </Button>
               </Tooltip>
-              <Tooltip position={tooltipPos} content={t('upload')}>
-                <Button
-                  variant="ghost"
-                  size="custom"
-                  className="h-6 w-6 p-0 text-secondary hover:text-foreground"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onUploadInvoice(row);
-                  }}
-                  aria-label={t('upload')}
+              {isUploading ? (
+                <span className="inline-flex h-6 w-6 items-center justify-center">
+                  <LuRefreshCw size={14} className="animate-spin text-secondary" />
+                </span>
+              ) : (
+                <InvoiceUploadTypeMenu
+                  onUpload={(type) => onUploadInvoice(row, type)}
                   disabled={isUploading}
-                >
-                  {isUploading ? (
-                    <LuRefreshCw size={14} className="animate-spin" />
-                  ) : (
-                    <LuUpload size={14} />
-                  )}
-                </Button>
-              </Tooltip>
-              <Tooltip position={tooltipPos} content={t('preview')}>
-                <Button
-                  variant="ghost"
-                  size="custom"
-                  className="h-6 w-6 p-0 text-secondary hover:text-foreground"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onPreview(row);
+                  tooltipPos={tooltipPos}
+                  labels={{
+                    tooltip: t('upload'),
+                    uploadImage: t('uploadImage'),
+                    uploadFile: t('uploadFile'),
                   }}
-                  aria-label={t('preview')}
-                >
-                  <LuEye size={14} />
-                </Button>
-              </Tooltip>
+                />
+              )}
             </div>
           </div>
         );
       },
       className: 'w-20',
     },
-    // 4. Invoice value + payment method
+    // 5. Invoice value + payment method
     {
       header: t('colValue'),
       accessor: (row: InvoiceRow) => {
@@ -234,14 +234,6 @@ export function useInvoiceColumns(callbacks: ColumnCallbacks) {
         );
       },
       className: 'min-w-28',
-    },
-    // 5. Invoice status
-    {
-      header: t('colStatus'),
-      accessor: (row: InvoiceRow) => (
-        <InvoiceStatusCell invoice={row} onStatusChange={onStatusChange} />
-      ),
-      className: 'w-24',
     },
     // 6. sacrificeFor + order number with copy buttons
     {

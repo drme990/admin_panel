@@ -23,6 +23,8 @@ import InvoiceRejectionModal from './components/invoice-rejection-modal';
 import InvoiceTitle from './components/invoice-title';
 import { useInvoiceColumns } from './components/invoice-table-columns';
 import InvoiceCardView from './components/invoice-card-view';
+import { InvoiceUploadTypeMenu, type UploadFileType } from './components/invoice-upload-type-menu';
+import { STATUS_TEXT_COLORS } from './components/invoice-status-cell';
 import OrderDetailModal from '../(orders-execution)/components/order-detail-modal';
 import ChangeStatusModal from '../(orders-execution)/components/change-status-modal';
 import OrderHistoryModal, { OrderHistoryEntry } from '../(orders-execution)/components/order-history-modal';
@@ -43,6 +45,7 @@ import {
     downloadInvoiceFile,
 } from './lib/invoice-utils';
 import { uploadInvoiceToR2 } from '@/lib/image-upload-utils';
+import { cn } from '@/lib/utils';
 
 type DateQuickPreset = 'today' | 'tomorrow' | 'yesterday' | 'last7Days' | 'all';
 
@@ -94,6 +97,7 @@ export default function InvoicesPage() {
     // Invoice upload
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [uploadInvoiceTarget, setUploadInvoiceTarget] = useState<InvoiceRow | null>(null);
+    const [uploadFileType, setUploadFileType] = useState<UploadFileType | null>(null);
     const [uploadingInvoiceId, setUploadingInvoiceId] = useState<string | null>(null);
 
     // Order detail modal
@@ -124,6 +128,68 @@ export default function InvoicesPage() {
 
     // View mode: list or card
     const [viewMode, setViewMode] = useState<'list' | 'card'>('list');
+
+    const [filtersLoaded, setFiltersLoaded] = useState(false);
+    const FILTERS_STORAGE_KEY = 'admin-invoices-filters';
+
+    // Load persisted filters on mount
+    useEffect(() => {
+        const raw = localStorage.getItem(FILTERS_STORAGE_KEY);
+        if (raw) {
+            try {
+                const saved = JSON.parse(raw);
+                if (typeof saved.searchInput === 'string') setSearchInput(saved.searchInput);
+                if (saved.reviewFilter) setReviewFilter(saved.reviewFilter);
+                if (typeof saved.sourceFilter === 'string') setSourceFilter(saved.sourceFilter);
+                if (typeof saved.paymentMethodFilter === 'string') setPaymentMethodFilter(saved.paymentMethodFilter);
+                if (typeof saved.fromDateFilter === 'string') setFromDateFilter(saved.fromDateFilter);
+                if (typeof saved.toDateFilter === 'string') setToDateFilter(saved.toDateFilter);
+                if (typeof saved.referralFilter === 'string') setReferralFilter(saved.referralFilter);
+                if (typeof saved.categoryFilter === 'string') setCategoryFilter(saved.categoryFilter);
+                if (saved.statusFilter) setStatusFilter(saved.statusFilter);
+                if (typeof saved.intentionFilter === 'string') setIntentionFilter(saved.intentionFilter);
+                if (saved.viewMode === 'list' || saved.viewMode === 'card') setViewMode(saved.viewMode);
+                if (typeof saved.pageSize === 'number') setPageSize(saved.pageSize);
+            } catch {
+                // ignore corrupted storage
+            }
+        }
+        setFiltersLoaded(true);
+    }, []);
+
+    // Persist filters whenever they change
+    useEffect(() => {
+        if (!filtersLoaded) return;
+        const filters = {
+            searchInput,
+            reviewFilter,
+            sourceFilter,
+            paymentMethodFilter,
+            fromDateFilter,
+            toDateFilter,
+            referralFilter,
+            categoryFilter,
+            statusFilter,
+            intentionFilter,
+            viewMode,
+            pageSize,
+        };
+        localStorage.setItem(FILTERS_STORAGE_KEY, JSON.stringify(filters));
+    }, [
+        searchInput,
+        reviewFilter,
+        sourceFilter,
+        paymentMethodFilter,
+        fromDateFilter,
+        toDateFilter,
+        referralFilter,
+        categoryFilter,
+        statusFilter,
+        intentionFilter,
+        viewMode,
+        pageSize,
+        filtersLoaded,
+    ]);
 
     const fetchInvoices = useCallback(async (signal?: AbortSignal) => {
         setLoading(true);
@@ -216,13 +282,14 @@ export default function InvoicesPage() {
     }, [pageSize, reviewFilter, sourceFilter, paymentMethodFilter, searchQuery, fromDateFilter, toDateFilter, statusFilter, referralFilter, categoryFilter, intentionFilter, t]);
 
     useEffect(() => {
+        if (!filtersLoaded) return;
         const controller = new AbortController();
         void fetchInvoices(controller.signal);
 
         return () => {
             controller.abort();
         };
-    }, [fetchInvoices]);
+    }, [fetchInvoices, filtersLoaded]);
 
     // Debounced search
     useEffect(() => {
@@ -531,8 +598,9 @@ export default function InvoicesPage() {
         }
     };
 
-    const handleUploadInvoiceClick = (invoice: InvoiceRow) => {
+    const handleUploadInvoiceClick = (invoice: InvoiceRow, type: UploadFileType) => {
         setUploadInvoiceTarget(invoice);
+        setUploadFileType(type);
         fileInputRef.current?.click();
     };
 
@@ -540,16 +608,13 @@ export default function InvoicesPage() {
         const file = e.target.files?.[0];
         if (!file || !uploadInvoiceTarget) return;
 
-        const allowedTypes = [
-            'image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif',
-            'application/pdf',
-            'application/msword',
-            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-            'text/plain',
-        ];
+        const allowedTypes = uploadFileType === 'image'
+            ? ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif']
+            : ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain'];
         if (!allowedTypes.includes(file.type)) {
-            toast.error(t('invalidInvoice'));
+            toast.error(uploadFileType === 'image' ? t('invalidInvoiceImage') : t('invalidInvoiceFile'));
             if (fileInputRef.current) fileInputRef.current.value = '';
+            setUploadFileType(null);
             return;
         }
         if (file.size > 10 * 1024 * 1024) {
@@ -600,6 +665,7 @@ export default function InvoicesPage() {
         } finally {
             setUploadingInvoiceId(null);
             setUploadInvoiceTarget(null);
+            setUploadFileType(null);
             if (fileInputRef.current) fileInputRef.current.value = '';
         }
     };
@@ -816,6 +882,16 @@ export default function InvoicesPage() {
         return invoices.slice(start, start + pageSize);
     }, [invoices, page, pageSize]);
 
+    // Status counts for the current filtered invoices
+    const invoiceStats = useMemo(() => {
+        const total = invoices.length;
+        const confirmed = invoices.filter((inv) => inv.invoiceStatus === 'confirmed').length;
+        const waiting = invoices.filter((inv) => inv.invoiceStatus === 'waiting').length;
+        const pending = invoices.filter((inv) => inv.invoiceStatus === 'pending').length;
+        const rejected = invoices.filter((inv) => inv.invoiceStatus === 'rejected').length;
+        return { total, confirmed, waiting, pending, rejected };
+    }, [invoices]);
+
     // ---------- Bulk selection & actions ----------
 
     const toggleInvoiceSelection = (invoiceId: string) => {
@@ -943,6 +1019,26 @@ export default function InvoicesPage() {
                 <h1 className="text-2xl font-bold text-foreground">{t('pageTitle')}</h1>
             </div>
 
+            {/* Invoice status stats */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+                {[
+                    { key: 'total', label: t('statsTotal'), value: invoiceStats.total, color: 'text-foreground' },
+                    { key: 'confirmed', label: t('statsConfirmed'), value: invoiceStats.confirmed, color: STATUS_TEXT_COLORS.confirmed },
+                    { key: 'waiting', label: t('statsWaiting'), value: invoiceStats.waiting, color: STATUS_TEXT_COLORS.waiting },
+                    { key: 'pending', label: t('statsPending'), value: invoiceStats.pending, color: STATUS_TEXT_COLORS.pending },
+                    { key: 'rejected', label: t('statsRejected'), value: invoiceStats.rejected, color: STATUS_TEXT_COLORS.rejected },
+                ].map((stat) => (
+                    <div
+                        key={stat.key}
+                        className="flex flex-col items-center justify-center gap-1 rounded-lg border border-stroke bg-card-bg p-3"
+                    >
+                        <span className="text-xs text-secondary text-center">{stat.label}</span>
+                        <span className={cn('text-2xl font-bold', stat.color)}>{stat.value}</span>
+                    </div>
+                ))}
+            </div>
+
+
             {/* Filters */}
             <InvoiceFilters
                 searchInput={searchInput}
@@ -997,7 +1093,17 @@ export default function InvoicesPage() {
             {/* Total + view switcher */}
             <div className="flex items-center justify-between gap-4">
                 <span className="text-sm text-secondary">
-                    {t('totalCount', { count: totalInvoices })}
+                    {reviewFilter === 'all' ? (
+                        t('totalCount', { count: totalInvoices })
+                    ) : (
+                        <>
+                            {t('totalCount', { count: totalInvoices })}{' '}
+                            -{' '}
+                            <span className={STATUS_TEXT_COLORS[reviewFilter as InvoiceStatus]}>
+                                {t(`status.${reviewFilter}`)}
+                            </span>
+                        </>
+                    )}
                 </span>
                 <Tabs<'list' | 'card'>
                     value={viewMode}
@@ -1104,7 +1210,13 @@ export default function InvoicesPage() {
                 type="file"
                 ref={fileInputRef}
                 className="hidden"
-                accept="image/*,application/pdf,.doc,.docx,.txt"
+                accept={
+                    uploadFileType === 'image'
+                        ? 'image/*'
+                        : uploadFileType === 'file'
+                            ? 'application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain'
+                            : ''
+                }
                 onChange={handleUploadInvoiceFile}
             />
 

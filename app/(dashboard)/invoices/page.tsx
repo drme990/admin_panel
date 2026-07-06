@@ -20,6 +20,7 @@ import InvoiceEditModal from './components/invoice-edit-modal';
 import InvoicePreviewModal from './components/invoice-preview-modal';
 import InvoicePaymentMethodModal from './components/invoice-payment-method-modal';
 import InvoiceRejectionModal from './components/invoice-rejection-modal';
+import InvoiceRejectionFollowupModal from './components/invoice-rejection-followup-modal';
 import InvoiceTitle from './components/invoice-title';
 import { useInvoiceColumns } from './components/invoice-table-columns';
 import InvoiceCardView from './components/invoice-card-view';
@@ -93,6 +94,10 @@ export default function InvoicesPage() {
     const [statusChangeInvoice, setStatusChangeInvoice] = useState<InvoiceRow | null>(null);
     const [statusChangeTarget, setStatusChangeTarget] = useState<InvoiceStatus | null>(null);
     const [savingStatus, setSavingStatus] = useState(false);
+
+    // Rejection followup modal state
+    const [rejectionFollowupInvoice, setRejectionFollowupInvoice] = useState<InvoiceRow | null>(null);
+    const [rejectionFollowupReason, setRejectionFollowupReason] = useState('');
 
     // Invoice upload
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -256,6 +261,7 @@ export default function InvoicesPage() {
                         source: order.source || '',
                         paymentMethod,
                         reservationData: order.reservationData,
+                        referralId: order.referralId,
                         items: order.items || [],
                         userId: order.userId,
                         isGuest: order.isGuest,
@@ -525,6 +531,11 @@ export default function InvoicesPage() {
         setStatusChangeTarget(null);
     };
 
+    const handleCloseRejectionFollowup = () => {
+        setRejectionFollowupInvoice(null);
+        setRejectionFollowupReason('');
+    };
+
     const handleStatusChangeWithReason = async (
         invoice: InvoiceRow,
         status: InvoiceStatus,
@@ -579,6 +590,10 @@ export default function InvoicesPage() {
 
             toast.success(t('statusUpdated'));
             handleCloseStatusChange();
+            if (status === 'rejected') {
+                setRejectionFollowupInvoice(invoice);
+                setRejectionFollowupReason(rejectionReason);
+            }
         } catch (error) {
             console.error('Error updating invoice status:', error);
             toast.error(t('updateFailed'));
@@ -1252,6 +1267,15 @@ export default function InvoicesPage() {
                 onClose={handleCloseStatusChange}
                 onConfirm={handleStatusChangeWithReason}
                 loading={savingStatus}
+            />
+
+            {/* Rejection Followup Modal */}
+            <InvoiceRejectionFollowupModal
+                invoice={rejectionFollowupInvoice}
+                reason={rejectionFollowupReason}
+                referrals={referrals}
+                isOpen={!!rejectionFollowupInvoice}
+                onClose={handleCloseRejectionFollowup}
             />
 
             {/* Order Detail Modal */}

@@ -26,6 +26,7 @@ export interface InvoiceRow {
   source: string;
   paymentMethod?: PaymentMethod;
   reservationData?: ReservationOrderField[];
+  referralId?: string;
   items: OrderItem[];
   userId?: string;
   isGuest?: boolean;

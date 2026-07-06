@@ -984,6 +984,13 @@
         "fakeReceipt": "Fake receipt",
         "other": "Other"
       },
+      "rejectionFollowupTitle": "Rejection Follow-up",
+      "rejectionFollowupNoMessage": "No message available",
+      "copyRefPhone": "Copy referral phone",
+      "refPhoneMissing": "Referral phone number is not available",
+      "refMessageMissing": "Referral message is not available",
+      "whatsappOpened": "WhatsApp conversation opened",
+      "whatsappOpenFailed": "Failed to open WhatsApp conversation",
       "status": {
         "all": "All",
         "confirmed": "Confirmed",

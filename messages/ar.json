@@ -982,6 +982,13 @@
         "fakeReceipt": "ايصال مزيف",
         "other": "اخرى"
       },
+      "rejectionFollowupTitle": "متابعة الرفض",
+      "rejectionFollowupNoMessage": "لا توجد رسالة متاحة",
+      "copyRefPhone": "نسخ رقم هاتف الإحالة",
+      "refPhoneMissing": "رقم هاتف الإحالة غير متاح",
+      "refMessageMissing": "رسالة الإحالة غير متاحة",
+      "whatsappOpened": "تم فتح محادثة واتساب",
+      "whatsappOpenFailed": "فشل فتح محادثة واتساب",
       "status": {
         "all": "الكل",
         "confirmed": "مؤكد",

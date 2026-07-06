@@ -27,7 +27,6 @@ import {
   LuHistory,
   LuFileText,
   LuDownload,
-  LuFileArchive,
 } from 'react-icons/lu';
 import { FaWhatsapp } from 'react-icons/fa6';
 
@@ -208,9 +207,25 @@ export function useInvoiceColumns(callbacks: ColumnCallbacks) {
         const statusColor = STATUS_TEXT_COLORS[row.invoiceStatus as InvoiceStatus] ?? 'text-foreground';
         return (
           <div className="flex flex-col gap-0.5 whitespace-nowrap">
-            <span className={`text-lg font-bold ${statusColor}`}>
-              {row.value.toFixed(2)} {row.invoiceCurrency}
-            </span>
+            <div className="flex items-center gap-1">
+              <span className={`text-lg font-bold ${statusColor}`}>
+                {row.value.toFixed(2)} {row.invoiceCurrency}
+              </span>
+              <Tooltip position={tooltipPos} content={t('edit')}>
+                <Button
+                  variant="ghost"
+                  size="custom"
+                  className="h-5 w-5 p-0 text-secondary hover:text-foreground"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEdit(row);
+                  }}
+                  aria-label={t('edit')}
+                >
+                  <LuPencilLine size={12} />
+                </Button>
+              </Tooltip>
+            </div>
             <div className="flex items-center gap-1 border border-stroke rounded-xl px-2 py-1 w-fit">
               <span className={`text-xs ${statusColor}`}>
                 {pmLabel || t('noPaymentMethod')}
@@ -464,16 +479,6 @@ export function useInvoiceColumns(callbacks: ColumnCallbacks) {
                 </Button>
               </Tooltip>
 
-              <Tooltip position={tooltipPos} content={t('edit')}>
-                <Button
-                  variant="icon-primary"
-                  size="custom"
-                  onClick={(e) => { e.stopPropagation(); onEdit(row); }}
-                  aria-label={t('edit')}
-                >
-                  <LuFileArchive size={16} />
-                </Button>
-              </Tooltip>
             </div>
           </div>
         );

@@ -928,7 +928,7 @@
       "colSacrificeFor": "For",
       "colItems": "Items",
       "edit": "Edit",
-      "editTitle": "Edit Invoice",
+      "editTitle": "Edit Value",
       "download": "Download",
       "upload": "Upload",
       "downloadFailed": "Failed to download invoice",
@@ -977,6 +977,13 @@
       "rejectionReasonPlaceholder": "Enter rejection reason...",
       "rejectionReasonTitle": "Rejection Reason",
       "rejectionReasonHint": "Please provide a reason for rejecting this invoice.",
+      "rejectionReasons": {
+        "missingData": "Missing data",
+        "differentCurrency": "Different currency",
+        "unclearPhoto": "Unclear photo",
+        "fakeReceipt": "Fake receipt",
+        "other": "Other"
+      },
       "status": {
         "all": "All",
         "confirmed": "Confirmed",

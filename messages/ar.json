@@ -926,7 +926,7 @@
       "colSacrificeFor": "المؤدى عنه",
       "colItems": "العناصر",
       "edit": "تعديل",
-      "editTitle": "تعديل الفاتورة",
+      "editTitle": "تعديل القيمة",
       "download": "تحميل",
       "upload": "رفع",
       "downloadFailed": "فشل تحميل الفاتورة",
@@ -975,6 +975,13 @@
       "rejectionReasonPlaceholder": "أدخل سبب الرفض...",
       "rejectionReasonTitle": "سبب الرفض",
       "rejectionReasonHint": "يرجى تقديم سبب رفض هذه الفاتورة.",
+      "rejectionReasons": {
+        "missingData": "بيانات ناقصه",
+        "differentCurrency": "عملة مختلفة",
+        "unclearPhoto": "تصوير غير واضح",
+        "fakeReceipt": "ايصال مزيف",
+        "other": "اخرى"
+      },
       "status": {
         "all": "الكل",
         "confirmed": "مؤكد",
@@ -1006,7 +1013,7 @@
       },
       "totalCount": "{count} فاتورة",
       "header": {
-        "invoices": "الفواتير",
+        "invoices": "فواتير",
         "today": "اليوم",
         "tomorrow": "غداً",
         "yesterday": "أمس",

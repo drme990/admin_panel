@@ -58,7 +58,7 @@ export function InvoiceUploadTypeMenu({
           disabled={disabled}
           aria-label={labels.tooltip}
         >
-          <LuUpload size={14} />
+          <LuUpload className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
         </Button>
       </Tooltip>
       {isOpen && (
@@ -73,7 +73,7 @@ export function InvoiceUploadTypeMenu({
               handleSelect('image');
             }}
           >
-            <LuImage size={14} className="text-success" />
+            <LuImage className="text-success w-3.5 h-3.5 sm:w-4 sm:h-4" />
             {labels.uploadImage}
           </Button>
           <Button
@@ -86,7 +86,7 @@ export function InvoiceUploadTypeMenu({
               handleSelect('file');
             }}
           >
-            <LuFileText size={14} className="text-warning" />
+            <LuFileText className="text-warning w-3.5 h-3.5 sm:w-4 sm:h-4" />
             {labels.uploadFile}
           </Button>
         </div>

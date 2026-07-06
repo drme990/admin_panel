@@ -130,7 +130,7 @@
   --font-satoshi: var(--font-satoshi);
   --font-expo-arabic: var(--font-expo-arabic);
 
-  --breakpoint-xs: 420px
+  --breakpoint-xs: 375px
 }
 
 /* ─── Base Styles ─────────────────────────────────────────────── */

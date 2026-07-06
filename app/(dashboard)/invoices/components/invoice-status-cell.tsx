@@ -97,7 +97,7 @@ export default function InvoiceStatusCell({ invoice, onStatusChange }: Props) {
       </button>
 
       {isOpen && (
-        <div className="absolute top-full left-0 mt-1.5 z-30 flex flex-row gap-1 rounded-lg border border-stroke bg-card-bg shadow-lg p-1">
+        <div className="absolute top-full right-0 mt-1.5 z-30 flex flex-row gap-1 rounded-lg border border-stroke bg-card-bg shadow-lg p-1">
           {STATUS_LIST.map((s) => (
             <button
               key={s}

@@ -91,7 +91,7 @@ export const initialOrderPageState: OrderPageState = {
   whatsappFilter: 'all',
   categoryFilter: 'all',
   intentionFilter: 'all',
-  countryFilter: 'all',
+  countryFilter: '',
   loading: false,
   loadingStats: false,
   stats: null,

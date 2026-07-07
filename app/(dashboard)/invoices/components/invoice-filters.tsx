@@ -6,12 +6,12 @@ import Tabs from '@/components/ui/tabs';
 import Dropdown from '@/components/ui/dropdown';
 import Button from '@/components/ui/button';
 import CustomDatePicker from '@/components/ui/custom-date-picker';
+import CountrySelector from '@/components/shared/country-selector';
 import { LuSearch, LuRefreshCw } from 'react-icons/lu';
 
 import { PAYMENT_METHODS, PAYMENT_METHOD_LABELS } from '@/lib/order';
 import { Category } from '@/types/Category';
 import { Referral } from '@/types/Referral';
-import { Country } from '@/types/Country';
 import { RESERVATION_FIELD_PRESETS } from '@/lib/reservation-fields';
 import { OrderStatus } from '@/types/Order';
 import type { ReviewFilter } from '../lib/invoice-utils';
@@ -47,7 +47,6 @@ interface Props {
   onIntentionChange: (value: string) => void;
   countryFilter: string;
   onCountryChange: (value: string) => void;
-  countries: Country[];
 }
 
 export default function InvoiceFilters({
@@ -79,7 +78,6 @@ export default function InvoiceFilters({
   onIntentionChange,
   countryFilter,
   onCountryChange,
-  countries,
 }: Props) {
   const t = useTranslations('admin.invoices');
 
@@ -146,14 +144,6 @@ export default function InvoiceFilters({
       label: locale === 'ar' ? option.ar : option.en,
       value: locale === 'ar' ? option.ar : option.en,
     })) || []),
-  ];
-
-  const countryOptions = [
-    { label: t('filters.allCountries'), value: 'all' },
-    ...countries.map((country) => ({
-      label: locale === 'ar' ? country.name.ar : country.name.en,
-      value: country.code,
-    })),
   ];
 
   const referralTabOptions = [
@@ -256,14 +246,13 @@ export default function InvoiceFilters({
           className="w-full sm:w-40"
         />
 
-        <Dropdown
+        <CountrySelector
           value={countryFilter}
-          options={countryOptions}
           onChange={onCountryChange}
           placeholder={t('filters.country')}
-          searchable
-          searchPlaceholder={t('filters.searchCountry')}
-          className="w-full sm:w-40"
+          allowClear
+          clearLabel={t('filters.allCountries')}
+          className="w-full sm:w-48"
         />
 
         <Button variant="icon-primary" size="custom" onClick={onRefresh} className="shrink-0">

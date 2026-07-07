@@ -1847,7 +1847,9 @@
         "allApps": "All Apps",
         "manasik": "Manasik",
         "ghadaq": "Ghadaq",
-        "allStatus": "All Status"
+        "allStatus": "All Status",
+        "allCountries": "All Countries",
+        "country": "Country"
       },
       "common": {
         "allReferences": "All References",
@@ -1873,7 +1875,9 @@
         "filterApp": "App",
         "filterStatus": "Status",
         "filterRef": "Referral",
-        "filterTier": "Tier"
+        "filterTier": "Tier",
+        "filterProfileCountry": "Profile Country",
+        "filterDetectedCountry": "Detected Country"
       },
       "status": {
         "active": "Active",
@@ -1963,6 +1967,39 @@
         "changedBy": "Changed By",
         "arrow": "->",
         "none": "None"
+      },
+      "export": {
+        "button": "Export",
+        "title": "Export Customers",
+        "columnsTitle": "Columns to Export",
+        "selectAll": "Select All",
+        "deselectAll": "Deselect All",
+        "noColumnsSelected": "Please select at least one column to export.",
+        "success": "Exported successfully",
+        "failed": "Export failed",
+        "csv": "CSV",
+        "csvDescription": "Comma-separated values file",
+        "xlsx": "XLSX",
+        "xlsxDescription": "Excel spreadsheet file",
+        "pdf": "PDF",
+        "pdfDescription": "Portable document format",
+        "pdfTitle": "Customers Report — {date}",
+        "sheetName": "Customers",
+        "headers": {
+          "name": "Name",
+          "email": "Email",
+          "phone": "Phone",
+          "country": "Country",
+          "detectedCountry": "Detected Country",
+          "appId": "App",
+          "ref": "Referral",
+          "tier": "Tier",
+          "status": "Status",
+          "registrationIp": "Registration IP",
+          "lastLoginIp": "Last Login IP",
+          "lastLoginAt": "Last Login",
+          "createdAt": "Created At"
+        }
       }
     },
     "referrals": {

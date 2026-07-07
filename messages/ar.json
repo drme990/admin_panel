@@ -1846,7 +1846,9 @@
         "allApps": "كل التطبيقات",
         "manasik": "مناسك",
         "ghadaq": "غدق",
-        "allStatus": "كل الحالات"
+        "allStatus": "كل الحالات",
+        "allCountries": "كل الدول",
+        "country": "الدولة"
       },
       "common": {
         "allReferences": "كل المعرفات",
@@ -1872,7 +1874,9 @@
         "filterApp": "التطبيق",
         "filterStatus": "الحالة",
         "filterRef": "الإحالة",
-        "filterTier": "الفئة"
+        "filterTier": "الفئة",
+        "filterProfileCountry": "دولة الملف",
+        "filterDetectedCountry": "الدولة المكتشفة"
       },
       "status": {
         "active": "نشط",
@@ -1962,6 +1966,39 @@
         "changedBy": "بواسطة",
         "arrow": "->",
         "none": "لا يوجد"
+      },
+      "export": {
+        "button": "تصدير",
+        "title": "تصدير العملاء",
+        "columnsTitle": "الأعمدة للتصدير",
+        "selectAll": "تحديد الكل",
+        "deselectAll": "إلغاء التحديد",
+        "noColumnsSelected": "يرجى اختيار عمود واحد على الأقل للتصدير.",
+        "success": "تم التصدير بنجاح",
+        "failed": "فشل التصدير",
+        "csv": "CSV",
+        "csvDescription": "ملف قيم مفصولة بفواصل",
+        "xlsx": "XLSX",
+        "xlsxDescription": "ملف جدول بيانات Excel",
+        "pdf": "PDF",
+        "pdfDescription": "مستند بصيغة PDF",
+        "pdfTitle": "تقرير العملاء — {date}",
+        "sheetName": "العملاء",
+        "headers": {
+          "name": "الاسم",
+          "email": "البريد الإلكتروني",
+          "phone": "الهاتف",
+          "country": "الدولة",
+          "detectedCountry": "الدولة المكتشفة",
+          "appId": "التطبيق",
+          "ref": "الإحالة",
+          "tier": "الفئة",
+          "status": "الحالة",
+          "registrationIp": "IP التسجيل",
+          "lastLoginIp": "IP آخر تسجيل دخول",
+          "lastLoginAt": "آخر تسجيل دخول",
+          "createdAt": "تاريخ الإنشاء"
+        }
       }
     },
     "referrals": {

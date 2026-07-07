@@ -14,7 +14,6 @@ import { LuList, LuLayoutGrid } from 'react-icons/lu';
 import { Order, OrderStatus, PaymentMethod, InvoiceStatus } from '@/types/Order';
 import { Category } from '@/types/Category';
 import { Referral } from '@/types/Referral';
-import { Country } from '@/types/Country';
 
 import InvoiceFilters from './components/invoice-filters';
 import InvoiceEditModal from './components/invoice-edit-modal';
@@ -76,10 +75,9 @@ export default function InvoicesPage() {
     const [categoryFilter, setCategoryFilter] = useState('all');
     const [statusFilter, setStatusFilter] = useState<OrderStatus | 'all'>('all');
     const [intentionFilter, setIntentionFilter] = useState('all');
-    const [countryFilter, setCountryFilter] = useState('all');
+    const [countryFilter, setCountryFilter] = useState('');
     const [categories, setCategories] = useState<Category[]>([]);
     const [referrals, setReferrals] = useState<Referral[]>([]);
-    const [countries, setCountries] = useState<Country[]>([]);
     const [totalInvoices, setTotalInvoices] = useState(0);
 
     // Edit modal state
@@ -156,7 +154,9 @@ export default function InvoicesPage() {
                 if (typeof saved.categoryFilter === 'string') setCategoryFilter(saved.categoryFilter);
                 if (saved.statusFilter) setStatusFilter(saved.statusFilter);
                 if (typeof saved.intentionFilter === 'string') setIntentionFilter(saved.intentionFilter);
-                if (typeof saved.countryFilter === 'string') setCountryFilter(saved.countryFilter);
+                if (typeof saved.countryFilter === 'string') {
+                    setCountryFilter(saved.countryFilter === 'all' ? '' : saved.countryFilter);
+                }
                 if (saved.viewMode === 'list' || saved.viewMode === 'card') setViewMode(saved.viewMode);
                 if (typeof saved.pageSize === 'number') setPageSize(saved.pageSize);
             } catch {
@@ -342,21 +342,6 @@ export default function InvoicesPage() {
             }
         };
         fetchReferrals();
-    }, []);
-
-    useEffect(() => {
-        const fetchCountries = async () => {
-            try {
-                const res = await fetch('/api/countries?active=true', { cache: 'no-store' });
-                const data = await res.json();
-                if (data.success) {
-                    setCountries(data.data);
-                }
-            } catch (err) {
-                console.error('Error fetching countries:', err);
-            }
-        };
-        fetchCountries();
     }, []);
 
     // ---------- Date filter helpers ----------
@@ -1130,7 +1115,6 @@ export default function InvoicesPage() {
                     setCountryFilter(val);
                     setPage(1);
                 }}
-                countries={countries}
             />
 
             {/* Total + view switcher */}

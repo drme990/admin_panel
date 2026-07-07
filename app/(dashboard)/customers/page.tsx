@@ -18,6 +18,7 @@ import CustomerHistoryModal, {
   CountryHistoryEntry,
 } from './components/customer-history-modal';
 import CustomerInfoModal from './components/customer-info-modal';
+import CustomerExportModal from './components/customer-export-modal';
 import { Order } from '@/types/Order';
 
 import { toast } from 'react-toastify';
@@ -30,31 +31,10 @@ import {
   LuInfo,
   LuCopy,
   LuCheck,
+  LuDownload,
 } from 'react-icons/lu';
 
-type Customer = {
-  _id: string;
-  name: string;
-  email: string;
-  phone: string;
-  country: string;
-  detectedCountry?: string | null;
-  registrationIp?: string;
-  lastLoginIp?: string;
-  lastLoginAt?: string;
-  appId: 'ghadaq' | 'manasik';
-  isBanned: boolean;
-  isAdminCreated?: boolean;
-  ref: string | null;
-  tier?: string | null;
-  createdAt: string;
-};
-
-type UserTier = {
-  _id: string;
-  name: string;
-  color: string;
-};
+import { Customer, UserTier } from './types';
 
 type Referral = {
   _id: string;
@@ -125,6 +105,8 @@ export default function CustomersPage() {
   const [banFilter, setBanFilter] = useState<BanFilter>('all');
   const [refFilter, setRefFilter] = useState<RefFilter>('all');
   const [tierFilter, setTierFilter] = useState<TierFilter>('all');
+  const [countryFilter, setCountryFilter] = useState('');
+  const [detectedCountryFilter, setDetectedCountryFilter] = useState('');
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
     null,
@@ -164,6 +146,7 @@ export default function CustomersPage() {
   const [updatingCountryId, setUpdatingCountryId] = useState<string | null>(
     null,
   );
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
   // Pagination state
   const [page, setPage] = useState(1);
@@ -219,6 +202,8 @@ export default function CustomersPage() {
     return options;
   }, [referrals]);
 
+
+
   const fetchCustomers = useCallback(async () => {
     try {
       setLoading(true);
@@ -229,6 +214,8 @@ export default function CustomersPage() {
       if (banFilter === 'active') params.set('isBanned', 'false');
       if (refFilter !== 'all') params.set('ref', refFilter);
       if (tierFilter !== 'all') params.set('tier', tierFilter === 'none' ? '__none__' : tierFilter);
+      if (countryFilter) params.set('country', countryFilter);
+      if (detectedCountryFilter) params.set('detectedCountry', detectedCountryFilter);
       if (search.trim()) params.set('search', search.trim());
       params.set('page', page.toString());
       params.set('limit', limit.toString());
@@ -258,15 +245,15 @@ export default function CustomersPage() {
     } finally {
       setLoading(false);
     }
-  }, [appFilter, banFilter, refFilter, tierFilter, search, page, limit, t]);
+  }, [appFilter, banFilter, refFilter, tierFilter, countryFilter, detectedCountryFilter, search, page, limit, t]);
 
   useEffect(() => {
     setPage(1);
-  }, [appFilter, banFilter, refFilter, tierFilter, search]);
+  }, [appFilter, banFilter, refFilter, tierFilter, countryFilter, detectedCountryFilter, search]);
 
   useEffect(() => {
     setSelectedCustomerKeys([]);
-  }, [page, appFilter, banFilter, refFilter, tierFilter, search, limit]);
+  }, [page, appFilter, banFilter, refFilter, tierFilter, countryFilter, detectedCountryFilter, search, limit]);
 
   useEffect(() => {
     fetchCustomers();
@@ -814,11 +801,21 @@ export default function CustomersPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-foreground mb-2">
-          {t('title')}
-        </h1>
-        <p className="text-secondary">{t('description')}</p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground mb-2">
+            {t('title')}
+          </h1>
+          <p className="text-secondary">{t('description')}</p>
+        </div>
+        <Button
+          variant="outline"
+          onClick={() => setIsExportModalOpen(true)}
+          className="gap-2"
+        >
+          <LuDownload size={18} />
+          {t('export.button')}
+        </Button>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
@@ -861,7 +858,7 @@ export default function CustomersPage() {
           suffix={<LuSearch className="text-secondary" size={18} />}
         />
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
           <div className="space-y-1">
             <p className="text-[10px] uppercase text-secondary font-medium tracking-wide">
               {tCommon('filterApp')}
@@ -927,6 +924,40 @@ export default function CustomersPage() {
                 size="sm"
               />
             )}
+          </div>
+
+          <div className="space-y-1">
+            <p className="text-[10px] uppercase text-secondary font-medium tracking-wide">
+              {tCommon('filterProfileCountry')}
+            </p>
+            <CountrySelector
+              value={countryFilter}
+              onChange={(value) => {
+                setCountryFilter(value);
+                setPage(1);
+              }}
+              placeholder={t('filters.allCountries')}
+              allowClear
+              clearLabel={t('filters.allCountries')}
+              className="w-full"
+            />
+          </div>
+
+          <div className="space-y-1">
+            <p className="text-[10px] uppercase text-secondary font-medium tracking-wide">
+              {tCommon('filterDetectedCountry')}
+            </p>
+            <CountrySelector
+              value={detectedCountryFilter}
+              onChange={(value) => {
+                setDetectedCountryFilter(value);
+                setPage(1);
+              }}
+              placeholder={t('filters.allCountries')}
+              allowClear
+              clearLabel={t('filters.allCountries')}
+              className="w-full"
+            />
           </div>
         </div>
       </div>
@@ -996,6 +1027,14 @@ export default function CustomersPage() {
         isOpen={isInfoModalOpen}
         onClose={() => setIsInfoModalOpen(false)}
         customer={selectedCustomer}
+      />
+
+      <CustomerExportModal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+        customers={customers}
+        locale={locale}
+        tiers={tiers}
       />
     </div>
   );

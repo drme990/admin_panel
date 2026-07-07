@@ -16,7 +16,6 @@ import Modal from '@/components/ui/modal';
 import { Order, OrderStatus } from '@/types/Order';
 import { Category } from '@/types/Category';
 import { Referral } from '@/types/Referral';
-import { Country } from '@/types/Country';
 
 import ExecutionFilters from '../components/execution-filters';
 import { useExecutionColumns } from '../components/execution-table-columns';
@@ -71,7 +70,6 @@ export default function ExecutionPage() {
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [referrals, setReferrals] = useState<Referral[]>([]);
-  const [countries, setCountries] = useState<Country[]>([]);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [uploadingPhotoOrderId, setUploadingPhotoOrderId] = useState<string | null>(null);
   const [uploadingInvoiceOrderId, setUploadingInvoiceOrderId] = useState<string | null>(null);
@@ -133,7 +131,7 @@ export default function ExecutionPage() {
       categoryFilter: 'all',
       statusFilter: 'all',
       intentionFilter: 'all',
-      countryFilter: 'all',
+      countryFilter: '',
       pageSize: 50,
     },
   });
@@ -211,21 +209,6 @@ export default function ExecutionPage() {
       }
     };
     fetchReferrals();
-  }, []);
-
-  useEffect(() => {
-    const fetchCountries = async () => {
-      try {
-        const res = await fetch('/api/countries?active=true', { cache: 'no-store' });
-        const data = await res.json();
-        if (data.success) {
-          setCountries(data.data);
-        }
-      } catch (err) {
-        console.error('Error fetching countries:', err);
-      }
-    };
-    fetchCountries();
   }, []);
 
   useEffect(() => {
@@ -1092,7 +1075,6 @@ export default function ExecutionPage() {
         onIntentionChange={(val) => setFilter({ intentionFilter: val })}
         countryFilter={countryFilter as string}
         onCountryChange={(val) => setFilter({ countryFilter: val })}
-        countries={countries}
       />
 
       {fromDateFilter && (

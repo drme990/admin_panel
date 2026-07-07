@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { LuFileText, LuFileSpreadsheet, LuSheet } from 'react-icons/lu';
 import { jsPDF } from 'jspdf';
@@ -9,6 +10,7 @@ import { toast } from 'react-toastify';
 
 import Modal from '@/components/ui/modal';
 import Button from '@/components/ui/button';
+import Checkbox from '@/components/ui/checkbox';
 import { Order } from '@/types/Order';
 
 interface ExportModalProps {
@@ -34,6 +36,30 @@ interface ExportRow {
   createdAt: string;
   updatedAt: string;
 }
+
+type ExportColumnKey = keyof ExportRow;
+
+interface ExportColumn {
+  key: ExportColumnKey;
+  labelKey: string;
+}
+
+const EXPORT_COLUMNS: ExportColumn[] = [
+  { key: 'orderNumber', labelKey: 'export.headers.orderNumber' },
+  { key: 'fullName', labelKey: 'export.headers.fullName' },
+  { key: 'phone', labelKey: 'export.headers.phone' },
+  { key: 'email', labelKey: 'export.headers.email' },
+  { key: 'country', labelKey: 'export.headers.country' },
+  { key: 'items', labelKey: 'export.headers.items' },
+  { key: 'totalAmount', labelKey: 'export.headers.totalAmount' },
+  { key: 'paidAmount', labelKey: 'export.headers.paidAmount' },
+  { key: 'remainingAmount', labelKey: 'export.headers.remainingAmount' },
+  { key: 'currency', labelKey: 'export.headers.currency' },
+  { key: 'status', labelKey: 'export.headers.status' },
+  { key: 'source', labelKey: 'export.headers.source' },
+  { key: 'createdAt', labelKey: 'export.headers.createdAt' },
+  { key: 'updatedAt', labelKey: 'export.headers.updatedAt' },
+];
 
 function formatDate(dateValue?: string, locale: string = 'en'): string {
   if (!dateValue) return 'N/A';
@@ -84,51 +110,40 @@ function buildExportRows(orders: Order[], locale: string): ExportRow[] {
   });
 }
 
-function getHeaders(t: (key: string) => string): string[] {
-  return [
-    t('export.headers.orderNumber'),
-    t('export.headers.fullName'),
-    t('export.headers.phone'),
-    t('export.headers.email'),
-    t('export.headers.country'),
-    t('export.headers.items'),
-    t('export.headers.totalAmount'),
-    t('export.headers.paidAmount'),
-    t('export.headers.remainingAmount'),
-    t('export.headers.currency'),
-    t('export.headers.status'),
-    t('export.headers.source'),
-    t('export.headers.createdAt'),
-    t('export.headers.updatedAt'),
-  ];
-}
-
-function rowToArray(row: ExportRow): string[] {
-  return [
-    row.orderNumber,
-    row.fullName,
-    row.phone,
-    row.email,
-    row.country,
-    row.items,
-    row.totalAmount,
-    row.paidAmount,
-    row.remainingAmount,
-    row.currency,
-    row.status,
-    row.source,
-    row.createdAt,
-    row.updatedAt,
-  ];
-}
-
 export default function ExportModal({ isOpen, onClose, orders, date }: ExportModalProps) {
   const t = useTranslations('execution');
   const locale = useLocale();
 
+  const [selectedColumns, setSelectedColumns] = useState<Set<ExportColumnKey>>(
+    () => new Set(EXPORT_COLUMNS.map((c) => c.key)),
+  );
+
+  const activeColumns = EXPORT_COLUMNS.filter((c) => selectedColumns.has(c.key));
+  const hasSelectedColumns = activeColumns.length > 0;
+
+  const toggleColumn = (key: ExportColumnKey) => {
+    setSelectedColumns((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  const selectAllColumns = () => {
+    setSelectedColumns(new Set(EXPORT_COLUMNS.map((c) => c.key)));
+  };
+
+  const deselectAllColumns = () => {
+    setSelectedColumns(new Set());
+  };
+
   const handleExport = async (format: 'csv' | 'xlsx' | 'pdf') => {
-    const rows = buildExportRows(orders, locale);
-    const headers = getHeaders(t);
+    if (activeColumns.length === 0) return;
+
+    const allRows = buildExportRows(orders, locale);
+    const headers = activeColumns.map((c) => t(c.labelKey));
+    const rows = allRows.map((row) => activeColumns.map((c) => row[c.key]));
     const filename = `execution-${date || 'all'}`;
 
     try {
@@ -152,65 +167,111 @@ export default function ExportModal({ isOpen, onClose, orders, date }: ExportMod
       isOpen={isOpen}
       onClose={onClose}
       title={t('export.title')}
-      size="sm"
-      footer={
-        <div className="flex justify-end">
-          <Button variant="secondary" onClick={onClose}>
-            {t('export.cancel')}
+      size="md"
+    >
+      <div className="space-y-4 py-2">
+        {/* Column selection */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <h4 className="text-sm font-semibold text-foreground">
+              {t('export.columnsTitle')}
+            </h4>
+            <div className="flex items-center gap-1">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={selectAllColumns}
+              >
+                {t('export.selectAll')}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={deselectAllColumns}
+              >
+                {t('export.deselectAll')}
+              </Button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto rounded-lg border border-stroke bg-background p-3">
+            {EXPORT_COLUMNS.map((column) => (
+              <div
+                key={column.key}
+                className="flex items-center gap-2 text-sm text-foreground hover:bg-foreground/5 cursor-pointer rounded px-2 py-1.5"
+                onClick={() => toggleColumn(column.key)}
+              >
+                <Checkbox
+                  checked={selectedColumns.has(column.key)}
+                  onChange={() => toggleColumn(column.key)}
+                  size="sm"
+                />
+                <span className="truncate">{t(column.labelKey)}</span>
+              </div>
+            ))}
+          </div>
+
+          {!hasSelectedColumns && (
+            <p className="text-xs text-error">{t('export.noColumnsSelected')}</p>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 gap-3">
+          <Button
+            variant="outline"
+            onClick={() => handleExport('csv')}
+            disabled={!hasSelectedColumns}
+            className="justify-start gap-3 h-14"
+          >
+            <LuFileSpreadsheet size={22} className="text-success" />
+            <div className="text-start">
+              <p className="font-semibold">{t('export.csv')}</p>
+              <p className="text-xs text-secondary">{t('export.csvDescription')}</p>
+            </div>
+          </Button>
+
+          <Button
+            variant="outline"
+            onClick={() => handleExport('xlsx')}
+            disabled={!hasSelectedColumns}
+            className="justify-start gap-3 h-14"
+          >
+            <LuSheet size={22} className="text-primary" />
+            <div className="text-start">
+              <p className="font-semibold">{t('export.xlsx')}</p>
+              <p className="text-xs text-secondary">{t('export.xlsxDescription')}</p>
+            </div>
+          </Button>
+
+          <Button
+            variant="outline"
+            onClick={() => handleExport('pdf')}
+            disabled={!hasSelectedColumns}
+            className="justify-start gap-3 h-14"
+          >
+            <LuFileText size={22} className="text-error" />
+            <div className="text-start">
+              <p className="font-semibold">{t('export.pdf')}</p>
+              <p className="text-xs text-secondary">{t('export.pdfDescription')}</p>
+            </div>
           </Button>
         </div>
-      }
-    >
-      <div className="grid grid-cols-1 gap-3 py-2">
-        <Button
-          variant="outline"
-          onClick={() => handleExport('csv')}
-          className="justify-start gap-3 h-14"
-        >
-          <LuFileSpreadsheet size={22} className="text-success" />
-          <div className="text-start">
-            <p className="font-semibold">{t('export.csv')}</p>
-            <p className="text-xs text-secondary">{t('export.csvDescription')}</p>
-          </div>
-        </Button>
-
-        <Button
-          variant="outline"
-          onClick={() => handleExport('xlsx')}
-          className="justify-start gap-3 h-14"
-        >
-          <LuSheet size={22} className="text-primary" />
-          <div className="text-start">
-            <p className="font-semibold">{t('export.xlsx')}</p>
-            <p className="text-xs text-secondary">{t('export.xlsxDescription')}</p>
-          </div>
-        </Button>
-
-        <Button
-          variant="outline"
-          onClick={() => handleExport('pdf')}
-          className="justify-start gap-3 h-14"
-        >
-          <LuFileText size={22} className="text-error" />
-          <div className="text-start">
-            <p className="font-semibold">{t('export.pdf')}</p>
-            <p className="text-xs text-secondary">{t('export.pdfDescription')}</p>
-          </div>
-        </Button>
       </div>
     </Modal>
   );
 }
 
 /* ── CSV ─────────────────────────────────────────────── */
-function exportCsv(headers: string[], rows: ExportRow[], filename: string) {
+function exportCsv(headers: string[], rows: string[][], filename: string) {
   const escape = (v: string) => {
     if (/[",\n\r]/.test(v)) return `"${v.replace(/"/g, '""')}"`;
     return v;
   };
   const lines = [
     headers.map(escape).join(','),
-    ...rows.map((row) => rowToArray(row).map(escape).join(',')),
+    ...rows.map((row) => row.map(escape).join(',')),
   ];
   const bom = '\uFEFF';
   const blob = new Blob([bom + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
@@ -220,18 +281,18 @@ function exportCsv(headers: string[], rows: ExportRow[], filename: string) {
 /* ── XLSX ────────────────────────────────────────────── */
 function exportXlsx(
   headers: string[],
-  rows: ExportRow[],
+  rows: string[][],
   filename: string,
   t: (key: string) => string,
 ) {
-  const data = [headers, ...rows.map(rowToArray)];
+  const data = [headers, ...rows];
   const worksheet = XLSX.utils.aoa_to_sheet(data);
 
   // Auto-size columns
   const colWidths = headers.map((h, i) => {
     let max = h.length;
     for (const row of rows) {
-      const cell = rowToArray(row)[i] || '';
+      const cell = row[i] || '';
       if (cell.length > max) max = cell.length;
     }
     return { wch: Math.min(max + 2, 50) };
@@ -250,7 +311,7 @@ function exportXlsx(
 /* ── PDF ─────────────────────────────────────────────── */
 async function exportPdf(
   headers: string[],
-  rows: ExportRow[],
+  rows: string[][],
   filename: string,
   date: string,
   t: (key: string, values?: Record<string, string>) => string,
@@ -288,7 +349,7 @@ async function exportPdf(
   rows.forEach((row, i) => {
     const bRow = document.createElement('tr');
     bRow.style.cssText = `background-color:${i % 2 === 1 ? '#f5f7fa' : '#ffffff'};`;
-    rowToArray(row).forEach((cell) => {
+    row.forEach((cell) => {
       const td = document.createElement('td');
       td.textContent = cell;
       td.style.cssText =

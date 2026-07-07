@@ -443,6 +443,10 @@
     "export": {
       "button": "Export",
       "title": "Export Table Data",
+      "columnsTitle": "Columns to Export",
+      "selectAll": "Select All",
+      "deselectAll": "Deselect All",
+      "noColumnsSelected": "Please select at least one column to export.",
       "cancel": "Cancel",
       "success": "Exported successfully",
       "failed": "Export failed",

@@ -858,7 +858,7 @@ export default function CustomersPage() {
           suffix={<LuSearch className="text-secondary" size={18} />}
         />
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 auto-rows-fr">
           <div className="space-y-1">
             <p className="text-[10px] uppercase text-secondary font-medium tracking-wide">
               {tCommon('filterApp')}
@@ -868,6 +868,7 @@ export default function CustomersPage() {
               options={appFilterOptions}
               onChange={setAppFilter}
               size="sm"
+              className="flex-wrap"
             />
           </div>
 
@@ -880,6 +881,7 @@ export default function CustomersPage() {
               options={banFilterOptions}
               onChange={setBanFilter}
               size="sm"
+              className="flex-wrap"
             />
           </div>
 
@@ -897,6 +899,7 @@ export default function CustomersPage() {
                 options={refFilterOptions}
                 onChange={setRefFilter}
                 size="sm"
+                className="flex-wrap"
               />
             )}
           </div>
@@ -922,6 +925,7 @@ export default function CustomersPage() {
                 ]}
                 onChange={setTierFilter}
                 size="sm"
+                className="flex-wrap"
               />
             )}
           </div>

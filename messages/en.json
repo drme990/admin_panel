@@ -32,7 +32,10 @@
       "allReferrals": "All Referrals",
       "source": "Source",
       "allIntentions": "All Intentions",
-      "intention": "Intention"
+      "intention": "Intention",
+      "country": "Country",
+      "allCountries": "All Countries",
+      "searchCountry": "Search country..."
     },
     "total": "Total",
     "status": {
@@ -1018,7 +1021,10 @@
         "allIntentions": "All Intentions",
         "intention": "Intention",
         "allReferrals": "All Referrals",
-        "allCategories": "All Categories"
+        "allCategories": "All Categories",
+        "country": "Country",
+        "allCountries": "All Countries",
+        "searchCountry": "Search country..."
       },
       "totalCount": "{count} invoices",
       "header": {

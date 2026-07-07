@@ -32,7 +32,10 @@
       "allReferrals": "كل الإحالات",
       "source": "المصدر",
       "allIntentions": "كل النيات",
-      "intention": "النية"
+      "intention": "النية",
+      "country": "الدولة",
+      "allCountries": "كل الدول",
+      "searchCountry": "ابحث عن دولة..."
     },
     "total": "إجمالي الحجوزات",
     "status": {
@@ -94,6 +97,7 @@
       "downloadPhoto": "تحميل الصورة",
       "editPhoto": "تعديل الصورة",
       "sharePhoto": "مشاركة الصورة",
+      "uploadInvoice": "رفع الفاتورة",
       "uploadConfirmedInvoice": "فاتورة مؤكدة",
       "uploadWaitingInvoice": "فاتورة بانتظار التأكيد",
       "uploadAsImage": "صورة",
@@ -1016,7 +1020,10 @@
         "allIntentions": "كل النيات",
         "intention": "النية",
         "allReferrals": "كل الإحالات",
-        "allCategories": "كل الفئات"
+        "allCategories": "كل الفئات",
+        "country": "الدولة",
+        "allCountries": "كل الدول",
+        "searchCountry": "ابحث عن دولة..."
       },
       "totalCount": "{count} فاتورة",
       "header": {

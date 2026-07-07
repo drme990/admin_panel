@@ -11,6 +11,7 @@ import { LuSearch, LuRefreshCw } from 'react-icons/lu';
 import { PAYMENT_METHODS, PAYMENT_METHOD_LABELS } from '@/lib/order';
 import { Category } from '@/types/Category';
 import { Referral } from '@/types/Referral';
+import { Country } from '@/types/Country';
 import { RESERVATION_FIELD_PRESETS } from '@/lib/reservation-fields';
 import { OrderStatus } from '@/types/Order';
 import type { ReviewFilter } from '../lib/invoice-utils';
@@ -44,6 +45,9 @@ interface Props {
   onStatusChange: (value: OrderStatus | 'all') => void;
   intentionFilter: string;
   onIntentionChange: (value: string) => void;
+  countryFilter: string;
+  onCountryChange: (value: string) => void;
+  countries: Country[];
 }
 
 export default function InvoiceFilters({
@@ -73,6 +77,9 @@ export default function InvoiceFilters({
   onStatusChange,
   intentionFilter,
   onIntentionChange,
+  countryFilter,
+  onCountryChange,
+  countries,
 }: Props) {
   const t = useTranslations('admin.invoices');
 
@@ -139,6 +146,14 @@ export default function InvoiceFilters({
       label: locale === 'ar' ? option.ar : option.en,
       value: locale === 'ar' ? option.ar : option.en,
     })) || []),
+  ];
+
+  const countryOptions = [
+    { label: t('filters.allCountries'), value: 'all' },
+    ...countries.map((country) => ({
+      label: locale === 'ar' ? country.name.ar : country.name.en,
+      value: country.code,
+    })),
   ];
 
   const referralTabOptions = [
@@ -238,6 +253,16 @@ export default function InvoiceFilters({
           options={intentionOptions}
           onChange={onIntentionChange}
           placeholder={t('filters.intention')}
+          className="w-full sm:w-40"
+        />
+
+        <Dropdown
+          value={countryFilter}
+          options={countryOptions}
+          onChange={onCountryChange}
+          placeholder={t('filters.country')}
+          searchable
+          searchPlaceholder={t('filters.searchCountry')}
           className="w-full sm:w-40"
         />
 

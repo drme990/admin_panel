@@ -33,6 +33,7 @@ export interface OrderPageState {
   whatsappFilter?: string;
   categoryFilter?: string;
   intentionFilter?: string;
+  countryFilter?: string;
 
   // Loading
   loading: boolean;
@@ -90,6 +91,7 @@ export const initialOrderPageState: OrderPageState = {
   whatsappFilter: 'all',
   categoryFilter: 'all',
   intentionFilter: 'all',
+  countryFilter: 'all',
   loading: false,
   loadingStats: false,
   stats: null,
@@ -130,6 +132,7 @@ export type FilterPayload = Partial<
     | 'whatsappFilter'
     | 'categoryFilter'
     | 'intentionFilter'
+    | 'countryFilter'
   >
 >;
 

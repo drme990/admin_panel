@@ -14,6 +14,7 @@ import { LuList, LuLayoutGrid } from 'react-icons/lu';
 import { Order, OrderStatus, PaymentMethod, InvoiceStatus } from '@/types/Order';
 import { Category } from '@/types/Category';
 import { Referral } from '@/types/Referral';
+import { Country } from '@/types/Country';
 
 import InvoiceFilters from './components/invoice-filters';
 import InvoiceEditModal from './components/invoice-edit-modal';
@@ -75,8 +76,10 @@ export default function InvoicesPage() {
     const [categoryFilter, setCategoryFilter] = useState('all');
     const [statusFilter, setStatusFilter] = useState<OrderStatus | 'all'>('all');
     const [intentionFilter, setIntentionFilter] = useState('all');
+    const [countryFilter, setCountryFilter] = useState('all');
     const [categories, setCategories] = useState<Category[]>([]);
     const [referrals, setReferrals] = useState<Referral[]>([]);
+    const [countries, setCountries] = useState<Country[]>([]);
     const [totalInvoices, setTotalInvoices] = useState(0);
 
     // Edit modal state
@@ -153,6 +156,7 @@ export default function InvoicesPage() {
                 if (typeof saved.categoryFilter === 'string') setCategoryFilter(saved.categoryFilter);
                 if (saved.statusFilter) setStatusFilter(saved.statusFilter);
                 if (typeof saved.intentionFilter === 'string') setIntentionFilter(saved.intentionFilter);
+                if (typeof saved.countryFilter === 'string') setCountryFilter(saved.countryFilter);
                 if (saved.viewMode === 'list' || saved.viewMode === 'card') setViewMode(saved.viewMode);
                 if (typeof saved.pageSize === 'number') setPageSize(saved.pageSize);
             } catch {
@@ -176,6 +180,7 @@ export default function InvoicesPage() {
             categoryFilter,
             statusFilter,
             intentionFilter,
+            countryFilter,
             viewMode,
             pageSize,
         };
@@ -191,6 +196,7 @@ export default function InvoicesPage() {
         categoryFilter,
         statusFilter,
         intentionFilter,
+        countryFilter,
         viewMode,
         pageSize,
         filtersLoaded,
@@ -211,6 +217,7 @@ export default function InvoicesPage() {
             if (referralFilter) params.set('referralId', referralFilter);
             if (categoryFilter && categoryFilter !== 'all') params.set('category', categoryFilter);
             if (intentionFilter && intentionFilter !== 'all') params.set('intention', intentionFilter);
+            if (countryFilter && countryFilter !== 'all') params.set('country', countryFilter);
 
             const normalizedRange = normalizeDateRange(fromDateFilter, toDateFilter);
             if (normalizedRange.fromDate) params.set('fromDate', normalizedRange.fromDate);
@@ -285,7 +292,7 @@ export default function InvoicesPage() {
                 setLoading(false);
             }
         }
-    }, [pageSize, reviewFilter, sourceFilter, paymentMethodFilter, searchQuery, fromDateFilter, toDateFilter, statusFilter, referralFilter, categoryFilter, intentionFilter, t]);
+    }, [pageSize, reviewFilter, sourceFilter, paymentMethodFilter, searchQuery, fromDateFilter, toDateFilter, statusFilter, referralFilter, categoryFilter, intentionFilter, countryFilter, t]);
 
     useEffect(() => {
         if (!filtersLoaded) return;
@@ -335,6 +342,21 @@ export default function InvoicesPage() {
             }
         };
         fetchReferrals();
+    }, []);
+
+    useEffect(() => {
+        const fetchCountries = async () => {
+            try {
+                const res = await fetch('/api/countries?active=true', { cache: 'no-store' });
+                const data = await res.json();
+                if (data.success) {
+                    setCountries(data.data);
+                }
+            } catch (err) {
+                console.error('Error fetching countries:', err);
+            }
+        };
+        fetchCountries();
     }, []);
 
     // ---------- Date filter helpers ----------
@@ -1103,13 +1125,33 @@ export default function InvoicesPage() {
                     setIntentionFilter(val);
                     setPage(1);
                 }}
+                countryFilter={countryFilter}
+                onCountryChange={(val) => {
+                    setCountryFilter(val);
+                    setPage(1);
+                }}
+                countries={countries}
             />
 
             {/* Total + view switcher */}
             <div className="flex items-center justify-between gap-4">
                 <span className="text-sm text-secondary">
                     {reviewFilter === 'all' ? (
-                        t('totalCount', { count: totalInvoices })
+                        <>
+                            {t('totalCount', { count: totalInvoices })}
+                            {invoiceStats.confirmed > 0 && (
+                                <> - <span className={STATUS_TEXT_COLORS.confirmed}>{invoiceStats.confirmed} {t('status.confirmed')}</span></>
+                            )}
+                            {invoiceStats.waiting > 0 && (
+                                <> - <span className={STATUS_TEXT_COLORS.waiting}>{invoiceStats.waiting} {t('status.waiting')}</span></>
+                            )}
+                            {invoiceStats.pending > 0 && (
+                                <> - <span className={STATUS_TEXT_COLORS.pending}>{invoiceStats.pending} {t('status.pending')}</span></>
+                            )}
+                            {invoiceStats.rejected > 0 && (
+                                <> - <span className={STATUS_TEXT_COLORS.rejected}>{invoiceStats.rejected} {t('status.rejected')}</span></>
+                            )}
+                        </>
                     ) : (
                         <>
                             {t('totalCount', { count: totalInvoices })}{' '}

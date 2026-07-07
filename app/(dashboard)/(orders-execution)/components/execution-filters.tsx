@@ -6,6 +6,7 @@ import Button from '@/components/ui/button';
 import CustomDatePicker from '@/components/ui/custom-date-picker';
 import { Category } from '@/types/Category';
 import { Referral } from '@/types/Referral';
+import { Country } from '@/types/Country';
 import { LuSearch, LuRefreshCw } from 'react-icons/lu';
 import { RESERVATION_FIELD_PRESETS } from '@/lib/reservation-fields';
 
@@ -35,6 +36,9 @@ interface Props {
   onStatusChange: (value: string) => void;
   intentionFilter: string;
   onIntentionChange: (value: string) => void;
+  countryFilter: string;
+  onCountryChange: (value: string) => void;
+  countries: Country[];
 }
 
 export default function ExecutionFilters({
@@ -61,6 +65,9 @@ export default function ExecutionFilters({
   onStatusChange,
   intentionFilter,
   onIntentionChange,
+  countryFilter,
+  onCountryChange,
+  countries,
 }: Props) {
   const t = useTranslations('execution');
 
@@ -80,6 +87,14 @@ export default function ExecutionFilters({
         value: label,
       };
     }) || []),
+  ];
+
+  const countryOptions = [
+    { label: t('filters.allCountries'), value: 'all' },
+    ...countries.map((country) => ({
+      label: locale === 'ar' ? country.name.ar : country.name.en,
+      value: country.code,
+    })),
   ];
 
   const datePresetOptions: Array<{ label: string; value: DateQuickPreset }> = [
@@ -181,6 +196,16 @@ export default function ExecutionFilters({
           options={intentionOptions}
           onChange={onIntentionChange}
           placeholder={t('filters.intention')}
+          className="w-full sm:w-40"
+        />
+
+        <Dropdown
+          value={countryFilter}
+          options={countryOptions}
+          onChange={onCountryChange}
+          placeholder={t('filters.country')}
+          searchable
+          searchPlaceholder={t('filters.searchCountry')}
           className="w-full sm:w-40"
         />
 

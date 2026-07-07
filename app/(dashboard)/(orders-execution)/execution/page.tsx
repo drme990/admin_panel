@@ -16,6 +16,7 @@ import Modal from '@/components/ui/modal';
 import { Order, OrderStatus } from '@/types/Order';
 import { Category } from '@/types/Category';
 import { Referral } from '@/types/Referral';
+import { Country } from '@/types/Country';
 
 import ExecutionFilters from '../components/execution-filters';
 import { useExecutionColumns } from '../components/execution-table-columns';
@@ -70,6 +71,7 @@ export default function ExecutionPage() {
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [referrals, setReferrals] = useState<Referral[]>([]);
+  const [countries, setCountries] = useState<Country[]>([]);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [uploadingPhotoOrderId, setUploadingPhotoOrderId] = useState<string | null>(null);
   const [uploadingInvoiceOrderId, setUploadingInvoiceOrderId] = useState<string | null>(null);
@@ -131,6 +133,7 @@ export default function ExecutionPage() {
       categoryFilter: 'all',
       statusFilter: 'all',
       intentionFilter: 'all',
+      countryFilter: 'all',
       pageSize: 50,
     },
   });
@@ -151,6 +154,7 @@ export default function ExecutionPage() {
     referralFilter,
     categoryFilter,
     intentionFilter,
+    countryFilter,
     searchInput,
     searchQuery,
     selectedOrder,
@@ -207,6 +211,21 @@ export default function ExecutionPage() {
       }
     };
     fetchReferrals();
+  }, []);
+
+  useEffect(() => {
+    const fetchCountries = async () => {
+      try {
+        const res = await fetch('/api/countries?active=true', { cache: 'no-store' });
+        const data = await res.json();
+        if (data.success) {
+          setCountries(data.data);
+        }
+      } catch (err) {
+        console.error('Error fetching countries:', err);
+      }
+    };
+    fetchCountries();
   }, []);
 
   useEffect(() => {
@@ -277,6 +296,7 @@ export default function ExecutionPage() {
         if (categoryFilter && categoryFilter !== 'all') params.set('category', categoryFilter);
         if (statusFilter !== 'all') params.set('status', statusFilter);
         if (intentionFilter && intentionFilter !== 'all') params.set('intention', intentionFilter);
+        if (countryFilter && countryFilter !== 'all') params.set('country', countryFilter);
         if (searchQuery) params.set('search', searchQuery);
 
         const normalizedRange = normalizeDateRange(fromDateFilter, toDateFilter);
@@ -327,6 +347,7 @@ export default function ExecutionPage() {
       categoryFilter,
       statusFilter,
       intentionFilter,
+      countryFilter,
       searchQuery,
       page,
       pageSize,
@@ -362,6 +383,7 @@ export default function ExecutionPage() {
         params.set('category', categoryId);
         if (statusFilter !== 'all') params.set('status', statusFilter);
         if (intentionFilter && intentionFilter !== 'all') params.set('intention', intentionFilter);
+        if (countryFilter && countryFilter !== 'all') params.set('country', countryFilter);
         if (searchQuery) params.set('search', searchQuery);
 
         const normalizedRange = normalizeDateRange(fromDateFilter, toDateFilter);
@@ -396,6 +418,7 @@ export default function ExecutionPage() {
       referralFilter,
       statusFilter,
       intentionFilter,
+      countryFilter,
       searchQuery,
       t,
     ],
@@ -411,6 +434,7 @@ export default function ExecutionPage() {
         if (referralFilter) params.set('referralId', referralFilter);
         if (categoryFilter && categoryFilter !== 'all') params.set('category', categoryFilter);
         if (intentionFilter && intentionFilter !== 'all') params.set('intention', intentionFilter);
+        if (countryFilter && countryFilter !== 'all') params.set('country', countryFilter);
         if (searchQuery) params.set('search', searchQuery);
 
         const normalizedRange = normalizeDateRange(fromDateFilter, toDateFilter);
@@ -437,7 +461,7 @@ export default function ExecutionPage() {
         }
       }
     },
-    [statusFilter, sourceFilter, referralFilter, categoryFilter, intentionFilter, searchQuery, fromDateFilter, toDateFilter, setLoadingStats, setStats],
+    [statusFilter, sourceFilter, referralFilter, categoryFilter, intentionFilter, countryFilter, searchQuery, fromDateFilter, toDateFilter, setLoadingStats, setStats],
   );
 
   useEffect(() => {
@@ -1066,6 +1090,9 @@ export default function ExecutionPage() {
         onStatusChange={(val) => setFilter({ statusFilter: val })}
         intentionFilter={intentionFilter as string}
         onIntentionChange={(val) => setFilter({ intentionFilter: val })}
+        countryFilter={countryFilter as string}
+        onCountryChange={(val) => setFilter({ countryFilter: val })}
+        countries={countries}
       />
 
       {fromDateFilter && (

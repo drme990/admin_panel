@@ -18,6 +18,15 @@ interface ExportModalProps {
   onClose: () => void;
   orders: Order[];
   date: string;
+  filters?: {
+    source?: string;
+    status?: string;
+    category?: string;
+    intention?: string;
+    country?: string;
+    referralId?: string;
+    search?: string;
+  };
 }
 
 interface ExportRow {
@@ -110,7 +119,7 @@ function buildExportRows(orders: Order[], locale: string): ExportRow[] {
   });
 }
 
-export default function ExportModal({ isOpen, onClose, orders, date }: ExportModalProps) {
+export default function ExportModal({ isOpen, onClose, orders, date, filters }: ExportModalProps) {
   const t = useTranslations('execution');
   const locale = useLocale();
 
@@ -144,7 +153,23 @@ export default function ExportModal({ isOpen, onClose, orders, date }: ExportMod
     const allRows = buildExportRows(orders, locale);
     const headers = activeColumns.map((c) => t(c.labelKey));
     const rows = allRows.map((row) => activeColumns.map((c) => row[c.key]));
-    const filename = `execution-${date || 'all'}`;
+
+    // Build filename with filters
+    const filterParts: string[] = [];
+    if (date) filterParts.push(date);
+    if (filters?.source && filters.source !== 'all') filterParts.push(filters.source);
+    if (filters?.status && filters.status !== 'all') filterParts.push(filters.status);
+    if (filters?.category && filters.category !== 'all') filterParts.push('category');
+    if (filters?.intention && filters.intention !== 'all') filterParts.push(filters.intention);
+    if (filters?.country) filterParts.push(filters.country);
+    if (filters?.referralId) filterParts.push(filters.referralId);
+    if (filters?.search) filterParts.push('search');
+
+    const filename = filterParts.length > 0
+      ? `execution-${filterParts.join('-')}`
+      : `execution-${date || 'all'}`;
+
+    const loadingToast = toast.loading(t('export.preparing'));
 
     try {
       if (format === 'pdf') {
@@ -154,10 +179,12 @@ export default function ExportModal({ isOpen, onClose, orders, date }: ExportMod
       } else {
         exportXlsx(headers, rows, filename, t);
       }
+      toast.dismiss(loadingToast);
       toast.success(t('export.success'));
       onClose();
     } catch (error) {
       console.error(`${format.toUpperCase()} export failed:`, error);
+      toast.dismiss(loadingToast);
       toast.error(t('export.failed'));
     }
   };

@@ -1484,6 +1484,15 @@ export default function ExecutionPage() {
         onClose={() => setIsExportModalOpen(false)}
         orders={orders}
         date={fromDateFilter || ''}
+        filters={{
+          source: sourceFilter,
+          status: statusFilter,
+          category: categoryFilter,
+          intention: intentionFilter,
+          country: countryFilter,
+          referralId: referralFilter,
+          search: searchQuery,
+        }}
       />
 
       <CreateManualOrderModal

@@ -1039,6 +1039,15 @@ export default function CustomersPage() {
         customers={customers}
         locale={locale}
         tiers={tiers}
+        filters={{
+          app: appFilter,
+          ban: banFilter,
+          ref: refFilter,
+          tier: tierFilter,
+          country: countryFilter,
+          detectedCountry: detectedCountryFilter,
+          search: search,
+        }}
       />
     </div>
   );

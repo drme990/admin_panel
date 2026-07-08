@@ -19,6 +19,15 @@ interface CustomerExportModalProps {
   customers: Customer[];
   locale: string;
   tiers: UserTier[];
+  filters?: {
+    app?: string;
+    ban?: string;
+    ref?: string;
+    tier?: string;
+    country?: string;
+    detectedCountry?: string;
+    search?: string;
+  };
 }
 
 interface CustomerExportRow {
@@ -103,6 +112,7 @@ export default function CustomerExportModal({
   customers,
   locale,
   tiers,
+  filters,
 }: CustomerExportModalProps) {
   const t = useTranslations('admin.customers');
 
@@ -139,20 +149,37 @@ export default function CustomerExportModal({
     });
     const headers = activeColumns.map((c) => t(c.labelKey));
     const rows = allRows.map((row) => activeColumns.map((c) => row[c.key]));
-    const filename = `customers-${new Date().toISOString().split('T')[0]}`;
+
+    // Build filename with filters
+    const filterParts: string[] = [];
+    if (filters?.app && filters.app !== 'all') filterParts.push(filters.app);
+    if (filters?.ban && filters.ban !== 'all') filterParts.push(filters.ban);
+    if (filters?.ref && filters.ref !== 'all') filterParts.push(filters.ref);
+    if (filters?.tier && filters.tier !== 'all' && filters.tier !== 'none') filterParts.push(filters.tier);
+    if (filters?.country) filterParts.push(filters.country);
+    if (filters?.detectedCountry) filterParts.push(filters.detectedCountry);
+    if (filters?.search) filterParts.push('search');
+
+    const baseFilename = filterParts.length > 0
+      ? `customers-${filterParts.join('-')}`
+      : `customers-${new Date().toISOString().split('T')[0]}`;
+
+    const loadingToast = toast.loading(t('export.preparing'));
 
     try {
       if (format === 'pdf') {
-        await exportPdf(headers, rows, filename, t);
+        await exportPdf(headers, rows, baseFilename, t);
       } else if (format === 'csv') {
-        exportCsv(headers, rows, filename);
+        exportCsv(headers, rows, baseFilename);
       } else {
-        exportXlsx(headers, rows, filename, t);
+        exportXlsx(headers, rows, baseFilename, t);
       }
+      toast.dismiss(loadingToast);
       toast.success(t('export.success'));
       onClose();
     } catch (error) {
       console.error(`${format.toUpperCase()} export failed:`, error);
+      toast.dismiss(loadingToast);
       toast.error(t('export.failed'));
     }
   };

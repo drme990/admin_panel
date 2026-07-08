@@ -10,11 +10,11 @@ interface PaginationProps {
   hasNextPage?: boolean;
   hasPrevPage?: boolean;
   disabled?: boolean;
-  pageSize?: number;
-  onPageSizeChange?: (size: number) => void;
+  pageSize?: number | 'all';
+  onPageSizeChange?: (size: number | 'all') => void;
 }
 
-const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
+const PAGE_SIZE_OPTIONS = [10, 20, 50, 100, 'all'] as const;
 
 export default function Pagination({
   currentPage,
@@ -32,11 +32,11 @@ export default function Pagination({
   const t = useTranslations('orders.pagination');
 
   const pageSizeOptions = PAGE_SIZE_OPTIONS.map((size) => ({
-    label: String(size),
+    label: size === 'all' ? t('all') : String(size),
     value: size,
   }));
 
-  if (totalPages <= 1) return null;
+  if (totalPages <= 1 && pageSize !== 'all') return null;
 
   const getPageNumbers = () => {
     const pages: (number | string)[] = [];
@@ -76,9 +76,12 @@ export default function Pagination({
           <div className="flex items-center gap-2">
             <span className="text-sm text-secondary">{t('show')}</span>
             <Dropdown
-              value={pageSize}
-              options={pageSizeOptions}
-              onChange={(val) => onPageSizeChange(val)}
+              value={pageSize === 'all' ? 'all' : String(pageSize)}
+              options={pageSizeOptions.map((opt) => ({
+                label: opt.label,
+                value: opt.value === 'all' ? 'all' : String(opt.value),
+              }))}
+              onChange={(val) => onPageSizeChange(val === 'all' ? 'all' : Number(val))}
               disabled={disabled}
               className="w-20"
             />

@@ -20,7 +20,7 @@ export interface OrderPageState {
 
   // Pagination
   page: number;
-  pageSize: number;
+  pageSize: number | 'all';
 
   // Filters
   statusFilter: string;
@@ -80,7 +80,7 @@ export const initialOrderPageState: OrderPageState = {
   totalOrders: 0,
   totalPages: 1,
   page: 1,
-  pageSize: 20,
+  pageSize: 50,
   statusFilter: 'all',
   fromDateFilter: '',
   toDateFilter: '',
@@ -133,13 +133,14 @@ export type FilterPayload = Partial<
     | 'categoryFilter'
     | 'intentionFilter'
     | 'countryFilter'
+    | 'pageSize'
   >
 >;
 
 export type OrderPageAction =
   | { type: 'SET_ORDERS'; payload: { orders: Order[]; totalOrders: number; totalPages: number } }
   | { type: 'SET_PAGE'; payload: number }
-  | { type: 'SET_PAGE_SIZE'; payload: number }
+  | { type: 'SET_PAGE_SIZE'; payload: number | 'all' }
   | { type: 'SET_FILTER'; payload: FilterPayload }
   | { type: 'SET_DATE_RANGE'; payload: { fromDateFilter: string; toDateFilter: string } }
   | { type: 'RESET_PAGE' }
@@ -325,7 +326,10 @@ export function useOrderPage(options: UseOrderPageOptions) {
   const invoiceInputRef = useRef<HTMLInputElement | null>(null);
 
   const setPage = useCallback((page: number) => dispatch({ type: 'SET_PAGE', payload: page }), []);
-  const setPageSize = useCallback((size: number) => dispatch({ type: 'SET_PAGE_SIZE', payload: size }), []);
+  const setPageSize = useCallback((size: number | 'all') => {
+    const action: OrderPageAction = { type: 'SET_PAGE_SIZE', payload: size };
+    return dispatch(action);
+  }, []);
   const setFilter = useCallback(
     (filter: FilterPayload) => dispatch({ type: 'SET_FILTER', payload: filter }),
     [],

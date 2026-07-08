@@ -851,7 +851,8 @@
     },
     "pagination": {
       "show": "Show",
-      "pageInfo": "Page {page} of {totalPages}"
+      "pageInfo": "Page {page} of {totalPages}",
+      "all": "All"
     },
     "table": {
       "orderNumber": "Order Number",

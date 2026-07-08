@@ -245,7 +245,7 @@ export default function OrderHistoryPage() {
       try {
         const params = new URLSearchParams({
           page: String(page),
-          limit: String(pageSize),
+          limit: pageSize === 'all' ? '10000' : String(pageSize),
           view: 'table',
           tzOffsetMinutes: String(new Date().getTimezoneOffset()),
         });

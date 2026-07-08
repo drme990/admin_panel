@@ -61,7 +61,7 @@ export default function InvoicesPage() {
     const [invoices, setInvoices] = useState<InvoiceRow[]>([]);
     const [loading, setLoading] = useState(true);
     const [page, setPage] = useState(1);
-    const [pageSize, setPageSize] = useState(20);
+    const [pageSize, setPageSize] = useState<number | 'all'>(20);
     const [totalPages, setTotalPages] = useState(1);
 
     const [searchInput, setSearchInput] = useState('');
@@ -158,7 +158,7 @@ export default function InvoicesPage() {
                     setCountryFilter(saved.countryFilter === 'all' ? '' : saved.countryFilter);
                 }
                 if (saved.viewMode === 'list' || saved.viewMode === 'card') setViewMode(saved.viewMode);
-                if (typeof saved.pageSize === 'number') setPageSize(saved.pageSize);
+                if (typeof saved.pageSize === 'number' || saved.pageSize === 'all') setPageSize(saved.pageSize);
             } catch {
                 // ignore corrupted storage
             }
@@ -279,7 +279,7 @@ export default function InvoicesPage() {
             }
 
             setInvoices(rows);
-            setTotalPages(Math.max(1, Math.ceil(rows.length / pageSize)));
+            setTotalPages(pageSize === 'all' ? 1 : Math.max(1, Math.ceil(rows.length / pageSize)));
             setTotalInvoices(rows.length);
         } catch (error) {
             if ((error as { name?: string })?.name === 'AbortError') {
@@ -900,6 +900,7 @@ export default function InvoicesPage() {
 
     // Paginate locally (invoices are flattened from orders)
     const paginatedInvoices = useMemo(() => {
+        if (pageSize === 'all') return invoices;
         const start = (page - 1) * pageSize;
         return invoices.slice(start, start + pageSize);
     }, [invoices, page, pageSize]);

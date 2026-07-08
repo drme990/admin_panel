@@ -273,7 +273,7 @@ export default function ExecutionPage() {
       try {
         const params = new URLSearchParams();
         params.set('page', String(page));
-        params.set('limit', String(pageSize));
+        params.set('limit', pageSize === 'all' ? '10000' : String(pageSize));
         if (sourceFilter !== 'all') params.set('source', sourceFilter);
         if (referralFilter) params.set('referralId', referralFilter);
         if (categoryFilter && categoryFilter !== 'all') params.set('category', categoryFilter);

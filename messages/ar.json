@@ -850,7 +850,8 @@
     },
     "pagination": {
       "show": "عرض",
-      "pageInfo": "صفحة {page} من {totalPages}"
+      "pageInfo": "صفحة {page} من {totalPages}",
+      "all": "الكل"
     },
     "table": {
       "orderNumber": "رقم الطلب",

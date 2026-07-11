@@ -4,9 +4,9 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/providers/auth-provider';
 import {
-  LuLogIn as LogIn,
-  LuEye as Eye,
-  LuEyeOff as EyeOff,
+  LuLogIn,
+  LuEye,
+  LuEyeOff,
 } from 'react-icons/lu';
 import Input from '@/components/ui/input';
 import Button from '@/components/ui/button';
@@ -113,7 +113,7 @@ export default function LoginPage() {
                   tabIndex={-1}
                   aria-label={showPassword ? 'Hide password' : 'Show password'}
                 >
-                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  {showPassword ? <LuEyeOff size={16} /> : <LuEye size={16} />}
                 </Button>
               }
             />
@@ -128,7 +128,7 @@ export default function LoginPage() {
                 t('buttons.loggingIn')
               ) : (
                 <>
-                  <LogIn size={20} />
+                  <LuLogIn size={20} />
                   {t('buttons.login')}
                 </>
               )}

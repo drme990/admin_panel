@@ -143,7 +143,7 @@ function formatExecutionDate(value: string): string {
   return `${weekday} ${day}/${month}/${year}`;
 }
 
-function isNextDayExecutionDate(executionDateValue: string, createdAt: string): boolean {
+function isExecutionDateSoon(executionDateValue: string, createdAt: string): boolean {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(executionDateValue)) return false;
   if (!createdAt) return false;
 
@@ -156,7 +156,10 @@ function isNextDayExecutionDate(executionDateValue: string, createdAt: string): 
   const nextDay = new Date(createdDate);
   nextDay.setDate(nextDay.getDate() + 1);
 
-  return executionDate.getTime() === nextDay.getTime();
+  return (
+    executionDate.getTime() === createdDate.getTime() ||
+    executionDate.getTime() === nextDay.getTime()
+  );
 }
 
 export function buildOrderWhatsappMessage(data: OrderWhatsappData): string {
@@ -251,7 +254,7 @@ export function buildOrderWhatsappMessage(data: OrderWhatsappData): string {
   lines.push(remainingLine);
   lines.push(DIVIDER);
 
-  if (executionDate && !isNextDayExecutionDate(executionDate, data.createdAt)) {
+  if (executionDate && !isExecutionDateSoon(executionDate, data.createdAt)) {
     lines.push(`🗓️  *تنفيذ ${formatExecutionDate(executionDate)}*`);
     lines.push(DIVIDER);
   }

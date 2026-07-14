@@ -1,5 +1,7 @@
 'use client';
 
+import { OrderItem } from '@/types/Order';
+
 export function toIsoDateInput(date: Date): string {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -93,4 +95,50 @@ export function isImageUrl(url: string): boolean {
   } catch {
     return false;
   }
+}
+
+const DEFAULT_SIZE_VALUES = new Set(['default', 'الافتراضي']);
+
+function resolveSizeName(
+  sizeValue: string | { ar?: string; en?: string } | undefined,
+): string | null {
+  if (!sizeValue) return null;
+  const text =
+    typeof sizeValue === 'string'
+      ? sizeValue
+      : sizeValue.ar || sizeValue.en || '';
+  const trimmed = text.trim();
+  if (!trimmed) return null;
+  if (DEFAULT_SIZE_VALUES.has(trimmed.toLowerCase())) return null;
+  return trimmed;
+}
+
+export function getOrderItemDisplayName(
+  item: OrderItem,
+  locale: string,
+): string {
+  const directSize =
+    resolveSizeName(item.sizeName) ??
+    resolveSizeName(item.sizeLabel) ??
+    resolveSizeName(item.size);
+
+  if (directSize) return directSize;
+
+  if (
+    typeof item.sizeIndex === 'number' &&
+    Array.isArray(item.sizes) &&
+    item.sizeIndex >= 0 &&
+    item.sizeIndex < item.sizes.length
+  ) {
+    const option = item.sizes[item.sizeIndex];
+    const fromOption =
+      resolveSizeName(option?.name) ??
+      resolveSizeName(option?.label) ??
+      resolveSizeName(option?.value);
+    if (fromOption) return fromOption;
+  }
+
+  return locale === 'ar'
+    ? item.productName?.ar || item.productName?.en || ''
+    : item.productName?.en || item.productName?.ar || '';
 }

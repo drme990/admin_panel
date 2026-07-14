@@ -39,6 +39,7 @@ import {
   normalizeDateRange,
   addDaysToIsoDate,
   isImageUrl,
+  getOrderItemDisplayName,
 } from '../lib/order-utils';
 import { downloadFile } from '@/lib/download-utils';
 import { InvoiceUploadMenu, type UploadInvoiceStatus } from '../components/invoic-upload-menu';
@@ -1218,7 +1219,7 @@ export default function ExecutionPage() {
                             <div className="flex flex-col gap-0.5">
                               {matchingItems.map((item, i) => {
                                 const qty = item.quantity || 1;
-                                const name = locale === 'ar' ? item.productName?.ar : item.productName?.en;
+                                const name = getOrderItemDisplayName(item, locale);
                                 return (
                                   <span key={i} className="text-sm text-foreground">
                                     {qty > 1 ? `${qty} ${name}` : name}

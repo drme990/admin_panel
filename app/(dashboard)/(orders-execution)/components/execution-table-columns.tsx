@@ -28,7 +28,7 @@ import Checkbox from '@/components/ui/checkbox';
 import Tooltip from '@/components/ui/tooltip';
 import { Order } from '@/types/Order';
 import { STATUS_COLORS } from '../lib/order-status';
-import { isImageUrl } from '../lib/order-utils';
+import { isImageUrl, getOrderItemDisplayName } from '../lib/order-utils';
 import { downloadFile } from '@/lib/download-utils';
 import { InvoiceUploadMenu, type UploadInvoiceStatus } from './invoic-upload-menu';
 
@@ -221,14 +221,14 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
         if (items.length === 0) return <span className={order.status === 'partial-paid' ? 'text-orange-600 dark:text-orange-400' : 'text-secondary'}>-</span>;
         const itemTexts = items.map((item) => {
           const qty = item.quantity || 1;
-          const name = locale === 'ar' ? item.productName?.ar : item.productName?.en;
+          const name = getOrderItemDisplayName(item, locale);
           return qty > 1 ? `${qty} ${name}` : (name || '');
         });
         return (
           <div className="flex flex-col gap-1 min-w-52">
             {items.map((item, i) => {
               const qty = item.quantity || 1;
-              const name = locale === 'ar' ? item.productName?.ar : item.productName?.en;
+              const name = getOrderItemDisplayName(item, locale);
               return (
                 <span
                   key={i}

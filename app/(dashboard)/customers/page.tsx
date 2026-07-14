@@ -151,7 +151,7 @@ export default function CustomersPage() {
   // Pagination state
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
-  const limit = 20;
+  const [pageSize, setPageSize] = useState<number | 'all'>(20);
 
   // Stats from API (all customers, not filtered)
   const [stats, setStats] = useState({
@@ -218,7 +218,7 @@ export default function CustomersPage() {
       if (detectedCountryFilter) params.set('detectedCountry', detectedCountryFilter);
       if (search.trim()) params.set('search', search.trim());
       params.set('page', page.toString());
-      params.set('limit', limit.toString());
+      params.set('limit', pageSize === 'all' ? '10000' : String(pageSize));
 
       const query = params.toString();
       const url = query ? `/api/customers?${query}` : '/api/customers';
@@ -245,15 +245,15 @@ export default function CustomersPage() {
     } finally {
       setLoading(false);
     }
-  }, [appFilter, banFilter, refFilter, tierFilter, countryFilter, detectedCountryFilter, search, page, limit, t]);
+  }, [appFilter, banFilter, refFilter, tierFilter, countryFilter, detectedCountryFilter, search, page, pageSize, t]);
 
   useEffect(() => {
     setPage(1);
-  }, [appFilter, banFilter, refFilter, tierFilter, countryFilter, detectedCountryFilter, search]);
+  }, [appFilter, banFilter, refFilter, tierFilter, countryFilter, detectedCountryFilter, search, pageSize]);
 
   useEffect(() => {
     setSelectedCustomerKeys([]);
-  }, [page, appFilter, banFilter, refFilter, tierFilter, countryFilter, detectedCountryFilter, search, limit]);
+  }, [page, appFilter, banFilter, refFilter, tierFilter, countryFilter, detectedCountryFilter, search, pageSize]);
 
   useEffect(() => {
     fetchCustomers();
@@ -996,16 +996,16 @@ export default function CustomersPage() {
       />
 
       {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="space-y-4">
-          <Pagination
-            currentPage={page}
-            totalPages={totalPages}
-            onPageChange={setPage}
-            disabled={loading}
-          />
-        </div>
-      )}
+      <div className="space-y-4">
+        <Pagination
+          currentPage={page}
+          totalPages={totalPages}
+          onPageChange={setPage}
+          pageSize={pageSize}
+          onPageSizeChange={setPageSize}
+          disabled={loading}
+        />
+      </div>
 
       <ConfirmModal {...modalProps} />
 

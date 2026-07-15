@@ -285,24 +285,39 @@ export default function CustomerExportModal({
             {t('export.exportScopeTitle')}
           </h4>
           <div className="flex flex-col gap-2">
-            {(['current', 'custom', 'all'] as ExportScope[]).map((scope) => (
-              <label
-                key={scope}
-                className="flex items-center gap-2 text-sm text-foreground cursor-pointer"
-              >
-                <input
-                  type="radio"
-                  name="exportScope"
-                  value={scope}
-                  checked={exportScope === scope}
-                  onChange={() => setExportScope(scope)}
-                  className="accent-primary"
-                />
-                {scope === 'current' && t('export.currentView')}
-                {scope === 'custom' && t('export.customCount')}
-                {scope === 'all' && t('export.allFiltered')}
-              </label>
-            ))}
+            <label
+              className="flex items-center gap-2 text-sm text-foreground cursor-pointer"
+              onClick={() => setExportScope('current')}
+            >
+              <Checkbox
+                checked={exportScope === 'current'}
+                onChange={() => setExportScope('current')}
+                size="sm"
+              />
+              {t('export.currentView')}
+            </label>
+            <label
+              className="flex items-center gap-2 text-sm text-foreground cursor-pointer"
+              onClick={() => setExportScope('custom')}
+            >
+              <Checkbox
+                checked={exportScope === 'custom'}
+                onChange={() => setExportScope('custom')}
+                size="sm"
+              />
+              {t('export.customCount')}
+            </label>
+            <label
+              className="flex items-center gap-2 text-sm text-foreground cursor-pointer"
+              onClick={() => setExportScope('all')}
+            >
+              <Checkbox
+                checked={exportScope === 'all'}
+                onChange={() => setExportScope('all')}
+                size="sm"
+              />
+              {t('export.allFiltered')}
+            </label>
           </div>
           {exportScope === 'custom' && (
             <div className="flex items-center gap-2">

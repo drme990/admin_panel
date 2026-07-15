@@ -1146,6 +1146,12 @@ export default function CustomersPage() {
         loading={bulkUpdating}
       />
 
+      <div className="flex items-center justify-between text-sm">
+        <span className="text-secondary">
+          {t('total')}: <span className="font-semibold text-foreground">{totalCustomers}</span>
+        </span>
+      </div>
+
       <Table<Customer>
         columns={columns}
         data={customers}

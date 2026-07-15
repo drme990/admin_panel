@@ -26,7 +26,7 @@ export default function SuppliersPage() {
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
     const [page, setPage] = useState(1);
-    const [pageSize, setPageSize] = useState<number | 'all'>(20);
+    const [pageSize, setPageSize] = useState<number>(25);
     const [total, setTotal] = useState(0);
 
     const [isFormOpen, setIsFormOpen] = useState(false);
@@ -41,7 +41,7 @@ export default function SuppliersPage() {
             if (search) params.set('search', search);
             if (statusFilter !== 'all') params.set('status', statusFilter);
             params.set('page', String(page));
-            params.set('limit', pageSize === 'all' ? '10000' : String(pageSize));
+            params.set('limit', String(pageSize));
 
             const res = await fetch(`/api/suppliers?${params.toString()}`);
             const data = await res.json();
@@ -254,7 +254,7 @@ export default function SuppliersPage() {
             {total > 0 && (
                 <Pagination
                     currentPage={page}
-                    totalPages={pageSize === 'all' ? 1 : Math.ceil(total / pageSize)}
+                    totalPages={Math.ceil(total / pageSize)}
                     pageSize={pageSize}
                     onPageChange={setPage}
                     onPageSizeChange={setPageSize}

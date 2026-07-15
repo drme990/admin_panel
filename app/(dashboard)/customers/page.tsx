@@ -13,6 +13,7 @@ import ConfirmModal, { useConfirmModal } from '@/components/ui/confirm-modal';
 import Tooltip from '@/components/ui/tooltip';
 import Dropdown from '@/components/ui/dropdown';
 import CountrySelector from '@/components/shared/country-selector';
+import CustomDatePicker from '@/components/ui/custom-date-picker';
 import CustomerOrdersModal from './components/customer-orders-modal';
 import CustomerHistoryModal, {
   CountryHistoryEntry,
@@ -35,6 +36,10 @@ import {
 } from 'react-icons/lu';
 
 import { Customer, UserTier } from './types';
+import {
+  getRelativeIsoDate,
+  normalizeDateRange,
+} from '../(orders-execution)/lib/order-utils';
 
 type Referral = {
   _id: string;
@@ -47,6 +52,16 @@ type AppFilter = 'all' | 'ghadaq' | 'manasik';
 type BanFilter = 'all' | 'banned' | 'active';
 type RefFilter = 'all' | 'default' | string;
 type TierFilter = 'all' | 'none' | string;
+
+type DateQuickPreset =
+  | 'all'
+  | 'today'
+  | 'yesterday'
+  | 'last7Days'
+  | 'last30Days'
+  | 'thisMonth'
+  | 'lastMonth'
+  | 'custom';
 
 type CustomerRefHistory = {
   _id: string;
@@ -64,6 +79,13 @@ function getCustomerKey(customer: Customer): string {
 
 function getDefaultRefForApp(appId: Customer['appId']): string {
   return appId === 'ghadaq' ? 'GHD-D' : 'MNK-D';
+}
+
+function toIsoDate(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 function CopyIdButton({ id }: { id: string }) {
@@ -107,6 +129,9 @@ export default function CustomersPage() {
   const [tierFilter, setTierFilter] = useState<TierFilter>('all');
   const [countryFilter, setCountryFilter] = useState('');
   const [detectedCountryFilter, setDetectedCountryFilter] = useState('');
+  const [fromDateFilter, setFromDateFilter] = useState('');
+  const [toDateFilter, setToDateFilter] = useState('');
+  const [activeDatePreset, setActiveDatePreset] = useState<DateQuickPreset>('all');
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
     null,
@@ -151,7 +176,56 @@ export default function CustomersPage() {
   // Pagination state
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
-  const [pageSize, setPageSize] = useState<number | 'all'>(20);
+  const [totalCustomers, setTotalCustomers] = useState(0);
+  const [pageSize, setPageSize] = useState<number>(25);
+
+  const handleDatePreset = (preset: Exclude<DateQuickPreset, 'custom'>) => {
+    setActiveDatePreset(preset);
+    switch (preset) {
+      case 'all':
+        setFromDateFilter('');
+        setToDateFilter('');
+        break;
+      case 'today':
+        setFromDateFilter(getRelativeIsoDate(0));
+        setToDateFilter(getRelativeIsoDate(0));
+        break;
+      case 'yesterday':
+        setFromDateFilter(getRelativeIsoDate(-1));
+        setToDateFilter(getRelativeIsoDate(-1));
+        break;
+      case 'last7Days':
+        setFromDateFilter(getRelativeIsoDate(-6));
+        setToDateFilter(getRelativeIsoDate(0));
+        break;
+      case 'last30Days':
+        setFromDateFilter(getRelativeIsoDate(-29));
+        setToDateFilter(getRelativeIsoDate(0));
+        break;
+      case 'thisMonth': {
+        const now = new Date();
+        setFromDateFilter(toIsoDate(new Date(now.getFullYear(), now.getMonth(), 1)));
+        setToDateFilter(getRelativeIsoDate(0));
+        break;
+      }
+      case 'lastMonth': {
+        const now = new Date();
+        setFromDateFilter(toIsoDate(new Date(now.getFullYear(), now.getMonth() - 1, 1)));
+        setToDateFilter(toIsoDate(new Date(now.getFullYear(), now.getMonth(), 0)));
+        break;
+      }
+    }
+  };
+
+  const handleFromDateChange = (value: string) => {
+    setFromDateFilter(value);
+    setActiveDatePreset('custom');
+  };
+
+  const handleToDateChange = (value: string) => {
+    setToDateFilter(value);
+    setActiveDatePreset('custom');
+  };
 
   // Stats from API (all customers, not filtered)
   const [stats, setStats] = useState({
@@ -217,8 +291,14 @@ export default function CustomersPage() {
       if (countryFilter) params.set('country', countryFilter);
       if (detectedCountryFilter) params.set('detectedCountry', detectedCountryFilter);
       if (search.trim()) params.set('search', search.trim());
+
+      const normalizedRange = normalizeDateRange(fromDateFilter, toDateFilter);
+      if (normalizedRange.fromDate) params.set('fromDate', normalizedRange.fromDate);
+      if (normalizedRange.toDate) params.set('toDate', normalizedRange.toDate);
+      params.set('tzOffsetMinutes', String(new Date().getTimezoneOffset()));
+
       params.set('page', page.toString());
-      params.set('limit', pageSize === 'all' ? '10000' : String(pageSize));
+      params.set('limit', String(pageSize));
 
       const query = params.toString();
       const url = query ? `/api/customers?${query}` : '/api/customers';
@@ -228,6 +308,7 @@ export default function CustomersPage() {
       if (data.success) {
         setCustomers(data.data.customers || []);
         setTotalPages(data.data.pagination?.totalPages || 0);
+        setTotalCustomers(data.data.pagination?.total || 0);
         setStats(
           data.data.stats || {
             total: 0,
@@ -245,15 +326,46 @@ export default function CustomersPage() {
     } finally {
       setLoading(false);
     }
-  }, [appFilter, banFilter, refFilter, tierFilter, countryFilter, detectedCountryFilter, search, page, pageSize, t]);
+  }, [appFilter, banFilter, refFilter, tierFilter, countryFilter, detectedCountryFilter, search, fromDateFilter, toDateFilter, page, pageSize, t]);
+
+  const fetchCustomersForExport = useCallback(async (limit: number) => {
+    const params = new URLSearchParams();
+    if (appFilter !== 'all') params.set('appId', appFilter);
+    if (banFilter === 'banned') params.set('isBanned', 'true');
+    if (banFilter === 'active') params.set('isBanned', 'false');
+    if (refFilter !== 'all') params.set('ref', refFilter);
+    if (tierFilter !== 'all') params.set('tier', tierFilter === 'none' ? '__none__' : tierFilter);
+    if (countryFilter) params.set('country', countryFilter);
+    if (detectedCountryFilter) params.set('detectedCountry', detectedCountryFilter);
+    if (search.trim()) params.set('search', search.trim());
+
+    const normalizedExportRange = normalizeDateRange(fromDateFilter, toDateFilter);
+    if (normalizedExportRange.fromDate) params.set('fromDate', normalizedExportRange.fromDate);
+    if (normalizedExportRange.toDate) params.set('toDate', normalizedExportRange.toDate);
+    params.set('tzOffsetMinutes', String(new Date().getTimezoneOffset()));
+
+    params.set('page', '1');
+    params.set('limit', String(limit));
+
+    const query = params.toString();
+    const url = query ? `/api/customers?${query}` : '/api/customers';
+    const response = await fetch(url);
+    const data = await response.json();
+
+    if (!data.success) {
+      throw new Error(data.error || t('messages.fetchFailed'));
+    }
+
+    return (data.data.customers || []) as Customer[];
+  }, [appFilter, banFilter, refFilter, tierFilter, countryFilter, detectedCountryFilter, search, fromDateFilter, toDateFilter, t]);
 
   useEffect(() => {
     setPage(1);
-  }, [appFilter, banFilter, refFilter, tierFilter, countryFilter, detectedCountryFilter, search, pageSize]);
+  }, [appFilter, banFilter, refFilter, tierFilter, countryFilter, detectedCountryFilter, search, fromDateFilter, toDateFilter, pageSize]);
 
   useEffect(() => {
     setSelectedCustomerKeys([]);
-  }, [page, appFilter, banFilter, refFilter, tierFilter, countryFilter, detectedCountryFilter, search, pageSize]);
+  }, [page, appFilter, banFilter, refFilter, tierFilter, countryFilter, detectedCountryFilter, search, fromDateFilter, toDateFilter, pageSize]);
 
   useEffect(() => {
     fetchCustomers();
@@ -851,6 +963,52 @@ export default function CustomersPage() {
       </div>
 
       <div className="bg-card-bg border border-stroke rounded-site p-4 space-y-4">
+        {/* Date range filter */}
+        <div className="rounded-site border border-stroke bg-background p-4 space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <CustomDatePicker
+              value={fromDateFilter}
+              onChange={handleFromDateChange}
+              locale={locale}
+              label={t('filters.fromDate')}
+              placeholder={t('filters.fromDate')}
+            />
+            <CustomDatePicker
+              value={toDateFilter}
+              onChange={handleToDateChange}
+              locale={locale}
+              label={t('filters.toDate')}
+              placeholder={t('filters.toDate')}
+            />
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            {[
+              { value: 'all' as const, label: t('filters.dateModeAll') },
+              { value: 'today' as const, label: t('filters.today') },
+              { value: 'yesterday' as const, label: t('filters.yesterday') },
+              { value: 'last7Days' as const, label: t('filters.last7Days') },
+              { value: 'last30Days' as const, label: t('filters.last30Days') },
+              { value: 'thisMonth' as const, label: t('filters.thisMonth') },
+              { value: 'lastMonth' as const, label: t('filters.lastMonth') },
+            ].map((preset) => (
+              <Button
+                key={preset.value}
+                variant="custom"
+                type="button"
+                size="custom"
+                onClick={() => handleDatePreset(preset.value)}
+                className={`rounded-md border px-3 py-2 text-sm font-medium transition-colors ${activeDatePreset === preset.value
+                  ? 'bg-foreground border-foreground text-background shadow-sm'
+                  : 'bg-background border-stroke text-foreground hover:bg-foreground/5'
+                  }`}
+              >
+                {preset.label}
+              </Button>
+            ))}
+          </div>
+        </div>
+
         <Input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -1039,6 +1197,8 @@ export default function CustomersPage() {
         customers={customers}
         locale={locale}
         tiers={tiers}
+        totalCount={totalCustomers}
+        onFetchForExport={fetchCustomersForExport}
         filters={{
           app: appFilter,
           ban: banFilter,
@@ -1047,6 +1207,8 @@ export default function CustomersPage() {
           country: countryFilter,
           detectedCountry: detectedCountryFilter,
           search: search,
+          fromDate: fromDateFilter,
+          toDate: toDateFilter,
         }}
       />
     </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import { OrderItem } from '@/types/Order';
+import type { OrderItem } from '@/types/Order';
 
 export function toIsoDateInput(date: Date): string {
   const year = date.getFullYear();

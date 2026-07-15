@@ -274,7 +274,7 @@ export default function ExecutionPage() {
       try {
         const params = new URLSearchParams();
         params.set('page', String(page));
-        params.set('limit', pageSize === 'all' ? '10000' : String(pageSize));
+        params.set('limit', String(pageSize));
         if (sourceFilter !== 'all') params.set('source', sourceFilter);
         if (referralFilter) params.set('referralId', referralFilter);
         if (categoryFilter && categoryFilter !== 'all') params.set('category', categoryFilter);
@@ -338,6 +338,48 @@ export default function ExecutionPage() {
       t,
       setLoading,
       dispatch,
+    ],
+  );
+
+  const fetchExecutionForExport = useCallback(
+    async (limit: number) => {
+      const params = new URLSearchParams();
+      params.set('page', '1');
+      params.set('limit', String(limit));
+      if (sourceFilter !== 'all') params.set('source', sourceFilter);
+      if (referralFilter) params.set('referralId', referralFilter);
+      if (categoryFilter && categoryFilter !== 'all') params.set('category', categoryFilter);
+      if (statusFilter !== 'all') params.set('status', statusFilter);
+      if (intentionFilter && intentionFilter !== 'all') params.set('intention', intentionFilter);
+      if (countryFilter && countryFilter !== 'all') params.set('country', countryFilter);
+      if (searchQuery) params.set('search', searchQuery);
+
+      const normalizedRange = normalizeDateRange(fromDateFilter, toDateFilter);
+      if (normalizedRange.fromDate) params.set('fromDate', normalizedRange.fromDate);
+      if (normalizedRange.toDate) params.set('toDate', normalizedRange.toDate);
+
+      const res = await fetch(`/api/execution?${params.toString()}`, {
+        cache: 'no-store',
+      });
+      const data: ExecutionResponse = await res.json();
+
+      if (!data.success || !data.data) {
+        throw new Error(data.error || t('messages.loadFailed'));
+      }
+
+      return data.data.orders;
+    },
+    [
+      fromDateFilter,
+      toDateFilter,
+      sourceFilter,
+      referralFilter,
+      categoryFilter,
+      statusFilter,
+      intentionFilter,
+      countryFilter,
+      searchQuery,
+      t,
     ],
   );
 
@@ -1485,6 +1527,8 @@ export default function ExecutionPage() {
         onClose={() => setIsExportModalOpen(false)}
         orders={orders}
         date={fromDateFilter || ''}
+        totalCount={totalOrders}
+        onFetchForExport={fetchExecutionForExport}
         filters={{
           source: sourceFilter,
           status: statusFilter,

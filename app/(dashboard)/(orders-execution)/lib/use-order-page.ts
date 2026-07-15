@@ -20,7 +20,7 @@ export interface OrderPageState {
 
   // Pagination
   page: number;
-  pageSize: number | 'all';
+  pageSize: number;
 
   // Filters
   statusFilter: string;
@@ -140,7 +140,7 @@ export type FilterPayload = Partial<
 export type OrderPageAction =
   | { type: 'SET_ORDERS'; payload: { orders: Order[]; totalOrders: number; totalPages: number } }
   | { type: 'SET_PAGE'; payload: number }
-  | { type: 'SET_PAGE_SIZE'; payload: number | 'all' }
+  | { type: 'SET_PAGE_SIZE'; payload: number }
   | { type: 'SET_FILTER'; payload: FilterPayload }
   | { type: 'SET_DATE_RANGE'; payload: { fromDateFilter: string; toDateFilter: string } }
   | { type: 'RESET_PAGE' }
@@ -326,7 +326,7 @@ export function useOrderPage(options: UseOrderPageOptions) {
   const invoiceInputRef = useRef<HTMLInputElement | null>(null);
 
   const setPage = useCallback((page: number) => dispatch({ type: 'SET_PAGE', payload: page }), []);
-  const setPageSize = useCallback((size: number | 'all') => {
+  const setPageSize = useCallback((size: number) => {
     const action: OrderPageAction = { type: 'SET_PAGE_SIZE', payload: size };
     return dispatch(action);
   }, []);

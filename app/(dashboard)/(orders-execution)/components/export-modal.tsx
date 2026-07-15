@@ -11,6 +11,7 @@ import { toast } from 'react-toastify';
 import Modal from '@/components/ui/modal';
 import Button from '@/components/ui/button';
 import Checkbox from '@/components/ui/checkbox';
+import Dropdown from '@/components/ui/dropdown';
 import { Order } from '@/types/Order';
 
 interface ExportModalProps {
@@ -18,6 +19,8 @@ interface ExportModalProps {
   onClose: () => void;
   orders: Order[];
   date: string;
+  totalCount?: number;
+  onFetchForExport?: (limit: number) => Promise<Order[]>;
   filters?: {
     source?: string;
     status?: string;
@@ -119,13 +122,20 @@ function buildExportRows(orders: Order[], locale: string): ExportRow[] {
   });
 }
 
-export default function ExportModal({ isOpen, onClose, orders, date, filters }: ExportModalProps) {
+const EXPORT_LIMIT_OPTIONS = [50, 100, 250, 500, 1000, 2500, 5000, 10000];
+
+type ExportScope = 'current' | 'custom' | 'all';
+
+export default function ExportModal({ isOpen, onClose, orders, date, totalCount = 0, onFetchForExport, filters }: ExportModalProps) {
   const t = useTranslations('execution');
   const locale = useLocale();
 
   const [selectedColumns, setSelectedColumns] = useState<Set<ExportColumnKey>>(
     () => new Set(EXPORT_COLUMNS.map((c) => c.key)),
   );
+  const [exportScope, setExportScope] = useState<ExportScope>('current');
+  const [customLimit, setCustomLimit] = useState<number>(100);
+  const [isFetching, setIsFetching] = useState(false);
 
   const activeColumns = EXPORT_COLUMNS.filter((c) => selectedColumns.has(c.key));
   const hasSelectedColumns = activeColumns.length > 0;
@@ -147,10 +157,33 @@ export default function ExportModal({ isOpen, onClose, orders, date, filters }: 
     setSelectedColumns(new Set());
   };
 
+  const resolveExportOrders = async (): Promise<Order[]> => {
+    if (exportScope === 'current') return orders;
+
+    if (!onFetchForExport) {
+      toast.error(t('export.fetchNotAvailable'));
+      return orders;
+    }
+
+    const limit = exportScope === 'all' ? totalCount || 10000 : customLimit;
+    setIsFetching(true);
+    try {
+      return await onFetchForExport(limit);
+    } catch (error) {
+      console.error('Export fetch failed:', error);
+      toast.error(t('export.fetchFailed'));
+      return orders;
+    } finally {
+      setIsFetching(false);
+    }
+  };
+
   const handleExport = async (format: 'csv' | 'xlsx' | 'pdf') => {
     if (activeColumns.length === 0) return;
 
-    const allRows = buildExportRows(orders, locale);
+    const exportOrders = await resolveExportOrders();
+
+    const allRows = buildExportRows(exportOrders, locale);
     const headers = activeColumns.map((c) => t(c.labelKey));
     const rows = allRows.map((row) => activeColumns.map((c) => row[c.key]));
 
@@ -245,11 +278,57 @@ export default function ExportModal({ isOpen, onClose, orders, date, filters }: 
           )}
         </div>
 
+        {/* Export scope selection */}
+        <div className="space-y-3">
+          <h4 className="text-sm font-semibold text-foreground">
+            {t('export.exportScopeTitle')}
+          </h4>
+          <div className="flex flex-col gap-2">
+            {(['current', 'custom', 'all'] as ExportScope[]).map((scope) => (
+              <label
+                key={scope}
+                className="flex items-center gap-2 text-sm text-foreground cursor-pointer"
+              >
+                <input
+                  type="radio"
+                  name="exportScope"
+                  value={scope}
+                  checked={exportScope === scope}
+                  onChange={() => setExportScope(scope)}
+                  className="accent-primary"
+                />
+                {scope === 'current' && t('export.currentView')}
+                {scope === 'custom' && t('export.customCount')}
+                {scope === 'all' && t('export.allFiltered')}
+              </label>
+            ))}
+          </div>
+          {exportScope === 'custom' && (
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-secondary">{t('export.records')}</span>
+              <Dropdown
+                value={String(customLimit)}
+                options={EXPORT_LIMIT_OPTIONS.map((limit) => ({
+                  label: String(limit),
+                  value: String(limit),
+                }))}
+                onChange={(val) => setCustomLimit(Number(val))}
+                className="w-28"
+              />
+            </div>
+          )}
+          {exportScope === 'all' && totalCount > 0 && (
+            <p className="text-xs text-secondary">
+              {t('export.allFilteredCount', { count: totalCount })}
+            </p>
+          )}
+        </div>
+
         <div className="grid grid-cols-1 gap-3">
           <Button
             variant="outline"
             onClick={() => handleExport('csv')}
-            disabled={!hasSelectedColumns}
+            disabled={!hasSelectedColumns || isFetching}
             className="justify-start gap-3 h-14"
           >
             <LuFileSpreadsheet size={22} className="text-success" />
@@ -262,7 +341,7 @@ export default function ExportModal({ isOpen, onClose, orders, date, filters }: 
           <Button
             variant="outline"
             onClick={() => handleExport('xlsx')}
-            disabled={!hasSelectedColumns}
+            disabled={!hasSelectedColumns || isFetching}
             className="justify-start gap-3 h-14"
           >
             <LuSheet size={22} className="text-primary" />
@@ -275,7 +354,7 @@ export default function ExportModal({ isOpen, onClose, orders, date, filters }: 
           <Button
             variant="outline"
             onClick={() => handleExport('pdf')}
-            disabled={!hasSelectedColumns}
+            disabled={!hasSelectedColumns || isFetching}
             className="justify-start gap-3 h-14"
           >
             <LuFileText size={22} className="text-error" />

@@ -11,7 +11,7 @@ import { toast } from 'react-toastify';
 import Modal from '@/components/ui/modal';
 import Button from '@/components/ui/button';
 import Checkbox from '@/components/ui/checkbox';
-import Dropdown from '@/components/ui/dropdown';
+import Input from '@/components/ui/input';
 import { Order } from '@/types/Order';
 
 interface ExportModalProps {
@@ -20,7 +20,7 @@ interface ExportModalProps {
   orders: Order[];
   date: string;
   totalCount?: number;
-  onFetchForExport?: (limit: number) => Promise<Order[]>;
+  onFetchForExport?: (limit: number, offset: number) => Promise<Order[]>;
   filters?: {
     source?: string;
     status?: string;
@@ -122,8 +122,6 @@ function buildExportRows(orders: Order[], locale: string): ExportRow[] {
   });
 }
 
-const EXPORT_LIMIT_OPTIONS = [50, 100, 250, 500, 1000, 2500, 5000, 10000];
-
 type ExportScope = 'current' | 'custom' | 'all';
 
 export default function ExportModal({ isOpen, onClose, orders, date, totalCount = 0, onFetchForExport, filters }: ExportModalProps) {
@@ -134,8 +132,17 @@ export default function ExportModal({ isOpen, onClose, orders, date, totalCount 
     () => new Set(EXPORT_COLUMNS.map((c) => c.key)),
   );
   const [exportScope, setExportScope] = useState<ExportScope>('current');
-  const [customLimit, setCustomLimit] = useState<number>(100);
+  const [startRecord, setStartRecord] = useState<string>('1');
+  const [endRecord, setEndRecord] = useState<string>(String(Math.max(1, totalCount)));
   const [isFetching, setIsFetching] = useState(false);
+
+  const handleScopeChange = (scope: ExportScope) => {
+    setExportScope(scope);
+    if (scope !== 'current') {
+      setStartRecord('1');
+      setEndRecord(String(Math.max(1, totalCount)));
+    }
+  };
 
   const activeColumns = EXPORT_COLUMNS.filter((c) => selectedColumns.has(c.key));
   const hasSelectedColumns = activeColumns.length > 0;
@@ -165,10 +172,26 @@ export default function ExportModal({ isOpen, onClose, orders, date, totalCount 
       return orders;
     }
 
-    const limit = exportScope === 'all' ? totalCount || 10000 : customLimit;
+    const maxRecord = Math.max(1, totalCount);
+    let limit = maxRecord;
+    let offset = 0;
+
+    if (exportScope === 'custom') {
+      const parsedFrom = Number.parseInt(startRecord, 10);
+      const parsedTo = Number.parseInt(endRecord, 10);
+      const fromRecord = Number.isNaN(parsedFrom)
+        ? 1
+        : Math.max(1, Math.min(parsedFrom, maxRecord));
+      const toRecord = Number.isNaN(parsedTo)
+        ? maxRecord
+        : Math.max(fromRecord, Math.min(parsedTo, maxRecord));
+      limit = toRecord - fromRecord + 1;
+      offset = fromRecord - 1;
+    }
+
     setIsFetching(true);
     try {
-      return await onFetchForExport(limit);
+      return await onFetchForExport(limit, offset);
     } catch (error) {
       console.error('Export fetch failed:', error);
       toast.error(t('export.fetchFailed'));
@@ -286,56 +309,63 @@ export default function ExportModal({ isOpen, onClose, orders, date, totalCount 
           <div className="flex flex-col gap-2">
             <label
               className="flex items-center gap-2 text-sm text-foreground cursor-pointer"
-              onClick={() => setExportScope('current')}
+              onClick={() => handleScopeChange('current')}
             >
               <Checkbox
                 checked={exportScope === 'current'}
-                onChange={() => setExportScope('current')}
+                onChange={() => handleScopeChange('current')}
                 size="sm"
               />
               {t('export.currentView')}
             </label>
             <label
               className="flex items-center gap-2 text-sm text-foreground cursor-pointer"
-              onClick={() => setExportScope('custom')}
+              onClick={() => handleScopeChange('custom')}
             >
               <Checkbox
                 checked={exportScope === 'custom'}
-                onChange={() => setExportScope('custom')}
+                onChange={() => handleScopeChange('custom')}
                 size="sm"
               />
               {t('export.customCount')}
             </label>
             <label
               className="flex items-center gap-2 text-sm text-foreground cursor-pointer"
-              onClick={() => setExportScope('all')}
+              onClick={() => handleScopeChange('all')}
             >
               <Checkbox
                 checked={exportScope === 'all'}
-                onChange={() => setExportScope('all')}
+                onChange={() => handleScopeChange('all')}
                 size="sm"
               />
               {t('export.allFiltered')}
             </label>
           </div>
-          {exportScope === 'custom' && (
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-secondary">{t('export.records')}</span>
-              <Dropdown
-                value={String(customLimit)}
-                options={EXPORT_LIMIT_OPTIONS.map((limit) => ({
-                  label: String(limit),
-                  value: String(limit),
-                }))}
-                onChange={(val) => setCustomLimit(Number(val))}
-                className="w-28"
-              />
-            </div>
-          )}
           {exportScope === 'all' && totalCount > 0 && (
             <p className="text-xs text-secondary">
               {t('export.allFilteredCount', { count: totalCount })}
             </p>
+          )}
+
+          {exportScope === 'custom' && (
+            <div className="grid grid-cols-2 gap-3 pt-1">
+              <Input
+                type="number"
+                min={1}
+                max={Math.max(1, totalCount)}
+                label={t('export.fromRecord')}
+                value={startRecord}
+                onChange={(e) => setStartRecord(e.target.value)}
+              />
+              <Input
+                type="number"
+                min={1}
+                max={Math.max(1, totalCount)}
+                label={t('export.toRecord')}
+                value={endRecord}
+                onChange={(e) => setEndRecord(e.target.value)}
+              />
+            </div>
           )}
         </div>
 

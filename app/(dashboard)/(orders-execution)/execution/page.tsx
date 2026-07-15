@@ -342,10 +342,11 @@ export default function ExecutionPage() {
   );
 
   const fetchExecutionForExport = useCallback(
-    async (limit: number) => {
+    async (limit: number, offset: number = 0) => {
       const params = new URLSearchParams();
       params.set('page', '1');
       params.set('limit', String(limit));
+      params.set('offset', String(offset));
       if (sourceFilter !== 'all') params.set('source', sourceFilter);
       if (referralFilter) params.set('referralId', referralFilter);
       if (categoryFilter && categoryFilter !== 'all') params.set('category', categoryFilter);

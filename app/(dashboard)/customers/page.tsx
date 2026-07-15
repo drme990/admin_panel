@@ -328,7 +328,7 @@ export default function CustomersPage() {
     }
   }, [appFilter, banFilter, refFilter, tierFilter, countryFilter, detectedCountryFilter, search, fromDateFilter, toDateFilter, page, pageSize, t]);
 
-  const fetchCustomersForExport = useCallback(async (limit: number) => {
+  const fetchCustomersForExport = useCallback(async (limit: number, offset: number = 0) => {
     const params = new URLSearchParams();
     if (appFilter !== 'all') params.set('appId', appFilter);
     if (banFilter === 'banned') params.set('isBanned', 'true');
@@ -346,6 +346,8 @@ export default function CustomersPage() {
 
     params.set('page', '1');
     params.set('limit', String(limit));
+    params.set('offset', String(offset));
+    params.set('globalSlice', 'true');
 
     const query = params.toString();
     const url = query ? `/api/customers?${query}` : '/api/customers';

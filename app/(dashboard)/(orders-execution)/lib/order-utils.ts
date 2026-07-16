@@ -1,7 +1,5 @@
 'use client';
 
-import type { OrderItem } from '@/types/Order';
-
 export function toIsoDateInput(date: Date): string {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -99,8 +97,23 @@ export function isImageUrl(url: string): boolean {
 
 const DEFAULT_SIZE_VALUES = new Set(['default', 'الافتراضي']);
 
+type SizeValue = string | { ar?: string; en?: string } | undefined;
+
+type OrderItemSizeInput = {
+  productName?: { ar?: string; en?: string };
+  sizeName?: SizeValue;
+  sizeLabel?: SizeValue;
+  size?: SizeValue;
+  sizeIndex?: number;
+  sizes?: Array<{
+    name?: SizeValue;
+    label?: SizeValue;
+    value?: SizeValue;
+  }>;
+};
+
 function resolveSizeName(
-  sizeValue: string | { ar?: string; en?: string } | undefined,
+  sizeValue: SizeValue,
 ): string | null {
   if (!sizeValue) return null;
   const text =
@@ -114,7 +127,7 @@ function resolveSizeName(
 }
 
 export function getOrderItemDisplayName(
-  item: OrderItem,
+  item: OrderItemSizeInput,
   locale: string,
 ): string {
   const directSize =

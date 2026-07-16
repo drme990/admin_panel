@@ -2,10 +2,20 @@
 
 import { useTranslations } from 'next-intl';
 import { LuPackage, LuShoppingBag } from 'react-icons/lu';
+import { getOrderItemDisplayName } from '../lib/order-utils';
 
 interface ProductStat {
   productId: string;
   productName: { ar: string; en: string };
+  sizeName?: { ar: string; en: string } | string;
+  sizeLabel?: { ar: string; en: string } | string;
+  size?: { ar: string; en: string } | string;
+  sizeIndex?: number;
+  sizes?: Array<{
+    name?: { ar: string; en: string } | string;
+    label?: { ar: string; en: string } | string;
+    value?: { ar: string; en: string } | string;
+  }>;
   quantity: number;
 }
 
@@ -135,20 +145,33 @@ export default function OrderStats({
             {cat.products.length > 0 && (
               <div className="mt-3 space-y-1">
                 {cat.products.map((product) => {
-                  const productName =
-                    locale === 'ar'
-                      ? product.productName.ar
-                      : product.productName.en;
+                  const displayName = getOrderItemDisplayName(
+                    {
+                      productName: product.productName,
+                      sizeName: product.sizeName,
+                      sizeLabel: product.sizeLabel,
+                      size: product.size,
+                      sizeIndex: product.sizeIndex,
+                      sizes: product.sizes,
+                    },
+                    locale,
+                  );
+                  const sizeKey = JSON.stringify({
+                    sizeName: product.sizeName,
+                    sizeLabel: product.sizeLabel,
+                    size: product.size,
+                    sizeIndex: product.sizeIndex,
+                  });
                   return (
                     <div
-                      key={product.productId}
+                      key={`${product.productId}-${sizeKey}`}
                       className="flex items-center justify-between text-xs sm:text-sm"
                     >
                       <span
                         className="text-secondary truncate max-w-[70%]"
-                        title={productName}
+                        title={displayName}
                       >
-                        {productName}
+                        {displayName}
                       </span>
                       <span className="font-medium text-foreground ml-2 shrink-0">
                         {product.quantity.toLocaleString()}

@@ -1,5 +1,6 @@
 'use client';
 
+import { useMemo } from 'react';
 import Image from 'next/image';
 import { LuDownload, LuPencil } from 'react-icons/lu';
 import { useTranslations } from 'next-intl';
@@ -19,6 +20,19 @@ interface DesignPreviewModalProps {
 }
 
 /**
+ * Append a cache-busting query parameter to a URL.
+ *
+ * Order design images are overwritten at the same R2 key when the admin
+ * edits + saves. Without cache-busting, the browser + Cloudflare CDN
+ * serve the stale cached version. The `?v=timestamp` forces a fresh
+ * fetch every time the modal opens.
+ */
+function withCacheBust(url: string): string {
+  const separator = url.includes('?') ? '&' : '?';
+  return `${url}${separator}v=${Date.now()}`;
+}
+
+/**
  * Design preview modal — uses the shared Modal component to show an
  * order's design image with download + edit actions in the footer.
  */
@@ -31,10 +45,23 @@ export default function DesignPreviewModal({
   const t = useTranslations('execution.table');
   const isOpen = !!url;
 
+  // Cache-bust the image URL every time the modal opens so we always
+  // show the latest version (the admin may have edited + re-rendered).
+  // Including `isOpen` in the deps ensures a fresh timestamp each time
+  // the modal opens, even though the base URL doesn't change between
+  // edits.
+  const displayUrl = useMemo(() => {
+    if (!url || !isOpen) return null;
+    return withCacheBust(url);
+  }, [url, isOpen]);
+
   const handleDownload = () => {
     if (!url) return;
     const filename = orderNumber ? `design-${orderNumber}` : 'design';
-    void downloadFile(url, filename);
+    // Cache-bust the download URL too — the browser/CDN may serve a
+    // stale cached version otherwise (same key gets overwritten on
+    // re-render).
+    void downloadFile(withCacheBust(url), filename);
   };
 
   const handleEdit = () => {
@@ -64,9 +91,9 @@ export default function DesignPreviewModal({
         </div>
       }
     >
-      {url && (
+      {displayUrl && (
         <Image
-          src={url}
+          src={displayUrl}
           alt={t('design')}
           className="max-h-[70vh] max-w-full rounded-lg object-contain"
           width={1200}

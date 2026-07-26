@@ -996,7 +996,10 @@ export default function ExecutionPage() {
     // Download the most recent design
     const latest = designs[designs.length - 1];
     try {
-      await downloadFile(latest.url, `design-${order.orderNumber}`);
+      // Cache-bust the URL — the same key gets overwritten when the
+      // admin edits + re-renders, so the CDN may serve a stale copy.
+      const cacheBustUrl = `${latest.url}${latest.url.includes('?') ? '&' : '?'}v=${Date.now()}`;
+      await downloadFile(cacheBustUrl, `design-${order.orderNumber}`);
     } catch (error) {
       console.error('Error downloading design:', error);
       toast.error(t('messages.downloadFailed') || 'Failed to download design');

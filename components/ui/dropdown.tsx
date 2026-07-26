@@ -1,4 +1,4 @@
-import { ReactNode, useState, useRef, useEffect } from 'react';
+import { ReactNode, useState, useRef, useEffect, useCallback } from 'react';
 import { LuChevronDown, LuSearch } from 'react-icons/lu';
 import Button from './button';
 
@@ -39,7 +39,6 @@ export default function Dropdown<T = string>({
   const [direction, setDirection] = useState<'down' | 'up'>('down');
   const [search, setSearch] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   const selectedOption = options.find((opt) => opt.value === value);
@@ -66,11 +65,10 @@ export default function Dropdown<T = string>({
     };
   }, [isOpen]);
 
-  useEffect(() => {
-    if (!isOpen || !dropdownRef.current || !menuRef.current) return;
-
+  const measureMenu = useCallback((menu: HTMLDivElement | null) => {
+    if (!menu || !dropdownRef.current) return;
     const rect = dropdownRef.current.getBoundingClientRect();
-    const menuHeight = menuRef.current.offsetHeight;
+    const menuHeight = menu.offsetHeight;
     const spaceBelow = window.innerHeight - rect.bottom;
     const spaceAbove = rect.top;
     const margin = 8;
@@ -80,15 +78,19 @@ export default function Dropdown<T = string>({
     } else {
       setDirection('down');
     }
-  }, [isOpen]);
+  }, []);
 
   useEffect(() => {
     if (isOpen && searchable) {
       setTimeout(() => searchInputRef.current?.focus(), 10);
-    } else {
-      setSearch('');
     }
   }, [isOpen, searchable]);
+
+  const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
+  if (isOpen !== prevIsOpen) {
+    setPrevIsOpen(isOpen);
+    if (!isOpen) setSearch('');
+  }
 
   const handleSelect = (optionValue: T) => {
     onChange(optionValue);
@@ -127,7 +129,7 @@ export default function Dropdown<T = string>({
 
       {isOpen && (
         <div
-          ref={menuRef}
+          ref={measureMenu}
           className={`absolute left-0 right-0 bg-card-bg border border-stroke rounded-lg shadow-lg z-50 min-h-30 max-h-60 overflow-y-auto ${direction === 'up'
             ? 'bottom-full mb-1'
             : 'top-full mt-1'

@@ -150,6 +150,7 @@ export function useInvoiceColumns(callbacks: ColumnCallbacks) {
               aria-label={t('preview')}
             >
               {isImageUrl(row.url) ? (
+                // eslint-disable-next-line @next/next/no-img-element -- dynamic URL with onError hide fallback
                 <img
                   src={row.url}
                   alt="Invoice"

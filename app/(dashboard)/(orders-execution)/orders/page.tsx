@@ -24,7 +24,6 @@ import OrderStats from '../components/order-stats';
 import useOrderPage from '../lib/use-order-page';
 import { LuPlus } from 'react-icons/lu';
 import {
-  toIsoDateInput,
   getRelativeIsoDate,
   normalizeDateRange,
 } from '../lib/order-utils';
@@ -105,7 +104,6 @@ export default function OrderHistoryPage() {
     setBlockingOrderId,
     setBlockedUserIds,
     setPendingBanOrder,
-    setAsyncAction,
     fetchOrderDetails,
     setSelectedOrder,
     setOrderHistoryModalOpen,

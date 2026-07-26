@@ -31,7 +31,6 @@ import {
   LuPalette,
   LuRefreshCw,
   LuCalendarDays,
-  LuWallet,
   LuUserCog,
   LuChartNoAxesCombined,
   LuBaggageClaim,

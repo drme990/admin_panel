@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import Modal from '@/components/ui/modal';
 import Input from '@/components/ui/input';
@@ -44,8 +44,11 @@ export default function AccountFormModal({
 }: AccountFormModalProps) {
   const t = useTranslations('admin.accounts');
   const [formData, setFormData] = useState<AccountFormData>(DEFAULT_FORM);
-
-  useEffect(() => {
+  const [prevAccount, setPrevAccount] = useState(account);
+  const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
+  if (account !== prevAccount || isOpen !== prevIsOpen) {
+    setPrevAccount(account);
+    setPrevIsOpen(isOpen);
     if (account) {
       setFormData({
         name: account.name,
@@ -58,7 +61,7 @@ export default function AccountFormModal({
     } else {
       setFormData(DEFAULT_FORM);
     }
-  }, [account, isOpen]);
+  }
 
   const typeOptions = ACCOUNT_TYPES.map((type) => ({
     value: type,

@@ -24,11 +24,12 @@ export interface OrderDesignUrl {
   /** Which template variant was used — 'text' (no-image) or 'image' */
   templateType: 'text' | 'image';
   /**
-   * ID of the design-app template project used to generate this design.
-   * The admin panel opens `{DESIGN_APP_URL}/editor/{templateId}` to
-   * let the admin edit the template.
+   * ID of the design-app project (design instance) generated for this
+   * order. The admin panel opens `{DESIGN_APP_URL}/editor/{projectId}`
+   * so the admin can edit THIS specific design — not the template.
+   * The template stays unchanged; only this design instance is edited.
    */
-  templateId?: string;
+  projectId?: string;
   /** When the design was generated (ISO string) */
   createdAt: string;
 }

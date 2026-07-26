@@ -6,7 +6,6 @@ import { useTranslations } from 'next-intl';
 import { toast } from 'react-toastify';
 import {
   LuCalendarRange as CalendarRange,
-  LuClock as ClockIcon,
   LuInfo as InfoIcon,
 } from 'react-icons/lu';
 import Button from '@/components/ui/button';
@@ -91,7 +90,6 @@ export default function BookingAdminPage() {
   );
 
   const egyptToday = useMemo(() => getEgyptToday(), []);
-  const tomorrow = useMemo(() => addDays(egyptToday, 1), [egyptToday]);
   const dayAfterTomorrow = useMemo(() => addDays(egyptToday, 2), [egyptToday]);
 
   useEffect(() => {

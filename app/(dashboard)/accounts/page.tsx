@@ -190,14 +190,6 @@ export default function AccountsPage() {
         [confirm, fetchAccounts, t],
     );
 
-    const totalBalance = useMemo(
-        () =>
-            accounts
-                .filter((a) => a.isActive)
-                .reduce((sum, a) => sum + a.balance, 0),
-        [accounts],
-    );
-
     const columns = useMemo(
         () => [
             {

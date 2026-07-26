@@ -430,7 +430,6 @@ export default function CreateManualOrderModal({
     products,
     loadingProducts,
     referrals,
-    loadingReferrals,
     creating,
     invoices,
     uploadingInvoice,
@@ -803,9 +802,6 @@ export default function CreateManualOrderModal({
   }, [form.items, getLoadedUnitPrice, t]);
 
   const isPartialPayment = paidAmountNum > 0 && paidAmountNum < fullOrderTotal;
-  const remainingAmount = isPartialPayment
-    ? Math.max(0, fullOrderTotal - paidAmountNum)
-    : 0;
 
   const validateForm = useCallback((): Record<string, string | undefined> => {
     const errors: Record<string, string | undefined> = {};
@@ -1439,7 +1435,6 @@ export default function CreateManualOrderModal({
 
         <div className="flex flex-col gap-3">
           {form.items.map((item, index) => {
-            const product = getProduct(item.productId);
             const sizeOpts = getSizeOptions(item.productId);
             return (
               <div
@@ -1874,6 +1869,7 @@ export default function CreateManualOrderModal({
                       {/* Preview */}
                       {invoice.previewUrl && (
                         <div className="w-fit">
+                          {/* eslint-disable-next-line @next/next/no-img-element -- previewUrl is a blob URL from File, not optimizable by next/image */}
                           <img
                             src={invoice.previewUrl}
                             alt="Invoice preview"
@@ -2061,6 +2057,7 @@ export default function CreateManualOrderModal({
             {form.reservationData.photo && (
               <div className="mt-3">
                 <div className="relative w-64 h-64 rounded-lg overflow-hidden border border-stroke shrink-0 group">
+                  {/* eslint-disable-next-line @next/next/no-img-element -- dynamic user-provided URL with custom fallback handling */}
                   <img
                     src={form.reservationData.photo}
                     alt="User photo"

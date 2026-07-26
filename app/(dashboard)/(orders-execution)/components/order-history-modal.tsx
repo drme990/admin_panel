@@ -133,6 +133,7 @@ function PhotoValue({ value, onClick }: { value: string | null; onClick?: (url: 
         onClick={() => onClick?.(value)}
         className="block group cursor-pointer"
       >
+        {/* eslint-disable-next-line @next/next/no-img-element -- dynamic URL with onError hide fallback */}
         <img
           src={value}
           alt="Photo"
@@ -162,6 +163,7 @@ function InvoiceValue({ value, onClick }: { value: string | null; onClick?: (url
       className="flex items-center gap-2 text-primary hover:underline text-sm disabled:opacity-60 disabled:cursor-default"
     >
       {url && isImageUrl(url) ? (
+        // eslint-disable-next-line @next/next/no-img-element -- dynamic URL with conditional render
         <img
           src={url}
           alt="Invoice"
@@ -200,6 +202,7 @@ function InvoiceImageValue({ value, onClick }: { value: string | null; onClick?:
       className="flex items-center gap-2 text-primary hover:underline text-sm"
     >
       {isImageUrl(url) ? (
+        // eslint-disable-next-line @next/next/no-img-element -- dynamic URL with conditional render
         <img
           src={url}
           alt={t('preview')}
@@ -266,21 +269,25 @@ function InvoiceValueValue({ value }: { value: string | null }) {
 function TextValue({ type, value }: { type: OrderHistoryEntry['changeType']; value: string | null }) {
   if (value === null || value === undefined) return <span className="text-secondary">-</span>;
   if (type === 'items') {
+    let parsedItems: Array<{ productName?: { ar?: string; en?: string }; quantity?: number }> | null = null;
     try {
-      const items = JSON.parse(value) as Array<{
+      parsedItems = JSON.parse(value) as Array<{
         productName?: { ar?: string; en?: string };
         quantity?: number;
       }>;
+    } catch {
+      parsedItems = null;
+    }
+    if (Array.isArray(parsedItems)) {
       return (
         <span className="text-foreground">
-          {items
+          {parsedItems
             .map((item) => `${item.quantity || 1}x ${item.productName?.en || item.productName?.ar || '?'}`)
             .join(', ')}
         </span>
       );
-    } catch {
-      return <span className="text-foreground break-all">{value}</span>;
     }
+    return <span className="text-foreground break-all">{value}</span>;
   }
   return <span className="text-foreground break-all">{value}</span>;
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 
 import Modal from '@/components/ui/modal';
@@ -26,12 +26,11 @@ export default function ChangeExecutionDateModal({
 }: Props) {
   const t = useTranslations('execution');
   const [date, setDate] = useState(currentDate);
-
-  useEffect(() => {
-    if (isOpen) {
-      setDate(currentDate);
-    }
-  }, [isOpen, currentDate]);
+  const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
+  if (isOpen !== prevIsOpen) {
+    setPrevIsOpen(isOpen);
+    if (isOpen) setDate(currentDate);
+  }
 
   const handleSave = () => {
     if (!date) return;

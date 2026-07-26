@@ -1,6 +1,6 @@
 'use client';
 
-import { useTranslations, useLocale } from 'next-intl';
+import { useTranslations } from 'next-intl';
 
 import Tabs from '@/components/ui/tabs';
 import Dropdown from '@/components/ui/dropdown';

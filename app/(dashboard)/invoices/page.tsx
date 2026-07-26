@@ -24,7 +24,7 @@ import InvoiceRejectionFollowupModal from './components/invoice-rejection-follow
 import InvoiceTitle from './components/invoice-title';
 import { useInvoiceColumns } from './components/invoice-table-columns';
 import InvoiceCardView from './components/invoice-card-view';
-import { InvoiceUploadTypeMenu, type UploadFileType } from './components/invoice-upload-type-menu';
+import { type UploadFileType } from './components/invoice-upload-type-menu';
 import { STATUS_TEXT_COLORS } from './components/invoice-status-cell';
 import OrderDetailModal from '../(orders-execution)/components/order-detail-modal';
 import ChangeStatusModal from '../(orders-execution)/components/change-status-modal';
@@ -778,7 +778,6 @@ export default function InvoicesPage() {
     const updateOrderStatus = async (
         status: OrderStatus,
         cancellationReason?: string,
-        _isScammer?: boolean,
     ) => {
         if (!selectedOrder) return;
         setUpdatingStatus(true);

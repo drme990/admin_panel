@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
-import { toast } from 'react-toastify';
 import {
   LuMinus,
   LuPlus,
@@ -13,7 +12,6 @@ import Modal from '@/components/ui/modal';
 import Button from '@/components/ui/button';
 import Input from '@/components/ui/input';
 import Textarea from '@/components/ui/textarea';
-import Tooltip from '@/components/ui/tooltip';
 import Dropdown from '@/components/ui/dropdown';
 import { Order, OrderItem } from '@/types/Order';
 import { Product } from '@/types/Product';
@@ -62,7 +60,6 @@ export default function EditOrderModal({
 }: Props) {
   const t = useTranslations('execution');
   const locale = useLocale();
-  const tooltipPos = locale === 'ar' ? 'right' : 'left';
 
   const [names, setNames] = useState<string[]>([]);
   const [shortDuaa, setShortDuaa] = useState('');
@@ -73,7 +70,17 @@ export default function EditOrderModal({
   const [isAlive, setIsAlive] = useState('');
   const [intention, setIntention] = useState('');
 
-  useEffect(() => {
+  const [prevOpenOrder, setPrevOpenOrder] = useState<{
+    open: boolean;
+    order: Order | null;
+    locale: string;
+  }>({ open: isOpen, order, locale });
+  if (
+    isOpen !== prevOpenOrder.open ||
+    order !== prevOpenOrder.order ||
+    locale !== prevOpenOrder.locale
+  ) {
+    setPrevOpenOrder({ open: isOpen, order, locale });
     if (isOpen && order) {
       const rawNames = getReservationValue(order, 'sacrificeFor');
       setNames(
@@ -91,20 +98,25 @@ export default function EditOrderModal({
       setIsAlive(normalizePresetValue(getReservationValue(order, 'isAlive'), isAlivePreset, locale));
       setIntention(normalizePresetValue(getReservationValue(order, 'intention'), intentionPreset, locale));
     }
-  }, [isOpen, order, locale]);
+  }
+
+  const shouldLoadProducts = isOpen && field === 'items';
+  const [prevShouldLoad, setPrevShouldLoad] = useState(shouldLoadProducts);
+  if (shouldLoadProducts !== prevShouldLoad) {
+    setPrevShouldLoad(shouldLoadProducts);
+    if (shouldLoadProducts) setLoadingProducts(true);
+  }
 
   useEffect(() => {
-    if (isOpen && field === 'items') {
-      setLoadingProducts(true);
-      fetch('/api/products')
-        .then((r) => r.json())
-        .then((data) => {
-          if (data.success) setProducts(data.data.products || []);
-        })
-        .catch(() => { })
-        .finally(() => setLoadingProducts(false));
-    }
-  }, [isOpen, field]);
+    if (!shouldLoadProducts) return;
+    fetch('/api/products')
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.success) setProducts(data.data.products || []);
+      })
+      .catch(() => { })
+      .finally(() => setLoadingProducts(false));
+  }, [shouldLoadProducts]);
 
   const handleQuantityChange = useCallback(
     (index: number, delta: number) => {

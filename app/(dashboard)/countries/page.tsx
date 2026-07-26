@@ -557,7 +557,7 @@ export default function CountriesPage() {
   };
 
   // Visibility settings handlers
-  const openVisibilityModal = (country: Country) => {
+  const openVisibilityModal = useCallback((country: Country) => {
     const mode = country.visibilityMode ?? 'all';
     const normalizedVisible = normalizeVisibilityMap(
       country.countriesToSee,
@@ -570,7 +570,7 @@ export default function CountriesPage() {
     setRegionFilter('all');
     setCopyFromCountryId(null);
     setVisibilityOpen(true);
-  };
+  }, [normalizeVisibilityMap]);
 
   const toggleVisibleToCountry = (countryCode: string) => {
     const isEnabled = isCountryEnabledForTab(countryCode, visibilityTab);
@@ -857,6 +857,7 @@ export default function CountriesPage() {
       savingRoundingByCountry,
       roundingDraftByCountry,
       setRoundingDraftForCurrency,
+      openVisibilityModal,
     ],
   );
 

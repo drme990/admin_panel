@@ -1,6 +1,6 @@
 'use client';
 
-import { useReducer, useCallback, useEffect, useRef } from 'react';
+import { useReducer, useCallback, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { toast } from 'react-toastify';
 

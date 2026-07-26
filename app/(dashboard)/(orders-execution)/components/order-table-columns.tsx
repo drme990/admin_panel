@@ -4,7 +4,7 @@ import { useTranslations } from 'next-intl';
 import Button from '@/components/ui/button';
 import Checkbox from '@/components/ui/checkbox';
 import Tooltip from '@/components/ui/tooltip';
-import { Order, OrderStatus } from '@/types/Order';
+import { Order } from '@/types/Order';
 import { FaWhatsapp } from 'react-icons/fa6';
 import {
   LuEye,

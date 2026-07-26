@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { LuRefreshCw } from 'react-icons/lu';
 
@@ -43,7 +43,11 @@ export default function InvoiceRejectionModal({
     [t],
   );
 
-  useEffect(() => {
+  const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
+  const [prevInvoice, setPrevInvoice] = useState(invoice);
+  if (isOpen !== prevIsOpen || invoice !== prevInvoice) {
+    setPrevIsOpen(isOpen);
+    setPrevInvoice(invoice);
     if (isOpen) {
       const existing = invoice?.rejectionReason || '';
       const matched = rejectionOptions.find((opt) => opt.label === existing);
@@ -58,7 +62,7 @@ export default function InvoiceRejectionModal({
       setSelectedReason('');
       setCustomReason('');
     }
-  }, [isOpen, invoice, rejectionOptions]);
+  }
 
   const handleConfirm = () => {
     if (!invoice || !status) return;

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 
 import Modal from '@/components/ui/modal';
@@ -23,13 +23,14 @@ export default function InvoiceEditModal({ invoice, saving, onClose, onSave }: P
 
   const [editValue, setEditValue] = useState('');
   const [editCurrency, setEditCurrency] = useState('EGP');
-
-  useEffect(() => {
+  const [prevInvoice, setPrevInvoice] = useState(invoice);
+  if (invoice !== prevInvoice) {
+    setPrevInvoice(invoice);
     if (invoice) {
       setEditValue(String(invoice.value || ''));
       setEditCurrency(invoice.invoiceCurrency || 'EGP');
     }
-  }, [invoice]);
+  }
 
   return (
     <Modal

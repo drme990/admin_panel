@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 
 import Modal from '@/components/ui/modal';
@@ -25,7 +25,6 @@ const AVAILABLE_STATUSES: OrderStatus[] = ['completed', 'refunded', 'cancelled']
 export default function ChangeStatusModal({
   isOpen,
   onClose,
-  currentStatus,
   onUpdateStatus,
   updating,
   namespace = 'orders',
@@ -34,6 +33,15 @@ export default function ChangeStatusModal({
   const [selectedStatus, setSelectedStatus] = useState<OrderStatus>('completed');
   const [cancellationPreset, setCancellationPreset] = useState<CancellationPreset>('returned');
   const [customReason, setCustomReason] = useState('');
+  const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
+  if (isOpen !== prevIsOpen) {
+    setPrevIsOpen(isOpen);
+    if (isOpen) {
+      setSelectedStatus('completed');
+      setCancellationPreset('returned');
+      setCustomReason('');
+    }
+  }
 
   const presetOptions = useMemo(
     () => [
@@ -44,14 +52,6 @@ export default function ChangeStatusModal({
     ],
     [t],
   );
-
-  useEffect(() => {
-    if (isOpen) {
-      setSelectedStatus('completed');
-      setCancellationPreset('returned');
-      setCustomReason('');
-    }
-  }, [isOpen]);
 
   const isCancelled = selectedStatus === 'cancelled';
   const isOther = cancellationPreset === 'other';

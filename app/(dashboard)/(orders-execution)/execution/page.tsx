@@ -33,6 +33,7 @@ import OrderDetailModal from '../components/order-detail-modal';
 import ChangeStatusModal from '../components/change-status-modal';
 import CreateManualOrderModal from '../components/create-manual-order-modal';
 import OrderStats from '../components/order-stats';
+import DesignPreviewModal from '../components/design-preview-modal';
 import useOrderPage from '../lib/use-order-page';
 import {
   getRelativeIsoDate,
@@ -75,6 +76,8 @@ export default function ExecutionPage() {
   const [uploadingPhotoOrderId, setUploadingPhotoOrderId] = useState<string | null>(null);
   const [uploadingInvoiceOrderId, setUploadingInvoiceOrderId] = useState<string | null>(null);
   const [creatingDesignOrderId, setCreatingDesignOrderId] = useState<string | null>(null);
+  const [designPreviewUrl, setDesignPreviewUrl] = useState<string | null>(null);
+  const [designPreviewOrder, setDesignPreviewOrder] = useState<Order | null>(null);
   const [isCreateManualOrderModalOpen, setIsCreateManualOrderModalOpen] = useState(false);
   const { confirm, modalProps } = useConfirmModal();
 
@@ -907,6 +910,21 @@ export default function ExecutionPage() {
   // the order's designUrls array and returns the results. We then
   // refetch the order so the table updates (icon switches from
   // "create" to "download + edit").
+  // ── Design generation ──────────────────────────────────────────────
+  // Maps a backend skip reasonCode to a localized human-readable string.
+  // The backend sends machine-readable codes so the admin panel can show
+  // them in the user's locale instead of hardcoded Arabic.
+  const designReasonKey: Record<string, string> = {
+    noTemplate: 'table.designReasonNoTemplate',
+    noBookingProduct: 'table.designReasonNoBookingProduct',
+    templateNotFound: 'table.designReasonTemplateNotFound',
+    designAppNotConfigured: 'table.designReasonDesignAppNotConfigured',
+    callbackSecretNotConfigured: 'table.designReasonCallbackSecretNotConfigured',
+    timeout: 'table.designReasonTimeout',
+    unknown: 'table.designReasonUnknown',
+    internalError: 'table.designReasonInternalError',
+  };
+
   const handleCreateDesign = async (order: Order) => {
     setCreatingDesignOrderId(order._id);
     try {
@@ -916,17 +934,33 @@ export default function ExecutionPage() {
       });
       const data = await res.json();
       if (!data.success) {
-        throw new Error(data.error?.message || data.error || 'Failed to create design');
+        // Backend returned an error (500, 401, 404, etc.)
+        // Map the error code to a localized message instead of showing
+        // the raw English message from the backend.
+        const code = data.error?.code || 'internalError';
+        const reasonKey = designReasonKey[code] || 'table.designReasonUnknown';
+        throw new Error(t(reasonKey));
       }
 
       const generated = data.data?.generated || [];
-      const skipped = data.data?.skipped || [];
+      const skipped: Array<{ reasonCode?: string; reason?: string; productName?: string }> =
+        data.data?.skipped || [];
 
-      if (generated.length === 0) {
-        // All products were skipped — no template assigned
-        toast.error(t('table.designCreateNoTemplate'));
+      if (generated.length === 0 && skipped.length === 0) {
+        // No products in the order at all — nothing to generate
+        toast.error(t('table.designCreateFailed'));
+      } else if (generated.length === 0) {
+        // All products were skipped — show the ACTUAL reason, not a
+        // generic "no template" message. Use the first skip's reason
+        // (if all products share the same reason, this is perfect; if
+        // they differ, the user at least sees one actionable reason).
+        const firstSkip = skipped[0];
+        const reasonCode = firstSkip?.reasonCode || 'unknown';
+        const reasonKey = designReasonKey[reasonCode] || 'table.designReasonUnknown';
+        const localizedReason = t(reasonKey);
+        toast.error(t('table.designCreateAllSkipped', { reason: localizedReason }));
       } else if (skipped.length > 0) {
-        // Some products had templates, some didn't
+        // Partial success — some designs created, some skipped
         toast.info(t('table.designCreatePartial'));
       } else {
         toast.success(t('table.designCreated'));
@@ -970,13 +1004,15 @@ export default function ExecutionPage() {
   };
 
   // ── Edit design ────────────────────────────────────────────────────
-  // Opens the design app's editor in a new tab, loading the template
-  // that was used to generate this order's design. The user is already
+  // Opens the design app's editor in a new tab, loading the DESIGN
+  // INSTANCE (not the template) for this order. The user is already
   // logged in via SSO (shared cookie), so no login prompt appears.
   //
-  // After editing + saving the template in the design app, the admin
-  // returns to this page and clicks the "create" icon again to
-  // re-generate the design with the updated template.
+  // The design instance is a standalone project created at generation
+  // time — it has the order's actual data (customer name, photo, etc.)
+  // baked in as concrete text/image layers. Editing it doesn't affect
+  // the template or future orders. The template only changes when the
+  // user explicitly edits it in the design app's templates section.
   const handleEditDesign = (order: Order) => {
     const designs = order.designUrls || [];
     if (designs.length === 0) {
@@ -984,9 +1020,10 @@ export default function ExecutionPage() {
       return;
     }
 
-    // Use the most recent design's templateId
+    // Use the most recent design's projectId (the design instance, not
+    // the template)
     const latest = designs[designs.length - 1];
-    if (!latest.templateId) {
+    if (!latest.projectId) {
       toast.error(t('table.designCreateFailed'));
       return;
     }
@@ -999,8 +1036,9 @@ export default function ExecutionPage() {
     }
 
     // Open the editor in a new tab — the SSO cookie authenticates the
-    // user automatically.
-    window.open(`${designAppUrl}/editor/${latest.templateId}`, '_blank');
+    // user automatically. The URL points to the design instance, so
+    // the admin edits THIS order's design, not the template.
+    window.open(`${designAppUrl}/editor/${latest.projectId}`, '_blank');
   };
 
   const [creatingPaymentLinkOrderId, setCreatingPaymentLinkOrderId] = useState<string | null>(null);
@@ -1170,6 +1208,13 @@ export default function ExecutionPage() {
     onCreateDesign: handleCreateDesign,
     onEditDesign: handleEditDesign,
     onDownloadDesign: handleDownloadDesign,
+    onPreviewDesign: (order) => {
+      const designs = order.designUrls || [];
+      if (designs.length === 0) return;
+      const latest = designs[designs.length - 1];
+      setDesignPreviewOrder(order);
+      setDesignPreviewUrl(latest.url);
+    },
     creatingDesignOrderId,
   });
 
@@ -1405,6 +1450,7 @@ export default function ExecutionPage() {
                                       title={invoice.url.split('/').pop() || invoice.url}
                                     >
                                       {isImageUrl(invoice.url) ? (
+                                        // eslint-disable-next-line @next/next/no-img-element -- dynamic URL with conditional render
                                         <img
                                           src={invoice.url}
                                           alt="Invoice"
@@ -1674,6 +1720,17 @@ export default function ExecutionPage() {
         accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
         className="hidden"
         onChange={handleInvoiceFileChange}
+      />
+
+      {/* Design preview lightbox */}
+      <DesignPreviewModal
+        url={designPreviewUrl}
+        orderNumber={designPreviewOrder?.orderNumber}
+        onClose={() => {
+          setDesignPreviewUrl(null);
+          setDesignPreviewOrder(null);
+        }}
+        onEdit={designPreviewOrder ? () => handleEditDesign(designPreviewOrder) : undefined}
       />
     </div>
   );

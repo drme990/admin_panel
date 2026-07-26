@@ -1,4 +1,4 @@
-import { type ReactNode, useState, useRef, useEffect } from 'react';
+import { type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import { useLocale } from 'next-intl';
 import { toast } from 'react-toastify';
@@ -29,7 +29,7 @@ import Checkbox from '@/components/ui/checkbox';
 import Tooltip from '@/components/ui/tooltip';
 import { Order } from '@/types/Order';
 import { STATUS_COLORS } from '../lib/order-status';
-import { isImageUrl, getOrderItemDisplayName } from '../lib/order-utils';
+import { getOrderItemDisplayName } from '../lib/order-utils';
 import { downloadFile } from '@/lib/download-utils';
 import { InvoiceUploadMenu, type UploadInvoiceStatus } from './invoic-upload-menu';
 
@@ -63,7 +63,11 @@ async function copyToClipboard(text: string): Promise<void> {
     ta.select();
     const ok = document.execCommand('copy');
     document.body.removeChild(ta);
-    ok ? resolve() : reject(new Error('Copy failed'));
+    if (ok) {
+      resolve();
+    } else {
+      reject(new Error('Copy failed'));
+    }
   });
 }
 
@@ -96,6 +100,7 @@ interface ColumnCallbacks {
   onCreateDesign: (order: Order) => void;
   onEditDesign: (order: Order) => void;
   onDownloadDesign: (order: Order) => void;
+  onPreviewDesign: (order: Order) => void;
   creatingDesignOrderId: string | null;
 }
 
@@ -131,6 +136,7 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
     onCreateDesign,
     onEditDesign,
     onDownloadDesign,
+    onPreviewDesign,
     creatingDesignOrderId,
   } = callbacks;
 
@@ -367,19 +373,38 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
         const designs = order.designUrls || [];
         const hasDesign = designs.length > 0;
         const isCreating = creatingDesignOrderId === order._id;
-        const iconColor = hasDesign ? 'text-primary' : 'text-secondary';
+        // Match the photo column's color scheme:
+        // - has design → text-primary (white/primary)
+        // - no design  → text-secondary/50 (dimmed)
+        const iconColor = hasDesign ? 'text-primary' : 'text-secondary/50';
 
         return (
           <div className="flex flex-col items-center gap-1">
-            <span className={`inline-flex items-center justify-center p-2 ${iconColor}`}>
-              {isCreating ? (
-                <LuRefreshCw size={24} className="animate-spin" />
-              ) : hasDesign ? (
-                <LuPalette size={24} />
-              ) : (
-                <LuSparkles size={24} />
-              )}
-            </span>
+            {hasDesign ? (
+              <Tooltip position={tooltipPos} content={t('table.viewDesign')}>
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); onPreviewDesign(order); }}
+                  disabled={isCreating}
+                  className={`inline-flex items-center justify-center p-2 ${iconColor} disabled:opacity-50`}
+                  aria-label={t('table.viewDesign')}
+                >
+                  {isCreating ? (
+                    <LuRefreshCw size={24} className="animate-spin" />
+                  ) : (
+                    <LuPalette size={24} />
+                  )}
+                </button>
+              </Tooltip>
+            ) : (
+              <span className={`inline-flex items-center justify-center p-2 ${iconColor}`}>
+                {isCreating ? (
+                  <LuRefreshCw size={24} className="animate-spin" />
+                ) : (
+                  <LuPalette size={24} />
+                )}
+              </span>
+            )}
             <div className="flex flex-row gap-1">
               {hasDesign ? (
                 <>

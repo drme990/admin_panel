@@ -72,6 +72,7 @@ Create `admin_panel/.env.local`:
 ```env
 BACKEND_URL=http://localhost:3000
 NEXT_PUBLIC_BACKEND_URL=http://localhost:3000
+NEXT_PUBLIC_DESIGN_APP_URL=http://localhost:3001
 ```
 
 ## Scripts

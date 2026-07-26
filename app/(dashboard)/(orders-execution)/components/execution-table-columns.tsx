@@ -94,6 +94,7 @@ interface ColumnCallbacks {
   blockingOrderId: string | null;
   blockedUserIds: Set<string>;
   onCreateDesign: (order: Order) => void;
+  onEditDesign: (order: Order) => void;
   onDownloadDesign: (order: Order) => void;
   creatingDesignOrderId: string | null;
 }
@@ -128,6 +129,7 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
     blockingOrderId,
     blockedUserIds,
     onCreateDesign,
+    onEditDesign,
     onDownloadDesign,
     creatingDesignOrderId,
   } = callbacks;
@@ -398,7 +400,7 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
                       variant="ghost"
                       size="custom"
                       className="h-5 w-5 p-0 text-secondary hover:text-foreground"
-                      onClick={(e) => { e.stopPropagation(); onCreateDesign(order); }}
+                      onClick={(e) => { e.stopPropagation(); onEditDesign(order); }}
                       disabled={isCreating}
                       aria-label={t('table.editDesign')}
                     >

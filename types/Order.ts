@@ -23,6 +23,12 @@ export interface OrderDesignUrl {
   url: string;
   /** Which template variant was used — 'text' (no-image) or 'image' */
   templateType: 'text' | 'image';
+  /**
+   * ID of the design-app template project used to generate this design.
+   * The admin panel opens `{DESIGN_APP_URL}/editor/{templateId}` to
+   * let the admin edit the template.
+   */
+  templateId?: string;
   /** When the design was generated (ISO string) */
   createdAt: string;
 }

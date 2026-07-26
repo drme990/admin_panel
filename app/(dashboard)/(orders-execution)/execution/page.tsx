@@ -969,6 +969,40 @@ export default function ExecutionPage() {
     }
   };
 
+  // ── Edit design ────────────────────────────────────────────────────
+  // Opens the design app's editor in a new tab, loading the template
+  // that was used to generate this order's design. The user is already
+  // logged in via SSO (shared cookie), so no login prompt appears.
+  //
+  // After editing + saving the template in the design app, the admin
+  // returns to this page and clicks the "create" icon again to
+  // re-generate the design with the updated template.
+  const handleEditDesign = (order: Order) => {
+    const designs = order.designUrls || [];
+    if (designs.length === 0) {
+      toast.error(t('table.noDesignToDownload'));
+      return;
+    }
+
+    // Use the most recent design's templateId
+    const latest = designs[designs.length - 1];
+    if (!latest.templateId) {
+      toast.error(t('table.designCreateFailed'));
+      return;
+    }
+
+    const designAppUrl = process.env.NEXT_PUBLIC_DESIGN_APP_URL;
+    if (!designAppUrl) {
+      toast.error(t('table.designCreateFailed'));
+      console.error('NEXT_PUBLIC_DESIGN_APP_URL is not set');
+      return;
+    }
+
+    // Open the editor in a new tab — the SSO cookie authenticates the
+    // user automatically.
+    window.open(`${designAppUrl}/editor/${latest.templateId}`, '_blank');
+  };
+
   const [creatingPaymentLinkOrderId, setCreatingPaymentLinkOrderId] = useState<string | null>(null);
 
   const handleCreatePaymentLink = async (order: Order) => {
@@ -1134,6 +1168,7 @@ export default function ExecutionPage() {
     blockingOrderId,
     blockedUserIds,
     onCreateDesign: handleCreateDesign,
+    onEditDesign: handleEditDesign,
     onDownloadDesign: handleDownloadDesign,
     creatingDesignOrderId,
   });

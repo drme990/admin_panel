@@ -20,6 +20,7 @@ import {
   LuBan,
   LuFileText,
   LuCircleAlert,
+  LuSparkles,
 } from 'react-icons/lu';
 import { FaWhatsapp } from 'react-icons/fa6';
 
@@ -92,6 +93,9 @@ interface ColumnCallbacks {
   uploadingInvoiceOrderId: string | null;
   blockingOrderId: string | null;
   blockedUserIds: Set<string>;
+  onCreateDesign: (order: Order) => void;
+  onDownloadDesign: (order: Order) => void;
+  creatingDesignOrderId: string | null;
 }
 
 export function useExecutionColumns(callbacks: ColumnCallbacks) {
@@ -123,6 +127,9 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
     uploadingInvoiceOrderId,
     blockingOrderId,
     blockedUserIds,
+    onCreateDesign,
+    onDownloadDesign,
+    creatingDesignOrderId,
   } = callbacks;
 
   const columns = [
@@ -354,48 +361,69 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
     },
     {
       header: t('table.design'),
-      accessor: () => (
-        <div className="flex flex-col items-center gap-1">
-          <span className="inline-flex items-center justify-center p-2 text-primary">
-            <LuPalette size={24} />
-          </span>
-          <div className="flex flex-row gap-1">
-            <Tooltip position={tooltipPos} content={t('table.uploadDesign')}>
-              <Button
-                variant="ghost"
-                size="custom"
-                className="h-5 w-5 p-0 text-secondary hover:text-foreground"
-                disabled
-                aria-label={t('table.uploadDesign')}
-              >
-                <LuUpload size={12} />
-              </Button>
-            </Tooltip>
-            <Tooltip position={tooltipPos} content={t('table.downloadDesign')}>
-              <Button
-                variant="ghost"
-                size="custom"
-                className="h-5 w-5 p-0 text-secondary hover:text-foreground"
-                disabled
-                aria-label={t('table.downloadDesign')}
-              >
-                <LuDownload size={12} />
-              </Button>
-            </Tooltip>
-            <Tooltip position={tooltipPos} content={t('table.editDesign')}>
-              <Button
-                variant="ghost"
-                size="custom"
-                className="h-5 w-5 p-0 text-secondary hover:text-foreground"
-                disabled
-                aria-label={t('table.editDesign')}
-              >
-                <LuPencil size={12} />
-              </Button>
-            </Tooltip>
+      accessor: (order: Order) => {
+        const designs = order.designUrls || [];
+        const hasDesign = designs.length > 0;
+        const isCreating = creatingDesignOrderId === order._id;
+        const iconColor = hasDesign ? 'text-primary' : 'text-secondary';
+
+        return (
+          <div className="flex flex-col items-center gap-1">
+            <span className={`inline-flex items-center justify-center p-2 ${iconColor}`}>
+              {isCreating ? (
+                <LuRefreshCw size={24} className="animate-spin" />
+              ) : hasDesign ? (
+                <LuPalette size={24} />
+              ) : (
+                <LuSparkles size={24} />
+              )}
+            </span>
+            <div className="flex flex-row gap-1">
+              {hasDesign ? (
+                <>
+                  <Tooltip position={tooltipPos} content={t('table.downloadDesign')}>
+                    <Button
+                      variant="ghost"
+                      size="custom"
+                      className="h-5 w-5 p-0 text-secondary hover:text-foreground"
+                      onClick={(e) => { e.stopPropagation(); onDownloadDesign(order); }}
+                      disabled={isCreating}
+                      aria-label={t('table.downloadDesign')}
+                    >
+                      <LuDownload size={12} />
+                    </Button>
+                  </Tooltip>
+                  <Tooltip position={tooltipPos} content={t('table.editDesign')}>
+                    <Button
+                      variant="ghost"
+                      size="custom"
+                      className="h-5 w-5 p-0 text-secondary hover:text-foreground"
+                      onClick={(e) => { e.stopPropagation(); onCreateDesign(order); }}
+                      disabled={isCreating}
+                      aria-label={t('table.editDesign')}
+                    >
+                      <LuPencil size={12} />
+                    </Button>
+                  </Tooltip>
+                </>
+              ) : (
+                <Tooltip position={tooltipPos} content={t('table.createDesign')}>
+                  <Button
+                    variant="ghost"
+                    size="custom"
+                    className="h-5 w-5 p-0 text-secondary hover:text-foreground"
+                    onClick={(e) => { e.stopPropagation(); onCreateDesign(order); }}
+                    disabled={isCreating}
+                    aria-label={t('table.createDesign')}
+                  >
+                    <LuSparkles size={12} />
+                  </Button>
+                </Tooltip>
+              )}
+            </div>
           </div>
-        </div>
-      ),
+        );
+      },
       className: 'min-w-16',
     },
     {

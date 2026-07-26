@@ -10,6 +10,23 @@ export type OrderStatus =
 
 export type InvoiceStatus = 'confirmed' | 'waiting' | 'pending' | 'rejected';
 
+/**
+ * A generated design image for an order, one per product that had a
+ * matching template. Populated by the design-app callback flow.
+ */
+export interface OrderDesignUrl {
+  /** Backend product ID (string ObjectId) this design was generated for */
+  productId: string;
+  /** Product name snapshot (for display without a DB lookup) */
+  productName?: string;
+  /** Public R2 URL of the generated JPG */
+  url: string;
+  /** Which template variant was used — 'text' (no-image) or 'image' */
+  templateType: 'text' | 'image';
+  /** When the design was generated (ISO string) */
+  createdAt: string;
+}
+
 export type PaymentMethod =
   | 'card'
   | 'wallet'
@@ -150,6 +167,8 @@ export interface Order {
     value: number;
     currency?: string;
   }>;
+  /** Generated design images — one entry per product with a template */
+  designUrls?: OrderDesignUrl[];
   statusUpdateTime: string;
   // Terms
   termsAgreedAt?: string;

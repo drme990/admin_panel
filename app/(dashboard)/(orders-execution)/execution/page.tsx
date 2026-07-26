@@ -74,6 +74,7 @@ export default function ExecutionPage() {
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [uploadingPhotoOrderId, setUploadingPhotoOrderId] = useState<string | null>(null);
   const [uploadingInvoiceOrderId, setUploadingInvoiceOrderId] = useState<string | null>(null);
+  const [creatingDesignOrderId, setCreatingDesignOrderId] = useState<string | null>(null);
   const [isCreateManualOrderModalOpen, setIsCreateManualOrderModalOpen] = useState(false);
   const { confirm, modalProps } = useConfirmModal();
 
@@ -900,6 +901,74 @@ export default function ExecutionPage() {
     }
   };
 
+  // ── Design generation ──────────────────────────────────────────────
+  // Calls the backend, which calls the design app callback to render
+  // the template + upload the JPG to R2. The backend stores the URL on
+  // the order's designUrls array and returns the results. We then
+  // refetch the order so the table updates (icon switches from
+  // "create" to "download + edit").
+  const handleCreateDesign = async (order: Order) => {
+    setCreatingDesignOrderId(order._id);
+    try {
+      const res = await fetch(`/api/orders/${order._id}/generate-design`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      const data = await res.json();
+      if (!data.success) {
+        throw new Error(data.error?.message || data.error || 'Failed to create design');
+      }
+
+      const generated = data.data?.generated || [];
+      const skipped = data.data?.skipped || [];
+
+      if (generated.length === 0) {
+        // All products were skipped — no template assigned
+        toast.error(t('table.designCreateNoTemplate'));
+      } else if (skipped.length > 0) {
+        // Some products had templates, some didn't
+        toast.info(t('table.designCreatePartial'));
+      } else {
+        toast.success(t('table.designCreated'));
+      }
+
+      // Refetch the order so designUrls is fresh in the table
+      const updatedOrder = await fetchOrderDetails(order._id, false);
+      if (updatedOrder) {
+        // Update the order in the local list so the icon switches
+        // immediately without a full refetch.
+        dispatch({
+          type: 'UPDATE_ORDER_IN_LIST',
+          payload: {
+            orderId: order._id,
+            updates: { designUrls: updatedOrder.designUrls },
+          },
+        });
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : t('table.designCreateFailed');
+      toast.error(message);
+    } finally {
+      setCreatingDesignOrderId(null);
+    }
+  };
+
+  const handleDownloadDesign = async (order: Order) => {
+    const designs = order.designUrls || [];
+    if (designs.length === 0) {
+      toast.error(t('table.noDesignToDownload'));
+      return;
+    }
+    // Download the most recent design
+    const latest = designs[designs.length - 1];
+    try {
+      await downloadFile(latest.url, `design-${order.orderNumber}`);
+    } catch (error) {
+      console.error('Error downloading design:', error);
+      toast.error(t('messages.downloadFailed') || 'Failed to download design');
+    }
+  };
+
   const [creatingPaymentLinkOrderId, setCreatingPaymentLinkOrderId] = useState<string | null>(null);
 
   const handleCreatePaymentLink = async (order: Order) => {
@@ -1064,6 +1133,9 @@ export default function ExecutionPage() {
     uploadingInvoiceOrderId,
     blockingOrderId,
     blockedUserIds,
+    onCreateDesign: handleCreateDesign,
+    onDownloadDesign: handleDownloadDesign,
+    creatingDesignOrderId,
   });
 
   return (

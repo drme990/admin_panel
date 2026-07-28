@@ -100,7 +100,7 @@
       "designCreateNoTemplate": "No template assigned to this product",
       "designCreatePartial": "Some designs were created, but some products have no template",
       "designCreateAllSkipped": "Could not create designs: {reason}",
-      "designReasonNoTemplate": "No template assigned to this product",
+      "designReasonNoTemplate": "No matching template for this product (image template for orders with a photo, or text template for orders without)",
       "designReasonNoBookingProduct": "Product is not imported in the design app",
       "designReasonTemplateNotFound": "The template assigned to this product was deleted",
       "designReasonDesignAppNotConfigured": "Design app URL is not configured",

@@ -100,7 +100,7 @@
       "designCreateNoTemplate": "لا يوجد قالب لهذا المنتج",
       "designCreatePartial": "تم إنشاء بعض التصاميم، ولكن بعض المنتجات ليس لها قوالب",
       "designCreateAllSkipped": "تعذّر إنشاء التصاميم: {reason}",
-      "designReasonNoTemplate": "لا يوجد قالب لهذا المنتج",
+      "designReasonNoTemplate": "لا يوجد قالب مناسب لهذا المنتج (قالب صوري للطلبات بصورة، أو قالب نصي للطلبات بدون صورة)",
       "designReasonNoBookingProduct": "المنتج غير مستورد في تطبيق التصميم",
       "designReasonTemplateNotFound": "تم حذف القالب المرتبط بهذا المنتج",
       "designReasonDesignAppNotConfigured": "لم يتم ضبط رابط تطبيق التصميم",

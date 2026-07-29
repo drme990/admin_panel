@@ -831,13 +831,32 @@ export default function ExecutionPage() {
   };
 
   const handleCopyPhotoUrl = async (order: Order) => {
-    const photoUrl = order.reservationData?.find((f) => f.key === 'photo')?.value;
-    if (!photoUrl) {
+    const photoValue = order.reservationData?.find((f) => f.key === 'photo')?.value;
+    if (!photoValue) {
       toast.error(t('editOrder.noPhotoToShare'));
       return;
     }
+
+    // Parse JSON array format (multi-image) or use as single URL (legacy)
+    const photoUrls: string[] = (() => {
+      try {
+        const parsed = JSON.parse(photoValue);
+        if (Array.isArray(parsed)) {
+          return parsed.filter((v): v is string => typeof v === 'string' && v.length > 0);
+        }
+      } catch {
+        // Not JSON — treat as a single URL (legacy)
+      }
+      return [photoValue];
+    })();
+
+    if (photoUrls.length === 0) {
+      toast.error(t('editOrder.noPhotoToShare'));
+      return;
+    }
+
     try {
-      await navigator.clipboard.writeText(photoUrl);
+      await navigator.clipboard.writeText(photoUrls.join('\n'));
       toast.success(t('editOrder.photoUrlCopied'));
     } catch {
       toast.error(t('editOrder.failed'));

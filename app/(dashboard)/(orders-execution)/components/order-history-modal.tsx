@@ -124,25 +124,44 @@ function parseInvoiceFieldValue(value: string | null): Record<string, unknown> |
   return null;
 }
 
+function parsePhotoUrls(value: string | null): string[] {
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    if (Array.isArray(parsed)) {
+      return parsed.filter((v): v is string => typeof v === 'string' && v.length > 0);
+    }
+  } catch {
+    // Not JSON — treat as a single URL (legacy)
+  }
+  return isImageUrl(value) ? [value] : [];
+}
+
 function PhotoValue({ value, onClick }: { value: string | null; onClick?: (url: string) => void }) {
   if (!value) return <span className="text-secondary">-</span>;
-  if (isImageUrl(value)) {
+  const urls = parsePhotoUrls(value);
+  if (urls.length > 0) {
     return (
-      <button
-        type="button"
-        onClick={() => onClick?.(value)}
-        className="block group cursor-pointer"
-      >
-        {/* eslint-disable-next-line @next/next/no-img-element -- dynamic URL with onError hide fallback */}
-        <img
-          src={value}
-          alt="Photo"
-          className="w-24 h-24 object-cover rounded-lg border border-stroke group-hover:ring-2 ring-primary transition-all"
-          onError={(e) => {
-            (e.target as HTMLImageElement).style.display = 'none';
-          }}
-        />
-      </button>
+      <div className="flex flex-wrap gap-2">
+        {urls.map((url, i) => (
+          <button
+            key={i}
+            type="button"
+            onClick={() => onClick?.(url)}
+            className="block group cursor-pointer"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element -- dynamic URL with onError hide fallback */}
+            <img
+              src={url}
+              alt={`Photo ${i + 1}`}
+              className="w-24 h-24 object-cover rounded-lg border border-stroke group-hover:ring-2 ring-primary transition-all"
+              onError={(e) => {
+                (e.target as HTMLImageElement).style.display = 'none';
+              }}
+            />
+          </button>
+        ))}
+      </div>
     );
   }
   return <span className="text-foreground break-all">{value.length > 40 ? `${value.slice(0, 40)}...` : value}</span>;

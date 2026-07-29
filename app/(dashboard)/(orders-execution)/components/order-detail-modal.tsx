@@ -754,29 +754,55 @@ export default function OrderDetailModal({
                         const values = getReservationValues(field.value);
 
                         if (field.key === 'photo') {
+                          const photoUrls = (() => {
+                            try {
+                              const parsed = JSON.parse(field.value);
+                              if (Array.isArray(parsed)) {
+                                return parsed.filter(
+                                  (v): v is string =>
+                                    typeof v === 'string' && v.length > 0,
+                                );
+                              }
+                            } catch {
+                              // Not JSON — treat as a single URL (legacy)
+                            }
+                            return field.value ? [field.value] : [];
+                          })();
+
+                          if (photoUrls.length === 0) return null;
+
                           return (
                             <div
                               key={`${field.key}-${index}`}
-                              className="flex flex-col items-center gap-3 p-4 rounded-lg bg-background border border-stroke"
+                              className="flex flex-col gap-3 p-4 rounded-lg bg-background border border-stroke"
                             >
-                              <div className="overflow-hidden">
-                                <Image
-                                  src={field.value}
-                                  alt={getReservationLabel(field.label)}
-                                  className="w-full max-w-50 h-auto object-cover rounded"
-                                  width={200}
-                                  height={96}
-                                />
+                              <div className="flex flex-wrap gap-3">
+                                {photoUrls.map((url, photoIndex) => (
+                                  <div
+                                    key={`${field.key}-${index}-${photoIndex}`}
+                                    className="flex flex-col items-center gap-2"
+                                  >
+                                    <div className="overflow-hidden">
+                                      <Image
+                                        src={url}
+                                        alt={`${getReservationLabel(field.label)} ${photoIndex + 1}`}
+                                        className="w-full max-w-50 h-auto object-cover rounded"
+                                        width={200}
+                                        height={96}
+                                      />
+                                    </div>
+                                    <a
+                                      href={url}
+                                      download
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="inline-flex items-center px-3 py-1 rounded-md text-sm font-medium bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                                    >
+                                      Download Image
+                                    </a>
+                                  </div>
+                                ))}
                               </div>
-                              <a
-                                href={field.value}
-                                download
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center px-3 py-1 rounded-md text-sm font-medium bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
-                              >
-                                Download Image
-                              </a>
                             </div>
                           );
                         }

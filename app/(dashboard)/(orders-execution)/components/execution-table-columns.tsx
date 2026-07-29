@@ -287,8 +287,23 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
     {
       header: t('table.photo'),
       accessor: (order: Order) => {
-        const photoUrl = getReservationValue(order, 'photo');
-        const hasPhoto = Boolean(photoUrl);
+        const rawPhotoValue = getReservationValue(order, 'photo');
+        // Parse JSON array format (multi-image) or use as single URL (legacy)
+        const photoUrls: string[] = (() => {
+          if (!rawPhotoValue) return [];
+          try {
+            const parsed = JSON.parse(rawPhotoValue);
+            if (Array.isArray(parsed)) {
+              return parsed.filter((v): v is string => typeof v === 'string' && v.length > 0);
+            }
+          } catch {
+            // Not JSON — treat as a single URL (legacy)
+          }
+          return [rawPhotoValue];
+        })();
+        const photoUrl = photoUrls[0] || '';
+        const hasPhoto = photoUrls.length > 0;
+        const photoCount = photoUrls.length;
         const partialPaid = order.status === 'partial-paid';
         const iconColor = hasPhoto
           ? (partialPaid ? 'text-orange-600 dark:text-orange-400' : 'text-primary')
@@ -297,15 +312,20 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
         return (
           <div className="flex flex-col items-center gap-1">
             {hasPhoto ? (
-              <Tooltip position={tooltipPos} content={t('table.viewPhoto')}>
+              <Tooltip position={tooltipPos} content={photoCount > 1 ? t('table.viewPhoto') + ` (${photoCount})` : t('table.viewPhoto')}>
                 <a
                   href={photoUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={(e) => e.stopPropagation()}
-                  className={`inline-flex items-center justify-center p-2 ${iconColor}`}
+                  className={`inline-flex items-center justify-center p-2 relative ${iconColor}`}
                 >
                   <LuImage size={24} />
+                  {photoCount > 1 && (
+                    <span className="absolute -top-1 -right-1 bg-primary text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center">
+                      {photoCount}
+                    </span>
+                  )}
                 </a>
               </Tooltip>
             ) : (

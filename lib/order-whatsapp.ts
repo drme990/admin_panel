@@ -247,8 +247,23 @@ export function buildOrderWhatsappMessage(data: OrderWhatsappData): string {
 
   // Add photo if present
   if (photo) {
-    lines.push(`🤳🏻صورة: ${photo}`);
-    lines.push(DIVIDER);
+    const photoUrls: string[] = (() => {
+      try {
+        const parsed = JSON.parse(photo);
+        if (Array.isArray(parsed)) {
+          return parsed.filter((v): v is string => typeof v === 'string' && v.length > 0);
+        }
+      } catch {
+        // Not JSON — treat as a single URL (legacy)
+      }
+      return photo ? [photo] : [];
+    })();
+
+    if (photoUrls.length > 0) {
+      const label = photoUrls.length > 1 ? 'صور' : 'صورة';
+      lines.push(`🤳🏻${label}: ${photoUrls.join(' | ')}`);
+      lines.push(DIVIDER);
+    }
   }
 
   lines.push(remainingLine);

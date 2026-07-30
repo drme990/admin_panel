@@ -837,6 +837,54 @@ export default function OrderDetailModal({
                     </div>
                   </div>
                 ) : null}
+
+                {/* Design images */}
+                {order.designUrls && order.designUrls.length > 0 ? (
+                  <div>
+                    <h3 className="font-semibold mb-3">
+                      {t('reservationData.designs') || 'Designs'}
+                    </h3>
+                    <div className="flex flex-col gap-3 p-4 rounded-lg bg-background border border-stroke">
+                      <div className="flex flex-wrap gap-3">
+                        {order.designUrls.map((design, designIndex) => {
+                          const variantLabel =
+                            design.templateType === 'image'
+                              ? t('reservationData.designImageVariant') || 'Image'
+                              : t('reservationData.designTextVariant') || 'Text';
+                          return (
+                            <div
+                              key={`design-${designIndex}`}
+                              className="flex flex-col items-center gap-2"
+                            >
+                              <div className="overflow-hidden">
+                                <Image
+                                  src={`${design.url}${design.url.includes('?') ? '&' : '?'}v=${now}`}
+                                  alt={`Design ${designIndex + 1} (${variantLabel})`}
+                                  className="w-full max-w-50 h-auto object-cover rounded"
+                                  width={200}
+                                  height={96}
+                                  unoptimized
+                                />
+                              </div>
+                              <span className="text-xs text-secondary">
+                                {variantLabel}
+                              </span>
+                              <a
+                                href={`${design.url}${design.url.includes('?') ? '&' : '?'}v=${now}`}
+                                download
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center px-3 py-1 rounded-md text-sm font-medium bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                              >
+                                Download Design
+                              </a>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
               </>
             );
           })()}

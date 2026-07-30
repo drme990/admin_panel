@@ -33,7 +33,7 @@ import OrderDetailModal from '../components/order-detail-modal';
 import ChangeStatusModal from '../components/change-status-modal';
 import CreateManualOrderModal from '../components/create-manual-order-modal';
 import OrderStats from '../components/order-stats';
-import DesignPreviewModal from '../components/design-preview-modal';
+import OrderGalleryModal from '../components/order-gallery-modal';
 import useOrderPage from '../lib/use-order-page';
 import {
   getRelativeIsoDate,
@@ -76,7 +76,7 @@ export default function ExecutionPage() {
   const [uploadingPhotoOrderId, setUploadingPhotoOrderId] = useState<string | null>(null);
   const [uploadingInvoiceOrderId, setUploadingInvoiceOrderId] = useState<string | null>(null);
   const [creatingDesignOrderId, setCreatingDesignOrderId] = useState<string | null>(null);
-  const [designPreviewUrl, setDesignPreviewUrl] = useState<string | null>(null);
+  const [photoPreviewOrder, setPhotoPreviewOrder] = useState<Order | null>(null);
   const [designPreviewOrder, setDesignPreviewOrder] = useState<Order | null>(null);
   const [isCreateManualOrderModalOpen, setIsCreateManualOrderModalOpen] = useState(false);
   const { confirm, modalProps } = useConfirmModal();
@@ -810,13 +810,28 @@ export default function ExecutionPage() {
 
     try {
       setUploadingPhotoOrderId(order._id);
-      const oldPhotoUrl = order.reservationData?.find((f) => f.key === 'photo')?.value;
+      const oldPhotoValue = order.reservationData?.find((f) => f.key === 'photo')?.value;
       const photoUrl = await uploadImageToR2(file);
       await updateOrder(order._id, { photo: photoUrl });
 
-      if (oldPhotoUrl) {
-        deleteOldImage(oldPhotoUrl).catch((error: unknown) => {
-          console.warn('Failed to delete old customer image:', error);
+      // Delete old images from R2 (handles both JSON array and legacy single URL)
+      if (oldPhotoValue) {
+        const oldUrls: string[] = (() => {
+          try {
+            const parsed = JSON.parse(oldPhotoValue);
+            if (Array.isArray(parsed)) {
+              return parsed.filter((v): v is string => typeof v === 'string' && v.length > 0);
+            }
+          } catch {
+            // Not JSON — treat as a single URL (legacy)
+          }
+          return oldPhotoValue ? [oldPhotoValue] : [];
+        })();
+
+        oldUrls.forEach((url) => {
+          deleteOldImage(url).catch((error: unknown) => {
+            console.warn('Failed to delete old customer image:', error);
+          });
         });
       }
     } catch (error) {
@@ -1035,17 +1050,18 @@ export default function ExecutionPage() {
   // baked in as concrete text/image layers. Editing it doesn't affect
   // the template or future orders. The template only changes when the
   // user explicitly edits it in the design app's templates section.
-  const handleEditDesign = (order: Order) => {
+  const handleEditDesign = (order: Order, projectIdOverride?: string) => {
     const designs = order.designUrls || [];
     if (designs.length === 0) {
       toast.error(t('table.noDesignToDownload'));
       return;
     }
 
-    // Use the most recent design's projectId (the design instance, not
-    // the template)
+    // Use the provided projectId (from gallery selection) or fall back to
+    // the most recent design's projectId (the design instance, not the template)
     const latest = designs[designs.length - 1];
-    if (!latest.projectId) {
+    const projectId = projectIdOverride || latest.projectId;
+    if (!projectId) {
       toast.error(t('table.designCreateFailed'));
       return;
     }
@@ -1060,7 +1076,7 @@ export default function ExecutionPage() {
     // Open the editor in a new tab — the SSO cookie authenticates the
     // user automatically. The URL points to the design instance, so
     // the admin edits THIS order's design, not the template.
-    window.open(`${designAppUrl}/editor/${latest.projectId}`, '_blank');
+    window.open(`${designAppUrl}/editor/${projectId}`, '_blank');
   };
 
   const [creatingPaymentLinkOrderId, setCreatingPaymentLinkOrderId] = useState<string | null>(null);
@@ -1233,9 +1249,12 @@ export default function ExecutionPage() {
     onPreviewDesign: (order) => {
       const designs = order.designUrls || [];
       if (designs.length === 0) return;
-      const latest = designs[designs.length - 1];
       setDesignPreviewOrder(order);
-      setDesignPreviewUrl(latest.url);
+    },
+    onPreviewPhoto: (order) => {
+      const photoField = order.reservationData?.find((f) => f.key === 'photo');
+      if (!photoField?.value) return;
+      setPhotoPreviewOrder(order);
     },
     creatingDesignOrderId,
   });
@@ -1744,15 +1763,31 @@ export default function ExecutionPage() {
         onChange={handleInvoiceFileChange}
       />
 
-      {/* Design preview lightbox */}
-      <DesignPreviewModal
-        url={designPreviewUrl}
-        orderNumber={designPreviewOrder?.orderNumber}
+      {/* Photo gallery lightbox (customer photos only) */}
+      <OrderGalleryModal
+        key={`photo-${photoPreviewOrder?._id ?? 'closed'}`}
+        order={photoPreviewOrder}
+        mode="photo"
         onClose={() => {
-          setDesignPreviewUrl(null);
+          setPhotoPreviewOrder(null);
+        }}
+      />
+
+      {/* Design gallery lightbox (designs only) */}
+      <OrderGalleryModal
+        key={`design-${designPreviewOrder?._id ?? 'closed'}`}
+        order={designPreviewOrder}
+        mode="design"
+        onClose={() => {
           setDesignPreviewOrder(null);
         }}
-        onEdit={designPreviewOrder ? () => handleEditDesign(designPreviewOrder) : undefined}
+        onEditDesign={designPreviewOrder ? (item) => {
+          if (item.kind === 'design' && item.projectId) {
+            handleEditDesign(designPreviewOrder, item.projectId);
+          } else {
+            handleEditDesign(designPreviewOrder);
+          }
+        } : undefined}
       />
     </div>
   );

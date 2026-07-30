@@ -89,6 +89,8 @@
       "copyItems": "Copy Items",
       "duaa": "Duaa",
       "design": "Design",
+      "designTextVariant": "Text",
+      "designImageVariant": "Image",
       "uploadDesign": "Upload Design",
       "downloadDesign": "Download Design",
       "editDesign": "Edit Design",
@@ -367,7 +369,10 @@
       }
     },
     "reservationData": {
-      "title": "Reservation Data"
+      "title": "Reservation Data",
+      "designs": "Designs",
+      "designTextVariant": "Text",
+      "designImageVariant": "Image"
     },
     "editOrder": {
       "title": "Edit Order",
@@ -564,7 +569,10 @@
     },
     "reservationData": {
       "title": "Reservation Data",
-      "more": "more"
+      "more": "more",
+      "designs": "Designs",
+      "designTextVariant": "Text",
+      "designImageVariant": "Image"
     },
     "loadingOrderDetails": "Loading order details...",
     "detailsLoadFailed": "Failed to load order details",

@@ -101,6 +101,7 @@ interface ColumnCallbacks {
   onEditDesign: (order: Order) => void;
   onDownloadDesign: (order: Order) => void;
   onPreviewDesign: (order: Order) => void;
+  onPreviewPhoto: (order: Order) => void;
   creatingDesignOrderId: string | null;
 }
 
@@ -137,6 +138,7 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
     onEditDesign,
     onDownloadDesign,
     onPreviewDesign,
+    onPreviewPhoto,
     creatingDesignOrderId,
   } = callbacks;
 
@@ -313,12 +315,11 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
           <div className="flex flex-col items-center gap-1">
             {hasPhoto ? (
               <Tooltip position={tooltipPos} content={photoCount > 1 ? t('table.viewPhoto') + ` (${photoCount})` : t('table.viewPhoto')}>
-                <a
-                  href={photoUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={(e) => e.stopPropagation()}
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); onPreviewPhoto(order); }}
                   className={`inline-flex items-center justify-center p-2 relative ${iconColor}`}
+                  aria-label={t('table.viewPhoto')}
                 >
                   <LuImage size={24} />
                   {photoCount > 1 && (
@@ -326,7 +327,7 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
                       {photoCount}
                     </span>
                   )}
-                </a>
+                </button>
               </Tooltip>
             ) : (
               <span className={`inline-flex items-center justify-center p-2 ${iconColor}`}>

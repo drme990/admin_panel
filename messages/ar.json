@@ -89,6 +89,8 @@
       "copyItems": "نسخ المنتجات",
       "duaa": "الدعاء",
       "design": "التصميم",
+      "designTextVariant": "نص",
+      "designImageVariant": "صورة",
       "uploadDesign": "رفع التصميم",
       "downloadDesign": "تحميل التصميم",
       "editDesign": "تعديل التصميم",
@@ -366,7 +368,10 @@
       }
     },
     "reservationData": {
-      "title": "بيانات الحجز"
+      "title": "بيانات الحجز",
+      "designs": "التصاميم",
+      "designTextVariant": "نص",
+      "designImageVariant": "صورة"
     },
     "editOrder": {
       "title": "تعديل الطلب",
@@ -563,7 +568,10 @@
     },
     "reservationData": {
       "title": "بيانات الحجز",
-      "more": "إضافية"
+      "more": "إضافية",
+      "designs": "التصاميم",
+      "designTextVariant": "نص",
+      "designImageVariant": "صورة"
     },
     "loadingOrderDetails": "جارٍ تحميل تفاصيل الطلب...",
     "detailsLoadFailed": "فشل تحميل تفاصيل الطلب",

@@ -40,14 +40,16 @@ function getReservationValue(order: Order | null, key: string): string {
 function normalizePresetValue(
   storedValue: string,
   preset: { options?: Array<{ ar: string; en: string }> } | undefined,
-  locale: string,
 ): string {
   if (!storedValue || !preset?.options) return '';
   const matched = preset.options.find(
     (o) => o.ar === storedValue || o.en === storedValue,
   );
   if (!matched) return '';
-  return locale === 'ar' ? matched.ar : matched.en;
+  // Always return the Arabic value — it's the canonical value stored in the DB.
+  // The design app's renderer reads these fields (intention, gender, isAlive)
+  // from the DB and expects Arabic strings.
+  return matched.ar;
 }
 
 export default function EditOrderModal({
@@ -94,9 +96,9 @@ export default function EditOrderModal({
       const genderPreset = RESERVATION_FIELD_PRESETS.find((p) => p.key === 'gender');
       const isAlivePreset = RESERVATION_FIELD_PRESETS.find((p) => p.key === 'isAlive');
       const intentionPreset = RESERVATION_FIELD_PRESETS.find((p) => p.key === 'intention');
-      setGender(normalizePresetValue(getReservationValue(order, 'gender'), genderPreset, locale));
-      setIsAlive(normalizePresetValue(getReservationValue(order, 'isAlive'), isAlivePreset, locale));
-      setIntention(normalizePresetValue(getReservationValue(order, 'intention'), intentionPreset, locale));
+      setGender(normalizePresetValue(getReservationValue(order, 'gender'), genderPreset));
+      setIsAlive(normalizePresetValue(getReservationValue(order, 'isAlive'), isAlivePreset));
+      setIntention(normalizePresetValue(getReservationValue(order, 'intention'), intentionPreset));
     }
   }
 
@@ -264,11 +266,11 @@ export default function EditOrderModal({
               const isAlivePreset = RESERVATION_FIELD_PRESETS.find((p) => p.key === 'isAlive');
               const genderOptions = genderPreset?.options?.map((o) => ({
                 label: locale === 'ar' ? o.ar : o.en,
-                value: locale === 'ar' ? o.ar : o.en,
+                value: o.ar,
               })) || [];
               const isAliveOptions = isAlivePreset?.options?.map((o) => ({
                 label: locale === 'ar' ? o.ar : o.en,
-                value: locale === 'ar' ? o.ar : o.en,
+                value: o.ar,
               })) || [];
               return (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 border-t border-stroke">
@@ -310,7 +312,7 @@ export default function EditOrderModal({
               const intentionPreset = RESERVATION_FIELD_PRESETS.find((p) => p.key === 'intention');
               const intentionOptions = intentionPreset?.options?.map((o) => ({
                 label: locale === 'ar' ? o.ar : o.en,
-                value: locale === 'ar' ? o.ar : o.en,
+                value: o.ar,
               })) || [];
               return (
                 <Dropdown

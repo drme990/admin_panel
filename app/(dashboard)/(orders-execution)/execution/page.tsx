@@ -1076,7 +1076,7 @@ export default function ExecutionPage() {
     // Open the editor in a new tab — the SSO cookie authenticates the
     // user automatically. The URL points to the design instance, so
     // the admin edits THIS order's design, not the template.
-    window.open(`${designAppUrl}/editor/${projectId}`, '_blank');
+    window.open(`${designAppUrl}/editor/d/${projectId}`, '_blank');
   };
 
   const [creatingPaymentLinkOrderId, setCreatingPaymentLinkOrderId] = useState<string | null>(null);

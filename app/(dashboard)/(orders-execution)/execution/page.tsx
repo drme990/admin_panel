@@ -76,6 +76,7 @@ export default function ExecutionPage() {
   const [uploadingPhotoOrderId, setUploadingPhotoOrderId] = useState<string | null>(null);
   const [uploadingInvoiceOrderId, setUploadingInvoiceOrderId] = useState<string | null>(null);
   const [creatingDesignOrderId, setCreatingDesignOrderId] = useState<string | null>(null);
+  const [downloadingDesignOrderId, setDownloadingDesignOrderId] = useState<string | null>(null);
   const [photoPreviewOrder, setPhotoPreviewOrder] = useState<Order | null>(null);
   const [designPreviewOrder, setDesignPreviewOrder] = useState<Order | null>(null);
   const [isCreateManualOrderModalOpen, setIsCreateManualOrderModalOpen] = useState(false);
@@ -1022,6 +1023,7 @@ export default function ExecutionPage() {
   };
 
   const handleDownloadDesign = async (order: Order) => {
+    if (downloadingDesignOrderId) return;
     const designs = order.designUrls || [];
     if (designs.length === 0) {
       toast.error(t('table.noDesignToDownload'));
@@ -1029,6 +1031,7 @@ export default function ExecutionPage() {
     }
     // Download the most recent design
     const latest = designs[designs.length - 1];
+    setDownloadingDesignOrderId(order._id);
     try {
       // Cache-bust the URL — the same key gets overwritten when the
       // admin edits + re-renders, so the CDN may serve a stale copy.
@@ -1037,6 +1040,8 @@ export default function ExecutionPage() {
     } catch (error) {
       console.error('Error downloading design:', error);
       toast.error(t('messages.downloadFailed') || 'Failed to download design');
+    } finally {
+      setDownloadingDesignOrderId(null);
     }
   };
 
@@ -1077,6 +1082,76 @@ export default function ExecutionPage() {
     // user automatically. The URL points to the design instance, so
     // the admin edits THIS order's design, not the template.
     window.open(`${designAppUrl}/editor/d/${projectId}`, '_blank');
+  };
+
+  // ── Regenerate design ──────────────────────────────────────────────
+  // Deletes all existing designs for the order (R2 images + design app
+  // projects + thumbnails) and generates fresh ones. Used when the admin
+  // wants to start over — e.g. the template was updated or the order
+  // data changed after the initial generation.
+  const handleRegenerateDesign = async (order: Order) => {
+    setCreatingDesignOrderId(order._id);
+    try {
+      // 1. Delete existing designs (R2 images + design app projects)
+      const designs = order.designUrls || [];
+      if (designs.length > 0) {
+        const deleteRes = await fetch(`/api/orders/${order._id}/designs`, {
+          method: 'DELETE',
+          credentials: 'include',
+        });
+        const deleteData = await deleteRes.json();
+        if (!deleteData.success) {
+          throw new Error(t('table.regenerateDesignFailed'));
+        }
+      }
+
+      // 2. Generate new designs (same flow as handleCreateDesign)
+      const res = await fetch(`/api/orders/${order._id}/generate-design`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      const data = await res.json();
+      if (!data.success) {
+        const code = data.error?.code || 'internalError';
+        const reasonKey = designReasonKey[code] || 'table.designReasonUnknown';
+        throw new Error(t(reasonKey));
+      }
+
+      const generated = data.data?.generated || [];
+      const skipped: Array<{ reasonCode?: string; reason?: string; productName?: string }> =
+        data.data?.skipped || [];
+
+      if (generated.length === 0 && skipped.length === 0) {
+        toast.error(t('table.designCreateFailed'));
+      } else if (generated.length === 0) {
+        const firstSkip = skipped[0];
+        const reasonCode = firstSkip?.reasonCode || 'unknown';
+        const reasonKey = designReasonKey[reasonCode] || 'table.designReasonUnknown';
+        const localizedReason = t(reasonKey);
+        toast.error(t('table.designCreateAllSkipped', { reason: localizedReason }));
+      } else if (skipped.length > 0) {
+        toast.info(t('table.designCreatePartial'));
+      } else {
+        toast.success(t('table.designRegenerated'));
+      }
+
+      // Refetch the order so designUrls is fresh in the table
+      const updatedOrder = await fetchOrderDetails(order._id, false);
+      if (updatedOrder) {
+        dispatch({
+          type: 'UPDATE_ORDER_IN_LIST',
+          payload: {
+            orderId: order._id,
+            updates: { designUrls: updatedOrder.designUrls },
+          },
+        });
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : t('table.regenerateDesignFailed');
+      toast.error(message);
+    } finally {
+      setCreatingDesignOrderId(null);
+    }
   };
 
   const [creatingPaymentLinkOrderId, setCreatingPaymentLinkOrderId] = useState<string | null>(null);
@@ -1244,6 +1319,7 @@ export default function ExecutionPage() {
     blockingOrderId,
     blockedUserIds,
     onCreateDesign: handleCreateDesign,
+    onRegenerateDesign: handleRegenerateDesign,
     onEditDesign: handleEditDesign,
     onDownloadDesign: handleDownloadDesign,
     onPreviewDesign: (order) => {
@@ -1257,6 +1333,7 @@ export default function ExecutionPage() {
       setPhotoPreviewOrder(order);
     },
     creatingDesignOrderId,
+    downloadingDesignOrderId,
   });
 
   return (

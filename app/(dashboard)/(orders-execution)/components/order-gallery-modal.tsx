@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
-import { LuDownload, LuPencil, LuChevronLeft, LuChevronRight } from 'react-icons/lu';
+import { LuDownload, LuPencil, LuChevronLeft, LuChevronRight, LuRefreshCw } from 'react-icons/lu';
 import { useTranslations } from 'next-intl';
 import Modal from '@/components/ui/modal';
 import Button from '@/components/ui/button';
@@ -161,6 +161,7 @@ export default function OrderGalleryModal({
 }: OrderGalleryModalProps) {
   const t = useTranslations('execution.table');
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   const items = useMemo(() => buildGalleryItems(order, mode, t), [order, mode, t]);
   const isOpen = items.length > 0;
@@ -203,8 +204,8 @@ export default function OrderGalleryModal({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, goToPrevious, goToNext]);
 
-  const handleDownload = () => {
-    if (!currentItem) return;
+  const handleDownload = async () => {
+    if (!currentItem || isDownloading) return;
     const filename = currentItem.kind === 'design'
       ? `design-${order?.orderNumber || ''}`
       : `photo-${order?.orderNumber || ''}`;
@@ -212,7 +213,12 @@ export default function OrderGalleryModal({
       currentItem.kind === 'design'
         ? withCacheBust(currentItem.url)
         : currentItem.url;
-    void downloadFile(url, filename);
+    setIsDownloading(true);
+    try {
+      await downloadFile(url, filename);
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   const handleEdit = () => {
@@ -235,8 +241,12 @@ export default function OrderGalleryModal({
       contentClassName="flex flex-col items-center justify-center p-0 overflow-hidden"
       footer={
         <div className="flex items-center justify-center gap-2">
-          <Button variant="outline" size="sm" onClick={handleDownload}>
-            <LuDownload size={16} className="mr-1" />
+          <Button variant="outline" size="sm" onClick={handleDownload} disabled={isDownloading}>
+            {isDownloading ? (
+              <LuRefreshCw size={16} className="mr-1 animate-spin" />
+            ) : (
+              <LuDownload size={16} className="mr-1" />
+            )}
             {currentItem?.kind === 'design'
               ? t('downloadDesign')
               : t('downloadPhoto')}

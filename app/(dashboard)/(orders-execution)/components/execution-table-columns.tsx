@@ -98,11 +98,13 @@ interface ColumnCallbacks {
   blockingOrderId: string | null;
   blockedUserIds: Set<string>;
   onCreateDesign: (order: Order) => void;
+  onRegenerateDesign: (order: Order) => void;
   onEditDesign: (order: Order) => void;
   onDownloadDesign: (order: Order) => void;
   onPreviewDesign: (order: Order) => void;
   onPreviewPhoto: (order: Order) => void;
   creatingDesignOrderId: string | null;
+  downloadingDesignOrderId: string | null;
 }
 
 export function useExecutionColumns(callbacks: ColumnCallbacks) {
@@ -135,11 +137,13 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
     blockingOrderId,
     blockedUserIds,
     onCreateDesign,
+    onRegenerateDesign,
     onEditDesign,
     onDownloadDesign,
     onPreviewDesign,
     onPreviewPhoto,
     creatingDesignOrderId,
+    downloadingDesignOrderId,
   } = callbacks;
 
   const columns = [
@@ -394,6 +398,7 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
         const designs = order.designUrls || [];
         const hasDesign = designs.length > 0;
         const isCreating = creatingDesignOrderId === order._id;
+        const isDownloading = downloadingDesignOrderId === order._id;
         // Match the photo column's color scheme:
         // - has design → text-primary (white/primary)
         // - no design  → text-secondary/50 (dimmed)
@@ -435,10 +440,30 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
                       size="custom"
                       className="h-5 w-5 p-0 text-secondary hover:text-foreground"
                       onClick={(e) => { e.stopPropagation(); onDownloadDesign(order); }}
-                      disabled={isCreating}
+                      disabled={isCreating || isDownloading}
                       aria-label={t('table.downloadDesign')}
                     >
-                      <LuDownload size={12} />
+                      {isDownloading ? (
+                        <LuRefreshCw size={12} className="animate-spin" />
+                      ) : (
+                        <LuDownload size={12} />
+                      )}
+                    </Button>
+                  </Tooltip>
+                  <Tooltip position={tooltipPos} content={t('table.regenerateDesign')}>
+                    <Button
+                      variant="ghost"
+                      size="custom"
+                      className="h-5 w-5 p-0 text-secondary hover:text-foreground"
+                      onClick={(e) => { e.stopPropagation(); onRegenerateDesign(order); }}
+                      disabled={isCreating}
+                      aria-label={t('table.regenerateDesign')}
+                    >
+                      {isCreating ? (
+                        <LuRefreshCw size={12} className="animate-spin" />
+                      ) : (
+                        <LuRefreshCw size={12} />
+                      )}
                     </Button>
                   </Tooltip>
                   <Tooltip position={tooltipPos} content={t('table.editDesign')}>

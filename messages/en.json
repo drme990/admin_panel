@@ -2098,6 +2098,21 @@
         "createSuccess": "Referral created successfully",
         "updateSuccess": "Referral updated successfully",
         "deleteSuccess": "Referral deleted successfully"
+      },
+      "defaultPhones": {
+        "title": "Default Phone Numbers",
+        "description": "Set the default WhatsApp number for each app. Used when a referral has no phone number.",
+        "button": "Default Numbers",
+        "cancel": "Cancel",
+        "manasik": "Manasik Default Number",
+        "ghadaq": "Ghadaq Default Number",
+        "manasikPlaceholder": "Manasik WhatsApp number",
+        "ghadaqPlaceholder": "Ghadaq WhatsApp number",
+        "save": "Save Numbers",
+        "saving": "Saving...",
+        "saveSuccess": "Default phone numbers saved successfully",
+        "saveFailed": "Failed to save default phone numbers",
+        "loadFailed": "Failed to load default phone numbers"
       }
     },
     "logs": {

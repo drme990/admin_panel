@@ -11,12 +11,14 @@ import { Referral } from '@/types/Referral';
 import Button from '@/components/ui/button';
 import Tooltip from '@/components/ui/tooltip';
 import { toast } from 'react-toastify';
+import DefaultPhoneNumbersModal from './components/default-phone-numbers-modal';
 
 import {
   LuPlus as Plus,
   LuPen as Edit,
   LuTrash2 as Trash2,
   LuSearch as Search,
+  LuPhone,
 } from 'react-icons/lu';
 
 export default function ReferralsPage() {
@@ -32,6 +34,7 @@ export default function ReferralsPage() {
     referralId: '',
     phone: '',
   });
+  const [showDefaultPhonesModal, setShowDefaultPhonesModal] = useState(false);
   const t = useTranslations('admin.referrals');
   const { confirm, modalProps } = useConfirmModal();
   const ToolTipPositions = useLocale() === 'ar' ? 'right' : 'left';
@@ -228,10 +231,16 @@ export default function ReferralsPage() {
           </h1>
           <p className="text-secondary">{t('description')}</p>
         </div>
-        <Button onClick={() => setShowModal(true)}>
-          <Plus size={20} />
-          {t('addReferral')}
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button variant="outline" onClick={() => setShowDefaultPhonesModal(true)}>
+            <LuPhone size={18} />
+            {t('defaultPhones.button')}
+          </Button>
+          <Button onClick={() => setShowModal(true)}>
+            <Plus size={20} />
+            {t('addReferral')}
+          </Button>
+        </div>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3">
@@ -319,6 +328,11 @@ export default function ReferralsPage() {
           />
         </form>
       </Modal>
+
+      <DefaultPhoneNumbersModal
+        isOpen={showDefaultPhonesModal}
+        onClose={() => setShowDefaultPhonesModal(false)}
+      />
 
       <ConfirmModal {...modalProps} />
     </div>

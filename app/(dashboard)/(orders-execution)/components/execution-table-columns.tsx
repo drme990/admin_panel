@@ -105,6 +105,7 @@ interface ColumnCallbacks {
   onPreviewPhoto: (order: Order) => void;
   creatingDesignOrderId: string | null;
   downloadingDesignOrderId: string | null;
+  downloadingInvoiceOrderId: string | null;
 }
 
 export function useExecutionColumns(callbacks: ColumnCallbacks) {
@@ -144,6 +145,7 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
     onPreviewPhoto,
     creatingDesignOrderId,
     downloadingDesignOrderId,
+    downloadingInvoiceOrderId,
   } = callbacks;
 
   const columns = [
@@ -339,13 +341,13 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
               </span>
             )}
             <div className="flex flex-row gap-1">
-              <Tooltip position={tooltipPos} content={t('table.uploadPhoto')}>
+              <Tooltip position={tooltipPos} content={photoCount >= 4 ? (t('table.maxPhotosReached') || 'Maximum 4 images') : t('table.uploadPhoto')}>
                 <Button
                   variant="ghost"
                   size="custom"
                   className="h-5 w-5 p-0 text-secondary hover:text-foreground"
                   onClick={(e) => { e.stopPropagation(); onUploadPhoto(order); }}
-                  disabled={uploadingPhotoOrderId === order._id}
+                  disabled={uploadingPhotoOrderId === order._id || photoCount >= 4}
                   aria-label={t('table.uploadPhoto')}
                 >
                   {uploadingPhotoOrderId === order._id ? (
@@ -592,10 +594,14 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
                   size="custom"
                   className="h-5 w-5 p-0 text-secondary hover:text-foreground"
                   onClick={(e) => { e.stopPropagation(); onDownloadInvoice(order); }}
-                  disabled={!hasInvoice}
+                  disabled={!hasInvoice || downloadingInvoiceOrderId === order._id}
                   aria-label={t('table.downloadInvoice')}
                 >
-                  <LuDownload size={12} />
+                  {downloadingInvoiceOrderId === order._id ? (
+                    <LuRefreshCw size={12} className="animate-spin" />
+                  ) : (
+                    <LuDownload size={12} />
+                  )}
                 </Button>
               </Tooltip>
             </div>

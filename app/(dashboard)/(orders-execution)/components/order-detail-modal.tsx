@@ -27,6 +27,8 @@ import {
   LuX,
   LuClock,
   LuRotateCw,
+  LuDownload,
+  LuRefreshCw,
 } from 'react-icons/lu';
 import Image from 'next/image';
 
@@ -150,6 +152,7 @@ export default function OrderDetailModal({
   const t = useTranslations(namespace);
   const [copiedPaymentId, setCopiedPaymentId] = useState<string | null>(null);
   const [now, setNow] = useState<number>(() => Date.now());
+  const [downloadingInvoiceUrl, setDownloadingInvoiceUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -691,7 +694,10 @@ export default function OrderDetailModal({
                             <button
                               key={invoice.url}
                               type="button"
+                              disabled={downloadingInvoiceUrl === invoice.url}
                               onClick={async () => {
+                                if (downloadingInvoiceUrl) return;
+                                setDownloadingInvoiceUrl(invoice.url);
                                 try {
                                   await downloadFile(
                                     invoice.url,
@@ -702,9 +708,11 @@ export default function OrderDetailModal({
                                     t('messages.downloadFailed') ||
                                     'Failed to download invoice',
                                   );
+                                } finally {
+                                  setDownloadingInvoiceUrl(null);
                                 }
                               }}
-                              className="relative flex flex-col items-center gap-2 p-3 rounded-lg bg-background border border-stroke hover:border-primary transition-colors text-left"
+                              className="relative flex flex-col items-center gap-2 p-3 rounded-lg bg-background border border-stroke hover:border-primary transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                               <span
                                 className={`absolute top-2 left-2 inline-flex items-center justify-center w-7 h-7 rounded-full ${config.bg}`}
@@ -723,10 +731,19 @@ export default function OrderDetailModal({
                                 />
                               ) : (
                                 <span className="inline-flex items-center justify-center p-2 text-primary h-24">
-                                  <LuFileText size={32} />
+                                  {downloadingInvoiceUrl === invoice.url ? (
+                                    <LuRefreshCw size={32} className="animate-spin" />
+                                  ) : (
+                                    <LuFileText size={32} />
+                                  )}
                                 </span>
                               )}
-                              <span className="text-xs text-primary font-medium truncate max-w-full">
+                              <span className="text-xs text-primary font-medium truncate max-w-full inline-flex items-center gap-1">
+                                {downloadingInvoiceUrl === invoice.url ? (
+                                  <LuRefreshCw size={12} className="animate-spin" />
+                                ) : (
+                                  <LuDownload size={12} />
+                                )}
                                 {t('table.downloadInvoice')}
                               </span>
                               {invoiceStatus === 'rejected' &&

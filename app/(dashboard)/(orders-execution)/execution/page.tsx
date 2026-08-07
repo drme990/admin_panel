@@ -25,8 +25,8 @@ import EditOrderModal from '../components/edit-order-modal';
 import OrderHistoryModal, { OrderHistoryEntry } from '../components/order-history-modal';
 import ExportModal from '../components/export-modal';
 import {
-  uploadImageToR2,
   deleteOldImage,
+  uploadImageToR2,
   uploadInvoiceToR2,
 } from '../../../../lib/image-upload-utils';
 import OrderDetailModal from '../components/order-detail-modal';
@@ -77,6 +77,7 @@ export default function ExecutionPage() {
   const [uploadingInvoiceOrderId, setUploadingInvoiceOrderId] = useState<string | null>(null);
   const [creatingDesignOrderId, setCreatingDesignOrderId] = useState<string | null>(null);
   const [downloadingDesignOrderId, setDownloadingDesignOrderId] = useState<string | null>(null);
+  const [downloadingInvoiceOrderId, setDownloadingInvoiceOrderId] = useState<string | null>(null);
   const [photoPreviewOrder, setPhotoPreviewOrder] = useState<Order | null>(null);
   const [designPreviewOrder, setDesignPreviewOrder] = useState<Order | null>(null);
   const [isCreateManualOrderModalOpen, setIsCreateManualOrderModalOpen] = useState(false);
@@ -809,32 +810,35 @@ export default function ExecutionPage() {
       return;
     }
 
+    // Parse existing photos (JSON array or legacy single URL)
+    const oldPhotoValue = order.reservationData?.find((f) => f.key === 'photo')?.value;
+    const existingUrls: string[] = (() => {
+      if (!oldPhotoValue) return [];
+      try {
+        const parsed = JSON.parse(oldPhotoValue);
+        if (Array.isArray(parsed)) {
+          return parsed.filter((v): v is string => typeof v === 'string' && v.length > 0);
+        }
+      } catch {
+        // Not JSON — treat as a single URL (legacy)
+      }
+      return [oldPhotoValue];
+    })();
+
+    // Max 4 images — refuse if already at the limit
+    if (existingUrls.length >= 4) {
+      toast.error(t('editOrder.maxPhotosReached') || 'Maximum 4 images allowed');
+      if (photoInputRef.current) photoInputRef.current.value = '';
+      return;
+    }
+
     try {
       setUploadingPhotoOrderId(order._id);
-      const oldPhotoValue = order.reservationData?.find((f) => f.key === 'photo')?.value;
       const photoUrl = await uploadImageToR2(file);
-      await updateOrder(order._id, { photo: photoUrl });
-
-      // Delete old images from R2 (handles both JSON array and legacy single URL)
-      if (oldPhotoValue) {
-        const oldUrls: string[] = (() => {
-          try {
-            const parsed = JSON.parse(oldPhotoValue);
-            if (Array.isArray(parsed)) {
-              return parsed.filter((v): v is string => typeof v === 'string' && v.length > 0);
-            }
-          } catch {
-            // Not JSON — treat as a single URL (legacy)
-          }
-          return oldPhotoValue ? [oldPhotoValue] : [];
-        })();
-
-        oldUrls.forEach((url) => {
-          deleteOldImage(url).catch((error: unknown) => {
-            console.warn('Failed to delete old customer image:', error);
-          });
-        });
-      }
+      // Append the new image to the existing array (don't replace)
+      const updatedUrls = [...existingUrls, photoUrl];
+      await updateOrder(order._id, { photo: JSON.stringify(updatedUrls) });
+      // Note: old images are NOT deleted — we're adding, not replacing
     } catch (error) {
       const message = error instanceof Error ? error.message : t('editOrder.uploadFailed');
       toast.error(message);
@@ -844,6 +848,129 @@ export default function ExecutionPage() {
       setUploadingPhotoOrderId(null);
       if (photoInputRef.current) photoInputRef.current.value = '';
     }
+  };
+
+  // ── Delete a single photo from the gallery modal ───────────────────
+  // Removes the URL from the order's photo array and deletes the file
+  // from R2. The modal updates immediately (optimistic) — the API call
+  // and R2 deletion happen in the background.
+  const handleDeletePhoto = async (order: Order, urlToDelete: string) => {
+    const photoField = order.reservationData?.find((f) => f.key === 'photo');
+    const existingUrls: string[] = (() => {
+      if (!photoField?.value) return [];
+      try {
+        const parsed = JSON.parse(photoField.value);
+        if (Array.isArray(parsed)) {
+          return parsed.filter((v): v is string => typeof v === 'string' && v.length > 0);
+        }
+      } catch {
+        // legacy single URL
+      }
+      return photoField.value ? [photoField.value] : [];
+    })();
+
+    const updatedUrls = existingUrls.filter((u) => u !== urlToDelete);
+    const newValue = updatedUrls.length > 0 ? JSON.stringify(updatedUrls) : '';
+
+    // ── Optimistic: update local state immediately so the modal reflects
+    // the deletion without waiting for the API round-trip. ──
+    const updatedOrder: Order = {
+      ...order,
+      reservationData: order.reservationData?.map((f) =>
+        f.key === 'photo' ? { ...f, value: newValue } : f,
+      ),
+    };
+    setPhotoPreviewOrder(updatedOrder);
+    dispatch({
+      type: 'UPDATE_ORDER_IN_LIST',
+      payload: { orderId: order._id, updates: { reservationData: updatedOrder.reservationData } },
+    });
+
+    // If no photos remain, close the modal
+    if (updatedUrls.length === 0) {
+      setPhotoPreviewOrder(null);
+    }
+
+    // ── Background: persist to API + delete from R2 (best-effort) ──
+    try {
+      await updateOrder(order._id, { photo: newValue });
+    } catch (error) {
+      console.error('Failed to persist photo deletion:', error);
+      // Revert local state on failure
+      setPhotoPreviewOrder(order);
+      dispatch({
+        type: 'UPDATE_ORDER_IN_LIST',
+        payload: { orderId: order._id, updates: { reservationData: order.reservationData } },
+      });
+    }
+
+    deleteOldImage(urlToDelete).catch((err: unknown) => {
+      console.warn('Failed to delete image from R2:', err);
+    });
+  };
+
+  // ── Replace a single photo from the gallery modal ──────────────────
+  // Uploads the new file, swaps the URL in the array, and deletes the
+  // old image from R2. The modal updates immediately after the upload
+  // completes (before the API persist round-trip).
+  const handleReplacePhoto = async (order: Order, oldUrl: string, file: File) => {
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error(t('editOrder.invalidImage'));
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error(t('editOrder.imageTooLarge'));
+      return;
+    }
+
+    const photoField = order.reservationData?.find((f) => f.key === 'photo');
+    const existingUrls: string[] = (() => {
+      if (!photoField?.value) return [];
+      try {
+        const parsed = JSON.parse(photoField.value);
+        if (Array.isArray(parsed)) {
+          return parsed.filter((v): v is string => typeof v === 'string' && v.length > 0);
+        }
+      } catch {
+        // legacy single URL
+      }
+      return photoField.value ? [photoField.value] : [];
+    })();
+
+    const newUrl = await uploadImageToR2(file);
+    const updatedUrls = existingUrls.map((u) => (u === oldUrl ? newUrl : u));
+
+    // ── Optimistic: update local state immediately so the modal shows
+    // the new image without waiting for the API round-trip. ──
+    const updatedOrder: Order = {
+      ...order,
+      reservationData: order.reservationData?.map((f) =>
+        f.key === 'photo' ? { ...f, value: JSON.stringify(updatedUrls) } : f,
+      ),
+    };
+    setPhotoPreviewOrder(updatedOrder);
+    dispatch({
+      type: 'UPDATE_ORDER_IN_LIST',
+      payload: { orderId: order._id, updates: { reservationData: updatedOrder.reservationData } },
+    });
+
+    // ── Background: persist to API + delete old image from R2 ──
+    try {
+      await updateOrder(order._id, { photo: JSON.stringify(updatedUrls) });
+    } catch (error) {
+      console.error('Failed to persist photo replacement:', error);
+      // Revert local state on failure
+      setPhotoPreviewOrder(order);
+      dispatch({
+        type: 'UPDATE_ORDER_IN_LIST',
+        payload: { orderId: order._id, updates: { reservationData: order.reservationData } },
+      });
+    }
+
+    deleteOldImage(oldUrl).catch((err: unknown) => {
+      console.warn('Failed to delete old image from R2:', err);
+    });
   };
 
   const handleCopyPhotoUrl = async (order: Order) => {
@@ -926,16 +1053,20 @@ export default function ExecutionPage() {
   };
 
   const handleDownloadInvoice = async (order: Order) => {
+    if (downloadingInvoiceOrderId) return;
     const invoices = order.invoiceUrls || [];
     if (invoices.length === 0) {
       toast.error(t('editOrder.noInvoiceToDownload'));
       return;
     }
+    setDownloadingInvoiceOrderId(order._id);
     try {
       await downloadFile(invoices[invoices.length - 1].url, `invoice-${order.orderNumber}`);
     } catch (error) {
       console.error('Error downloading invoice:', error);
       toast.error(t('messages.downloadFailed') || 'Failed to download invoice');
+    } finally {
+      setDownloadingInvoiceOrderId(null);
     }
   };
 
@@ -1334,6 +1465,7 @@ export default function ExecutionPage() {
     },
     creatingDesignOrderId,
     downloadingDesignOrderId,
+    downloadingInvoiceOrderId,
   });
 
   return (
@@ -1848,6 +1980,8 @@ export default function ExecutionPage() {
         onClose={() => {
           setPhotoPreviewOrder(null);
         }}
+        onDeletePhoto={photoPreviewOrder ? (url) => handleDeletePhoto(photoPreviewOrder, url) : undefined}
+        onReplacePhoto={photoPreviewOrder ? (oldUrl, file) => handleReplacePhoto(photoPreviewOrder, oldUrl, file) : undefined}
       />
 
       {/* Design gallery lightbox (designs only) */}

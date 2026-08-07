@@ -1,8 +1,8 @@
 'use client';
 
-import { useMemo, useState, useEffect, useCallback } from 'react';
+import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import Image from 'next/image';
-import { LuDownload, LuPencil, LuChevronLeft, LuChevronRight, LuRefreshCw } from 'react-icons/lu';
+import { LuDownload, LuPencil, LuChevronLeft, LuChevronRight, LuRefreshCw, LuTrash2, LuReplace } from 'react-icons/lu';
 import { useTranslations } from 'next-intl';
 import Modal from '@/components/ui/modal';
 import Button from '@/components/ui/button';
@@ -137,6 +137,10 @@ interface OrderGalleryModalProps {
   onClose: () => void;
   /** Called when the "edit design" button is clicked. Receives the design item. */
   onEditDesign?: (item: GalleryItem) => void;
+  /** Called when the user confirms deletion of a photo. Receives the photo URL. */
+  onDeletePhoto?: (url: string) => Promise<void>;
+  /** Called when the user picks a replacement file for a photo. Receives the old URL + new File. */
+  onReplacePhoto?: (oldUrl: string, file: File) => Promise<void>;
 }
 
 /**
@@ -158,16 +162,31 @@ export default function OrderGalleryModal({
   mode,
   onClose,
   onEditDesign,
+  onDeletePhoto,
+  onReplacePhoto,
 }: OrderGalleryModalProps) {
   const t = useTranslations('execution.table');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isReplacing, setIsReplacing] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const replaceInputRef = useRef<HTMLInputElement>(null);
 
   const items = useMemo(() => buildGalleryItems(order, mode, t), [order, mode, t]);
   const isOpen = items.length > 0;
 
   // Selection resets to 0 automatically when the parent passes a new `key`
   // (keyed by order ID in the execution page), which remounts this component.
+
+  // Clamp selectedIndex when items shrink (e.g. after a photo is deleted
+  // optimistically — the parent updates the order before this component
+  // adjusts its own index).
+  useEffect(() => {
+    if (selectedIndex > items.length - 1) {
+      setSelectedIndex(Math.max(0, items.length - 1));
+    }
+  }, [items.length, selectedIndex]);
 
   const currentItem = items[selectedIndex] || null;
 
@@ -230,6 +249,54 @@ export default function OrderGalleryModal({
   const canEdit =
     currentItem?.kind === 'design' && !!currentItem.projectId && !!onEditDesign;
 
+  const canDeletePhoto = mode === 'photo' && !!onDeletePhoto;
+  const canReplacePhoto = mode === 'photo' && !!onReplacePhoto;
+  const isBusy = isDownloading || isDeleting || isReplacing;
+
+  const handleDeletePhoto = async () => {
+    if (!currentItem || currentItem.kind !== 'photo' || isDeleting) return;
+    // Two-step: first click shows "confirm", second click deletes
+    if (!confirmingDelete) {
+      setConfirmingDelete(true);
+      return;
+    }
+    setConfirmingDelete(false);
+    setIsDeleting(true);
+    try {
+      await onDeletePhoto?.(currentItem.url);
+      // selectedIndex is auto-clamped by the useEffect above when
+      // the parent's optimistic update shrinks the items list.
+    } catch {
+      // parent shows toast
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleReplaceClick = () => {
+    if (!currentItem || currentItem.kind !== 'photo' || isReplacing) return;
+    replaceInputRef.current?.click();
+  };
+
+  const handleReplaceFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !currentItem || currentItem.kind !== 'photo') return;
+    setIsReplacing(true);
+    try {
+      await onReplacePhoto?.(currentItem.url, file);
+    } catch {
+      // parent shows toast
+    } finally {
+      setIsReplacing(false);
+      if (replaceInputRef.current) replaceInputRef.current.value = '';
+    }
+  };
+
+  // Reset confirm-delete state when switching items
+  useEffect(() => {
+    setConfirmingDelete(false);
+  }, [selectedIndex]);
+
   if (!isOpen) return null;
 
   return (
@@ -241,20 +308,58 @@ export default function OrderGalleryModal({
       contentClassName="flex flex-col items-center justify-center p-0 overflow-hidden"
       footer={
         <div className="flex items-center justify-center gap-2">
-          <Button variant="outline" size="sm" onClick={handleDownload} disabled={isDownloading}>
-            {isDownloading ? (
+          {isDownloading ? (
+            <Button variant="outline" size="sm" disabled>
               <LuRefreshCw size={16} className="mr-1 animate-spin" />
-            ) : (
+              {currentItem?.kind === 'design'
+                ? t('downloadDesign')
+                : t('downloadPhoto')}
+            </Button>
+          ) : (
+            <Button variant="outline" size="sm" onClick={handleDownload}>
               <LuDownload size={16} className="mr-1" />
-            )}
-            {currentItem?.kind === 'design'
-              ? t('downloadDesign')
-              : t('downloadPhoto')}
-          </Button>
+              {currentItem?.kind === 'design'
+                ? t('downloadDesign')
+                : t('downloadPhoto')}
+            </Button>
+          )}
           {canEdit && (
             <Button variant="primary" size="sm" onClick={handleEdit}>
               <LuPencil size={16} className="mr-1" />
               {t('editDesign')}
+            </Button>
+          )}
+          {canReplacePhoto && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleReplaceClick}
+              disabled={isBusy}
+            >
+              {isReplacing ? (
+                <LuRefreshCw size={16} className="mr-1 animate-spin" />
+              ) : (
+                <LuReplace size={16} className="mr-1" />
+              )}
+              {t('replacePhoto') || 'Replace'}
+            </Button>
+          )}
+          {canDeletePhoto && (
+            <Button
+              variant={confirmingDelete ? 'primary' : 'outline'}
+              size="sm"
+              onClick={handleDeletePhoto}
+              disabled={isBusy}
+              className={confirmingDelete ? 'bg-red-600 hover:bg-red-700 text-white border-red-600' : 'text-red-600 hover:text-red-700 border-red-300 hover:border-red-400'}
+            >
+              {isDeleting ? (
+                <LuRefreshCw size={16} className="mr-1 animate-spin" />
+              ) : (
+                <LuTrash2 size={16} className="mr-1" />
+              )}
+              {confirmingDelete
+                ? (t('confirmDelete') || 'Confirm?')
+                : (t('deletePhoto') || 'Delete')}
             </Button>
           )}
         </div>
@@ -333,6 +438,15 @@ export default function OrderGalleryModal({
           </div>
         </div>
       )}
+
+      {/* Hidden file input for photo replacement */}
+      <input
+        ref={replaceInputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp,image/gif"
+        className="hidden"
+        onChange={handleReplaceFileChange}
+      />
     </Modal>
   );
 }

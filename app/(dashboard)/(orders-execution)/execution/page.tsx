@@ -793,22 +793,12 @@ export default function ExecutionPage() {
   };
 
   const handlePhotoFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
     const order = photoUploadOrderRef.current;
     if (!order) return;
 
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
-    if (!allowedTypes.includes(file.type)) {
-      toast.error(t('editOrder.invalidImage'));
-      if (photoInputRef.current) photoInputRef.current.value = '';
-      return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error(t('editOrder.imageTooLarge'));
-      if (photoInputRef.current) photoInputRef.current.value = '';
-      return;
-    }
 
     // Parse existing photos (JSON array or legacy single URL)
     const oldPhotoValue = order.reservationData?.find((f) => f.key === 'photo')?.value;
@@ -832,11 +822,33 @@ export default function ExecutionPage() {
       return;
     }
 
+    const remainingSlots = 4 - existingUrls.length;
+    // Take only as many files as we have slots for
+    const selectedFiles = Array.from(files).slice(0, remainingSlots);
+    if (Array.from(files).length > remainingSlots) {
+      toast.info(t('editOrder.maxPhotosReached') || `Only ${remainingSlots} image(s) can be uploaded`);
+    }
+
+    // Validate all files first — reject the batch if any file is invalid
+    for (const file of selectedFiles) {
+      if (!allowedTypes.includes(file.type)) {
+        toast.error(t('editOrder.invalidImage'));
+        if (photoInputRef.current) photoInputRef.current.value = '';
+        return;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error(t('editOrder.imageTooLarge'));
+        if (photoInputRef.current) photoInputRef.current.value = '';
+        return;
+      }
+    }
+
     try {
       setUploadingPhotoOrderId(order._id);
-      const photoUrl = await uploadImageToR2(file);
-      // Append the new image to the existing array (don't replace)
-      const updatedUrls = [...existingUrls, photoUrl];
+      // Upload all selected files in parallel
+      const newUrls = await Promise.all(selectedFiles.map((file) => uploadImageToR2(file)));
+      // Append the new images to the existing array (don't replace)
+      const updatedUrls = [...existingUrls, ...newUrls];
       await updateOrder(order._id, { photo: JSON.stringify(updatedUrls) });
       // Note: old images are NOT deleted — we're adding, not replacing
     } catch (error) {
@@ -1960,6 +1972,7 @@ export default function ExecutionPage() {
         ref={photoInputRef}
         type="file"
         accept="image/*"
+        multiple
         className="hidden"
         onChange={handlePhotoFileChange}
       />

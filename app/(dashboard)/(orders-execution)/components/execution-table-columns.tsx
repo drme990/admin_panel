@@ -329,7 +329,7 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
                 >
                   <LuImage size={24} />
                   {photoCount > 1 && (
-                    <span className="absolute -top-1 -right-1 bg-primary text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center">
+                    <span className="absolute -top-1 -right-1 bg-primary text-primary-text text-[10px] rounded-full w-4 h-4 flex items-center justify-center">
                       {photoCount}
                     </span>
                   )}

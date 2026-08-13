@@ -35,7 +35,12 @@
       "intention": "Intention",
       "country": "Country",
       "allCountries": "All Countries",
-      "searchCountry": "Search country..."
+      "searchCountry": "Search country...",
+      "whatsappState": "WhatsApp state",
+      "whatsappStateAll": "All states",
+      "whatsappStateClicked": "Clicked",
+      "whatsappStateNotClicked": "Not clicked",
+      "whatsappStateNoNeedToClick": "No need to click"
     },
     "total": "Total",
     "status": {
@@ -410,6 +415,7 @@
       "addName": "Add Name",
       "loadingProducts": "Loading products...",
       "selectProduct": "Select a product",
+      "selectSize": "Select size",
       "addItem": "Add Prodcut"
     },
     "blockCustomer": "Block Customer",

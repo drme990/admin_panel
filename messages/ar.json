@@ -35,7 +35,12 @@
       "intention": "النية",
       "country": "الدولة",
       "allCountries": "كل الدول",
-      "searchCountry": "ابحث عن دولة..."
+      "searchCountry": "ابحث عن دولة...",
+      "whatsappState": "حالة واتساب",
+      "whatsappStateAll": "كل الحالات",
+      "whatsappStateClicked": "تم النقر",
+      "whatsappStateNotClicked": "لم يتم النقر",
+      "whatsappStateNoNeedToClick": "لا حاجة للنقر"
     },
     "total": "إجمالي الحجوزات",
     "status": {
@@ -409,6 +414,7 @@
       "addName": "إضافة اسم",
       "loadingProducts": "جارٍ تحميل المنتجات...",
       "selectProduct": "اختر منتجاً",
+      "selectSize": "اختر الحجم",
       "addItem": "إضافة منتج"
     },
     "blockCustomer": "حظر العميل",

@@ -28,7 +28,7 @@ import Button from '@/components/ui/button';
 import Checkbox from '@/components/ui/checkbox';
 import Tooltip from '@/components/ui/tooltip';
 import { Order } from '@/types/Order';
-import { STATUS_COLORS } from '../lib/order-status';
+import { STATUS_COLORS, WHATSAPP_STATE_CLASSES } from '../lib/order-status';
 import { getOrderItemDisplayName } from '../lib/order-utils';
 import { downloadFile } from '@/lib/download-utils';
 import { InvoiceUploadMenu, type UploadInvoiceStatus } from './invoic-upload-menu';
@@ -214,6 +214,16 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
               </Tooltip>
             </div>
             <div className="flex items-center gap-1.5">
+              <span
+                className={`h-2.5 w-2.5 rounded-full shrink-0 ${WHATSAPP_STATE_CLASSES[order.isWhatsappButtonClicked || 'no-need-to-click']}`}
+                title={
+                  order.isWhatsappButtonClicked === 'clicked'
+                    ? t('filters.whatsappStateClicked')
+                    : order.isWhatsappButtonClicked === 'not-clicked'
+                      ? t('filters.whatsappStateNotClicked')
+                      : t('filters.whatsappStateNoNeedToClick')
+                }
+              />
               <span className={`font-semibold whitespace-nowrap text-sm ${order.status === 'partial-paid' ? 'text-orange-600 dark:text-orange-400' : 'text-foreground'}`}>
                 {order.orderNumber}
               </span>

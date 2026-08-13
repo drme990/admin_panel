@@ -163,7 +163,16 @@ export default function EditOrderModal({
   const handleChangeItemProduct = (index: number, productId: string) => {
     const product = products.find((p) => p._id === productId);
     if (!product) return;
-    const size = product.sizes[0];
+    // Keep the current sizeIndex if it exists in the new product, otherwise fall back to 0
+    const prevItem = items[index];
+    const keptIndex =
+      prevItem?.productId === product._id &&
+        typeof prevItem?.sizeIndex === 'number' &&
+        prevItem.sizeIndex >= 0 &&
+        prevItem.sizeIndex < product.sizes.length
+        ? prevItem.sizeIndex
+        : 0;
+    const size = product.sizes[keptIndex] ?? product.sizes[0];
     setItems((prev) => {
       const next = [...prev];
       next[index] = {
@@ -173,8 +182,28 @@ export default function EditOrderModal({
         productName: product.name,
         price: size?.price ?? 0,
         currency: product.baseCurrency,
-        sizeIndex: 0,
+        sizeIndex: keptIndex,
         sizeName: size?.name ?? { ar: '', en: '' },
+      };
+      return next;
+    });
+  };
+
+  const handleChangeItemSize = (index: number, sizeIndex: number) => {
+    const item = items[index];
+    if (!item) return;
+    const product = products.find((p) => p._id === item.productId);
+    if (!product) return;
+    const size = product.sizes[sizeIndex];
+    if (!size) return;
+    setItems((prev) => {
+      const next = [...prev];
+      next[index] = {
+        ...next[index],
+        price: size.price ?? 0,
+        currency: product.baseCurrency,
+        sizeIndex,
+        sizeName: size.name ?? { ar: '', en: '' },
       };
       return next;
     });
@@ -334,6 +363,12 @@ export default function EditOrderModal({
                   label: locale === 'ar' ? p.name?.ar : p.name?.en,
                   value: p._id,
                 }));
+                const selectedProduct = products.find((p) => p._id === item.productId);
+                const hasMultipleSizes = (selectedProduct?.sizes?.length ?? 0) > 1;
+                const sizeOptions = (selectedProduct?.sizes ?? []).map((s, i) => ({
+                  label: locale === 'ar' ? s.name?.ar : s.name?.en,
+                  value: String(i),
+                }));
                 return (
                   <div
                     key={index}
@@ -348,6 +383,17 @@ export default function EditOrderModal({
                         className="w-full"
                       />
                     </div>
+                    {hasMultipleSizes && (
+                      <div className="w-full sm:w-40 shrink-0">
+                        <Dropdown
+                          value={String(item.sizeIndex ?? 0)}
+                          options={sizeOptions}
+                          onChange={(value) => handleChangeItemSize(index, Number(value))}
+                          placeholder={t('editOrder.selectSize')}
+                          className="w-full"
+                        />
+                      </div>
+                    )}
                     <span className="text-sm text-secondary whitespace-nowrap">
                       {item.price} {item.currency}
                     </span>

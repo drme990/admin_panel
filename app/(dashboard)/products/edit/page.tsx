@@ -8,6 +8,7 @@ import ProductForm from '@/components/admin/product-form';
 import BackButton from '@/components/shared/back-button';
 import { PageLoading } from '@/components/ui/loading';
 import { Product } from '@/types/Product';
+import { stripDesignMarkers } from '@/lib/product-name';
 
 export default function ProductEditPage() {
   const router = useRouter();
@@ -86,7 +87,7 @@ export default function ProductEditPage() {
           <h1 className="text-2xl font-bold text-foreground">
             {t('editProduct')}
           </h1>
-          <p className="text-sm text-secondary">{product.name.ar}</p>
+          <p className="text-sm text-secondary">{stripDesignMarkers(product.name.ar)}</p>
         </div>
       </div>
 

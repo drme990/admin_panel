@@ -1,4 +1,5 @@
 import { ReservationFieldKey } from '@/lib/reservation-fields';
+import { stripDesignMarkers } from '@/lib/product-name';
 import type {
   BillingData,
   Order,
@@ -84,7 +85,7 @@ function resolveOrderItemSizeLabel(item: OrderItem | undefined): string | null {
 function formatOrderItemNameWithSize(item: OrderItem | undefined): string {
   if (!item) return '';
 
-  const productName = item.productName.ar || item.productName.en || '';
+  const productName = stripDesignMarkers(item.productName.ar || item.productName.en || '');
   const sizeLabel = resolveOrderItemSizeLabel(item);
 
   return sizeLabel || productName;

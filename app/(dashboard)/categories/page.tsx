@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from 'next-intl';
 import { toast } from 'react-toastify';
 import { Category } from '@/types/Category';
 import { Product } from '@/types/Product';
+import { stripDesignMarkers } from '@/lib/product-name';
 import Table from '@/components/ui/table';
 import Modal from '@/components/ui/modal';
 import Button from '@/components/ui/button';
@@ -452,10 +453,10 @@ export default function CategoriesPage() {
                     className="w-full text-start px-3 py-2 rounded-md text-sm hover:bg-primary/10 hover:text-primary transition-colors flex items-center gap-2"
                   >
                     <LuPlus size={14} className="shrink-0 text-primary" />
-                    <span>{product.name.ar}</span>
+                    <span>{stripDesignMarkers(product.name.ar)}</span>
                     {product.name.en && (
                       <span className="text-secondary text-xs truncate">
-                        {product.name.en}
+                        {stripDesignMarkers(product.name.en)}
                       </span>
                     )}
                   </button>
@@ -482,10 +483,10 @@ export default function CategoriesPage() {
                     className="w-full text-start px-3 py-2 rounded-md text-sm hover:bg-error/10 hover:text-error transition-colors flex items-center gap-2"
                   >
                     <LuTrash2 size={14} className="shrink-0 text-error" />
-                    <span>{product.name.ar}</span>
+                    <span>{stripDesignMarkers(product.name.ar)}</span>
                     {product.name.en && (
                       <span className="text-secondary text-xs truncate">
-                        {product.name.en}
+                        {stripDesignMarkers(product.name.en)}
                       </span>
                     )}
                   </button>

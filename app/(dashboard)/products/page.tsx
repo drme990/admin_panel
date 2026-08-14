@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { Product, getPrimaryProductImageUrl } from '@/types/Product';
+import { stripDesignMarkers } from '@/lib/product-name';
 import Image from 'next/image';
 import Table from '@/components/ui/table';
 import Tabs from '@/components/ui/tabs';
@@ -235,7 +236,7 @@ export default function ProductsPage() {
           <div className="relative w-12 h-12 rounded-lg overflow-hidden">
             <Image
               src={img}
-              alt={product.name.ar}
+              alt={stripDesignMarkers(product.name.ar)}
               fill
               className="object-cover"
               unoptimized
@@ -249,7 +250,7 @@ export default function ProductsPage() {
     {
       header: t('table.nameAr'),
       accessor: (product: Product) => (
-        <span className="font-medium">{product.name.ar}</span>
+        <span className="font-medium">{stripDesignMarkers(product.name.ar)}</span>
       ),
     },
     {
@@ -506,7 +507,7 @@ export default function ProductsPage() {
                   <div className="relative w-10 h-10 rounded-lg overflow-hidden shrink-0">
                     <Image
                       src={img}
-                      alt={product.name.ar}
+                      alt={stripDesignMarkers(product.name.ar)}
                       fill
                       className="object-cover"
                       unoptimized
@@ -516,7 +517,7 @@ export default function ProductsPage() {
                   <div className="w-10 h-10 rounded-lg bg-stroke/20 shrink-0" />
                 )}
                 <span className="flex-1 font-medium text-foreground text-sm">
-                  {product.name.ar}
+                  {stripDesignMarkers(product.name.ar)}
                 </span>
                 <div className="flex flex-col gap-0.5 shrink-0">
                   <Button

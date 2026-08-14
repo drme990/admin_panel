@@ -6,6 +6,7 @@ import Modal from '@/components/ui/modal';
 import { useTranslations } from 'next-intl';
 
 import { Order } from '@/types/Order';
+import { stripDesignMarkers } from '@/lib/product-name';
 
 const ORDER_STATUS_COLORS: Record<Order['status'], string> = {
   pending:
@@ -215,7 +216,7 @@ export default function CustomerOrdersModal({
                           >
                             <div className="flex-1">
                               <p className="font-medium text-foreground">
-                                {item.productName.en || item.productName.ar}
+                                {stripDesignMarkers(item.productName.en || item.productName.ar)}
                               </p>
 
                               <div className="flex flex-wrap gap-3 mt-1 text-xs text-secondary">

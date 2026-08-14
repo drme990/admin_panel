@@ -22,6 +22,7 @@ import Dropdown from '@/components/ui/dropdown';
 import Button from '@/components/ui/button';
 import Input from '@/components/ui/input';
 import Pagination from '@/components/ui/pagination';
+import { stripDesignMarkers } from '@/lib/product-name';
 import {
     type OrderDesignLog,
     type OrderDesignLogPagination,
@@ -456,8 +457,8 @@ function ExpandedDetails({
                             <div
                                 key={i}
                                 className={`flex items-start gap-3 p-3 rounded-lg border ${result.success
-                                        ? 'border-success/20 bg-success/5'
-                                        : 'border-error/20 bg-error/5'
+                                    ? 'border-success/20 bg-success/5'
+                                    : 'border-error/20 bg-error/5'
                                     }`}
                             >
                                 <div className="shrink-0 mt-0.5">
@@ -470,7 +471,7 @@ function ExpandedDetails({
                                 <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-2 flex-wrap">
                                         <span className="font-medium text-sm">
-                                            {result.productName || result.productId}
+                                            {stripDesignMarkers(result.productName || result.productId)}
                                         </span>
                                         {result.templateType && (
                                             <span className="text-xs text-secondary flex items-center gap-0.5">

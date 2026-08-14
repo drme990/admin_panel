@@ -1,5 +1,7 @@
 'use client';
 
+import { stripDesignMarkers } from '@/lib/product-name';
+
 export function toIsoDateInput(date: Date): string {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -151,7 +153,9 @@ export function getOrderItemDisplayName(
     if (fromOption) return fromOption;
   }
 
-  return locale === 'ar'
-    ? item.productName?.ar || item.productName?.en || ''
-    : item.productName?.en || item.productName?.ar || '';
+  return stripDesignMarkers(
+    locale === 'ar'
+      ? item.productName?.ar || item.productName?.en || ''
+      : item.productName?.en || item.productName?.ar || '',
+  );
 }

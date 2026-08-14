@@ -530,6 +530,56 @@
     "paymentLinkRegenerated": "تم إعادة إنشاء رابط الدفع",
     "regenerateFailed": "فشل إعادة إنشاء الرابط"
   },
+  "orderDesignLogs": {
+    "title": "سجل تصاميم الطلبات",
+    "description": "تتبع كل محاولة إنشاء تصميم — تلقائي أو يدوي، نجاح أو فشل.",
+    "refresh": "تحديث",
+    "emptyMessage": "لا توجد سجلات إنشاء تصاميم.",
+    "filters": {
+      "title": "تصفية",
+      "statusLabel": "الحالة",
+      "triggerLabel": "المصدر",
+      "searchLabel": "بحث",
+      "searchPlaceholder": "البحث برقم الطلب...",
+      "allStatuses": "كل الحالات",
+      "allTriggers": "كل المصادر"
+    },
+    "status": {
+      "success": "نجاح",
+      "partial": "جزئي",
+      "failed": "فشل",
+      "skipped": "متخطى"
+    },
+    "trigger": {
+      "auto_webhook": "تلقائي (ويب هوك)",
+      "auto_admin": "تلقائي (مشرف)",
+      "manual_admin": "يدوي"
+    },
+    "table": {
+      "orderNumber": "الطلب",
+      "status": "الحالة",
+      "trigger": "المصدر",
+      "results": "النتائج",
+      "duration": "المدة",
+      "date": "التاريخ",
+      "failed": "فشل",
+      "expand": "توسيع",
+      "collapse": "طي"
+    },
+    "details": {
+      "title": "التفاصيل",
+      "orderId": "معرف الطلب",
+      "orderStatus": "حالة الطلب",
+      "templateType": "نوع القالب",
+      "imageTemplate": "صورة",
+      "textTemplate": "نص",
+      "startedAt": "بدأ في",
+      "finishedAt": "انتهى في",
+      "error": "خطأ",
+      "products": "المنتجات",
+      "noProducts": "لم تتم معالجة أي منتجات."
+    }
+  },
   "orders": {
     "pageTitle": "سجل الطلبات",
     "orderDetails": "تفاصيل الطلب",
@@ -952,6 +1002,7 @@
       "referrals": "الإحالات",
       "refTracker": "متتبع الإحالة",
       "activityLogs": "سجل النشاطات",
+      "orderDesignLogs": "سجل التصاميم",
       "appearance": "المظهر",
       "exchange": "أسعار الصرف",
       "storageManager": "مدير التخزين",
@@ -1862,7 +1913,8 @@
         "payments": "المدفوعات",
         "suppliers": "الموردين",
         "accounts": "الحسابات",
-        "crm": "إدارة العلاقات"
+        "crm": "إدارة العلاقات",
+        "orderDesignLogs": "سجل التصاميم"
       },
       "buttons": {
         "cancel": "إلغاء",

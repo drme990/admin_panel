@@ -531,6 +531,56 @@
     "paymentLinkRegenerated": "Payment link regenerated",
     "regenerateFailed": "Failed to regenerate link"
   },
+  "orderDesignLogs": {
+    "title": "Order Design Logs",
+    "description": "Track every design generation attempt — auto or manual, success or failure.",
+    "refresh": "Refresh",
+    "emptyMessage": "No design generation logs found.",
+    "filters": {
+      "title": "Filters",
+      "statusLabel": "Status",
+      "triggerLabel": "Trigger",
+      "searchLabel": "Search",
+      "searchPlaceholder": "Search by order number...",
+      "allStatuses": "All Statuses",
+      "allTriggers": "All Triggers"
+    },
+    "status": {
+      "success": "Success",
+      "partial": "Partial",
+      "failed": "Failed",
+      "skipped": "Skipped"
+    },
+    "trigger": {
+      "auto_webhook": "Auto (Webhook)",
+      "auto_admin": "Auto (Admin)",
+      "manual_admin": "Manual"
+    },
+    "table": {
+      "orderNumber": "Order",
+      "status": "Status",
+      "trigger": "Trigger",
+      "results": "Results",
+      "duration": "Duration",
+      "date": "Date",
+      "failed": "failed",
+      "expand": "Expand",
+      "collapse": "Collapse"
+    },
+    "details": {
+      "title": "Details",
+      "orderId": "Order ID",
+      "orderStatus": "Order Status",
+      "templateType": "Template Type",
+      "imageTemplate": "Image",
+      "textTemplate": "Text",
+      "startedAt": "Started",
+      "finishedAt": "Finished",
+      "error": "Error",
+      "products": "Products",
+      "noProducts": "No products were processed."
+    }
+  },
   "orders": {
     "pageTitle": "Order History",
     "orderDetails": "Order Details",
@@ -953,6 +1003,7 @@
       "referrals": "Referrals",
       "refTracker": "Ref Tracker",
       "activityLogs": "Activity Logs",
+      "orderDesignLogs": "Design Logs",
       "appearance": "Appearance",
       "exchange": "Exchange Rates",
       "storageManager": "Storage Manager",
@@ -1863,7 +1914,8 @@
         "payments": "Payments",
         "suppliers": "Suppliers",
         "accounts": "Accounts",
-        "crm": "CRM"
+        "crm": "CRM",
+        "orderDesignLogs": "Design Logs"
       },
       "buttons": {
         "cancel": "Cancel",

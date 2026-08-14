@@ -43,6 +43,7 @@ import {
   LuWalletCards,
   LuClipboardCheck,
   LuReceipt,
+  LuImages,
 } from 'react-icons/lu';
 
 const navItems = [
@@ -207,6 +208,13 @@ const navItems = [
     superAdminOnly: false,
     permissionKey: 'activityLogs',
   },
+  {
+    key: 'orderDesignLogs',
+    href: '/order-design-logs',
+    icon: LuImages,
+    superAdminOnly: true,
+    permissionKey: 'orderDesignLogs',
+  },
 ];
 
 function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
@@ -252,6 +260,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
       logs: 'activityLogs',
       payments: 'payments',
       suppliers: 'suppliers',
+      'order-design-logs': 'orderDesignLogs',
     };
     return pageMap[page] ?? null;
   })();

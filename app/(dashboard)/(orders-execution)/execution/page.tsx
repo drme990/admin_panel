@@ -139,7 +139,7 @@ export default function ExecutionPage() {
       statusFilter: 'all',
       intentionFilter: 'all',
       countryFilter: '',
-      pageSize: 50,
+      pageSize: 250,
     },
   });
 
@@ -1478,6 +1478,8 @@ export default function ExecutionPage() {
     creatingDesignOrderId,
     downloadingDesignOrderId,
     downloadingInvoiceOrderId,
+    currentPage: page,
+    pageSize,
   });
 
   return (

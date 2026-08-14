@@ -106,6 +106,10 @@ interface ColumnCallbacks {
   creatingDesignOrderId: string | null;
   downloadingDesignOrderId: string | null;
   downloadingInvoiceOrderId: string | null;
+  /** Current page (1-based) — used to compute continuous row numbers across pages */
+  currentPage: number;
+  /** Page size — used to compute continuous row numbers across pages */
+  pageSize: number;
 }
 
 export function useExecutionColumns(callbacks: ColumnCallbacks) {
@@ -146,6 +150,8 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
     creatingDesignOrderId,
     downloadingDesignOrderId,
     downloadingInvoiceOrderId,
+    currentPage,
+    pageSize,
   } = callbacks;
 
   const columns = [
@@ -171,7 +177,7 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
       header: '#' as ReactNode,
       accessor: (_order: Order, index?: number) => (
         <span className="text-sm font-semibold text-foreground">
-          {(index ?? 0) + 1}
+          {(currentPage - 1) * pageSize + (index ?? 0) + 1}
         </span>
       ),
       className: 'w-12',

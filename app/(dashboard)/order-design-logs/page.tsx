@@ -17,7 +17,7 @@ import {
     LuChevronDown,
     LuChevronUp,
 } from 'react-icons/lu';
-import Table from '@/components/ui/table';
+import Loading from '@/components/ui/loading';
 import Dropdown from '@/components/ui/dropdown';
 import Button from '@/components/ui/button';
 import Input from '@/components/ui/input';
@@ -144,105 +144,6 @@ export default function OrderDesignLogsPage() {
         ...TRIGGER_OPTIONS.map((tr) => ({ value: tr, label: t(`trigger.${tr}`) })),
     ];
 
-    const columns = [
-        {
-            header: t('table.orderNumber'),
-            accessor: (log: OrderDesignLog) => (
-                <div className="flex flex-col gap-0.5">
-                    <span className="font-mono text-sm font-semibold text-foreground">
-                        {log.orderNumber}
-                    </span>
-                    {log.source && (
-                        <span className="text-xs text-secondary uppercase">{log.source}</span>
-                    )}
-                </div>
-            ),
-            className: 'min-w-32',
-        },
-        {
-            header: t('table.status'),
-            accessor: (log: OrderDesignLog) => (
-                <div className="flex items-center gap-1.5">
-                    {getStatusIcon(log.status)}
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(log.status)}`}>
-                        {t(`status.${log.status}`)}
-                    </span>
-                </div>
-            ),
-        },
-        {
-            header: t('table.trigger'),
-            accessor: (log: OrderDesignLog) => (
-                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getTriggerColor(log.trigger)}`}>
-                    {t(`trigger.${log.trigger}`)}
-                </span>
-            ),
-        },
-        {
-            header: t('table.results'),
-            accessor: (log: OrderDesignLog) => {
-                if (log.totalProducts === 0) {
-                    return <span className="text-secondary text-sm">—</span>;
-                }
-                return (
-                    <div className="flex items-center gap-2 text-sm">
-                        <span className="text-success font-medium">{log.generatedCount}</span>
-                        <span className="text-secondary">/</span>
-                        <span className="text-secondary">{log.totalProducts}</span>
-                        {log.failedCount > 0 && (
-                            <span className="text-error font-medium">({log.failedCount} {t('table.failed')})</span>
-                        )}
-                    </div>
-                );
-            },
-        },
-        {
-            header: t('table.duration'),
-            accessor: (log: OrderDesignLog) => (
-                <span className="text-secondary text-sm whitespace-nowrap">
-                    {formatDuration(log.durationMs)}
-                </span>
-            ),
-        },
-        {
-            header: t('table.date'),
-            accessor: (log: OrderDesignLog) => (
-                <div className="flex flex-col gap-0.5">
-                    <span className="text-secondary text-sm whitespace-nowrap">
-                        {formatDate(log.createdAt)}
-                    </span>
-                    {log.trigger !== 'auto_webhook' && log.triggeredByUserName && (
-                        <span className="text-xs text-secondary flex items-center gap-1">
-                            <LuUser size={10} />
-                            {log.triggeredByUserName}
-                        </span>
-                    )}
-                </div>
-            ),
-            className: 'min-w-40',
-        },
-        {
-            header: '',
-            accessor: (log: OrderDesignLog) => (
-                <button
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        setExpandedId(expandedId === log._id ? null : log._id);
-                    }}
-                    className="p-1 rounded hover:bg-background transition-colors"
-                    aria-label={expandedId === log._id ? t('table.collapse') : t('table.expand')}
-                >
-                    {expandedId === log._id ? (
-                        <LuChevronUp size={16} className="text-secondary" />
-                    ) : (
-                        <LuChevronDown size={16} className="text-secondary" />
-                    )}
-                </button>
-            ),
-            className: 'w-10',
-        },
-    ];
-
     return (
         <div className="space-y-6">
             {/* Header */}
@@ -288,22 +189,57 @@ export default function OrderDesignLogsPage() {
                 </div>
             </div>
 
-            {/* Table */}
-            <Table<OrderDesignLog>
-                columns={columns}
-                data={logs}
-                loading={loading}
-                emptyMessage={t('emptyMessage')}
-                getRowClassName={(log) => (log.status === 'failed' ? 'bg-error/5' : '')}
-            />
-
-            {/* Expanded row details — rendered below the table as a card */}
-            {expandedId && logs.find((l) => l._id === expandedId) && (
-                <ExpandedDetails
-                    log={logs.find((l) => l._id === expandedId)!}
-                    t={t}
-                />
-            )}
+            {/* Table with inline expandable rows */}
+            <div className="bg-card-bg border border-stroke rounded-site overflow-hidden">
+                {loading ? (
+                    <Loading size="md" text="Loading..." className="h-64" />
+                ) : logs.length === 0 ? (
+                    <div className="px-4 py-8 text-center">
+                        <p className="text-secondary">{t('emptyMessage')}</p>
+                    </div>
+                ) : (
+                    <div className="overflow-x-auto">
+                        <table className="w-full">
+                            <thead className="bg-background border-b border-stroke">
+                                <tr>
+                                    <th className="text-start px-4 py-3 text-sm font-semibold min-w-32">
+                                        {t('table.orderNumber')}
+                                    </th>
+                                    <th className="text-start px-4 py-3 text-sm font-semibold">
+                                        {t('table.status')}
+                                    </th>
+                                    <th className="text-start px-4 py-3 text-sm font-semibold">
+                                        {t('table.trigger')}
+                                    </th>
+                                    <th className="text-start px-4 py-3 text-sm font-semibold">
+                                        {t('table.results')}
+                                    </th>
+                                    <th className="text-start px-4 py-3 text-sm font-semibold">
+                                        {t('table.duration')}
+                                    </th>
+                                    <th className="text-start px-4 py-3 text-sm font-semibold min-w-40">
+                                        {t('table.date')}
+                                    </th>
+                                    <th className="w-10 px-4 py-3" />
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-stroke">
+                                {logs.map((log) => (
+                                    <LogRow
+                                        key={log._id}
+                                        log={log}
+                                        isExpanded={expandedId === log._id}
+                                        onToggle={() =>
+                                            setExpandedId(expandedId === log._id ? null : log._id)
+                                        }
+                                        t={t}
+                                    />
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </div>
 
             {/* Pagination */}
             {pagination && (
@@ -325,8 +261,131 @@ export default function OrderDesignLogsPage() {
 }
 
 /**
+ * A single log row + its inline expanded details.
+ *
+ * When expanded, renders an extra <tr> right below the data row
+ * with a full-width <td> containing the details panel.
+ */
+function LogRow({
+    log,
+    isExpanded,
+    onToggle,
+    t,
+}: {
+    log: OrderDesignLog;
+    isExpanded: boolean;
+    onToggle: () => void;
+    t: ReturnType<typeof useTranslations>;
+}) {
+    return (
+        <>
+            <tr
+                className={`hover:bg-background transition-colors cursor-pointer ${log.status === 'failed' ? 'bg-error/5' : ''}`}
+                onClick={onToggle}
+            >
+                {/* Order number */}
+                <td className="px-4 py-3 text-start">
+                    <div className="flex flex-col gap-0.5">
+                        <span className="font-mono text-sm font-semibold text-foreground">
+                            {log.orderNumber}
+                        </span>
+                        {log.source && (
+                            <span className="text-xs text-secondary uppercase">{log.source}</span>
+                        )}
+                    </div>
+                </td>
+
+                {/* Status */}
+                <td className="px-4 py-3 text-start">
+                    <div className="flex items-center gap-1.5">
+                        {getStatusIcon(log.status)}
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(log.status)}`}>
+                            {t(`status.${log.status}`)}
+                        </span>
+                    </div>
+                </td>
+
+                {/* Trigger */}
+                <td className="px-4 py-3 text-start">
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getTriggerColor(log.trigger)}`}>
+                        {t(`trigger.${log.trigger}`)}
+                    </span>
+                </td>
+
+                {/* Results */}
+                <td className="px-4 py-3 text-start">
+                    {log.totalProducts === 0 ? (
+                        <span className="text-secondary text-sm">—</span>
+                    ) : (
+                        <div className="flex items-center gap-2 text-sm">
+                            <span className="text-success font-medium">{log.generatedCount}</span>
+                            <span className="text-secondary">/</span>
+                            <span className="text-secondary">{log.totalProducts}</span>
+                            {log.failedCount > 0 && (
+                                <span className="text-error font-medium">
+                                    ({log.failedCount} {t('table.failed')})
+                                </span>
+                            )}
+                        </div>
+                    )}
+                </td>
+
+                {/* Duration */}
+                <td className="px-4 py-3 text-start">
+                    <span className="text-secondary text-sm whitespace-nowrap">
+                        {formatDuration(log.durationMs)}
+                    </span>
+                </td>
+
+                {/* Date */}
+                <td className="px-4 py-3 text-start">
+                    <div className="flex flex-col gap-0.5">
+                        <span className="text-secondary text-sm whitespace-nowrap">
+                            {formatDate(log.createdAt)}
+                        </span>
+                        {log.trigger !== 'auto_webhook' && log.triggeredByUserName && (
+                            <span className="text-xs text-secondary flex items-center gap-1">
+                                <LuUser size={10} />
+                                {log.triggeredByUserName}
+                            </span>
+                        )}
+                    </div>
+                </td>
+
+                {/* Expand/collapse button */}
+                <td className="px-4 py-3 text-start">
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onToggle();
+                        }}
+                        className="p-1 rounded hover:bg-background transition-colors"
+                        aria-label={isExpanded ? t('table.collapse') : t('table.expand')}
+                    >
+                        {isExpanded ? (
+                            <LuChevronUp size={16} className="text-secondary" />
+                        ) : (
+                            <LuChevronDown size={16} className="text-secondary" />
+                        )}
+                    </button>
+                </td>
+            </tr>
+
+            {/* Expanded details — inline below the row */}
+            {isExpanded && (
+                <tr>
+                    <td colSpan={7} className="p-0">
+                        <ExpandedDetails log={log} t={t} />
+                    </td>
+                </tr>
+            )}
+        </>
+    );
+}
+
+/**
  * Expanded details panel for a single log entry.
- * Shows per-product results, error messages, and metadata.
+ * Renders inside the table as a full-width row below the clicked log.
  */
 function ExpandedDetails({
     log,
@@ -336,17 +395,14 @@ function ExpandedDetails({
     t: ReturnType<typeof useTranslations>;
 }) {
     return (
-        <div className="bg-card-bg border border-stroke rounded-site p-4 space-y-4">
+        <div className="bg-background/50 px-4 py-4 space-y-4">
             <div className="flex items-center justify-between">
                 <h3 className="font-semibold text-lg">
                     {t('details.title')} — <span className="font-mono">{log.orderNumber}</span>
                 </h3>
-                <button
-                    onClick={() => {/* collapse handled by parent */ }}
-                    className="text-secondary text-sm hover:text-foreground"
-                >
+                <span className="text-secondary text-sm">
                     {t('details.orderId')}: <span className="font-mono text-xs">{log.orderId}</span>
-                </button>
+                </span>
             </div>
 
             {/* Metadata grid */}
@@ -418,7 +474,11 @@ function ExpandedDetails({
                                         </span>
                                         {result.templateType && (
                                             <span className="text-xs text-secondary flex items-center gap-0.5">
-                                                {result.templateType === 'image' ? <LuImage size={10} /> : <LuFileText size={10} />}
+                                                {result.templateType === 'image' ? (
+                                                    <LuImage size={10} />
+                                                ) : (
+                                                    <LuFileText size={10} />
+                                                )}
                                                 {result.templateType}
                                             </span>
                                         )}
@@ -439,7 +499,9 @@ function ExpandedDetails({
                                                 {result.errorCode || 'unknown'}
                                             </span>
                                             {result.errorMessage && (
-                                                <span className="text-error/70 ms-2">{result.errorMessage}</span>
+                                                <span className="text-error/70 ms-2">
+                                                    {result.errorMessage}
+                                                </span>
                                             )}
                                         </div>
                                     )}

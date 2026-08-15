@@ -245,7 +245,7 @@ export default function ProductsPricing() {
   }, [labelOptions, labelFilter, loading]);
 
   return (
-    <div className="container-site space-y-6 py-8">
+    <div className="space-y-6">
       {/* Header */}
       <div className="space-y-5">
         <div className="flex flex-col gap-2">

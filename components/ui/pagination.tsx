@@ -14,7 +14,7 @@ interface PaginationProps {
   onPageSizeChange?: (size: number) => void;
 }
 
-const PAGE_SIZE_OPTIONS = [10, 25, 50, 100, 250] as const;
+const PAGE_SIZE_OPTIONS = [16, 52, 100, 140, 200] as const;
 
 export default function Pagination({
   currentPage,
@@ -23,7 +23,7 @@ export default function Pagination({
   hasNextPage,
   hasPrevPage,
   disabled = false,
-  pageSize = 25,
+  pageSize = 52,
   onPageSizeChange,
 }: PaginationProps) {
   const canGoPrev = hasPrevPage ?? currentPage > 1;

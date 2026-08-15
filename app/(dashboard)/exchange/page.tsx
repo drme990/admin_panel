@@ -92,11 +92,10 @@ export default function ExchangePage() {
       header: t('table.status'),
       accessor: (log: CronLog) => (
         <span
-          className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
-            log.status === 'success'
+          className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${log.status === 'success'
               ? 'bg-green-500/10 text-green-500'
               : 'bg-red-500/10 text-red-500'
-          }`}
+            }`}
         >
           {log.status === 'success' ? (
             <CheckCircle size={12} />
@@ -111,11 +110,10 @@ export default function ExchangePage() {
       header: t('table.source'),
       accessor: (log: CronLog) => (
         <span
-          className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
-            log.source === 'cron'
+          className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${log.source === 'cron'
               ? 'bg-blue-500/10 text-blue-500'
               : 'bg-purple-500/10 text-purple-500'
-          }`}
+            }`}
         >
           {log.source === 'cron' ? <Clock size={12} /> : <User size={12} />}
           {t(`source.${log.source}`)}
@@ -167,20 +165,20 @@ export default function ExchangePage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-foreground mb-2">
+          <h1 className="text-2xl font-bold text-foreground">
             {t('title')}
           </h1>
-          <p className="text-secondary">{t('description')}</p>
+          <p className="mt-1 text-sm text-secondary">{t('description')}</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 shrink-0">
           <Button onClick={fetchLogs} variant="outline" size="sm">
             <RefreshCw size={16} className="me-1.5" />
             {t('refresh')}
           </Button>
 
-          <Button onClick={handleUpdatePrices} disabled={updating} size="md">
+          <Button onClick={handleUpdatePrices} disabled={updating} size="sm">
             <RefreshCw
               size={16}
               className={`me-2 ${updating ? 'animate-spin' : ''}`}
@@ -191,21 +189,12 @@ export default function ExchangePage() {
       </div>
 
       {/* Cron Logs */}
-      <div className="space-y-3">
-        <div>
-          <h2 className="text-xl font-semibold text-foreground">
-            {t('cronLogs')}
-          </h2>
-          <p className="text-secondary text-sm">{t('cronLogsDescription')}</p>
-        </div>
-
-        <Table<CronLog>
-          columns={columns}
-          data={logs}
-          loading={loading}
-          emptyMessage={t('noLogs')}
-        />
-      </div>
+      <Table<CronLog>
+        columns={columns}
+        data={logs}
+        loading={loading}
+        emptyMessage={t('noLogs')}
+      />
     </div>
   );
 }

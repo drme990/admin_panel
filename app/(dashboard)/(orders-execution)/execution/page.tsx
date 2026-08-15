@@ -3,7 +3,7 @@
 import { useEffect, useCallback, useState, useRef } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { toast } from 'react-toastify';
-import { LuDownload, LuPhone, LuEye, LuPalette, LuUpload, LuPencil, LuFileText, LuRefreshCw, LuPlus } from 'react-icons/lu';
+import { LuDownload, LuPhone, LuEye, LuPalette, LuPencil, LuFileText, LuRefreshCw, LuPlus, LuSparkles } from 'react-icons/lu';
 import { FaWhatsapp } from 'react-icons/fa6';
 
 import Table from '@/components/ui/table';
@@ -1768,42 +1768,100 @@ export default function ExecutionPage() {
                       },
                       {
                         header: t('table.design'),
-                        accessor: () => (
-                          <div className="flex flex-col items-center gap-1">
-                            <span className="inline-flex items-center justify-center p-2 text-primary">
-                              <LuPalette size={24} />
-                            </span>
-                            <div className="flex flex-row gap-1">
-                              <Button
-                                variant="ghost"
-                                size="custom"
-                                className="h-5 w-5 p-0 text-secondary hover:text-foreground"
-                                disabled
-                                aria-label={t('table.uploadDesign')}
-                              >
-                                <LuUpload size={12} />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="custom"
-                                className="h-5 w-5 p-0 text-secondary hover:text-foreground"
-                                disabled
-                                aria-label={t('table.downloadDesign')}
-                              >
-                                <LuDownload size={12} />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="custom"
-                                className="h-5 w-5 p-0 text-secondary hover:text-foreground"
-                                disabled
-                                aria-label={t('table.editDesign')}
-                              >
-                                <LuPencil size={12} />
-                              </Button>
+                        accessor: (order: Order) => {
+                          const designs = order.designUrls || [];
+                          const hasDesign = designs.length > 0;
+                          const isCreating = creatingDesignOrderId === order._id;
+                          const isDownloading = downloadingDesignOrderId === order._id;
+                          const iconColor = hasDesign ? 'text-primary' : 'text-secondary/50';
+
+                          return (
+                            <div className="flex flex-col items-center gap-1">
+                              {hasDesign ? (
+                                <button
+                                  type="button"
+                                  onClick={(e) => { e.stopPropagation(); setDesignPreviewOrder(order); }}
+                                  disabled={isCreating}
+                                  className={`inline-flex items-center justify-center p-2 ${iconColor} disabled:opacity-50`}
+                                  aria-label={t('table.viewDesign')}
+                                >
+                                  {isCreating ? (
+                                    <LuRefreshCw size={24} className="animate-spin" />
+                                  ) : (
+                                    <LuPalette size={24} />
+                                  )}
+                                </button>
+                              ) : (
+                                <span className={`inline-flex items-center justify-center p-2 ${iconColor}`}>
+                                  {isCreating ? (
+                                    <LuRefreshCw size={24} className="animate-spin" />
+                                  ) : (
+                                    <LuPalette size={24} />
+                                  )}
+                                </span>
+                              )}
+                              <div className="flex flex-row gap-1">
+                                {hasDesign ? (
+                                  <>
+                                    <Button
+                                      variant="ghost"
+                                      size="custom"
+                                      className="h-5 w-5 p-0 text-secondary hover:text-foreground"
+                                      onClick={(e) => { e.stopPropagation(); handleDownloadDesign(order); }}
+                                      disabled={isCreating || isDownloading}
+                                      aria-label={t('table.downloadDesign')}
+                                    >
+                                      {isDownloading ? (
+                                        <LuRefreshCw size={12} className="animate-spin" />
+                                      ) : (
+                                        <LuDownload size={12} />
+                                      )}
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="custom"
+                                      className="h-5 w-5 p-0 text-secondary hover:text-foreground"
+                                      onClick={(e) => { e.stopPropagation(); handleRegenerateDesign(order); }}
+                                      disabled={isCreating}
+                                      aria-label={t('table.regenerateDesign')}
+                                    >
+                                      {isCreating ? (
+                                        <LuRefreshCw size={12} className="animate-spin" />
+                                      ) : (
+                                        <LuRefreshCw size={12} />
+                                      )}
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="custom"
+                                      className="h-5 w-5 p-0 text-secondary hover:text-foreground"
+                                      onClick={(e) => { e.stopPropagation(); handleEditDesign(order); }}
+                                      disabled={isCreating}
+                                      aria-label={t('table.editDesign')}
+                                    >
+                                      <LuPencil size={12} />
+                                    </Button>
+                                  </>
+                                ) : (
+                                  <Button
+                                    variant="ghost"
+                                    size="custom"
+                                    className="h-5 w-5 p-0 text-secondary hover:text-foreground"
+                                    onClick={(e) => { e.stopPropagation(); handleCreateDesign(order); }}
+                                    disabled={isCreating}
+                                    aria-label={t('table.createDesign')}
+                                  >
+                                    {isCreating ? (
+                                      <LuRefreshCw size={12} className="animate-spin" />
+                                    ) : (
+                                      <LuSparkles size={12} />
+                                    )}
+                                  </Button>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        ),
+                          );
+                        },
                         className: 'min-w-20',
                       },
                       {

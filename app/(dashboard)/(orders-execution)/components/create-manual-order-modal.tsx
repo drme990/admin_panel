@@ -32,41 +32,6 @@ function extractDigits(value: string): string {
   return value.replace(/\D/g, '');
 }
 
-function levenshteinDistance(a: string, b: string): number {
-  const m = a.length;
-  const n = b.length;
-  if (m === 0) return n;
-  if (n === 0) return m;
-
-  const matrix: number[][] = Array.from({ length: m + 1 }, (_, i) => [i]);
-  for (let j = 1; j <= n; j++) {
-    matrix[0][j] = j;
-  }
-
-  for (let i = 1; i <= m; i++) {
-    for (let j = 1; j <= n; j++) {
-      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-      matrix[i][j] = Math.min(
-        matrix[i - 1][j] + 1,
-        matrix[i][j - 1] + 1,
-        matrix[i - 1][j - 1] + cost,
-      );
-    }
-  }
-
-  return matrix[m][n];
-}
-
-function phoneSimilarity(a: string, b: string): number {
-  const digitsA = extractDigits(a);
-  const digitsB = extractDigits(b);
-  if (digitsA.length === 0 && digitsB.length === 0) return 1;
-  if (digitsA.length === 0 || digitsB.length === 0) return 0;
-  const distance = levenshteinDistance(digitsA, digitsB);
-  const maxLength = Math.max(digitsA.length, digitsB.length);
-  return 1 - distance / maxLength;
-}
-
 function validatePhoneNumber(phone: string, countryName: string): boolean {
   if (!phone.trim()) return false;
 
@@ -1066,17 +1031,16 @@ export default function CreateManualOrderModal({
         const users = data.data as UserSuggestion[];
         const inputPhoneDigits = phone ? extractDigits(phone) : '';
         const inputEmail = email ? email.toLowerCase().trim() : '';
-        const PHONE_MATCH_THRESHOLD = 0.9;
+
+        // Auto-select only on an exact match (phone digits or email).
+        // The backend already does prefix matching, so the results are
+        // clean — no need for fuzzy similarity here.
         const bestMatch = users.find((u) => {
           const userPhoneDigits = u.phone ? extractDigits(u.phone) : '';
           const userEmail = u.email ? u.email.toLowerCase().trim() : '';
           const phoneExact = inputPhoneDigits.length > 0 && userPhoneDigits === inputPhoneDigits;
           const emailExact = inputEmail.length > 0 && userEmail === inputEmail;
-          const phoneClose =
-            inputPhoneDigits.length > 0 &&
-            userPhoneDigits.length > 0 &&
-            phoneSimilarity(inputPhoneDigits, userPhoneDigits) >= PHONE_MATCH_THRESHOLD;
-          return phoneExact || emailExact || phoneClose;
+          return phoneExact || emailExact;
         });
 
         if (bestMatch) {

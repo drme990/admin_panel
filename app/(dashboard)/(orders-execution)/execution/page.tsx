@@ -43,7 +43,6 @@ import {
   getOrderItemDisplayName,
 } from '../lib/order-utils';
 import { downloadFile } from '@/lib/download-utils';
-import { stripDesignMarkers } from '@/lib/product-name';
 import { InvoiceUploadMenu, type UploadInvoiceStatus } from '../components/invoic-upload-menu';
 
 interface ExecutionResponse {
@@ -1625,7 +1624,7 @@ export default function ExecutionPage() {
                 const matchingItems = (order.items || []).filter((item) => categoryProductIds.has(item.productId || ''));
                 const firstItem = matchingItems[0] || order.items?.[0];
                 const productName = firstItem
-                  ? stripDesignMarkers((locale === 'ar' ? firstItem.productName?.ar : firstItem.productName?.en) || t('stats.uncategorized'))
+                  ? (locale === 'ar' ? firstItem.productName?.ar : firstItem.productName?.en) || t('stats.uncategorized')
                   : t('stats.uncategorized');
                 if (!groups.has(productName)) {
                   groups.set(productName, []);

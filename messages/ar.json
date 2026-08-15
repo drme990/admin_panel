@@ -1533,6 +1533,8 @@
         "sizeNumber": "الحجم {number}",
         "sizeNameAr": "اسم الحجم (عربي)",
         "sizeNameEn": "اسم الحجم (إنجليزي)",
+        "sizeDesignName": "اسم تصميم الحجم",
+        "sizeDesignNameHelp": "يُستخدم في تطبيق التصميم لهذا الحجم بدلاً من اسم الحجم. اتركه فارغاً لاستخدام اسم الحجم.",
         "sizeAvailableLabel": "الحجم متاح",
         "sizeAvailabilityHelp": "عطّل هذا الحجم لإخفائه عن العملاء مع الاحتفاظ ببيانات السعر.",
         "sizePrice": "سعر الحجم",

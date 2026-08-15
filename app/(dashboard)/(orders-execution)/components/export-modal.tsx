@@ -13,7 +13,6 @@ import Button from '@/components/ui/button';
 import Checkbox from '@/components/ui/checkbox';
 import Input from '@/components/ui/input';
 import { Order } from '@/types/Order';
-import { stripDesignMarkers } from '@/lib/product-name';
 
 interface ExportModalProps {
   isOpen: boolean;
@@ -98,7 +97,7 @@ function buildExportRows(orders: Order[], locale: string): ExportRow[] {
 
     const items = (order.items || [])
       .map((item) => {
-        const name = stripDesignMarkers(locale === 'ar' ? item.productName?.ar : item.productName?.en);
+        const name = locale === 'ar' ? item.productName?.ar : item.productName?.en;
         const qty = item.quantity || 1;
         return qty > 1 ? `${qty}x ${name}` : (name || '');
       })

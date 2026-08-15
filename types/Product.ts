@@ -16,6 +16,12 @@ export interface ProductSize {
     ar: string;
     en: string;
   };
+  /**
+   * Design-only name for this size — used by the design app when
+   * generating designs instead of the customer-facing `name`.
+   * Single string (Arabic). Falls back to `name.ar` if not set.
+   */
+  designName?: string;
   /** Price in baseCurrency */
   price: number;
   /** Multi-currency converted / manually-set prices */

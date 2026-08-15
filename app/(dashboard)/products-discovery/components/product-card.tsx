@@ -7,7 +7,6 @@ import Image from 'next/image';
 import Tabs from '@/components/ui/tabs';
 
 import { Product, getPrimaryProductImageUrl } from '@/types/Product';
-import { stripDesignMarkers } from '@/lib/product-name';
 
 import { cn } from '@/lib/utils';
 
@@ -35,7 +34,7 @@ export default function ProductCard({ product, currencyCode }: Props) {
 
   const hasPartialPayment = Boolean(partialPayment?.isAllowed);
 
-  const productName = stripDesignMarkers(locale === 'ar' ? product.name.ar : product.name.en);
+  const productName = locale === 'ar' ? product.name.ar : product.name.en;
 
   const availablePrices = useMemo(() => {
     if (!activeSize) return [];
@@ -100,7 +99,7 @@ export default function ProductCard({ product, currencyCode }: Props) {
         {image ? (
           <Image
             src={image}
-            alt={stripDesignMarkers(product.name.en)}
+            alt={product.name.en}
             fill
             unoptimized
             className="object-cover transition-transform duration-300 group-hover:scale-105"

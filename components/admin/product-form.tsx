@@ -67,6 +67,7 @@ export default function ProductForm({
 
   const defaultSize = {
     name: { ar: '', en: '' },
+    designName: '',
     price: 0,
     prices: [] as CurrencyPrice[],
     manualPrice: null as number | null,
@@ -97,6 +98,7 @@ export default function ProductForm({
     },
     sizes: [{ ...defaultSize }] as {
       name: { ar: string; en: string };
+      designName: string;
       price: number;
       prices: CurrencyPrice[];
       manualPrice: number | null;
@@ -200,6 +202,7 @@ export default function ProductForm({
           product.sizes?.length > 0
             ? product.sizes.map((s) => ({
               name: { ar: s.name.ar || '', en: s.name.en || '' },
+              designName: s.designName || '',
               price: s.price || 0,
               prices: s.prices || [],
               manualPrice: s.manualPrice ?? null,
@@ -336,6 +339,8 @@ export default function ProductForm({
       size.name = { ...size.name, ar: value as string };
     } else if (field === 'name.en') {
       size.name = { ...size.name, en: value as string };
+    } else if (field === 'designName') {
+      size.designName = value as string;
     } else if (field === 'price') {
       size.price = value as number;
     } else if (field === 'manualPrice') {
@@ -916,6 +921,14 @@ export default function ProductForm({
                   onChange={(e) => updateSize(index, 'name.en', e.target.value)}
                 />
               </div>
+
+              <Input
+                label={t('form.sizeDesignName')}
+                type="text"
+                value={size.designName}
+                onChange={(e) => updateSize(index, 'designName', e.target.value)}
+                helperText={t('form.sizeDesignNameHelp')}
+              />
 
               <Switch
                 id={`sizeAvailable_${index}`}

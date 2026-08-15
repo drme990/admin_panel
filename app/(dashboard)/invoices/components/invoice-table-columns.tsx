@@ -8,7 +8,6 @@ import Button from '@/components/ui/button';
 import Tooltip from '@/components/ui/tooltip';
 import Checkbox from '@/components/ui/checkbox';
 import { Order, InvoiceStatus } from '@/types/Order';
-import { stripDesignMarkers } from '@/lib/product-name';
 import { getPaymentMethodLabel } from '@/lib/order';
 
 import type { InvoiceRow } from '../lib/invoice-utils';
@@ -314,7 +313,7 @@ export function useInvoiceColumns(callbacks: ColumnCallbacks) {
           <div className="flex flex-col gap-1 min-w-52">
             {items.map((item, i) => {
               const qty = item.quantity || 1;
-              const name = stripDesignMarkers(locale === 'ar' ? item.productName?.ar : item.productName?.en);
+              const name = locale === 'ar' ? item.productName?.ar : item.productName?.en;
               return (
                 <span key={i} className="text-sm font-medium text-foreground">
                   {qty > 1 ? `${qty} ${name}` : name}
@@ -331,7 +330,7 @@ export function useInvoiceColumns(callbacks: ColumnCallbacks) {
                     e.stopPropagation();
                     const itemTexts = items.map((item) => {
                       const qty = item.quantity || 1;
-                      const name = stripDesignMarkers(locale === 'ar' ? item.productName?.ar : item.productName?.en);
+                      const name = locale === 'ar' ? item.productName?.ar : item.productName?.en;
                       return qty > 1 ? `${qty} ${name}` : (name || '');
                     });
                     handleCopy(itemTexts.join('\n'), t('copied'));

@@ -7,7 +7,6 @@ import { LuFileText } from 'react-icons/lu';
 import Modal from '@/components/ui/modal';
 import Button from '@/components/ui/button';
 import Loading from '@/components/ui/loading';
-import { stripDesignMarkers } from '@/lib/product-name';
 import { STATUS_COLORS } from '../lib/order-status';
 import { OrderStatus } from '@/types/Order';
 import InvoicePreviewModal from '../../invoices/components/invoice-preview-modal';
@@ -302,7 +301,7 @@ function TextValue({ type, value }: { type: OrderHistoryEntry['changeType']; val
       return (
         <span className="text-foreground">
           {parsedItems
-            .map((item) => `${item.quantity || 1}x ${stripDesignMarkers(item.productName?.en || item.productName?.ar || '?')}`)
+            .map((item) => `${item.quantity || 1}x ${item.productName?.en || item.productName?.ar || '?'}`)
             .join(', ')}
         </span>
       );

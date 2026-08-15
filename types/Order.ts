@@ -73,6 +73,8 @@ export interface OrderItem {
   quantity: number;
   sizeIndex?: number;
   sizeName?: OrderItemSizeValue;
+  /** Design-only name snapshot from the product size (for the design app) */
+  sizeDesignName?: string;
   sizeLabel?: OrderItemSizeValue;
   size?: OrderItemSizeValue;
   sizes?: OrderItemSizeOption[];

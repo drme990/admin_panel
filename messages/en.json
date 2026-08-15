@@ -1535,6 +1535,8 @@
         "sizeNumber": "Size {number}",
         "sizeNameAr": "Size Name (Arabic)",
         "sizeNameEn": "Size Name (English)",
+        "sizeDesignName": "Size Design Name",
+        "sizeDesignNameHelp": "Used by the design app for this specific size instead of the size name. Leave empty to use the size name.",
         "sizeAvailableLabel": "Size Available",
         "sizeAvailabilityHelp": "Disable this size to hide it from customers while keeping its pricing data.",
         "sizePrice": "Size Price",

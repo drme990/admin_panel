@@ -4,7 +4,6 @@ import { useState, useCallback } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import Image from 'next/image';
 import { Product, getPrimaryProductImageUrl } from '@/types/Product';
-import { stripDesignMarkers } from '@/lib/product-name';
 import Button from '@/components/ui/button';
 import { toast } from 'react-toastify';
 import {
@@ -155,7 +154,7 @@ export default function ManualPricesTab({
                   <div className="relative w-10 h-10 rounded-lg overflow-hidden shrink-0">
                     <Image
                       src={img}
-                      alt={stripDesignMarkers(product.name.ar)}
+                      alt={product.name.ar}
                       fill
                       className="object-cover"
                       unoptimized
@@ -166,7 +165,7 @@ export default function ManualPricesTab({
                 )}
                 <div className="flex-1 text-start">
                   <span className="font-medium text-foreground">
-                    {stripDesignMarkers(isRTL ? product.name.ar : product.name.en)}
+                    {isRTL ? product.name.ar : product.name.en}
                   </span>
                   <span className="text-xs text-secondary ms-2">
                     {product.sizes.length} {t('manualPrices.sizes', { defaultValue: 'sizes' })}

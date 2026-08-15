@@ -6,7 +6,6 @@ import Modal from '@/components/ui/modal';
 import Button from '@/components/ui/button';
 import Tooltip from '@/components/ui/tooltip';
 import { Order, OrderPayment } from '@/types/Order';
-import { stripDesignMarkers } from '@/lib/product-name';
 import { STATUS_COLORS, PAYMENT_STATUS_COLORS } from '../lib/order-status';
 import { isImageUrl } from '../lib/order-utils';
 import { getPaymentMethodLabel } from '@/lib/order';
@@ -106,9 +105,7 @@ function getOrderItemDisplayName(
   item: Order['items'][number],
   locale: string,
 ): string {
-  const productName = stripDesignMarkers(
-    locale === 'ar' ? item.productName.ar : item.productName.en,
-  );
+  const productName = locale === 'ar' ? item.productName.ar : item.productName.en;
   const sizeLabel = resolveOrderItemSizeLabel(item, locale);
   return sizeLabel ? `${productName} - ${sizeLabel}` : productName;
 }

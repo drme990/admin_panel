@@ -25,7 +25,6 @@ import { FaWhatsapp } from 'react-icons/fa';
 import { isValidPhoneNumber } from 'libphonenumber-js';
 import { COUNTRIES } from '@/lib/countries';
 import { MANUAL_PAYMENT_METHODS, EASYKASH_PAYMENT_METHOD } from '@/lib/order';
-import { stripDesignMarkers } from '@/lib/product-name';
 import type { PaymentMethod } from '@/types/Order';
 
 function extractDigits(value: string): string {
@@ -489,7 +488,7 @@ export default function CreateManualOrderModal({
 
   const productOptions = useMemo(() => {
     const base = products.map((p) => ({
-      label: stripDesignMarkers(locale === 'ar' ? p.name.ar || p.name.en : p.name.en || p.name.ar),
+      label: locale === 'ar' ? p.name.ar || p.name.en : p.name.en || p.name.ar,
       value: p._id,
     }));
     // Sort so recently used products appear first

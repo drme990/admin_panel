@@ -232,8 +232,8 @@ export default function OrderDetailModal({
 
             return (
               <>
-                {/* Status + date */}
-                <div className="flex items-center justify-between">
+                {/* Status + dates */}
+                <div className="flex items-center justify-between flex-wrap gap-2">
                   <div className="flex items-center gap-3">
                     <span
                       className={`px-3 py-1 text-sm font-medium rounded-full ${STATUS_COLORS[order.status] || ''}`}
@@ -247,9 +247,15 @@ export default function OrderDetailModal({
                         </span>
                       )}
                   </div>
-                  <span className="text-sm text-secondary">
-                    {formatDate(order.statusUpdateTime)}
-                  </span>
+                  <div className="flex items-center gap-3 text-xs text-secondary">
+                    <span>
+                      {t('createdAt')}: <span className="font-medium text-foreground">{formatDate(order.createdAt)}</span>
+                    </span>
+                    <span className="text-stroke">|</span>
+                    <span>
+                      {t('lastUpdated')}: <span className="font-medium text-foreground">{formatDate(order.statusUpdateTime)}</span>
+                    </span>
+                  </div>
                 </div>
 
                 {/* Total amount hero */}
@@ -615,7 +621,12 @@ export default function OrderDetailModal({
                     />
                     <InfoRow
                       icon={<LuCalendar size={14} />}
-                      label={t('table.date')}
+                      label={t('createdAt')}
+                      value={formatDate(order.createdAt)}
+                    />
+                    <InfoRow
+                      icon={<LuCalendar size={14} />}
+                      label={t('lastUpdated')}
                       value={formatDate(order.statusUpdateTime)}
                     />
                     <InfoRow
@@ -631,11 +642,6 @@ export default function OrderDetailModal({
                           ? formatDate(order.termsAgreedAt)
                           : 'N/A'
                       }
-                    />
-                    <InfoRow
-                      icon={<LuHash size={14} />}
-                      label={t('updatedAt')}
-                      value={formatDate(order.statusUpdateTime)}
                     />
                     {order.referralId && (
                       <InfoRow

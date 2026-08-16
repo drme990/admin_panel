@@ -104,6 +104,7 @@ export default function OrderDesignsPage() {
     viewOrder,
     closeModal,
     updateOrder,
+    fetchOrderDetails,
     setEditOrderModalOpen,
     setEditingField,
     setSelectedOrder,
@@ -150,6 +151,7 @@ export default function OrderDesignsPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [referrals, setReferrals] = useState<Referral[]>([]);
   const [deleteDesign, setDeleteDesign] = useState<{ order: Order; design: OrderDesignUrl } | null>(null);
+  const [creatingPaymentLinkOrderId, setCreatingPaymentLinkOrderId] = useState<string | null>(null);
 
   // ── Fetch categories + referrals ───────────────────────────────────────
   useEffect(() => {
@@ -327,6 +329,30 @@ export default function OrderDesignsPage() {
     setSelectedOrder(order);
     setEditingField(field);
     setEditOrderModalOpen(true);
+  };
+
+  const handleCreatePaymentLink = async (order: Order) => {
+    try {
+      setCreatingPaymentLinkOrderId(order._id);
+      const res = await fetch(`/api/orders/${order._id}/regenerate-payment-link`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      const data = await res.json();
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to create payment link');
+      }
+      toast.success(isRTL ? 'تم إنشاء رابط الدفع' : 'Payment link created');
+      const updatedOrder = await fetchOrderDetails(order._id, false);
+      if (updatedOrder) {
+        setSelectedOrder(updatedOrder);
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : (isRTL ? 'فشل إنشاء رابط الدفع' : 'Failed to create payment link');
+      toast.error(message);
+    } finally {
+      setCreatingPaymentLinkOrderId(null);
+    }
   };
 
   const handleCopy = async (text: string, label: string) => {
@@ -637,6 +663,8 @@ export default function OrderDesignsPage() {
         formatDate={formatDate}
         locale={locale}
         namespace="execution"
+        onCreatePaymentLink={selectedOrder ? handleCreatePaymentLink : undefined}
+        isCreatingPaymentLink={selectedOrder ? creatingPaymentLinkOrderId === selectedOrder._id : false}
       />
 
       {/* Edit Order Modal */}

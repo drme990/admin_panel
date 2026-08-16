@@ -5,7 +5,7 @@ import { useLocale, useTranslations } from 'next-intl';
 import { toast } from 'react-toastify';
 import {
   LuPencil, LuTrash2, LuImage, LuCopy, LuCheck, LuClock, LuDownload, LuUpload, LuRefreshCw,
-  LuSparkles,
+  LuSparkles, LuEye, LuEllipsisVertical,
 } from 'react-icons/lu';
 
 import Pagination from '@/components/ui/pagination';
@@ -120,6 +120,16 @@ export default function OrderDesignsPage() {
 
   const tomorrow = getRelativeIsoDate(1);
 
+  const savedFilters = useMemo(() => {
+    if (typeof window === 'undefined') return null;
+    try {
+      const raw = sessionStorage.getItem('orderDesigns.filters');
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  }, []);
+
   // ── Order page hook (same as execution page) ───────────────────────────
   const {
     state,
@@ -139,14 +149,18 @@ export default function OrderDesignsPage() {
   } = useOrderPage({
     namespace: 'execution',
     initialState: {
-      fromDateFilter: tomorrow,
-      toDateFilter: tomorrow,
-      sourceFilter: 'all',
-      categoryFilter: 'all',
-      statusFilter: 'all',
-      intentionFilter: 'all',
-      countryFilter: '',
-      pageSize: 52,
+      fromDateFilter: savedFilters?.fromDateFilter ?? tomorrow,
+      toDateFilter: savedFilters?.toDateFilter ?? tomorrow,
+      sourceFilter: savedFilters?.sourceFilter ?? 'all',
+      categoryFilter: savedFilters?.categoryFilter ?? 'all',
+      statusFilter: savedFilters?.statusFilter ?? 'all',
+      intentionFilter: savedFilters?.intentionFilter ?? 'all',
+      countryFilter: savedFilters?.countryFilter ?? '',
+      pageSize: savedFilters?.pageSize ?? 52,
+      referralFilter: savedFilters?.referralFilter ?? '',
+      searchInput: savedFilters?.searchInput ?? '',
+      searchQuery: savedFilters?.searchQuery ?? '',
+      page: savedFilters?.page ?? 1,
     },
   });
 
@@ -186,11 +200,39 @@ export default function OrderDesignsPage() {
   const [uploadingKey, setUploadingKey] = useState<string | null>(null);
   const [downloadingKey, setDownloadingKey] = useState<string | null>(null);
   const [generatingOrderId, setGeneratingOrderId] = useState<string | null>(null);
-  const [reviewFilter, setReviewFilter] = useState<ReviewFilter>('waiting');
+  const [reviewFilter, setReviewFilter] = useState<ReviewFilter>(savedFilters?.reviewFilter ?? 'waiting');
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
   const [isDownloadingZip, setIsDownloadingZip] = useState(false);
   const [uploadTargetCard, setUploadTargetCard] = useState<DesignCard | null>(null);
+  const [openMoreMenuKey, setOpenMoreMenuKey] = useState<string | null>(null);
+  const [previewedCard, setPreviewedCard] = useState<{ card: DesignCard; counter: string } | null>(null);
   const uploadInputRef = useRef<HTMLInputElement>(null);
+
+  // ── Persist filters to session storage ─────────────────────────────────
+  const ORDER_DESIGNS_FILTERS_KEY = 'orderDesigns.filters';
+
+  useEffect(() => {
+    try {
+      const filters = {
+        fromDateFilter,
+        toDateFilter,
+        statusFilter,
+        sourceFilter,
+        referralFilter,
+        categoryFilter,
+        intentionFilter,
+        countryFilter,
+        searchInput,
+        searchQuery,
+        page,
+        pageSize,
+        reviewFilter,
+      };
+      sessionStorage.setItem(ORDER_DESIGNS_FILTERS_KEY, JSON.stringify(filters));
+    } catch (err) {
+      console.error('Failed to save order-designs filters:', err);
+    }
+  }, [fromDateFilter, toDateFilter, statusFilter, sourceFilter, referralFilter, categoryFilter, intentionFilter, countryFilter, searchInput, searchQuery, page, pageSize, reviewFilter]);
 
   // ── Category drill-down (same UX as the execution page) ────────────────
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
@@ -820,7 +862,7 @@ export default function OrderDesignsPage() {
   // Renders a full card (with the generated design + all its actions) when
   // `card.design` exists, or a "no design yet" placeholder with a single
   // Generate action otherwise.
-  const renderDesignCard = (card: DesignCard, counter: string) => {
+  const renderDesignCard = (card: DesignCard, counter: string, isPreview = false) => {
     const { order: cardOrder, design, itemIndex } = card;
     const sacrificeFor = getSacrificeFor(cardOrder);
     const displayName = sacrificeFor || cardOrder.billingData?.fullName || cardOrder.orderNumber;
@@ -841,9 +883,9 @@ export default function OrderDesignsPage() {
     return (
       <div
         key={`${cardOrder._id}-${itemIndex}`}
-        className={`group relative flex flex-col rounded-2xl border bg-card-bg shadow-sm transition-shadow hover:shadow-md cursor-pointer ${isSelected ? 'border-primary ring-2 ring-primary/30' : 'border-stroke'
+        className={`group relative flex flex-col rounded-2xl border bg-card-bg shadow-sm transition-shadow hover:shadow-md ${isPreview ? 'cursor-default' : 'cursor-pointer'} ${isSelected ? 'border-primary ring-2 ring-primary/30' : 'border-stroke'
           }`}
-        onClick={() => handleViewOrder(cardOrder)}
+        onClick={isPreview ? undefined : () => setPreviewedCard({ card, counter })}
       >
         {/* Selection checkbox — top left (only for generated designs) */}
         {design && (
@@ -917,45 +959,68 @@ export default function OrderDesignsPage() {
                   )}
                 </button>
               </Tooltip>
-              {/* Upload a replacement image */}
-              <Tooltip content={t('uploadDesign')} position={isRTL ? 'right' : 'left'}>
-                <button
-                  type="button"
-                  className="flex h-8 w-8 items-center justify-center rounded-lg bg-background/90 backdrop-blur-sm border border-stroke text-secondary hover:text-primary hover:bg-background transition-colors disabled:opacity-60"
-                  onClick={(e) => { e.stopPropagation(); triggerUploadDesign(card); }}
-                  disabled={uploadingKey === cardKey(cardOrder._id, design.productId)}
-                >
-                  {uploadingKey === cardKey(cardOrder._id, design.productId) ? (
-                    <LuRefreshCw className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <LuUpload className="h-4 w-4" />
-                  )}
-                </button>
-              </Tooltip>
-              {/* Regenerate design */}
-              <Tooltip content={tExec('table.regenerateDesign')} position={isRTL ? 'right' : 'left'}>
-                <button
-                  type="button"
-                  className="flex h-8 w-8 items-center justify-center rounded-lg bg-background/90 backdrop-blur-sm border border-stroke text-secondary hover:text-primary hover:bg-background transition-colors disabled:opacity-60"
-                  onClick={(e) => { e.stopPropagation(); handleRegenerateDesign(cardOrder); }}
-                  disabled={isGenerating}
-                >
-                  {isGenerating ? (
-                    <LuRefreshCw className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <LuRefreshCw className="h-4 w-4" />
-                  )}
-                </button>
-              </Tooltip>
-              {/* Delete design */}
-              <Tooltip content={t('delete')} position={isRTL ? 'right' : 'left'}>
-                <button
-                  className="flex h-8 w-8 items-center justify-center rounded-lg bg-background/90 backdrop-blur-sm border border-stroke text-secondary hover:text-error hover:bg-background transition-colors"
-                  onClick={(e) => { e.stopPropagation(); setDeleteDesign({ order: cardOrder, design }); }}
-                >
-                  <LuTrash2 className="h-4 w-4" />
-                </button>
-              </Tooltip>
+              {/* More actions: upload, regenerate, delete */}
+              {(() => {
+                const moreMenuKey = cardKey(cardOrder._id, design.productId);
+                const isMoreOpen = openMoreMenuKey === moreMenuKey;
+                return (
+                  <>
+                    <Tooltip content={t('more')} position={isRTL ? 'right' : 'left'}>
+                      <button
+                        type="button"
+                        className="flex h-8 w-8 items-center justify-center rounded-lg bg-background/90 backdrop-blur-sm border border-stroke text-secondary hover:text-primary hover:bg-background transition-colors"
+                        onClick={(e) => { e.stopPropagation(); setOpenMoreMenuKey(isMoreOpen ? null : moreMenuKey); }}
+                        aria-label={t('more')}
+                      >
+                        <LuEllipsisVertical className="h-4 w-4" />
+                      </button>
+                    </Tooltip>
+                    {isMoreOpen && (
+                      <>
+                        {/* Upload a replacement image */}
+                        <Tooltip content={t('uploadDesign')} position={isRTL ? 'right' : 'left'}>
+                          <button
+                            type="button"
+                            className="flex h-8 w-8 items-center justify-center rounded-lg bg-background/90 backdrop-blur-sm border border-stroke text-secondary hover:text-primary hover:bg-background transition-colors disabled:opacity-60"
+                            onClick={(e) => { e.stopPropagation(); triggerUploadDesign(card); }}
+                            disabled={uploadingKey === cardKey(cardOrder._id, design.productId)}
+                          >
+                            {uploadingKey === cardKey(cardOrder._id, design.productId) ? (
+                              <LuRefreshCw className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <LuUpload className="h-4 w-4" />
+                            )}
+                          </button>
+                        </Tooltip>
+                        {/* Regenerate design */}
+                        <Tooltip content={tExec('table.regenerateDesign')} position={isRTL ? 'right' : 'left'}>
+                          <button
+                            type="button"
+                            className="flex h-8 w-8 items-center justify-center rounded-lg bg-background/90 backdrop-blur-sm border border-stroke text-secondary hover:text-primary hover:bg-background transition-colors disabled:opacity-60"
+                            onClick={(e) => { e.stopPropagation(); handleRegenerateDesign(cardOrder); }}
+                            disabled={isGenerating}
+                          >
+                            {isGenerating ? (
+                              <LuRefreshCw className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <LuRefreshCw className="h-4 w-4" />
+                            )}
+                          </button>
+                        </Tooltip>
+                        {/* Delete design */}
+                        <Tooltip content={t('delete')} position={isRTL ? 'right' : 'left'}>
+                          <button
+                            className="flex h-8 w-8 items-center justify-center rounded-lg bg-background/90 backdrop-blur-sm border border-stroke text-secondary hover:text-error hover:bg-background transition-colors"
+                            onClick={(e) => { e.stopPropagation(); setDeleteDesign({ order: cardOrder, design }); }}
+                          >
+                            <LuTrash2 className="h-4 w-4" />
+                          </button>
+                        </Tooltip>
+                      </>
+                    )}
+                  </>
+                );
+              })()}
             </>
           ) : null}
         </div>
@@ -1049,24 +1114,36 @@ export default function OrderDesignsPage() {
           )}
 
           {/* Order number — small secondary chip, with copy */}
-          <div className="flex flex-col items-start gap-1.5 pt-1">
-            <div className="flex items-center gap-1">
-              <span className="inline-flex items-center gap-1 rounded-full border border-stroke bg-background px-2 py-0.5 text-xs text-secondary truncate">
-                #{cardOrder.orderNumber}
-                {itemIndex > 1 && ` · ${itemIndex}`}
+          <div className="flex items-center justify-between pt-1">
+            <div className="flex flex-col items-start gap-1.5">
+              <div className="flex items-center gap-1">
+                <span className="inline-flex items-center gap-1 rounded-full border border-stroke bg-background px-2 py-0.5 text-xs text-secondary truncate">
+                  #{cardOrder.orderNumber}
+                  {itemIndex > 1 && ` · ${itemIndex}`}
+                </span>
+                <Tooltip content={t('copyOrderNumber')} position={isRTL ? 'right' : 'left'}>
+                  <button
+                    className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-secondary hover:text-primary hover:bg-primary/10 transition-colors"
+                    onClick={(e) => { e.stopPropagation(); handleCopy(cardOrder.orderNumber, isRTL ? 'رقم الطلب' : 'order number'); }}
+                  >
+                    <LuCopy className="h-3 w-3" />
+                  </button>
+                </Tooltip>
+              </div>
+              <span className="text-xs text-secondary/70">
+                {formatDate(cardOrder.createdAt)}
               </span>
-              <Tooltip content={t('copyOrderNumber')} position={isRTL ? 'right' : 'left'}>
-                <button
-                  className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-secondary hover:text-primary hover:bg-primary/10 transition-colors"
-                  onClick={(e) => { e.stopPropagation(); handleCopy(cardOrder.orderNumber, isRTL ? 'رقم الطلب' : 'order number'); }}
-                >
-                  <LuCopy className="h-3 w-3" />
-                </button>
-              </Tooltip>
             </div>
-            <span className="ml-auto text-xs text-secondary/70">
-              {formatDate(cardOrder.createdAt)}
-            </span>
+            <Tooltip content={t('viewOrder')} position={isRTL ? 'right' : 'left'}>
+              <button
+                type="button"
+                className="flex h-8 w-8 items-center justify-center rounded-lg border border-stroke bg-background text-secondary hover:text-primary hover:bg-primary/10 transition-colors"
+                onClick={(e) => { e.stopPropagation(); handleViewOrder(cardOrder); }}
+                aria-label={t('viewOrder')}
+              >
+                <LuEye className="h-4 w-4" />
+              </button>
+            </Tooltip>
           </div>
         </div>
       </div>
@@ -1319,6 +1396,24 @@ export default function OrderDesignsPage() {
         onUpdate={updateOrder}
         updating={savingOrderId !== null}
       />
+
+      {/* Design card click-to-preview overlay */}
+      {previewedCard && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+          onClick={() => setPreviewedCard(null)}
+          role="button"
+          tabIndex={-1}
+          aria-label="Close preview"
+        >
+          <div
+            className="w-64 sm:w-80 max-w-full scale-125 sm:scale-150 origin-center transition-transform"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {renderDesignCard(previewedCard.card, previewedCard.counter, true)}
+          </div>
+        </div>
+      )}
 
       {/* Hidden file input for the "upload replacement image" action */}
       <input

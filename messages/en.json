@@ -593,7 +593,8 @@
     "selectDesign": "Select design",
     "selectedCount": "selected",
     "downloadSelected": "Download Designs",
-    "clearSelection": "Clear selection"
+    "clearSelection": "Clear selection",
+    "more": "More"
   },
   "orderDesignLogs": {
     "title": "Order Design Logs",

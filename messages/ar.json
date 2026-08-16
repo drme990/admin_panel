@@ -592,7 +592,8 @@
     "selectDesign": "تحديد التصميم",
     "selectedCount": "محدد",
     "downloadSelected": "تحميل التصاميم",
-    "clearSelection": "إلغاء التحديد"
+    "clearSelection": "إلغاء التحديد",
+    "more": "المزيد"
   },
   "orderDesignLogs": {
     "title": "سجل تصاميم الطلبات",

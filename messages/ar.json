@@ -562,6 +562,8 @@
     "total": "الإجمالي",
     "edit": "تعديل",
     "editDesign": "تعديل التصميم",
+    "downloadDesign": "تحميل التصميم",
+    "uploadDesign": "رفع صورة بديلة",
     "editOrder": "تعديل الطلب",
     "editProduct": "تعديل المنتج",
     "editNames": "تعديل الأسماء",
@@ -583,7 +585,11 @@
     "reviewed": "تمت المراجعة",
     "markAsReviewed": "وضع علامة كمُراجَع",
     "markAsNotReviewed": "وضع علامة كغير مُراجَع",
-    "reviewUpdateFailed": "فشل تحديث حالة المراجعة"
+    "reviewUpdateFailed": "فشل تحديث حالة المراجعة",
+    "selectDesign": "تحديد التصميم",
+    "selectedCount": "محدد",
+    "downloadSelected": "تحميل التصاميم",
+    "clearSelection": "إلغاء التحديد"
   },
   "orderDesignLogs": {
     "title": "سجل تصاميم الطلبات",

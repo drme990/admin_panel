@@ -109,6 +109,31 @@ export async function updateDesignReviewStatus(
   return true;
 }
 
+/**
+ * Replace a single generated design's image URL (e.g. after the admin
+ * uploads a custom image to use instead of the auto-generated one).
+ * Resets the design back to "waiting for review" since its content changed.
+ * Calls PATCH /api/orders/{orderId}/designs (proxied to the backend's
+ * `/api/admin/orders/[id]/designs` route).
+ */
+export async function replaceDesignImage(
+  orderId: string,
+  productId: string,
+  url: string,
+): Promise<boolean> {
+  const res = await fetch(`/api/orders/${orderId}/designs`, {
+    method: 'PATCH',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ productId, url }),
+  });
+  const data = await res.json();
+  if (!data.success) {
+    throw new Error(data.error?.message || 'Failed to replace design image');
+  }
+  return true;
+}
+
 export function isImageUrl(url: string): boolean {
   try {
     const pathname = new URL(url).pathname;

@@ -563,6 +563,8 @@
     "total": "Total",
     "edit": "Edit",
     "editDesign": "Edit Design",
+    "downloadDesign": "Download Design",
+    "uploadDesign": "Upload Replacement Image",
     "editOrder": "Edit Order",
     "editProduct": "Edit Product",
     "editNames": "Edit Names",
@@ -584,7 +586,11 @@
     "reviewed": "Reviewed",
     "markAsReviewed": "Mark as Reviewed",
     "markAsNotReviewed": "Mark as Not Reviewed",
-    "reviewUpdateFailed": "Failed to update review status"
+    "reviewUpdateFailed": "Failed to update review status",
+    "selectDesign": "Select design",
+    "selectedCount": "selected",
+    "downloadSelected": "Download Designs",
+    "clearSelection": "Clear selection"
   },
   "orderDesignLogs": {
     "title": "Order Design Logs",

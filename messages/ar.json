@@ -2278,7 +2278,11 @@
         "login": "تسجيل دخول",
         "logout": "تسجيل خروج",
         "ban": "حظر",
-        "unban": "إلغاء الحظر"
+        "unban": "إلغاء الحظر",
+        "generate_design": "إنشاء تصميم",
+        "delete_designs": "حذف التصاميم",
+        "review_design": "تحديد التصميم كمُراجع",
+        "unreview_design": "إلغاء مراجعة التصميم"
       },
       "resources": {
         "allResources": "كل الموارد",
@@ -2291,7 +2295,13 @@
         "coupon": "كوبون",
         "appearance": "مظهر",
         "customer": "عميل",
-        "booking": "الحجز"
+        "booking": "الحجز",
+        "upload": "رفع ملف",
+        "exchange": "سعر الصرف",
+        "userTier": "مستوى المستخدم",
+        "account": "الحساب",
+        "category": "الفئة",
+        "supplier": "المورد"
       }
     },
     "appearance": {

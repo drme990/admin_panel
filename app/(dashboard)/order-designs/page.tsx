@@ -35,6 +35,7 @@ import {
   copyToClipboard,
   updateDesignReviewStatus,
   replaceDesignImage,
+  deleteSingleDesign,
 } from '../(orders-execution)/lib/order-utils';
 
 // ── Types ────────────────────────────────────────────────────────────────
@@ -772,17 +773,9 @@ export default function OrderDesignsPage() {
 
   const handleDeleteDesign = async () => {
     if (!deleteDesign) return;
-    const { design } = deleteDesign;
-    if (!design.projectId) {
-      toast.error(isRTL ? 'لا يمكن حذف التصميم — معرف المشروع غير موجود' : 'Cannot delete — project ID missing');
-      setDeleteDesign(null);
-      return;
-    }
+    const { order: designOrder, design } = deleteDesign;
     try {
-      const res = await fetch(`/api/order-designs?id=${encodeURIComponent(design.projectId)}`, {
-        method: 'DELETE',
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      await deleteSingleDesign(designOrder._id, design.productId);
       toast.success(isRTL ? 'تم حذف التصميم' : 'Design deleted');
       setDeleteDesign(null);
       // Refetch orders to update the design list
@@ -799,7 +792,14 @@ export default function OrderDesignsPage() {
   const isSingleDay = !!fromDateFilter && fromDateFilter === toDateFilter;
 
   const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString(isRTL ? 'ar' : 'en-US');
+    return new Date(date).toLocaleString(isRTL ? 'ar' : 'en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    });
   };
 
   // ── Shared design card renderer (used by the main grid + category modal) ─
@@ -929,21 +929,19 @@ export default function OrderDesignsPage() {
                   {isGenerating ? (
                     <LuRefreshCw className="h-4 w-4 animate-spin" />
                   ) : (
-                    <LuSparkles className="h-4 w-4" />
+                    <LuRefreshCw className="h-4 w-4" />
                   )}
                 </button>
               </Tooltip>
               {/* Delete design */}
-              {design.projectId && (
-                <Tooltip content={t('delete')} position={isRTL ? 'right' : 'left'}>
-                  <button
-                    className="flex h-8 w-8 items-center justify-center rounded-lg bg-background/90 backdrop-blur-sm border border-stroke text-secondary hover:text-error hover:bg-background transition-colors"
-                    onClick={(e) => { e.stopPropagation(); setDeleteDesign({ order: cardOrder, design }); }}
-                  >
-                    <LuTrash2 className="h-4 w-4" />
-                  </button>
-                </Tooltip>
-              )}
+              <Tooltip content={t('delete')} position={isRTL ? 'right' : 'left'}>
+                <button
+                  className="flex h-8 w-8 items-center justify-center rounded-lg bg-background/90 backdrop-blur-sm border border-stroke text-secondary hover:text-error hover:bg-background transition-colors"
+                  onClick={(e) => { e.stopPropagation(); setDeleteDesign({ order: cardOrder, design }); }}
+                >
+                  <LuTrash2 className="h-4 w-4" />
+                </button>
+              </Tooltip>
             </>
           ) : null}
         </div>
@@ -1037,19 +1035,21 @@ export default function OrderDesignsPage() {
           )}
 
           {/* Order number — small secondary chip, with copy */}
-          <div className="mt-auto flex items-center gap-1.5 pt-1">
-            <span className="inline-flex items-center gap-1 rounded-full border border-stroke bg-background px-2 py-0.5 text-xs text-secondary truncate">
-              #{cardOrder.orderNumber}
-              {itemIndex > 1 && ` · ${itemIndex}`}
-            </span>
-            <Tooltip content={t('copyOrderNumber')} position={isRTL ? 'right' : 'left'}>
-              <button
-                className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-secondary hover:text-primary hover:bg-primary/10 transition-colors"
-                onClick={(e) => { e.stopPropagation(); handleCopy(cardOrder.orderNumber, isRTL ? 'رقم الطلب' : 'order number'); }}
-              >
-                <LuCopy className="h-3 w-3" />
-              </button>
-            </Tooltip>
+          <div className="flex flex-col items-start gap-1.5 pt-1">
+            <p>
+              <span className="inline-flex items-center gap-1 rounded-full border border-stroke bg-background px-2 py-0.5 text-xs text-secondary truncate">
+                #{cardOrder.orderNumber}
+                {itemIndex > 1 && ` · ${itemIndex}`}
+              </span>
+              <Tooltip content={t('copyOrderNumber')} position={isRTL ? 'right' : 'left'}>
+                <button
+                  className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-secondary hover:text-primary hover:bg-primary/10 transition-colors"
+                  onClick={(e) => { e.stopPropagation(); handleCopy(cardOrder.orderNumber, isRTL ? 'رقم الطلب' : 'order number'); }}
+                >
+                  <LuCopy className="h-3 w-3" />
+                </button>
+              </Tooltip>
+            </p>
             <span className="ml-auto text-xs text-secondary/70">
               {formatDate(cardOrder.createdAt)}
             </span>

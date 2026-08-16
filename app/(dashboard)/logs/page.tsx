@@ -109,7 +109,7 @@ export default function LogsPage() {
         <span
           className={`px-2 py-1 rounded-full text-xs font-medium ${getActionColor(log.action)}`}
         >
-          {t(`actions.${log.action}`)}
+          {t.has(`actions.${log.action}`) ? t(`actions.${log.action}`) : log.action}
         </span>
       ),
     },
@@ -119,7 +119,7 @@ export default function LogsPage() {
         <span
           className={`px-2 py-1 rounded-full text-xs font-medium ${getResourceColor(log.resource)}`}
         >
-          {t(`resources.${log.resource}`)}
+          {t.has(`resources.${log.resource}`) ? t(`resources.${log.resource}`) : log.resource}
         </span>
       ),
     },
@@ -146,6 +146,10 @@ export default function LogsPage() {
     { value: 'delete', label: t('actions.delete') },
     { value: 'login', label: t('actions.login') },
     { value: 'logout', label: t('actions.logout') },
+    { value: 'generate_design', label: t('actions.generate_design') },
+    { value: 'delete_designs', label: t('actions.delete_designs') },
+    { value: 'review_design', label: t('actions.review_design') },
+    { value: 'unreview_design', label: t('actions.unreview_design') },
   ];
 
   const resourceOptions = [
@@ -153,7 +157,18 @@ export default function LogsPage() {
     { value: 'product', label: t('resources.product') },
     { value: 'user', label: t('resources.user') },
     { value: 'auth', label: t('resources.auth') },
+    { value: 'country', label: t('resources.country') },
+    { value: 'order', label: t('resources.order') },
     { value: 'referral', label: t('resources.referral') },
+    { value: 'coupon', label: t('resources.coupon') },
+    { value: 'appearance', label: t('resources.appearance') },
+    { value: 'upload', label: t('resources.upload') },
+    { value: 'exchange', label: t('resources.exchange') },
+    { value: 'userTier', label: t('resources.userTier') },
+    { value: 'account', label: t('resources.account') },
+    { value: 'booking', label: t('resources.booking') },
+    { value: 'category', label: t('resources.category') },
+    { value: 'supplier', label: t('resources.supplier') },
   ];
 
   return (

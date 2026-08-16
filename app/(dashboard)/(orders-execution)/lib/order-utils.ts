@@ -134,6 +134,27 @@ export async function replaceDesignImage(
   return true;
 }
 
+/**
+ * Delete a single generated design from an order (removes it from the
+ * order's `designUrls` array and deletes its image from R2 storage).
+ * Calls DELETE /api/orders/{orderId}/designs?productId=... (proxied to
+ * the backend's `/api/admin/orders/[id]/designs` route).
+ */
+export async function deleteSingleDesign(
+  orderId: string,
+  productId: string,
+): Promise<boolean> {
+  const res = await fetch(
+    `/api/orders/${orderId}/designs?productId=${encodeURIComponent(productId)}`,
+    { method: 'DELETE', credentials: 'include' },
+  );
+  const data = await res.json();
+  if (!data.success) {
+    throw new Error(data.error?.message || 'Failed to delete design');
+  }
+  return true;
+}
+
 export function isImageUrl(url: string): boolean {
   try {
     const pathname = new URL(url).pathname;

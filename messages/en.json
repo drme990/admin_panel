@@ -2279,7 +2279,11 @@
         "login": "Login",
         "logout": "Logout",
         "ban": "Ban",
-        "unban": "Unban"
+        "unban": "Unban",
+        "generate_design": "Generate Design",
+        "delete_designs": "Delete Designs",
+        "review_design": "Mark Design Reviewed",
+        "unreview_design": "Mark Design Not Reviewed"
       },
       "resources": {
         "allResources": "All Resources",
@@ -2292,7 +2296,13 @@
         "coupon": "Coupon",
         "appearance": "Appearance",
         "customer": "Customer",
-        "booking": "Booking"
+        "booking": "Booking",
+        "upload": "Upload",
+        "exchange": "Exchange",
+        "userTier": "User Tier",
+        "account": "Account",
+        "category": "Category",
+        "supplier": "Supplier"
       }
     },
     "appearance": {

@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from 'next-intl';
 import { toast } from 'react-toastify';
 import {
   LuPencil, LuTrash2, LuImage, LuCopy, LuCheck, LuClock, LuDownload, LuUpload, LuRefreshCw,
+  LuSparkles,
 } from 'react-icons/lu';
 
 import Pagination from '@/components/ui/pagination';
@@ -16,7 +17,7 @@ import BulkAction from '@/components/ui/bulk-action';
 import { downloadFile } from '@/lib/download-utils';
 import { uploadImageToR2, deleteOldImage } from '@/lib/image-upload-utils';
 
-import { Order, OrderDesignUrl } from '@/types/Order';
+import { Order, OrderDesignUrl, OrderItem } from '@/types/Order';
 import { Category } from '@/types/Category';
 import { Referral } from '@/types/Referral';
 
@@ -57,7 +58,7 @@ interface ExecutionResponse {
 type DateQuickPreset = 'today' | 'tomorrow' | 'yesterday' | 'last7Days' | 'all';
 type ReviewFilter = 'all' | 'reviewed' | 'waiting';
 
-/** Stable key identifying a single design within the selection set */
+/** Stable key identifying a single item/design within the selection set */
 function cardKey(orderId: string, productId: string): string {
   return `${orderId}::${productId}`;
 }
@@ -69,24 +70,32 @@ function buildDesignFilename(orderNumber: string, productLabel: string, itemInde
   return `${safe}.jpg`;
 }
 
-// ── Flattened design card (one per designUrls entry) ─────────────────────
+// ── Flattened design card (one per order item) ────────────────────────────
+// `design` is present once the design app has generated an image for this
+// item; when absent, the card renders as a "no design yet" placeholder
+// with a Generate action instead of a preview image.
 interface DesignCard {
   order: Order;
-  design: OrderDesignUrl;
-  /** 1-based index within the order's designs */
+  item: OrderItem;
+  design?: OrderDesignUrl;
+  /** 1-based index of this item within the order's items */
   itemIndex: number;
 }
 
 /**
- * Flatten orders into individual design cards.
- * Only orders that have designUrls are included.
+ * Flatten orders into per-item design cards. Every item of every order in
+ * range is included — items with a matching generated design carry it,
+ * items without one still get a card so the admin can trigger generation.
  */
 function flattenDesigns(orders: Order[]): DesignCard[] {
   const cards: DesignCard[] = [];
   for (const order of orders) {
-    if (!order.designUrls || order.designUrls.length === 0) continue;
-    order.designUrls.forEach((design, idx) => {
-      cards.push({ order, design, itemIndex: idx + 1 });
+    const items = order.items || [];
+    items.forEach((item, idx) => {
+      const design = item.productId
+        ? order.designUrls?.find((d) => d.productId === item.productId)
+        : undefined;
+      cards.push({ order, item, design, itemIndex: idx + 1 });
     });
   }
   return cards;
@@ -99,13 +108,7 @@ function getSacrificeFor(order: Order): string | undefined {
 
 /** Get the product/size display name for a design card */
 function getDesignLabel(card: DesignCard, locale: string): string {
-  // Try to match the design's productId to an order item
-  const item = card.order.items?.find((it) => it.productId === card.design.productId);
-  if (item) {
-    return getOrderItemDisplayName(item, locale);
-  }
-  // Fallback to the design's productName snapshot
-  return card.design.productName || '';
+  return getOrderItemDisplayName(card.item, locale) || card.design?.productName || '';
 }
 
 export default function OrderDesignsPage() {
@@ -181,6 +184,7 @@ export default function OrderDesignsPage() {
   const [reviewingKey, setReviewingKey] = useState<string | null>(null);
   const [uploadingKey, setUploadingKey] = useState<string | null>(null);
   const [downloadingKey, setDownloadingKey] = useState<string | null>(null);
+  const [generatingOrderId, setGeneratingOrderId] = useState<string | null>(null);
   const [reviewFilter, setReviewFilter] = useState<ReviewFilter>('all');
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
   const [isDownloadingZip, setIsDownloadingZip] = useState(false);
@@ -430,19 +434,25 @@ export default function OrderDesignsPage() {
   const designCards = useMemo(() => flattenDesigns(orders), [orders]);
 
   // ── Review status filter (all / reviewed / waiting for review) ─────────
+  // Cards without a generated design yet are only shown in the "all" tab —
+  // they aren't "waiting for review", they're waiting to be generated.
   const filteredDesignCards = useMemo(() => {
     if (reviewFilter === 'all') return designCards;
-    return designCards.filter((card) =>
-      reviewFilter === 'reviewed' ? !!card.design.reviewed : !card.design.reviewed,
-    );
+    return designCards.filter((card) => {
+      if (!card.design) return false;
+      return reviewFilter === 'reviewed' ? !!card.design.reviewed : !card.design.reviewed;
+    });
   }, [designCards, reviewFilter]);
 
   const reviewCounts = useMemo(() => {
     let reviewed = 0;
+    let withDesign = 0;
     for (const card of designCards) {
+      if (!card.design) continue;
+      withDesign++;
       if (card.design.reviewed) reviewed++;
     }
-    return { all: designCards.length, reviewed, waiting: designCards.length - reviewed };
+    return { all: designCards.length, reviewed, waiting: withDesign - reviewed };
   }, [designCards]);
 
   // ── Counter grouping by orderNumber ────────────────────────────────────
@@ -507,7 +517,7 @@ export default function OrderDesignsPage() {
   };
 
   const handleToggleReview = async (cardOrder: Order, design: OrderDesignUrl) => {
-    const key = `${cardOrder._id}-${design.productId}`;
+    const key = cardKey(cardOrder._id, design.productId);
     if (reviewingKey) return;
     const nextReviewed = !design.reviewed;
     setReviewingKey(key);
@@ -532,6 +542,7 @@ export default function OrderDesignsPage() {
   // ── Download a single design as an image ────────────────────────────────
   const handleDownloadDesignImage = async (card: DesignCard) => {
     const { order: cardOrder, design, itemIndex } = card;
+    if (!design) return;
     const key = cardKey(cardOrder._id, design.productId);
     if (downloadingKey) return;
     setDownloadingKey(key);
@@ -548,7 +559,7 @@ export default function OrderDesignsPage() {
 
   // ── Upload a replacement image for a single design ──────────────────────
   const triggerUploadDesign = (card: DesignCard) => {
-    if (uploadingKey) return;
+    if (uploadingKey || !card.design) return;
     setUploadTargetCard(card);
     uploadInputRef.current?.click();
   };
@@ -556,8 +567,9 @@ export default function OrderDesignsPage() {
   const handleUploadFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     const card = uploadTargetCard;
+    const design = card?.design;
     if (e.target) e.target.value = '';
-    if (!file || !card) return;
+    if (!file || !card || !design) return;
 
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
     if (!allowedTypes.includes(file.type)) {
@@ -569,7 +581,7 @@ export default function OrderDesignsPage() {
       return;
     }
 
-    const { order: cardOrder, design } = card;
+    const cardOrder = card.order;
     const key = cardKey(cardOrder._id, design.productId);
     setUploadingKey(key);
     try {
@@ -597,6 +609,77 @@ export default function OrderDesignsPage() {
     }
   };
 
+  // ── Generate / Regenerate design ─────────────────────────────────────────
+  // Maps a backend skip reasonCode to a localized human-readable string,
+  // reusing the same keys the execution page already defines.
+  const designReasonKey: Record<string, string> = {
+    noTemplate: 'table.designReasonNoTemplate',
+    noBookingProduct: 'table.designReasonNoBookingProduct',
+    templateNotFound: 'table.designReasonTemplateNotFound',
+    designAppNotConfigured: 'table.designReasonDesignAppNotConfigured',
+    callbackSecretNotConfigured: 'table.designReasonCallbackSecretNotConfigured',
+    timeout: 'table.designReasonTimeout',
+    unknown: 'table.designReasonUnknown',
+    internalError: 'table.designReasonInternalError',
+  };
+
+  const runGenerateDesign = async (order: Order, { isRegenerate }: { isRegenerate: boolean }) => {
+    if (generatingOrderId) return;
+    setGeneratingOrderId(order._id);
+    try {
+      if (isRegenerate && (order.designUrls || []).length > 0) {
+        const delRes = await fetch(`/api/orders/${order._id}/designs`, {
+          method: 'DELETE',
+          credentials: 'include',
+        });
+        const delData = await delRes.json();
+        if (!delData.success) throw new Error(tExec('table.regenerateDesignFailed'));
+      }
+
+      const res = await fetch(`/api/orders/${order._id}/generate-design`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      const data = await res.json();
+      if (!data.success) {
+        const code = data.error?.code || 'internalError';
+        throw new Error(tExec(designReasonKey[code] || 'table.designReasonUnknown'));
+      }
+
+      const generated = data.data?.generated || [];
+      const skipped: Array<{ reasonCode?: string }> = data.data?.skipped || [];
+
+      if (generated.length === 0 && skipped.length === 0) {
+        toast.error(tExec('table.designCreateFailed'));
+      } else if (generated.length === 0) {
+        const reasonCode = skipped[0]?.reasonCode || 'unknown';
+        const localizedReason = tExec(designReasonKey[reasonCode] || 'table.designReasonUnknown');
+        toast.error(tExec('table.designCreateAllSkipped', { reason: localizedReason }));
+      } else if (skipped.length > 0) {
+        toast.info(tExec('table.designCreatePartial'));
+      } else {
+        toast.success(isRegenerate ? tExec('table.designRegenerated') : tExec('table.designCreated'));
+      }
+
+      // Refetch the order so the newly generated designUrls are accurate
+      const updatedOrder = await fetchOrderDetails(order._id, false);
+      if (updatedOrder) {
+        dispatch({
+          type: 'UPDATE_ORDER_IN_LIST',
+          payload: { orderId: order._id, updates: { designUrls: updatedOrder.designUrls } },
+        });
+      }
+    } catch (error) {
+      const fallback = isRegenerate ? tExec('table.regenerateDesignFailed') : tExec('table.designCreateFailed');
+      toast.error(error instanceof Error ? error.message : fallback);
+    } finally {
+      setGeneratingOrderId(null);
+    }
+  };
+
+  const handleGenerateDesign = (order: Order) => runGenerateDesign(order, { isRegenerate: false });
+  const handleRegenerateDesign = (order: Order) => runGenerateDesign(order, { isRegenerate: true });
+
   // ── Selection + zip download ───────────────────────────────────────────
   const toggleCardSelection = (orderId: string, productId: string) => {
     const key = cardKey(orderId, productId);
@@ -616,6 +699,7 @@ export default function OrderDesignsPage() {
     const seen = new Set<string>();
     const items: { url: string; filename: string }[] = [];
     for (const card of allCards) {
+      if (!card.design) continue;
       const key = cardKey(card.order._id, card.design.productId);
       if (!selectedKeys.has(key) || seen.has(key)) continue;
       seen.add(key);
@@ -707,21 +791,26 @@ export default function OrderDesignsPage() {
   };
 
   // ── Shared design card renderer (used by the main grid + category modal) ─
+  // Renders a full card (with the generated design + all its actions) when
+  // `card.design` exists, or a "no design yet" placeholder with a single
+  // Generate action otherwise.
   const renderDesignCard = (card: DesignCard, counter: string) => {
     const { order: cardOrder, design, itemIndex } = card;
     const sacrificeFor = getSacrificeFor(cardOrder);
     const displayName = sacrificeFor || cardOrder.billingData?.fullName || cardOrder.orderNumber;
     const productLabel = getDesignLabel(card, locale);
-    const isSelected = selectedKeys.has(cardKey(cardOrder._id, design.productId));
+    const isGenerating = generatingOrderId === cardOrder._id;
 
-    const designEditUrl = designAppUrl && design.projectId
+    const designEditUrl = design && designAppUrl && design.projectId
       ? `${designAppUrl}/editor/d/${design.projectId}`
       : undefined;
 
     // Preview image URL with cache-busting
-    const previewUrl = design.url
+    const previewUrl = design?.url
       ? `${design.url}${design.url.includes('?') ? '&' : '?'}v=${cardOrder.statusUpdateTime || cardOrder.updatedAt || ''}`
       : undefined;
+
+    const isSelected = design ? selectedKeys.has(cardKey(cardOrder._id, design.productId)) : false;
 
     return (
       <div
@@ -730,109 +819,144 @@ export default function OrderDesignsPage() {
           }`}
         onClick={() => handleViewOrder(cardOrder)}
       >
-        {/* Selection checkbox — top left */}
-        <div className="absolute top-2 left-2 z-10">
-          <div
-            className="flex h-7 w-7 items-center justify-center rounded-lg border border-stroke bg-background/90 backdrop-blur-sm"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <Checkbox
-              checked={isSelected}
-              onChange={() => toggleCardSelection(cardOrder._id, design.productId)}
-              aria-label={t('selectDesign')}
-              size="sm"
-            />
+        {/* Selection checkbox — top left (only for generated designs) */}
+        {design && (
+          <div className="absolute top-2 left-2 z-10">
+            <div
+              className="flex h-7 w-7 items-center justify-center rounded-lg border border-stroke bg-background/90 backdrop-blur-sm"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Checkbox
+                checked={isSelected}
+                onChange={() => toggleCardSelection(cardOrder._id, design.productId)}
+                aria-label={t('selectDesign')}
+                size="sm"
+              />
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Action buttons — top right, stacked vertically */}
         <div className="absolute top-2 right-2 z-10 flex flex-col gap-1.5">
-          {/* Review status toggle */}
-          <Tooltip
-            content={design.reviewed ? t('markAsNotReviewed') : t('markAsReviewed')}
-            position={isRTL ? 'right' : 'left'}
-          >
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); handleToggleReview(cardOrder, design); }}
-              disabled={reviewingKey === `${cardOrder._id}-${design.productId}`}
-              className={`flex h-8 w-8 items-center justify-center rounded-lg backdrop-blur-sm border border-stroke transition-colors disabled:opacity-60 ${design.reviewed
-                ? 'bg-success/90 text-white hover:bg-success'
-                : 'bg-warning/90 text-white hover:bg-warning'
-                }`}
-            >
-              {design.reviewed ? (
-                <LuCheck className="h-4 w-4" />
-              ) : (
-                <LuClock className="h-4 w-4" />
-              )}
-            </button>
-          </Tooltip>
-          {/* Edit design (opens design app editor) */}
-          {designEditUrl && (
-            <Tooltip content={t('editDesign')} position={isRTL ? 'right' : 'left'}>
-              <a
-                href={designEditUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(e) => e.stopPropagation()}
+          {design ? (
+            <>
+              {/* Review status toggle */}
+              <Tooltip
+                content={design.reviewed ? t('markAsNotReviewed') : t('markAsReviewed')}
+                position={isRTL ? 'right' : 'left'}
               >
-                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-background/90 backdrop-blur-sm border border-stroke text-brand-primary hover:bg-background transition-colors">
-                  <LuPencil className="h-4 w-4" />
-                </span>
-              </a>
-            </Tooltip>
-          )}
-          {/* Download design image */}
-          <Tooltip content={t('downloadDesign')} position={isRTL ? 'right' : 'left'}>
-            <button
-              type="button"
-              className="flex h-8 w-8 items-center justify-center rounded-lg bg-background/90 backdrop-blur-sm border border-stroke text-secondary hover:text-primary hover:bg-background transition-colors disabled:opacity-60"
-              onClick={(e) => { e.stopPropagation(); handleDownloadDesignImage(card); }}
-              disabled={downloadingKey === cardKey(cardOrder._id, design.productId)}
-            >
-              {downloadingKey === cardKey(cardOrder._id, design.productId) ? (
-                <LuRefreshCw className="h-4 w-4 animate-spin" />
-              ) : (
-                <LuDownload className="h-4 w-4" />
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); handleToggleReview(cardOrder, design); }}
+                  disabled={reviewingKey === cardKey(cardOrder._id, design.productId)}
+                  className={`flex h-8 w-8 items-center justify-center rounded-lg backdrop-blur-sm border border-stroke transition-colors disabled:opacity-60 ${design.reviewed
+                    ? 'bg-success/90 text-white hover:bg-success'
+                    : 'bg-warning/90 text-white hover:bg-warning'
+                    }`}
+                >
+                  {design.reviewed ? (
+                    <LuCheck className="h-4 w-4" />
+                  ) : (
+                    <LuClock className="h-4 w-4" />
+                  )}
+                </button>
+              </Tooltip>
+              {/* Edit design (opens design app editor) */}
+              {designEditUrl && (
+                <Tooltip content={t('editDesign')} position={isRTL ? 'right' : 'left'}>
+                  <a
+                    href={designEditUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-background/90 backdrop-blur-sm border border-stroke text-brand-primary hover:bg-background transition-colors">
+                      <LuPencil className="h-4 w-4" />
+                    </span>
+                  </a>
+                </Tooltip>
               )}
-            </button>
-          </Tooltip>
-          {/* Upload a replacement image */}
-          <Tooltip content={t('uploadDesign')} position={isRTL ? 'right' : 'left'}>
-            <button
-              type="button"
-              className="flex h-8 w-8 items-center justify-center rounded-lg bg-background/90 backdrop-blur-sm border border-stroke text-secondary hover:text-primary hover:bg-background transition-colors disabled:opacity-60"
-              onClick={(e) => { e.stopPropagation(); triggerUploadDesign(card); }}
-              disabled={uploadingKey === cardKey(cardOrder._id, design.productId)}
-            >
-              {uploadingKey === cardKey(cardOrder._id, design.productId) ? (
-                <LuRefreshCw className="h-4 w-4 animate-spin" />
-              ) : (
-                <LuUpload className="h-4 w-4" />
+              {/* Download design image */}
+              <Tooltip content={t('downloadDesign')} position={isRTL ? 'right' : 'left'}>
+                <button
+                  type="button"
+                  className="flex h-8 w-8 items-center justify-center rounded-lg bg-background/90 backdrop-blur-sm border border-stroke text-secondary hover:text-primary hover:bg-background transition-colors disabled:opacity-60"
+                  onClick={(e) => { e.stopPropagation(); handleDownloadDesignImage(card); }}
+                  disabled={downloadingKey === cardKey(cardOrder._id, design.productId)}
+                >
+                  {downloadingKey === cardKey(cardOrder._id, design.productId) ? (
+                    <LuRefreshCw className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <LuDownload className="h-4 w-4" />
+                  )}
+                </button>
+              </Tooltip>
+              {/* Upload a replacement image */}
+              <Tooltip content={t('uploadDesign')} position={isRTL ? 'right' : 'left'}>
+                <button
+                  type="button"
+                  className="flex h-8 w-8 items-center justify-center rounded-lg bg-background/90 backdrop-blur-sm border border-stroke text-secondary hover:text-primary hover:bg-background transition-colors disabled:opacity-60"
+                  onClick={(e) => { e.stopPropagation(); triggerUploadDesign(card); }}
+                  disabled={uploadingKey === cardKey(cardOrder._id, design.productId)}
+                >
+                  {uploadingKey === cardKey(cardOrder._id, design.productId) ? (
+                    <LuRefreshCw className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <LuUpload className="h-4 w-4" />
+                  )}
+                </button>
+              </Tooltip>
+              {/* Regenerate design */}
+              <Tooltip content={tExec('table.regenerateDesign')} position={isRTL ? 'right' : 'left'}>
+                <button
+                  type="button"
+                  className="flex h-8 w-8 items-center justify-center rounded-lg bg-background/90 backdrop-blur-sm border border-stroke text-secondary hover:text-primary hover:bg-background transition-colors disabled:opacity-60"
+                  onClick={(e) => { e.stopPropagation(); handleRegenerateDesign(cardOrder); }}
+                  disabled={isGenerating}
+                >
+                  {isGenerating ? (
+                    <LuRefreshCw className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <LuSparkles className="h-4 w-4" />
+                  )}
+                </button>
+              </Tooltip>
+              {/* Delete design */}
+              {design.projectId && (
+                <Tooltip content={t('delete')} position={isRTL ? 'right' : 'left'}>
+                  <button
+                    className="flex h-8 w-8 items-center justify-center rounded-lg bg-background/90 backdrop-blur-sm border border-stroke text-secondary hover:text-error hover:bg-background transition-colors"
+                    onClick={(e) => { e.stopPropagation(); setDeleteDesign({ order: cardOrder, design }); }}
+                  >
+                    <LuTrash2 className="h-4 w-4" />
+                  </button>
+                </Tooltip>
               )}
-            </button>
-          </Tooltip>
-          {/* Delete design */}
-          {design.projectId && (
-            <Tooltip content={t('delete')} position={isRTL ? 'right' : 'left'}>
-              <button
-                className="flex h-8 w-8 items-center justify-center rounded-lg bg-background/90 backdrop-blur-sm border border-stroke text-secondary hover:text-error hover:bg-background transition-colors"
-                onClick={(e) => { e.stopPropagation(); setDeleteDesign({ order: cardOrder, design }); }}
-              >
-                <LuTrash2 className="h-4 w-4" />
-              </button>
-            </Tooltip>
-          )}
+            </>
+          ) : null}
         </div>
 
-        {/* Preview */}
+        {/* Preview — generated image, or a "generate" placeholder */}
         <div className="relative aspect-square w-full overflow-hidden rounded-t-2xl bg-muted">
           {previewUrl ? (
             <DesignImage src={previewUrl} alt={productLabel || cardOrder.orderNumber} />
           ) : (
-            <div className="flex h-full w-full items-center justify-center">
-              <LuImage className="h-10 w-10 text-secondary/30" />
+            <div className="flex h-full w-full flex-col items-center justify-center gap-3 border-2 border-dashed border-stroke/70 p-4">
+              <LuImage className="h-9 w-9 text-secondary/30" />
+              <p className="text-center text-xs text-secondary">{t('noDesignYet')}</p>
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); handleGenerateDesign(cardOrder); }}
+                disabled={isGenerating}
+                className="inline-flex items-center gap-1.5 rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-primary-text hover:opacity-90 transition-opacity disabled:opacity-60"
+              >
+                {isGenerating ? (
+                  <LuRefreshCw className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <LuSparkles className="h-3.5 w-3.5" />
+                )}
+                {isGenerating ? t('generatingDesign') : t('generateDesign')}
+              </button>
             </div>
           )}
 
@@ -1093,7 +1217,7 @@ export default function OrderDesignsPage() {
               const categoryProductIds = new Set(selectedCategory?.products.map((p) => p._id) || []);
 
               const categoryDesignCards = flattenDesigns(categoryModalOrders).filter((card) =>
-                categoryProductIds.size === 0 || categoryProductIds.has(card.design.productId),
+                categoryProductIds.size === 0 || categoryProductIds.has(card.item.productId || ''),
               );
 
               if (categoryDesignCards.length === 0) {

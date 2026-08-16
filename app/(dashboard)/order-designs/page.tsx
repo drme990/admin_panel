@@ -185,7 +185,7 @@ export default function OrderDesignsPage() {
   const [uploadingKey, setUploadingKey] = useState<string | null>(null);
   const [downloadingKey, setDownloadingKey] = useState<string | null>(null);
   const [generatingOrderId, setGeneratingOrderId] = useState<string | null>(null);
-  const [reviewFilter, setReviewFilter] = useState<ReviewFilter>('all');
+  const [reviewFilter, setReviewFilter] = useState<ReviewFilter>('waiting');
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
   const [isDownloadingZip, setIsDownloadingZip] = useState(false);
   const [uploadTargetCard, setUploadTargetCard] = useState<DesignCard | null>(null);
@@ -1000,7 +1000,7 @@ export default function OrderDesignsPage() {
           {productLabel && (
             <div className="flex items-start gap-1.5">
               <p
-                className="line-clamp-2 flex-1 text-sm font-medium text-secondary"
+                className="line-clamp-2 flex-1 text-sm font-medium text-foreground"
                 title={productLabel}
               >
                 {productLabel}
@@ -1086,26 +1086,6 @@ export default function OrderDesignsPage() {
         onCountryChange={(val) => setFilter({ countryFilter: val })}
       />
 
-      {/* Date navigation title */}
-      {isSingleDay && (
-        <div className="mb-6">
-          <ExecutionTitle
-            date={fromDateFilter}
-            locale={locale}
-            onPrevDay={() => {
-              if (!fromDateFilter) return;
-              const prev = addDaysToIsoDate(fromDateFilter, -1);
-              setDateRange({ fromDateFilter: prev, toDateFilter: prev });
-            }}
-            onNextDay={() => {
-              if (!fromDateFilter) return;
-              const next = addDaysToIsoDate(fromDateFilter, 1);
-              setDateRange({ fromDateFilter: next, toDateFilter: next });
-            }}
-          />
-        </div>
-      )}
-
       {/* Review status filter — all / reviewed / waiting for review */}
       <div className="flex flex-wrap items-center gap-2">
         {([
@@ -1129,6 +1109,27 @@ export default function OrderDesignsPage() {
           </button>
         ))}
       </div>
+
+      {/* Date navigation title */}
+      {isSingleDay && (
+        <div className="mb-6">
+          <ExecutionTitle
+            date={fromDateFilter}
+            locale={locale}
+            onPrevDay={() => {
+              if (!fromDateFilter) return;
+              const prev = addDaysToIsoDate(fromDateFilter, -1);
+              setDateRange({ fromDateFilter: prev, toDateFilter: prev });
+            }}
+            onNextDay={() => {
+              if (!fromDateFilter) return;
+              const next = addDaysToIsoDate(fromDateFilter, 1);
+              setDateRange({ fromDateFilter: next, toDateFilter: next });
+            }}
+          />
+        </div>
+      )}
+
 
       {/* Content */}
       {isLoading ? (

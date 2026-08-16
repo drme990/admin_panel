@@ -96,6 +96,11 @@
       "design": "التصميم",
       "designTextVariant": "نص",
       "designImageVariant": "صورة",
+      "waitingForReview": "بانتظار المراجعة",
+      "reviewed": "تمت المراجعة",
+      "markAsReviewed": "وضع علامة كمُراجَع",
+      "markAsNotReviewed": "وضع علامة كغير مُراجَع",
+      "reviewUpdateFailed": "فشل تحديث حالة المراجعة",
       "uploadDesign": "رفع التصميم",
       "downloadDesign": "تحميل التصميم",
       "editDesign": "تعديل التصميم",
@@ -385,7 +390,12 @@
       "title": "بيانات الحجز",
       "designs": "التصاميم",
       "designTextVariant": "نص",
-      "designImageVariant": "صورة"
+      "designImageVariant": "صورة",
+      "waitingForReview": "بانتظار المراجعة",
+      "reviewed": "تمت المراجعة",
+      "markAsReviewed": "وضع علامة كمُراجَع",
+      "markAsNotReviewed": "وضع علامة كغير مُراجَع",
+      "reviewUpdateFailed": "فشل تحديث حالة المراجعة"
     },
     "editOrder": {
       "title": "تعديل الطلب",
@@ -568,7 +578,12 @@
     "emptyDescription": "لا توجد تصاميم طلبات تطابق عوامل التصفية. حاول تعديل النطاق الزمني أو البحث.",
     "page": "صفحة",
     "of": "من",
-    "show": "عرض"
+    "show": "عرض",
+    "waitingForReview": "بانتظار المراجعة",
+    "reviewed": "تمت المراجعة",
+    "markAsReviewed": "وضع علامة كمُراجَع",
+    "markAsNotReviewed": "وضع علامة كغير مُراجَع",
+    "reviewUpdateFailed": "فشل تحديث حالة المراجعة"
   },
   "orderDesignLogs": {
     "title": "سجل تصاميم الطلبات",
@@ -677,7 +692,12 @@
       "more": "إضافية",
       "designs": "التصاميم",
       "designTextVariant": "نص",
-      "designImageVariant": "صورة"
+      "designImageVariant": "صورة",
+      "waitingForReview": "بانتظار المراجعة",
+      "reviewed": "تمت المراجعة",
+      "markAsReviewed": "وضع علامة كمُراجَع",
+      "markAsNotReviewed": "وضع علامة كغير مُراجَع",
+      "reviewUpdateFailed": "فشل تحديث حالة المراجعة"
     },
     "loadingOrderDetails": "جارٍ تحميل تفاصيل الطلب...",
     "detailsLoadFailed": "فشل تحميل تفاصيل الطلب",

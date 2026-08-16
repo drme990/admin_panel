@@ -86,6 +86,29 @@ export function normalizeWhatsappPhone(
   return withPlus ? `+${digitsOnly}` : digitsOnly;
 }
 
+/**
+ * Toggle the reviewed status of a single generated design on an order.
+ * Calls PATCH /api/orders/{orderId}/designs (proxied to the backend's
+ * `/api/admin/orders/[id]/designs` route).
+ */
+export async function updateDesignReviewStatus(
+  orderId: string,
+  productId: string,
+  reviewed: boolean,
+): Promise<boolean> {
+  const res = await fetch(`/api/orders/${orderId}/designs`, {
+    method: 'PATCH',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ productId, reviewed }),
+  });
+  const data = await res.json();
+  if (!data.success) {
+    throw new Error(data.error?.message || 'Failed to update review status');
+  }
+  return true;
+}
+
 export function isImageUrl(url: string): boolean {
   try {
     const pathname = new URL(url).pathname;

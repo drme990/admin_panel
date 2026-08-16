@@ -421,22 +421,29 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
         // - has design → text-primary (white/primary)
         // - no design  → text-secondary/50 (dimmed)
         const iconColor = hasDesign ? 'text-primary' : 'text-secondary/50';
+        const allReviewed = hasDesign && designs.every((d) => d.reviewed);
 
         return (
           <div className="flex flex-col items-center gap-1">
             {hasDesign ? (
-              <Tooltip position={tooltipPos} content={t('table.viewDesign')}>
+              <Tooltip position={tooltipPos} content={allReviewed ? t('table.reviewed') : t('table.waitingForReview')}>
                 <button
                   type="button"
                   onClick={(e) => { e.stopPropagation(); onPreviewDesign(order); }}
                   disabled={isCreating}
-                  className={`inline-flex items-center justify-center p-2 ${iconColor} disabled:opacity-50`}
+                  className={`relative inline-flex items-center justify-center p-2 ${iconColor} disabled:opacity-50`}
                   aria-label={t('table.viewDesign')}
                 >
                   {isCreating ? (
                     <LuRefreshCw size={24} className="animate-spin" />
                   ) : (
                     <LuPalette size={24} />
+                  )}
+                  {!isCreating && (
+                    <span
+                      className={`absolute top-0.5 right-0.5 h-2 w-2 rounded-full border border-card-bg ${allReviewed ? 'bg-success' : 'bg-warning'
+                        }`}
+                    />
                   )}
                 </button>
               </Tooltip>

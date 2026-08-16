@@ -32,6 +32,16 @@ export interface OrderDesignUrl {
   projectId?: string;
   /** When the design was generated (ISO string) */
   createdAt: string;
+  /**
+   * Whether an admin (with `orderDesigns` access) has marked this design
+   * as reviewed. Newly generated designs default to `false` ("waiting
+   * for review").
+   */
+  reviewed?: boolean;
+  /** When the design was marked as reviewed (ISO string) */
+  reviewedAt?: string;
+  /** Name/email of the admin who marked it reviewed */
+  reviewedBy?: string;
 }
 
 export type PaymentMethod =

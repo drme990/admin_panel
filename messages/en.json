@@ -96,6 +96,11 @@
       "design": "Design",
       "designTextVariant": "Text",
       "designImageVariant": "Image",
+      "waitingForReview": "Waiting for Review",
+      "reviewed": "Reviewed",
+      "markAsReviewed": "Mark as Reviewed",
+      "markAsNotReviewed": "Mark as Not Reviewed",
+      "reviewUpdateFailed": "Failed to update review status",
       "uploadDesign": "Upload Design",
       "downloadDesign": "Download Design",
       "editDesign": "Edit Design",
@@ -386,7 +391,12 @@
       "title": "Reservation Data",
       "designs": "Designs",
       "designTextVariant": "Text",
-      "designImageVariant": "Image"
+      "designImageVariant": "Image",
+      "waitingForReview": "Waiting for Review",
+      "reviewed": "Reviewed",
+      "markAsReviewed": "Mark as Reviewed",
+      "markAsNotReviewed": "Mark as Not Reviewed",
+      "reviewUpdateFailed": "Failed to update review status"
     },
     "editOrder": {
       "title": "Edit Order",
@@ -569,7 +579,12 @@
     "emptyDescription": "No order designs match your filters. Try adjusting the date range or search query.",
     "page": "Page",
     "of": "of",
-    "show": "Show"
+    "show": "Show",
+    "waitingForReview": "Waiting for Review",
+    "reviewed": "Reviewed",
+    "markAsReviewed": "Mark as Reviewed",
+    "markAsNotReviewed": "Mark as Not Reviewed",
+    "reviewUpdateFailed": "Failed to update review status"
   },
   "orderDesignLogs": {
     "title": "Order Design Logs",
@@ -678,7 +693,12 @@
       "more": "more",
       "designs": "Designs",
       "designTextVariant": "Text",
-      "designImageVariant": "Image"
+      "designImageVariant": "Image",
+      "waitingForReview": "Waiting for Review",
+      "reviewed": "Reviewed",
+      "markAsReviewed": "Mark as Reviewed",
+      "markAsNotReviewed": "Mark as Not Reviewed",
+      "reviewUpdateFailed": "Failed to update review status"
     },
     "loadingOrderDetails": "Loading order details...",
     "detailsLoadFailed": "Failed to load order details",

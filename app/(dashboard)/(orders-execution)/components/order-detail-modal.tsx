@@ -7,7 +7,7 @@ import Button from '@/components/ui/button';
 import Tooltip from '@/components/ui/tooltip';
 import { Order, OrderPayment } from '@/types/Order';
 import { STATUS_COLORS, PAYMENT_STATUS_COLORS } from '../lib/order-status';
-import { isImageUrl } from '../lib/order-utils';
+import { isImageUrl, updateDesignReviewStatus } from '../lib/order-utils';
 import { getPaymentMethodLabel } from '@/lib/order';
 import { downloadFile } from '@/lib/download-utils';
 import {
@@ -42,6 +42,9 @@ interface Props {
   namespace?: 'orders' | 'execution';
   onCreatePaymentLink?: (order: Order) => void;
   isCreatingPaymentLink?: boolean;
+  /** Called after a design's reviewed status is successfully updated, so
+   * the parent page can sync its order list/cards without refetching. */
+  onDesignReviewChange?: (orderId: string, productId: string, reviewed: boolean) => void;
 }
 
 function isOrderGuest(order: Pick<Order, 'userId' | 'isGuest'>): boolean {
@@ -147,11 +150,35 @@ export default function OrderDetailModal({
   namespace = 'orders',
   onCreatePaymentLink,
   isCreatingPaymentLink,
+  onDesignReviewChange,
 }: Props) {
   const t = useTranslations(namespace);
   const [copiedPaymentId, setCopiedPaymentId] = useState<string | null>(null);
   const [now, setNow] = useState<number>(() => Date.now());
   const [downloadingInvoiceUrl, setDownloadingInvoiceUrl] = useState<string | null>(null);
+  const [reviewOverrides, setReviewOverrides] = useState<Record<string, boolean>>({});
+  const [reviewingProductId, setReviewingProductId] = useState<string | null>(null);
+
+  // Reset local review overrides whenever the modal shows a different order
+  useEffect(() => {
+    setReviewOverrides({});
+  }, [order?._id]);
+
+  const handleToggleDesignReview = async (productId: string, currentReviewed: boolean) => {
+    if (!order || reviewingProductId) return;
+    const nextReviewed = !currentReviewed;
+    setReviewingProductId(productId);
+    try {
+      await updateDesignReviewStatus(order._id, productId, nextReviewed);
+      setReviewOverrides((prev) => ({ ...prev, [productId]: nextReviewed }));
+      onDesignReviewChange?.(order._id, productId, nextReviewed);
+      toast.success(nextReviewed ? t('reservationData.reviewed') : t('reservationData.waitingForReview'));
+    } catch {
+      toast.error(t('reservationData.reviewUpdateFailed'));
+    } finally {
+      setReviewingProductId(null);
+    }
+  };
 
   useEffect(() => {
     if (!isOpen) return;
@@ -873,12 +900,14 @@ export default function OrderDetailModal({
                             design.templateType === 'image'
                               ? t('reservationData.designImageVariant') || 'Image'
                               : t('reservationData.designTextVariant') || 'Text';
+                          const isReviewed = reviewOverrides[design.productId] ?? !!design.reviewed;
+                          const isTogglingReview = reviewingProductId === design.productId;
                           return (
                             <div
                               key={`design-${designIndex}`}
                               className="flex flex-col items-center gap-2"
                             >
-                              <div className="overflow-hidden">
+                              <div className="relative overflow-hidden">
                                 <Image
                                   src={`${design.url}${design.url.includes('?') ? '&' : '?'}v=${now}`}
                                   alt={`Design ${designIndex + 1} (${variantLabel})`}
@@ -891,6 +920,24 @@ export default function OrderDetailModal({
                               <span className="text-xs text-secondary">
                                 {variantLabel}
                               </span>
+                              <button
+                                type="button"
+                                onClick={() => handleToggleDesignReview(design.productId, isReviewed)}
+                                disabled={isTogglingReview}
+                                className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold transition-colors disabled:opacity-60 ${isReviewed
+                                    ? 'bg-success/10 text-success hover:bg-success/20'
+                                    : 'bg-warning/10 text-warning hover:bg-warning/20'
+                                  }`}
+                              >
+                                {isReviewed ? (
+                                  <LuCheck className="h-3.5 w-3.5" />
+                                ) : (
+                                  <LuClock className="h-3.5 w-3.5" />
+                                )}
+                                {isReviewed
+                                  ? t('reservationData.reviewed')
+                                  : t('reservationData.waitingForReview')}
+                              </button>
                               <a
                                 href={`${design.url}${design.url.includes('?') ? '&' : '?'}v=${now}`}
                                 download

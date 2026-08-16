@@ -4,7 +4,7 @@ import { useEffect, useCallback, useState, useMemo } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { toast } from 'react-toastify';
 import {
-  LuPencil, LuTrash2, LuImage, LuCopy,
+  LuPencil, LuTrash2, LuImage, LuCopy, LuCheck, LuClock,
 } from 'react-icons/lu';
 
 import Pagination from '@/components/ui/pagination';
@@ -26,6 +26,7 @@ import {
   addDaysToIsoDate,
   getOrderItemDisplayName,
   copyToClipboard,
+  updateDesignReviewStatus,
 } from '../(orders-execution)/lib/order-utils';
 
 // ── Types ────────────────────────────────────────────────────────────────
@@ -152,6 +153,7 @@ export default function OrderDesignsPage() {
   const [referrals, setReferrals] = useState<Referral[]>([]);
   const [deleteDesign, setDeleteDesign] = useState<{ order: Order; design: OrderDesignUrl } | null>(null);
   const [creatingPaymentLinkOrderId, setCreatingPaymentLinkOrderId] = useState<string | null>(null);
+  const [reviewingKey, setReviewingKey] = useState<string | null>(null);
 
   // ── Fetch categories + referrals ───────────────────────────────────────
   useEffect(() => {
@@ -355,6 +357,29 @@ export default function OrderDesignsPage() {
     }
   };
 
+  const handleToggleReview = async (cardOrder: Order, design: OrderDesignUrl) => {
+    const key = `${cardOrder._id}-${design.productId}`;
+    if (reviewingKey) return;
+    const nextReviewed = !design.reviewed;
+    setReviewingKey(key);
+    try {
+      await updateDesignReviewStatus(cardOrder._id, design.productId, nextReviewed);
+      const updatedDesignUrls = (cardOrder.designUrls || []).map((d) =>
+        d.productId === design.productId ? { ...d, reviewed: nextReviewed } : d,
+      );
+      dispatch({
+        type: 'UPDATE_ORDER_IN_LIST',
+        payload: { orderId: cardOrder._id, updates: { designUrls: updatedDesignUrls } },
+      });
+      toast.success(nextReviewed ? t('reviewed') : t('waitingForReview'));
+    } catch (error) {
+      console.error('Failed to update review status:', error);
+      toast.error(t('reviewUpdateFailed'));
+    } finally {
+      setReviewingKey(null);
+    }
+  };
+
   const handleCopy = async (text: string, label: string) => {
     if (!text) return;
     try {
@@ -463,7 +488,7 @@ export default function OrderDesignsPage() {
 
       {/* Content */}
       {isLoading ? (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 xs:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
           {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
             <div
               key={i}
@@ -486,7 +511,7 @@ export default function OrderDesignsPage() {
       ) : (
         <>
           {/* Grid */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="grid grid-cols-1 gap-4 xs:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
             {designCards.map((card, index) => {
               const { order: cardOrder, design, itemIndex } = card;
               const counter = counters[index] ?? String(index + 1);
@@ -505,7 +530,7 @@ export default function OrderDesignsPage() {
               return (
                 <div
                   key={`${cardOrder._id}-${itemIndex}`}
-                  className="group relative flex flex-col overflow-hidden rounded-2xl border border-stroke bg-card-bg shadow-sm transition-shadow hover:shadow-md cursor-pointer"
+                  className="group relative flex flex-col rounded-2xl border border-stroke bg-card-bg shadow-sm transition-shadow hover:shadow-md cursor-pointer"
                   onClick={() => handleViewOrder(cardOrder)}
                 >
                   {/* #Counter — top left */}
@@ -517,6 +542,27 @@ export default function OrderDesignsPage() {
 
                   {/* Action buttons — top right, stacked vertically */}
                   <div className="absolute top-2 right-2 z-10 flex flex-col gap-1.5">
+                    {/* Review status toggle */}
+                    <Tooltip
+                      content={design.reviewed ? t('markAsNotReviewed') : t('markAsReviewed')}
+                      position={isRTL ? 'right' : 'left'}
+                    >
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); handleToggleReview(cardOrder, design); }}
+                        disabled={reviewingKey === `${cardOrder._id}-${design.productId}`}
+                        className={`flex h-8 w-8 items-center justify-center rounded-lg backdrop-blur-sm border border-stroke transition-colors disabled:opacity-60 ${design.reviewed
+                          ? 'bg-success/90 text-white hover:bg-success'
+                          : 'bg-warning/90 text-white hover:bg-warning'
+                          }`}
+                      >
+                        {design.reviewed ? (
+                          <LuCheck className="h-4 w-4" />
+                        ) : (
+                          <LuClock className="h-4 w-4" />
+                        )}
+                      </button>
+                    </Tooltip>
                     {/* Edit design (opens design app editor) */}
                     {designEditUrl && (
                       <Tooltip content={t('editDesign')} position={isRTL ? 'right' : 'left'}>
@@ -665,6 +711,17 @@ export default function OrderDesignsPage() {
         namespace="execution"
         onCreatePaymentLink={selectedOrder ? handleCreatePaymentLink : undefined}
         isCreatingPaymentLink={selectedOrder ? creatingPaymentLinkOrderId === selectedOrder._id : false}
+        onDesignReviewChange={(orderId, productId, reviewed) => {
+          const targetOrder = orders.find((o) => o._id === orderId) || selectedOrder;
+          if (!targetOrder) return;
+          const updatedDesignUrls = (targetOrder.designUrls || []).map((d) =>
+            d.productId === productId ? { ...d, reviewed } : d,
+          );
+          dispatch({
+            type: 'UPDATE_ORDER_IN_LIST',
+            payload: { orderId, updates: { designUrls: updatedDesignUrls } },
+          });
+        }}
       />
 
       {/* Edit Order Modal */}

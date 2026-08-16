@@ -2,12 +2,14 @@
 
 import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import Image from 'next/image';
-import { LuDownload, LuPencil, LuChevronLeft, LuChevronRight, LuRefreshCw, LuTrash2, LuReplace } from 'react-icons/lu';
+import { LuDownload, LuPencil, LuChevronLeft, LuChevronRight, LuRefreshCw, LuTrash2, LuReplace, LuCheck, LuClock } from 'react-icons/lu';
 import { useTranslations } from 'next-intl';
+import { toast } from 'react-toastify';
 import Modal from '@/components/ui/modal';
 import Button from '@/components/ui/button';
 import { downloadFile } from '@/lib/download-utils';
 import { cn } from '@/lib/utils';
+import { updateDesignReviewStatus } from '../lib/order-utils';
 import type { Order, OrderDesignUrl } from '@/types/Order';
 
 /**
@@ -27,6 +29,10 @@ export interface GalleryItem {
   templateType?: 'text' | 'image';
   /** For design items: the design-app project ID (for editing) */
   projectId?: string;
+  /** For design items: the product ID this design belongs to (for review toggling) */
+  productId?: string;
+  /** For design items: whether it has been reviewed */
+  reviewed?: boolean;
 }
 
 /**
@@ -109,6 +115,8 @@ function buildGalleryItems(
             : `${t('design')} (${variantLabel})`,
         templateType: design.templateType,
         projectId: design.projectId,
+        productId: design.productId,
+        reviewed: design.reviewed,
       });
     });
   }
@@ -141,6 +149,8 @@ interface OrderGalleryModalProps {
   onDeletePhoto?: (url: string) => Promise<void>;
   /** Called when the user picks a replacement file for a photo. Receives the old URL + new File. */
   onReplacePhoto?: (oldUrl: string, file: File) => Promise<void>;
+  /** Called after a design's reviewed status is successfully updated. */
+  onDesignReviewChange?: (orderId: string, productId: string, reviewed: boolean) => void;
 }
 
 /**
@@ -164,6 +174,7 @@ export default function OrderGalleryModal({
   onEditDesign,
   onDeletePhoto,
   onReplacePhoto,
+  onDesignReviewChange,
 }: OrderGalleryModalProps) {
   const t = useTranslations('execution.table');
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -171,10 +182,17 @@ export default function OrderGalleryModal({
   const [isDeleting, setIsDeleting] = useState(false);
   const [isReplacing, setIsReplacing] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [reviewOverrides, setReviewOverrides] = useState<Record<string, boolean>>({});
+  const [isTogglingReview, setIsTogglingReview] = useState(false);
   const replaceInputRef = useRef<HTMLInputElement>(null);
 
   const items = useMemo(() => buildGalleryItems(order, mode, t), [order, mode, t]);
   const isOpen = items.length > 0;
+
+  // Reset local review overrides whenever a different order is shown
+  useEffect(() => {
+    setReviewOverrides({});
+  }, [order?._id]);
 
   // Selection resets to 0 automatically when the parent passes a new `key`
   // (keyed by order ID in the execution page), which remounts this component.
@@ -253,6 +271,28 @@ export default function OrderGalleryModal({
   const canReplacePhoto = mode === 'photo' && !!onReplacePhoto;
   const isBusy = isDownloading || isDeleting || isReplacing;
 
+  const isCurrentReviewed =
+    currentItem?.kind === 'design' && currentItem.productId
+      ? reviewOverrides[currentItem.productId] ?? !!currentItem.reviewed
+      : false;
+
+  const handleToggleReview = async () => {
+    if (!order || !currentItem || currentItem.kind !== 'design' || !currentItem.productId || isTogglingReview) return;
+    const productId = currentItem.productId;
+    const nextReviewed = !isCurrentReviewed;
+    setIsTogglingReview(true);
+    try {
+      await updateDesignReviewStatus(order._id, productId, nextReviewed);
+      setReviewOverrides((prev) => ({ ...prev, [productId]: nextReviewed }));
+      onDesignReviewChange?.(order._id, productId, nextReviewed);
+      toast.success(nextReviewed ? t('reviewed') : t('waitingForReview'));
+    } catch {
+      toast.error(t('reviewUpdateFailed'));
+    } finally {
+      setIsTogglingReview(false);
+    }
+  };
+
   const handleDeletePhoto = async () => {
     if (!currentItem || currentItem.kind !== 'photo' || isDeleting) return;
     // Two-step: first click shows "confirm", second click deletes
@@ -327,6 +367,24 @@ export default function OrderGalleryModal({
             <Button variant="primary" size="sm" onClick={handleEdit}>
               <LuPencil size={16} className="mr-1" />
               {t('editDesign')}
+            </Button>
+          )}
+          {currentItem?.kind === 'design' && currentItem.productId && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleToggleReview}
+              disabled={isTogglingReview}
+              className={isCurrentReviewed ? 'text-success border-success/30 hover:bg-success/10' : 'text-warning border-warning/30 hover:bg-warning/10'}
+            >
+              {isTogglingReview ? (
+                <LuRefreshCw size={16} className="mr-1 animate-spin" />
+              ) : isCurrentReviewed ? (
+                <LuCheck size={16} className="mr-1" />
+              ) : (
+                <LuClock size={16} className="mr-1" />
+              )}
+              {isCurrentReviewed ? t('reviewed') : t('waitingForReview')}
             </Button>
           )}
           {canReplacePhoto && (
@@ -433,6 +491,14 @@ export default function OrderGalleryModal({
                   sizes="56px"
                   unoptimized
                 />
+                {item.kind === 'design' && item.productId && (
+                  <span
+                    className={cn(
+                      'absolute bottom-0.5 right-0.5 h-2.5 w-2.5 rounded-full border border-white',
+                      (reviewOverrides[item.productId] ?? !!item.reviewed) ? 'bg-success' : 'bg-warning',
+                    )}
+                  />
+                )}
               </button>
             ))}
           </div>

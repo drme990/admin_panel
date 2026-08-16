@@ -1297,6 +1297,24 @@ export default function ExecutionPage() {
     }
   };
 
+  // Syncs the reviewed status of a design across the table row + any open
+  // modals (order detail modal / design gallery lightbox) after the admin
+  // toggles it — avoids a full refetch.
+  const handleDesignReviewChange = useCallback(
+    (orderId: string, productId: string, reviewed: boolean) => {
+      const targetOrder = orders.find((o) => o._id === orderId) || state.selectedOrder;
+      if (!targetOrder) return;
+      const updatedDesignUrls = (targetOrder.designUrls || []).map((d) =>
+        d.productId === productId ? { ...d, reviewed } : d,
+      );
+      dispatch({
+        type: 'UPDATE_ORDER_IN_LIST',
+        payload: { orderId, updates: { designUrls: updatedDesignUrls } },
+      });
+    },
+    [orders, state.selectedOrder, dispatch],
+  );
+
   const [creatingPaymentLinkOrderId, setCreatingPaymentLinkOrderId] = useState<string | null>(null);
 
   const handleCreatePaymentLink = async (order: Order) => {
@@ -1958,6 +1976,7 @@ export default function ExecutionPage() {
         namespace="execution"
         onCreatePaymentLink={selectedOrder ? handleCreatePaymentLink : undefined}
         isCreatingPaymentLink={selectedOrder ? creatingPaymentLinkOrderId === selectedOrder._id : false}
+        onDesignReviewChange={handleDesignReviewChange}
       />
 
       <ChangeExecutionDateModal
@@ -2072,6 +2091,7 @@ export default function ExecutionPage() {
             handleEditDesign(designPreviewOrder);
           }
         } : undefined}
+        onDesignReviewChange={handleDesignReviewChange}
       />
     </div>
   );

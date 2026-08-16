@@ -44,7 +44,6 @@ import {
   LuClipboardCheck,
   LuReceipt,
   LuImages,
-  LuPenLine,
 } from 'react-icons/lu';
 
 const navItems = [
@@ -72,7 +71,7 @@ const navItems = [
   {
     key: 'orderDesigns',
     href: '/order-designs',
-    icon: LuPenLine,
+    icon: LuImages,
     superAdminOnly: false,
     permissionKey: 'orderDesigns',
   },

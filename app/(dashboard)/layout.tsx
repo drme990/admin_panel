@@ -74,7 +74,7 @@ const navItems = [
     href: '/order-designs',
     icon: LuPenLine,
     superAdminOnly: false,
-    permissionKey: 'orders',
+    permissionKey: 'orderDesigns',
   },
   {
     key: 'invoices',
@@ -255,7 +255,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
       'products-discovery': 'products-discovery',
       orders: 'orders',
       execution: 'orders',
-      'order-designs': 'orders',
+      'order-designs': 'orderDesigns',
       invoices: 'invoices',
       customers: 'customers',
       analytics: 'analytics',

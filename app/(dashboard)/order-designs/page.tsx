@@ -431,7 +431,19 @@ export default function OrderDesignsPage() {
   const handleRefresh = () => void fetchDesigns();
 
   // ── Flatten orders → design cards ──────────────────────────────────────
-  const designCards = useMemo(() => flattenDesigns(orders), [orders]);
+  // When a category filter is active, the backend returns full orders that
+  // contain *any* product from that category — but we only want to show the
+  // design(s) for the matching product(s), not every item in the order.
+  const designCards = useMemo(() => {
+    const allCards = flattenDesigns(orders);
+    if (!categoryFilter || categoryFilter === 'all') return allCards;
+
+    const selectedCategory = categories.find((c) => c._id === categoryFilter);
+    const categoryProductIds = new Set(selectedCategory?.products.map((p) => p._id) || []);
+    if (categoryProductIds.size === 0) return allCards;
+
+    return allCards.filter((card) => categoryProductIds.has(card.item.productId || ''));
+  }, [orders, categoryFilter, categories]);
 
   // ── Review status filter (all / reviewed / waiting for review) ─────────
   // Cards without a generated design yet are only shown in the "all" tab —

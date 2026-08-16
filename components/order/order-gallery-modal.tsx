@@ -9,7 +9,7 @@ import Modal from '@/components/ui/modal';
 import Button from '@/components/ui/button';
 import { downloadFile } from '@/lib/download-utils';
 import { cn } from '@/lib/utils';
-import { updateDesignReviewStatus } from '../lib/order-utils';
+import { updateDesignReviewStatus } from '../../lib/order/order-utils';
 import type { Order, OrderDesignUrl } from '@/types/Order';
 
 /**

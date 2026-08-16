@@ -26,13 +26,13 @@ import { useInvoiceColumns } from './components/invoice-table-columns';
 import InvoiceCardView from './components/invoice-card-view';
 import { type UploadFileType } from './components/invoice-upload-type-menu';
 import { STATUS_TEXT_COLORS } from './components/invoice-status-cell';
-import OrderDetailModal from '../(orders-execution)/components/order-detail-modal';
-import ChangeStatusModal from '../(orders-execution)/components/change-status-modal';
-import OrderHistoryModal, { OrderHistoryEntry } from '../(orders-execution)/components/order-history-modal';
+import OrderDetailModal from '../../../components/order/order-detail-modal';
+import ChangeStatusModal from '../../../components/order/change-status-modal';
+import OrderHistoryModal, { OrderHistoryEntry } from '../../../components/order/order-history-modal';
 import {
     normalizeWhatsappPhone,
     copyToClipboard,
-} from '../(orders-execution)/lib/order-utils';
+} from '../../../lib/order/order-utils';
 import { buildOrderWhatsappMessageFromOrder } from '@/lib/order-whatsapp';
 import type {
     InvoiceEntry,

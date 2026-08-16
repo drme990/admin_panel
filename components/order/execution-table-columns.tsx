@@ -28,8 +28,8 @@ import Button from '@/components/ui/button';
 import Checkbox from '@/components/ui/checkbox';
 import Tooltip from '@/components/ui/tooltip';
 import { Order } from '@/types/Order';
-import { STATUS_COLORS, WHATSAPP_STATE_CLASSES } from '../lib/order-status';
-import { getOrderItemDisplayName } from '../lib/order-utils';
+import { STATUS_COLORS, WHATSAPP_STATE_CLASSES } from '../../lib/order/order-status';
+import { getOrderItemDisplayName } from '../../lib/order/order-utils';
 import { downloadFile } from '@/lib/download-utils';
 import { InvoiceUploadMenu, type UploadInvoiceStatus } from './invoic-upload-menu';
 

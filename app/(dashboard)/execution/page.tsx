@@ -17,33 +17,33 @@ import { Order, OrderStatus } from '@/types/Order';
 import { Category } from '@/types/Category';
 import { Referral } from '@/types/Referral';
 
-import ExecutionFilters from '../components/execution-filters';
-import { useExecutionColumns } from '../components/execution-table-columns';
-import ExecutionTitle from '../components/execution-title';
-import ChangeExecutionDateModal from '../components/change-execution-date-modal';
-import EditOrderModal from '../components/edit-order-modal';
-import OrderHistoryModal, { OrderHistoryEntry } from '../components/order-history-modal';
-import ExportModal from '../components/export-modal';
+import ExecutionFilters from '@/components/order/execution-filters';
+import { useExecutionColumns } from '@/components/order/execution-table-columns';
+import ExecutionTitle from '@/components/order/execution-title';
+import ChangeExecutionDateModal from '@/components/order/change-execution-date-modal';
+import EditOrderModal from '@/components/order/edit-order-modal';
+import OrderHistoryModal, { OrderHistoryEntry } from '@/components/order/order-history-modal';
+import ExportModal from '@/components/order/export-modal';
 import {
   deleteOldImage,
   uploadImageToR2,
   uploadInvoiceToR2,
-} from '../../../../lib/image-upload-utils';
-import OrderDetailModal from '../components/order-detail-modal';
-import ChangeStatusModal from '../components/change-status-modal';
-import CreateManualOrderModal from '../components/create-manual-order-modal';
-import OrderStats from '../components/order-stats';
-import OrderGalleryModal from '../components/order-gallery-modal';
-import useOrderPage from '../lib/use-order-page';
+} from '@/lib/image-upload-utils';
+import OrderDetailModal from '@/components/order/order-detail-modal';
+import ChangeStatusModal from '@/components/order/change-status-modal';
+import CreateManualOrderModal from '@/components/order/create-manual-order-modal';
+import OrderStats from '@/components/order/order-stats';
+import OrderGalleryModal from '@/components/order/order-gallery-modal';
+import useOrderPage from '@/lib/order/use-order-page';
 import {
   getRelativeIsoDate,
   normalizeDateRange,
   addDaysToIsoDate,
   isImageUrl,
   getOrderItemDisplayName,
-} from '../lib/order-utils';
+} from '@/lib/order/order-utils';
 import { downloadFile } from '@/lib/download-utils';
-import { InvoiceUploadMenu, type UploadInvoiceStatus } from '../components/invoic-upload-menu';
+import { InvoiceUploadMenu, type UploadInvoiceStatus } from '@/components/order/invoic-upload-menu';
 
 interface ExecutionResponse {
   success: boolean;

@@ -2,7 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import { LuPackage, LuShoppingBag } from 'react-icons/lu';
-import { getOrderItemDisplayName } from '../lib/order-utils';
+import { getOrderItemDisplayName } from '../../lib/order/order-utils';
 
 interface ProductStat {
   productId: string;

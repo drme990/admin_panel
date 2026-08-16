@@ -39,7 +39,7 @@ import { Customer, UserTier } from './types';
 import {
   getRelativeIsoDate,
   normalizeDateRange,
-} from '../(orders-execution)/lib/order-utils';
+} from '../../../lib/order/order-utils';
 
 type Referral = {
   _id: string;

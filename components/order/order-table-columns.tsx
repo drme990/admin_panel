@@ -20,7 +20,7 @@ import {
   STATUS_COLORS,
   WHATSAPP_STATE_CLASSES,
   getDefaultReferralCode,
-} from '../lib/order-status';
+} from '../../lib/order/order-status';
 
 interface ColumnCallbacks {
   onView: (order: Order) => void;

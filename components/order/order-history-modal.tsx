@@ -7,9 +7,9 @@ import { LuFileText } from 'react-icons/lu';
 import Modal from '@/components/ui/modal';
 import Button from '@/components/ui/button';
 import Loading from '@/components/ui/loading';
-import { STATUS_COLORS } from '../lib/order-status';
+import { STATUS_COLORS } from '../../lib/order/order-status';
 import { OrderStatus } from '@/types/Order';
-import InvoicePreviewModal from '../../invoices/components/invoice-preview-modal';
+import InvoicePreviewModal from '../../app/(dashboard)/invoices/components/invoice-preview-modal';
 
 export interface OrderHistoryEntry {
   _id: string;

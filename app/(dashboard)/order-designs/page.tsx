@@ -21,12 +21,12 @@ import { Order, OrderDesignUrl, OrderItem } from '@/types/Order';
 import { Category } from '@/types/Category';
 import { Referral } from '@/types/Referral';
 
-import ExecutionFilters from '../(orders-execution)/components/execution-filters';
-import ExecutionTitle from '../(orders-execution)/components/execution-title';
-import OrderDetailModal from '../(orders-execution)/components/order-detail-modal';
-import EditOrderModal from '../(orders-execution)/components/edit-order-modal';
-import OrderStats from '../(orders-execution)/components/order-stats';
-import useOrderPage from '../(orders-execution)/lib/use-order-page';
+import ExecutionFilters from '@/components/order/execution-filters';
+import ExecutionTitle from '@/components/order/execution-title';
+import OrderDetailModal from '@/components/order/order-detail-modal';
+import EditOrderModal from '@/components/order/edit-order-modal';
+import OrderStats from '@/components/order/order-stats';
+import useOrderPage from '@/lib/order/use-order-page';
 import {
   getRelativeIsoDate,
   normalizeDateRange,
@@ -36,7 +36,7 @@ import {
   updateDesignReviewStatus,
   replaceDesignImage,
   deleteSingleDesign,
-} from '../(orders-execution)/lib/order-utils';
+} from '@/lib/order/order-utils';
 
 // ── Types ────────────────────────────────────────────────────────────────
 interface ExecutionResponse {

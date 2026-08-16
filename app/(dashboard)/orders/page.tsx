@@ -14,19 +14,19 @@ import ConfirmModal, { useConfirmModal } from '@/components/ui/confirm-modal';
 import { Order, OrderStatus } from '@/types/Order';
 import { Referral } from '@/types/Referral';
 
-import OrderFilters from '../components/order-filters';
-import { useOrderColumns } from '../components/order-table-columns';
-import OrderDetailModal from '../components/order-detail-modal';
-import ChangeStatusModal from '../components/change-status-modal';
-import CreateManualOrderModal from '../components/create-manual-order-modal';
-import OrderHistoryModal, { OrderHistoryEntry } from '../components/order-history-modal';
-import OrderStats from '../components/order-stats';
-import useOrderPage from '../lib/use-order-page';
+import OrderFilters from '@/components/order/order-filters';
+import { useOrderColumns } from '@/components/order/order-table-columns';
+import OrderDetailModal from '@/components/order/order-detail-modal';
+import ChangeStatusModal from '@/components/order/change-status-modal';
+import CreateManualOrderModal from '@/components/order/create-manual-order-modal';
+import OrderHistoryModal, { OrderHistoryEntry } from '@/components/order/order-history-modal';
+import OrderStats from '@/components/order/order-stats';
+import useOrderPage from '@/lib/order/use-order-page';
 import { LuPlus } from 'react-icons/lu';
 import {
   getRelativeIsoDate,
   normalizeDateRange,
-} from '../lib/order-utils';
+} from '@/lib/order/order-utils';
 
 interface OrdersResponse {
   orders: Order[];

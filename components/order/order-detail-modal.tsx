@@ -6,8 +6,8 @@ import Modal from '@/components/ui/modal';
 import Button from '@/components/ui/button';
 import Tooltip from '@/components/ui/tooltip';
 import { Order, OrderPayment } from '@/types/Order';
-import { STATUS_COLORS, PAYMENT_STATUS_COLORS } from '../lib/order-status';
-import { isImageUrl, updateDesignReviewStatus } from '../lib/order-utils';
+import { STATUS_COLORS, PAYMENT_STATUS_COLORS } from '../../lib/order/order-status';
+import { isImageUrl, updateDesignReviewStatus } from '../../lib/order/order-utils';
 import { getPaymentMethodLabel } from '@/lib/order';
 import { downloadFile } from '@/lib/download-utils';
 import {
@@ -925,8 +925,8 @@ export default function OrderDetailModal({
                                 onClick={() => handleToggleDesignReview(design.productId, isReviewed)}
                                 disabled={isTogglingReview}
                                 className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold transition-colors disabled:opacity-60 ${isReviewed
-                                    ? 'bg-success/10 text-success hover:bg-success/20'
-                                    : 'bg-warning/10 text-warning hover:bg-warning/20'
+                                  ? 'bg-success/10 text-success hover:bg-success/20'
+                                  : 'bg-warning/10 text-warning hover:bg-warning/20'
                                   }`}
                               >
                                 {isReviewed ? (

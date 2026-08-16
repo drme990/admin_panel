@@ -7,7 +7,7 @@ import Modal from '@/components/ui/modal';
 import Button from '@/components/ui/button';
 import Dropdown from '@/components/ui/dropdown';
 import { OrderStatus } from '@/types/Order';
-import { STATUS_COLORS } from '../lib/order-status';
+import { STATUS_COLORS } from '../../lib/order/order-status';
 
 type CancellationPreset = 'returned' | 'scammer' | 'duplicate' | 'other';
 

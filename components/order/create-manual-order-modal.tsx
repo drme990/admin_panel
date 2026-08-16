@@ -18,7 +18,7 @@ import Tabs from '@/components/ui/tabs';
 import Switch from '@/components/ui/switch';
 import CustomDatePicker from '@/components/ui/custom-date-picker';
 import Textarea from '@/components/ui/textarea';
-import { uploadImageToR2, uploadInvoiceToR2, deleteOldImage } from '../../../../lib/image-upload-utils';
+import { uploadImageToR2, uploadInvoiceToR2, deleteOldImage } from '../../lib/image-upload-utils';
 
 import { LuCopy, LuCheck, LuRefreshCw, LuUpload, LuDownload, LuPlus, LuX, LuAtSign, LuPencil, LuUserCheck, LuImage, LuFileText } from 'react-icons/lu';
 import { FaWhatsapp } from 'react-icons/fa';

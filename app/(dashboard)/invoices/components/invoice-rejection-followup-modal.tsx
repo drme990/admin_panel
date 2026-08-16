@@ -9,7 +9,7 @@ import { toast } from 'react-toastify';
 import Button from '@/components/ui/button';
 import Modal from '@/components/ui/modal';
 import type { Referral } from '@/types/Referral';
-import { normalizeWhatsappPhone } from '../../(orders-execution)/lib/order-utils';
+import { normalizeWhatsappPhone } from '../../../../lib/order/order-utils';
 import { copyToClipboard } from '../lib/invoice-utils';
 import type { InvoiceRow } from '../lib/invoice-utils';
 

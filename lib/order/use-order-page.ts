@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import { toast } from 'react-toastify';
 
 import { Order, OrderStatus } from '@/types/Order';
-import { OrderStatsData } from '../components/order-stats';
+import { OrderStatsData } from '../../components/order/order-stats';
 import { copyToClipboard, normalizeWhatsappPhone } from './order-utils';
 import {
   buildOrderWhatsappMessageFromOrder,
@@ -608,6 +608,15 @@ export function useOrderPage(options: UseOrderPageOptions) {
         }
 
         toast.success(t('editOrder.success'));
+
+        // Notify the admin when the backend is re-generating designs
+        // after a non-status order data edit (names, duaa, items, etc.).
+        if (data.data?.regeneratingDesigns) {
+          const designRegeneratedMsg = t('table.designRegenerated');
+          if (designRegeneratedMsg && designRegeneratedMsg !== 'table.designRegenerated') {
+            toast.success(designRegeneratedMsg);
+          }
+        }
 
         const order = state.orders.find((o) => o._id === orderId);
         if (!order) return true;

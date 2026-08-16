@@ -7,7 +7,7 @@ import CustomDatePicker from '@/components/ui/custom-date-picker';
 import { Referral } from '@/types/Referral';
 import { OrderStatus } from '@/types/Order';
 import { LuSearch, LuRefreshCw } from 'react-icons/lu';
-import { STATUS_COLORS } from '../lib/order-status';
+import { STATUS_COLORS } from '../../lib/order/order-status';
 
 type StatusTabValue = 'all' | OrderStatus;
 type WhatsappFilterValue = 'all' | 'clicked' | 'not-clicked' | 'no-need-to-click';

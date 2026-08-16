@@ -1418,6 +1418,9 @@ export default function ExecutionPage() {
   const yesterday = getRelativeIsoDate(-1);
   const lastSevenDaysStart = getRelativeIsoDate(-6);
   const normalizedSelectedRange = normalizeDateRange(fromDateFilter, toDateFilter);
+  const isSingleDay =
+    !!normalizedSelectedRange.fromDate &&
+    normalizedSelectedRange.fromDate === normalizedSelectedRange.toDate;
 
   const activeDatePreset: DateQuickPreset | 'custom' =
     !normalizedSelectedRange.fromDate && !normalizedSelectedRange.toDate
@@ -1498,6 +1501,7 @@ export default function ExecutionPage() {
     downloadingInvoiceOrderId,
     currentPage: page,
     pageSize,
+    isSingleDay,
   });
 
   return (

@@ -188,6 +188,8 @@ export interface Order {
   }>;
   /** Generated design images — one entry per product with a template */
   designUrls?: OrderDesignUrl[];
+  /** Daily execution sequence number, reset to 1 for each execution date */
+  executionNumber?: number;
   statusUpdateTime: string;
   // Terms
   termsAgreedAt?: string;

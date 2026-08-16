@@ -468,31 +468,46 @@ export default function OrderDesignsPage() {
     return { all: designCards.length, reviewed, waiting: withDesign - reviewed };
   }, [designCards]);
 
-  // ── Counter grouping by orderNumber ────────────────────────────────────
-  const buildCounters = (cards: DesignCard[]): string[] => {
-    const result: string[] = [];
-    const orderGroupIndex = new Map<string, number>();
-    const orderOccurrence = new Map<string, number>();
-    let groupCount = 0;
+  // Single day flag must be defined before any derived counters that use it.
+  const isSingleDay = !!fromDateFilter && fromDateFilter === toDateFilter;
+
+  // ── Counter / execution number label ───────────────────────────────────
+  // Single day: use the persisted execution number (resets per execution date).
+  //   If an order has multiple visible items/designs, label them N.1, N.2, ...
+  // Multi day: use a plain 1..N counter because execution numbers reset daily
+  //   and would collide when showing several days at once.
+  const buildCounters = (cards: DesignCard[], singleDay: boolean): string[] => {
+    if (!singleDay) {
+      return cards.map((_, index) => String(index + 1));
+    }
+
+    const orderCounts = new Map<string, number>();
+    const orderSeen = new Map<string, number>();
 
     for (const card of cards) {
       const orderNum = card.order.orderNumber || card.order._id;
-      const existing = orderGroupIndex.get(orderNum);
-      if (existing === undefined) {
-        orderGroupIndex.set(orderNum, groupCount);
-        orderOccurrence.set(orderNum, 1);
-        result.push(String(groupCount + 1));
-        groupCount++;
-      } else {
-        const occ = (orderOccurrence.get(orderNum) ?? 0) + 1;
-        orderOccurrence.set(orderNum, occ);
-        result.push(`${existing + 1}.${occ}`);
-      }
+      orderCounts.set(orderNum, (orderCounts.get(orderNum) ?? 0) + 1);
     }
-    return result;
+
+    return cards.map((card, index) => {
+      const orderNum = card.order.orderNumber || card.order._id;
+      const executionNumber = card.order.executionNumber;
+
+      if (!executionNumber) {
+        // Fallback for orders that haven't been backfilled yet.
+        return String(index + 1);
+      }
+
+      const total = orderCounts.get(orderNum) ?? 1;
+      const seen = (orderSeen.get(orderNum) ?? 0) + 1;
+      orderSeen.set(orderNum, seen);
+
+      if (total === 1) return String(executionNumber);
+      return `${executionNumber}.${seen}`;
+    });
   };
 
-  const counters = useMemo(() => buildCounters(filteredDesignCards), [filteredDesignCards]);
+  const counters = useMemo(() => buildCounters(filteredDesignCards, isSingleDay), [filteredDesignCards, isSingleDay]);
 
   // ── Handlers ───────────────────────────────────────────────────────────
   const handleViewOrder = (order: Order) => {
@@ -789,7 +804,6 @@ export default function OrderDesignsPage() {
   // ── Derived values ─────────────────────────────────────────────────────
   const isLoading = loading && designCards.length === 0;
   const designAppUrl = process.env.NEXT_PUBLIC_DESIGN_APP_URL;
-  const isSingleDay = !!fromDateFilter && fromDateFilter === toDateFilter;
 
   const formatDate = (date: string) => {
     return new Date(date).toLocaleString(isRTL ? 'ar' : 'en-US', {
@@ -1036,7 +1050,7 @@ export default function OrderDesignsPage() {
 
           {/* Order number — small secondary chip, with copy */}
           <div className="flex flex-col items-start gap-1.5 pt-1">
-            <p>
+            <div className="flex items-center gap-1">
               <span className="inline-flex items-center gap-1 rounded-full border border-stroke bg-background px-2 py-0.5 text-xs text-secondary truncate">
                 #{cardOrder.orderNumber}
                 {itemIndex > 1 && ` · ${itemIndex}`}
@@ -1049,7 +1063,7 @@ export default function OrderDesignsPage() {
                   <LuCopy className="h-3 w-3" />
                 </button>
               </Tooltip>
-            </p>
+            </div>
             <span className="ml-auto text-xs text-secondary/70">
               {formatDate(cardOrder.createdAt)}
             </span>
@@ -1247,7 +1261,7 @@ export default function OrderDesignsPage() {
                 if (!groups.has(productName)) groups.set(productName, []);
                 groups.get(productName)!.push(card);
               });
-              const categoryCounters = buildCounters(categoryDesignCards);
+              const categoryCounters = buildCounters(categoryDesignCards, isSingleDay);
               let cursor = 0;
 
               return Array.from(groups.entries()).map(([productName, cards]) => {

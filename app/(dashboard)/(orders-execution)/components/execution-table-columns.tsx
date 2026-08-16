@@ -71,6 +71,20 @@ async function copyToClipboard(text: string): Promise<void> {
   });
 }
 
+function formatDateTime(date: string | Date | undefined, locale: string): string {
+  if (!date) return '-';
+  return new Date(date).toLocaleDateString(
+    locale === 'ar' ? 'ar-SA' : 'en-US',
+    {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    },
+  );
+}
+
 interface ColumnCallbacks {
   onView: (order: Order) => void;
   onWhatsapp: (order: Order) => void;
@@ -110,6 +124,8 @@ interface ColumnCallbacks {
   currentPage: number;
   /** Page size — used to compute continuous row numbers across pages */
   pageSize: number;
+  /** True when the current filter shows a single execution day (fromDate === toDate) */
+  isSingleDay: boolean;
 }
 
 export function useExecutionColumns(callbacks: ColumnCallbacks) {
@@ -152,6 +168,7 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
     downloadingInvoiceOrderId,
     currentPage,
     pageSize,
+    isSingleDay,
   } = callbacks;
 
   const columns = [
@@ -175,11 +192,24 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
     },
     {
       header: '#' as ReactNode,
-      accessor: (_order: Order, index?: number) => (
-        <span className="text-sm font-semibold text-foreground">
-          {(currentPage - 1) * pageSize + (index ?? 0) + 1}
-        </span>
-      ),
+      accessor: (order: Order, index?: number) => {
+        // Show the persisted execution number only when viewing a single day.
+        // When viewing a date range, use a normal page counter instead because
+        // execution numbers reset per day and would collide across days.
+        const number = isSingleDay ? order.executionNumber : undefined;
+        if (number) {
+          return (
+            <span className="text-sm font-semibold text-foreground">
+              {number}
+            </span>
+          );
+        }
+        return (
+          <span className="text-sm font-semibold text-foreground">
+            {(currentPage - 1) * pageSize + (index ?? 0) + 1}
+          </span>
+        );
+      },
       className: 'w-12',
     },
     {
@@ -678,6 +708,15 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
         );
       },
       className: 'min-w-24',
+    },
+    {
+      header: t('table.date'),
+      accessor: (order: Order) => (
+        <span className="text-sm text-secondary whitespace-nowrap">
+          {formatDateTime(order.statusUpdateTime, locale)}
+        </span>
+      ),
+      className: 'min-w-36',
     },
     {
       header: t('table.actions'),

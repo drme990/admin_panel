@@ -249,34 +249,39 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
                 </Button>
               </Tooltip>
             </div>
-            <div className="flex items-center gap-1.5">
-              <span
-                className={`h-2.5 w-2.5 rounded-full shrink-0 ${WHATSAPP_STATE_CLASSES[order.isWhatsappButtonClicked || 'no-need-to-click']}`}
-                title={
-                  order.isWhatsappButtonClicked === 'clicked'
-                    ? t('filters.whatsappStateClicked')
-                    : order.isWhatsappButtonClicked === 'not-clicked'
-                      ? t('filters.whatsappStateNotClicked')
-                      : t('filters.whatsappStateNoNeedToClick')
-                }
-              />
-              <span className={`font-semibold whitespace-nowrap text-sm ${order.status === 'partial-paid' ? 'text-orange-600 dark:text-orange-400' : 'text-foreground'}`}>
-                {order.orderNumber}
+            <div className="flex flex-col items-start gap-0.5">
+              <div className="flex items-center gap-1.5">
+                <span
+                  className={`h-2.5 w-2.5 rounded-full shrink-0 ${WHATSAPP_STATE_CLASSES[order.isWhatsappButtonClicked || 'no-need-to-click']}`}
+                  title={
+                    order.isWhatsappButtonClicked === 'clicked'
+                      ? t('filters.whatsappStateClicked')
+                      : order.isWhatsappButtonClicked === 'not-clicked'
+                        ? t('filters.whatsappStateNotClicked')
+                        : t('filters.whatsappStateNoNeedToClick')
+                  }
+                />
+                <span className={`font-semibold whitespace-nowrap text-sm ${order.status === 'partial-paid' ? 'text-orange-600 dark:text-orange-400' : 'text-foreground'}`}>
+                  {order.orderNumber}
+                </span>
+                <Tooltip position={tooltipPos} content={t('table.copyOrderNumber')}>
+                  <Button
+                    variant="ghost"
+                    size="custom"
+                    className="h-5 w-5 p-0 text-secondary hover:text-foreground"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      void copyToClipboard(order.orderNumber).then(() => toast.success(t('table.copied'))).catch(() => toast.error('Copy failed'));
+                    }}
+                    aria-label={t('table.copyOrderNumber')}
+                  >
+                    <LuCopy size={12} />
+                  </Button>
+                </Tooltip>
+              </div>
+              <span className="text-xs text-secondary whitespace-nowrap">
+                {formatDateTime(order.statusUpdateTime, locale)}
               </span>
-              <Tooltip position={tooltipPos} content={t('table.copyOrderNumber')}>
-                <Button
-                  variant="ghost"
-                  size="custom"
-                  className="h-5 w-5 p-0 text-secondary hover:text-foreground"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    void copyToClipboard(order.orderNumber).then(() => toast.success(t('table.copied'))).catch(() => toast.error('Copy failed'));
-                  }}
-                  aria-label={t('table.copyOrderNumber')}
-                >
-                  <LuCopy size={12} />
-                </Button>
-              </Tooltip>
             </div>
           </div>
         );
@@ -708,15 +713,6 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
         );
       },
       className: 'min-w-24',
-    },
-    {
-      header: t('table.date'),
-      accessor: (order: Order) => (
-        <span className="text-sm text-secondary whitespace-nowrap">
-          {formatDateTime(order.statusUpdateTime, locale)}
-        </span>
-      ),
-      className: 'min-w-36',
     },
     {
       header: t('table.actions'),

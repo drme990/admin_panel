@@ -1172,17 +1172,17 @@ export default function ExecutionPage() {
       toast.error(t('table.noDesignToDownload'));
       return;
     }
-    // Download the most recent design
-    const latest = designs[designs.length - 1];
     setDownloadingDesignOrderId(order._id);
     try {
-      // Cache-bust the URL — the same key gets overwritten when the
-      // admin edits + re-renders, so the CDN may serve a stale copy.
-      const cacheBustUrl = `${latest.url}${latest.url.includes('?') ? '&' : '?'}v=${Date.now()}`;
-      await downloadFile(cacheBustUrl, `design-${order.orderNumber}`);
+      for (let index = 0; index < designs.length; index += 1) {
+        const design = designs[index];
+        const cacheBustUrl = `${design.url}${design.url.includes('?') ? '&' : '?'}v=${Date.now()}`;
+        await downloadFile(cacheBustUrl, `design-${order.orderNumber}-${index + 1}`);
+      }
+      toast.success(t('table.downloaded'));
     } catch (error) {
-      console.error('Error downloading design:', error);
-      toast.error(t('messages.downloadFailed') || 'Failed to download design');
+      console.error('Error downloading designs:', error);
+      toast.error(t('messages.downloadFailed') || 'Failed to download designs');
     } finally {
       setDownloadingDesignOrderId(null);
     }

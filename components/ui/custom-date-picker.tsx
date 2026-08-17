@@ -78,6 +78,7 @@ export default function CustomDatePicker({
 }: CustomDatePickerProps) {
   const selectedDate = useMemo(() => fromIsoDate(value), [value]);
   const [isOpen, setIsOpen] = useState(false);
+  const [openUp, setOpenUp] = useState(false);
   const [monthDate, setMonthDate] = useState<Date>(selectedDate ?? new Date());
   const rootRef = useRef<HTMLDivElement | null>(null);
 
@@ -174,8 +175,13 @@ export default function CustomDatePicker({
           onClick={() => {
             setIsOpen((prev) => {
               const next = !prev;
-              if (next && selectedDate) {
-                setMonthDate(selectedDate);
+              if (next && rootRef.current) {
+                const rect = rootRef.current.getBoundingClientRect();
+                const spaceBelow = window.innerHeight - rect.bottom;
+                setOpenUp(spaceBelow < 380);
+                if (selectedDate) {
+                  setMonthDate(selectedDate);
+                }
               }
               return next;
             });
@@ -190,7 +196,10 @@ export default function CustomDatePicker({
         </Button>
 
         {isOpen && (
-          <div className="absolute z-30 mt-2 w-full min-w-[18rem] rounded-site border border-stroke bg-card-bg p-4 shadow-xl">
+          <div className={cn(
+            'absolute z-30 w-full min-w-[18rem] rounded-site border border-stroke bg-card-bg p-4 shadow-xl',
+            openUp ? 'bottom-full mb-2' : 'top-full mt-2',
+          )}>
             <div className="mb-4 flex items-center justify-between gap-3">
               <Button
                 variant="custom"

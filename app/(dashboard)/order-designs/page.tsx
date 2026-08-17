@@ -5,7 +5,7 @@ import { useLocale, useTranslations } from 'next-intl';
 import { toast } from 'react-toastify';
 import {
   LuPencil, LuTrash2, LuImage, LuCopy, LuCheck, LuClock, LuDownload, LuUpload, LuRefreshCw,
-  LuSparkles, LuEye, LuEllipsisVertical,
+  LuSparkles, LuEye, LuEllipsisVertical, LuX, LuImages, LuFile,
 } from 'react-icons/lu';
 
 import Pagination from '@/components/ui/pagination';
@@ -763,8 +763,7 @@ export default function OrderDesignsPage() {
 
   const clearSelection = () => setSelectedKeys(new Set());
 
-  const handleDownloadSelected = async () => {
-    if (selectedKeys.size === 0 || isDownloadingZip) return;
+  const buildDownloadItems = () => {
     const allCards = [...designCards, ...flattenDesigns(categoryModalOrders)];
     const seen = new Set<string>();
     const items: { url: string; filename: string }[] = [];
@@ -778,8 +777,28 @@ export default function OrderDesignsPage() {
         filename: buildDesignFilename(card.order.orderNumber, getDesignLabel(card, locale), card.itemIndex),
       });
     }
-    if (items.length === 0) return;
+    return items;
+  };
 
+  const downloadAsImages = async (items: { url: string; filename: string }[]) => {
+    if (items.length === 0) return;
+    setIsDownloadingZip(true);
+    try {
+      for (const item of items) {
+        await downloadFile(item.url, item.filename);
+      }
+      toast.success(isRTL ? 'تم تحميل التصاميم' : 'Designs downloaded');
+      clearSelection();
+    } catch (error) {
+      console.error('Failed to download designs as images:', error);
+      toast.error(isRTL ? 'فشل تحميل التصاميم' : 'Failed to download designs');
+    } finally {
+      setIsDownloadingZip(false);
+    }
+  };
+
+  const downloadAsZip = async (items: { url: string; filename: string }[]) => {
+    if (items.length === 0) return;
     setIsDownloadingZip(true);
     try {
       const res = await fetch('/api/order-designs/download-zip', {
@@ -810,6 +829,18 @@ export default function OrderDesignsPage() {
       toast.error(isRTL ? 'فشل تحميل التصاميم' : 'Failed to download designs');
     } finally {
       setIsDownloadingZip(false);
+    }
+  };
+
+  const handleDownloadOption = async (mode: string) => {
+    if (selectedKeys.size === 0 || isDownloadingZip) return;
+    const items = buildDownloadItems();
+    if (items.length === 0) return;
+
+    if (mode === 'images') {
+      await downloadAsImages(items);
+    } else if (mode === 'zip') {
+      await downloadAsZip(items);
     }
   };
 
@@ -883,7 +914,7 @@ export default function OrderDesignsPage() {
     return (
       <div
         key={`${cardOrder._id}-${itemIndex}`}
-        className={`group relative flex flex-col rounded-2xl border bg-card-bg shadow-sm transition-shadow hover:shadow-md ${isPreview ? 'cursor-default' : 'cursor-pointer'} ${isSelected ? 'border-primary ring-2 ring-primary/30' : 'border-stroke'
+        className={`group relative flex flex-col overflow-hidden rounded-2xl border bg-card-bg shadow-sm transition-shadow hover:shadow-md ${isPreview ? 'cursor-default' : 'cursor-pointer'} ${isSelected ? 'border-primary ring-2 ring-primary/30' : 'border-stroke'
           }`}
         onClick={isPreview ? undefined : () => setPreviewedCard({ card, counter })}
       >
@@ -911,7 +942,7 @@ export default function OrderDesignsPage() {
               {/* Review status toggle */}
               <Tooltip
                 content={design.reviewed ? t('markAsNotReviewed') : t('markAsReviewed')}
-                position={isRTL ? 'right' : 'left'}
+                position="left"
               >
                 <button
                   type="button"
@@ -931,7 +962,7 @@ export default function OrderDesignsPage() {
               </Tooltip>
               {/* Edit design (opens design app editor) */}
               {designEditUrl && (
-                <Tooltip content={t('editDesign')} position={isRTL ? 'right' : 'left'}>
+                <Tooltip content={t('editDesign')} position="left">
                   <a
                     href={designEditUrl}
                     target="_blank"
@@ -945,7 +976,7 @@ export default function OrderDesignsPage() {
                 </Tooltip>
               )}
               {/* Download design image */}
-              <Tooltip content={t('downloadDesign')} position={isRTL ? 'right' : 'left'}>
+              <Tooltip content={t('downloadDesign')} position="left">
                 <button
                   type="button"
                   className="flex h-8 w-8 items-center justify-center rounded-lg bg-background/90 backdrop-blur-sm border border-stroke text-secondary hover:text-primary hover:bg-background transition-colors disabled:opacity-60"
@@ -965,7 +996,7 @@ export default function OrderDesignsPage() {
                 const isMoreOpen = openMoreMenuKey === moreMenuKey;
                 return (
                   <>
-                    <Tooltip content={t('more')} position={isRTL ? 'right' : 'left'}>
+                    <Tooltip content={t('more')} position="left">
                       <button
                         type="button"
                         className="flex h-8 w-8 items-center justify-center rounded-lg bg-background/90 backdrop-blur-sm border border-stroke text-secondary hover:text-primary hover:bg-background transition-colors"
@@ -978,7 +1009,7 @@ export default function OrderDesignsPage() {
                     {isMoreOpen && (
                       <>
                         {/* Upload a replacement image */}
-                        <Tooltip content={t('uploadDesign')} position={isRTL ? 'right' : 'left'}>
+                        <Tooltip content={t('uploadDesign')} position="left">
                           <button
                             type="button"
                             className="flex h-8 w-8 items-center justify-center rounded-lg bg-background/90 backdrop-blur-sm border border-stroke text-secondary hover:text-primary hover:bg-background transition-colors disabled:opacity-60"
@@ -993,7 +1024,7 @@ export default function OrderDesignsPage() {
                           </button>
                         </Tooltip>
                         {/* Regenerate design */}
-                        <Tooltip content={tExec('table.regenerateDesign')} position={isRTL ? 'right' : 'left'}>
+                        <Tooltip content={tExec('table.regenerateDesign')} position="left">
                           <button
                             type="button"
                             className="flex h-8 w-8 items-center justify-center rounded-lg bg-background/90 backdrop-blur-sm border border-stroke text-secondary hover:text-primary hover:bg-background transition-colors disabled:opacity-60"
@@ -1008,7 +1039,7 @@ export default function OrderDesignsPage() {
                           </button>
                         </Tooltip>
                         {/* Delete design */}
-                        <Tooltip content={t('delete')} position={isRTL ? 'right' : 'left'}>
+                        <Tooltip content={t('delete')} position="left">
                           <button
                             className="flex h-8 w-8 items-center justify-center rounded-lg bg-background/90 backdrop-blur-sm border border-stroke text-secondary hover:text-error hover:bg-background transition-colors"
                             onClick={(e) => { e.stopPropagation(); setDeleteDesign({ order: cardOrder, design }); }}
@@ -1049,8 +1080,18 @@ export default function OrderDesignsPage() {
             </div>
           )}
 
-          {/* #Counter — bottom left */}
-          <div className="absolute bottom-2 left-2 z-10">
+          {/* Floating eye + counter — bottom left */}
+          <div className="absolute bottom-2 left-2 z-10 flex flex-col gap-1.5 items-start">
+            <Tooltip content={t('viewOrder')} position="right">
+              <button
+                type="button"
+                className="flex h-8 w-8 items-center justify-center rounded-lg border border-stroke bg-background text-secondary hover:text-primary hover:bg-primary/10 transition-colors"
+                onClick={(e) => { e.stopPropagation(); handleViewOrder(cardOrder); }}
+                aria-label={t('viewOrder')}
+              >
+                <LuEye className="h-4 w-4" />
+              </button>
+            </Tooltip>
             <span className="flex min-w-7 h-7 px-1.5 items-center justify-center rounded-full bg-primary text-primary-text text-xs font-bold shadow-sm">
               {counter}
             </span>
@@ -1111,39 +1152,28 @@ export default function OrderDesignsPage() {
                 </button>
               </Tooltip>
             </div>
-          )}
+          )
+          }
 
           {/* Order number — small secondary chip, with copy */}
-          <div className="flex items-center justify-between pt-1">
-            <div className="flex flex-col items-start gap-1.5">
-              <div className="flex items-center gap-1">
-                <span className="inline-flex items-center gap-1 rounded-full border border-stroke bg-background px-2 py-0.5 text-xs text-secondary truncate">
-                  #{cardOrder.orderNumber}
-                  {itemIndex > 1 && ` · ${itemIndex}`}
-                </span>
-                <Tooltip content={t('copyOrderNumber')} position={isRTL ? 'right' : 'left'}>
-                  <button
-                    className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-secondary hover:text-primary hover:bg-primary/10 transition-colors"
-                    onClick={(e) => { e.stopPropagation(); handleCopy(cardOrder.orderNumber, isRTL ? 'رقم الطلب' : 'order number'); }}
-                  >
-                    <LuCopy className="h-3 w-3" />
-                  </button>
-                </Tooltip>
-              </div>
-              <span className="text-xs text-secondary/70">
-                {formatDate(cardOrder.createdAt)}
+          <div className="flex flex-col items-start gap-1.5 pt-1 w-full">
+            <div className="flex items-center gap-1 w-full">
+              <span className="flex min-w-0 flex-1 items-center rounded-full border border-stroke bg-background px-1.5 py-0.5 text-[10px] sm:text-xs text-secondary truncate">
+                #{cardOrder.orderNumber}
+                {itemIndex > 1 && ` · ${itemIndex}`}
               </span>
+              <Tooltip content={t('copyOrderNumber')} position={isRTL ? 'right' : 'left'}>
+                <button
+                  className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-secondary hover:text-primary hover:bg-primary/10 transition-colors"
+                  onClick={(e) => { e.stopPropagation(); handleCopy(cardOrder.orderNumber, isRTL ? 'رقم الطلب' : 'order number'); }}
+                >
+                  <LuCopy className="h-3 w-3" />
+                </button>
+              </Tooltip>
             </div>
-            <Tooltip content={t('viewOrder')} position={isRTL ? 'right' : 'left'}>
-              <button
-                type="button"
-                className="flex h-8 w-8 items-center justify-center rounded-lg border border-stroke bg-background text-secondary hover:text-primary hover:bg-primary/10 transition-colors"
-                onClick={(e) => { e.stopPropagation(); handleViewOrder(cardOrder); }}
-                aria-label={t('viewOrder')}
-              >
-                <LuEye className="h-4 w-4" />
-              </button>
-            </Tooltip>
+            <span className="text-xs text-secondary/70">
+              {formatDate(cardOrder.createdAt)}
+            </span>
           </div>
         </div>
       </div>
@@ -1280,17 +1310,20 @@ export default function OrderDesignsPage() {
       {/* Category breakdown — same as the execution page */}
       <OrderStats stats={stats} loading={loadingStats} locale={locale} namespace="execution" onCategoryClick={handleCategoryClick} />
 
-      {/* Floating bulk-action bar — download selected designs as a zip */}
+      {/* Floating bulk-action bar — download selected designs */}
       <BulkAction
         selectedCount={selectedKeys.size}
         hideSelector
-        onApply={handleDownloadSelected}
         onClear={clearSelection}
         applyLabel={t('downloadSelected')}
         applyingLabel={t('downloadSelected')}
         clearLabel={t('clearSelection')}
         selectionLabel={`${selectedKeys.size} ${t('selectedCount')}`}
-        applyIcon={<LuDownload size={16} />}
+        applyOptions={[
+          { label: isRTL ? 'صور منفصلة' : 'Separate images', value: 'images', icon: <LuImages size={16} /> },
+          { label: isRTL ? 'ملف مضغوط' : 'ZIP file', value: 'zip', icon: <LuFile size={16} /> },
+        ]}
+        onApplyOption={handleDownloadOption}
         loading={isDownloadingZip}
       />
 
@@ -1400,12 +1433,21 @@ export default function OrderDesignsPage() {
       {/* Design card click-to-preview overlay */}
       {previewedCard && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+          className="fixed inset-0 z-50 h-screen w-screen min-h-screen flex items-center justify-center bg-black/70 p-4"
           onClick={() => setPreviewedCard(null)}
           role="button"
           tabIndex={-1}
           aria-label="Close preview"
         >
+          {/* Close preview */}
+          <button
+            type="button"
+            className="absolute top-4 left-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-background/90 text-foreground hover:bg-background border border-stroke shadow-sm"
+            onClick={(e) => { e.stopPropagation(); setPreviewedCard(null); }}
+            aria-label={tExec('table.close')}
+          >
+            <LuX className="h-5 w-5" />
+          </button>
           <div
             className="w-64 sm:w-80 max-w-full scale-125 sm:scale-150 origin-center transition-transform"
             onClick={(e) => e.stopPropagation()}

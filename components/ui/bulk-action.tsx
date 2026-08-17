@@ -10,11 +10,13 @@ import { cn } from '@/lib/utils';
 interface BulkActionOption {
   label: string;
   value: string;
+  icon?: ReactNode;
 }
 
 interface BulkActionProps {
   selectedCount: number;
-  onApply: () => void;
+  onApply?: () => void;
+  onApplyOption?: (value: string) => void;
   onClear: () => void;
   applyLabel: string;
   applyingLabel: string;
@@ -29,6 +31,7 @@ interface BulkActionProps {
   hideSelector?: boolean;
   value?: string;
   options?: BulkActionOption[];
+  applyOptions?: BulkActionOption[];
   onValueChange?: (value: string) => void;
   dropdownLabel?: string;
   /** Icon shown on the apply button (defaults to a checkmark). */
@@ -48,8 +51,10 @@ export default function BulkAction({
   selectedCount,
   value = '',
   options = [],
+  applyOptions = [],
   onValueChange,
   onApply,
+  onApplyOption,
   onClear,
   applyLabel,
   applyingLabel,
@@ -111,20 +116,32 @@ export default function BulkAction({
           </div>
         )}
 
-        <Button
-          type="button"
-          variant="primary"
-          onClick={onApply}
-          disabled={disabled || loading || (!hideSelector && !value)}
-          className="min-w-32 flex items-center justify-center gap-2"
-        >
-          {loading ? (
-            <LuRefreshCw size={16} className="animate-spin" />
-          ) : (
-            applyIcon ?? <LuSquareCheck size={16} />
-          )}
-          {loading ? applyingLabel : applyLabel}
-        </Button>
+        {applyOptions.length > 0 ? (
+          <div className="min-w-40">
+            <Dropdown
+              value=""
+              options={applyOptions}
+              onChange={(v) => onApplyOption?.(v)}
+              placeholder={applyLabel}
+              disabled={disabled || loading || selectedCount === 0}
+            />
+          </div>
+        ) : (
+          <Button
+            type="button"
+            variant="primary"
+            onClick={() => onApply?.()}
+            disabled={disabled || loading || (!hideSelector && !value)}
+            className="min-w-32 flex items-center justify-center gap-2"
+          >
+            {loading ? (
+              <LuRefreshCw size={16} className="animate-spin" />
+            ) : (
+              applyIcon ?? <LuSquareCheck size={16} />
+            )}
+            {loading ? applyingLabel : applyLabel}
+          </Button>
+        )}
       </div>
     </div>
   );

@@ -297,7 +297,7 @@
       "binance": "Binance"
     },
     "bulkAction": {
-      "selectedCount": "تم تحديد {count} طلبات",
+      "selectedCount": "{count} محدد",
       "executionDateLabel": "تاريخ التنفيذ",
       "apply": "تطبيق",
       "applying": "جارٍ التطبيق...",

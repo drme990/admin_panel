@@ -5,7 +5,7 @@ import { useLocale, useTranslations } from 'next-intl';
 import { toast } from 'react-toastify';
 import {
   LuPencil, LuTrash2, LuImage, LuCopy, LuCheck, LuClock, LuDownload, LuUpload, LuRefreshCw,
-  LuSparkles, LuEye, LuEllipsisVertical, LuX, LuImages, LuFile,
+  LuSparkles, LuEye, LuEllipsisVertical, LuX, LuImages, LuFile, LuCalendar,
 } from 'react-icons/lu';
 
 import Pagination from '@/components/ui/pagination';
@@ -17,7 +17,7 @@ import BulkAction from '@/components/ui/bulk-action';
 import { downloadFile } from '@/lib/download-utils';
 import { uploadImageToR2, deleteOldImage } from '@/lib/image-upload-utils';
 
-import { Order, OrderDesignUrl, OrderItem } from '@/types/Order';
+import { Order, OrderDesignUrl, OrderItem, ReservationOrderField } from '@/types/Order';
 import { Category } from '@/types/Category';
 import { Referral } from '@/types/Referral';
 
@@ -26,6 +26,7 @@ import ExecutionTitle from '@/components/order/execution-title';
 import OrderDetailModal from '@/components/order/order-detail-modal';
 import EditOrderModal from '@/components/order/edit-order-modal';
 import OrderStats from '@/components/order/order-stats';
+import ChangeExecutionDateModal from '@/components/order/change-execution-date-modal';
 import useOrderPage from '@/lib/order/use-order-page';
 import {
   getRelativeIsoDate,
@@ -206,6 +207,8 @@ export default function OrderDesignsPage() {
   const [uploadTargetCard, setUploadTargetCard] = useState<DesignCard | null>(null);
   const [openMoreMenuKey, setOpenMoreMenuKey] = useState<string | null>(null);
   const [previewedCard, setPreviewedCard] = useState<{ card: DesignCard; counter: string } | null>(null);
+  const [executionDateTarget, setExecutionDateTarget] = useState<Order[] | null>(null);
+  const [updatingExecutionDate, setUpdatingExecutionDate] = useState(false);
   const uploadInputRef = useRef<HTMLInputElement>(null);
 
   // ── Persist filters to session storage ─────────────────────────────────
@@ -832,8 +835,23 @@ export default function OrderDesignsPage() {
     }
   };
 
-  const handleDownloadOption = async (mode: string) => {
+  const getSelectedOrderTargets = () => {
+    const allCards = [...designCards, ...flattenDesigns(categoryModalOrders)];
+    const seen = new Set<string>();
+    const orders: Order[] = [];
+    for (const card of allCards) {
+      if (!card.design) continue;
+      const key = cardKey(card.order._id, card.design.productId);
+      if (!selectedKeys.has(key) || seen.has(key)) continue;
+      seen.add(key);
+      orders.push(card.order);
+    }
+    return Array.from(new Map(orders.map((o) => [o._id, o])).values());
+  };
+
+  const handleApplyOption = async (mode: string) => {
     if (selectedKeys.size === 0 || isDownloadingZip) return;
+
     const items = buildDownloadItems();
     if (items.length === 0) return;
 
@@ -842,6 +860,77 @@ export default function OrderDesignsPage() {
     } else if (mode === 'zip') {
       await downloadAsZip(items);
     }
+  };
+
+  const getCurrentExecutionDate = () => {
+    if (!executionDateTarget || executionDateTarget.length === 0) return '';
+    const value = executionDateTarget[0].reservationData?.find((f) => f.key === 'executionDate')?.value;
+    return value ? value.substring(0, 10) : '';
+  };
+
+  const handleUpdateExecutionDate = async (date: string) => {
+    if (!executionDateTarget || executionDateTarget.length === 0 || !date) return;
+    setUpdatingExecutionDate(true);
+    try {
+      if (executionDateTarget.length === 1) {
+        const [order] = executionDateTarget;
+        const res = await fetch(`/api/orders/${order._id}/execution-date`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ executionDate: date }),
+        });
+        const data = await res.json();
+        if (!data.success) {
+          throw new Error(data.error || 'Failed to update execution date');
+        }
+        const hasExecutionDate = order.reservationData?.some((f) => f.key === 'executionDate');
+        const nextReservationData = hasExecutionDate
+          ? order.reservationData!.map((f) =>
+            f.key === 'executionDate' ? { ...f, value: date } : f,
+          )
+          : [...(order.reservationData ?? []), { key: 'executionDate', label: { ar: 'تاريخ التنفيذ', en: 'Execution Date' }, type: 'date', value: date } as ReservationOrderField];
+        dispatch({
+          type: 'UPDATE_ORDER_RESERVATION_DATA',
+          payload: { orderId: order._id, reservationData: nextReservationData },
+        });
+      } else {
+        const res = await fetch('/api/execution/bulk-date', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            orderIds: executionDateTarget.map((o) => o._id),
+            executionDate: date,
+          }),
+        });
+        const data = await res.json();
+        if (!data.success) {
+          throw new Error(data.error || 'Failed to bulk update execution dates');
+        }
+        for (const order of executionDateTarget) {
+          const hasExecutionDate = order.reservationData?.some((f) => f.key === 'executionDate');
+          const nextReservationData = hasExecutionDate
+            ? order.reservationData!.map((f) =>
+              f.key === 'executionDate' ? { ...f, value: date } : f,
+            )
+            : [...(order.reservationData ?? []), { key: 'executionDate', label: { ar: 'تاريخ التنفيذ', en: 'Execution Date' }, type: 'date', value: date } as ReservationOrderField];
+          dispatch({
+            type: 'UPDATE_ORDER_RESERVATION_DATA',
+            payload: { orderId: order._id, reservationData: nextReservationData },
+          });
+        }
+      }
+      toast.success(isRTL ? 'تم تحديث تاريخ التنفيذ' : 'Execution date updated');
+      setExecutionDateTarget(null);
+    } catch (error) {
+      console.error('Error updating execution date:', error);
+      toast.error(isRTL ? 'فشل تحديث تاريخ التنفيذ' : 'Failed to update execution date');
+    } finally {
+      setUpdatingExecutionDate(false);
+    }
+  };
+
+  const openExecutionDateForOrder = (order: Order) => {
+    setExecutionDateTarget([order]);
   };
 
   const handleCopy = async (text: string, label: string) => {
@@ -1036,6 +1125,16 @@ export default function OrderDesignsPage() {
                             ) : (
                               <LuRefreshCw className="h-4 w-4" />
                             )}
+                          </button>
+                        </Tooltip>
+                        {/* Change execution date */}
+                        <Tooltip content={tExec('table.changeExecutionDate')} position="left">
+                          <button
+                            type="button"
+                            className="flex h-8 w-8 items-center justify-center rounded-lg bg-background/90 backdrop-blur-sm border border-stroke text-secondary hover:text-primary hover:bg-background transition-colors"
+                            onClick={(e) => { e.stopPropagation(); openExecutionDateForOrder(cardOrder); }}
+                          >
+                            <LuCalendar className="h-4 w-4" />
                           </button>
                         </Tooltip>
                         {/* Delete design */}
@@ -1264,6 +1363,27 @@ export default function OrderDesignsPage() {
       )}
 
 
+      {/* Bulk-action bar */}
+      <BulkAction
+        selectedCount={selectedKeys.size}
+        hideSelector
+        onClear={clearSelection}
+        applyLabel={t('downloadSelected')}
+        applyingLabel={t('downloadSelected')}
+        clearLabel={t('clearSelection')}
+        selectionLabel={`${selectedKeys.size} ${t('selectedCount')}`}
+        applyOptions={[
+          { label: isRTL ? 'صور منفصلة' : 'Separate images', value: 'images', icon: <LuImages size={16} /> },
+          { label: isRTL ? 'ملف مضغوط' : 'ZIP file', value: 'zip', icon: <LuFile size={16} /> },
+        ]}
+        onApplyOption={handleApplyOption}
+        extraLabel={isRTL ? 'تغيير تاريخ التنفيذ' : 'Change execution date'}
+        onExtraApply={() => setExecutionDateTarget(getSelectedOrderTargets())}
+        extraIcon={<LuCalendar size={16} />}
+        extraLoading={updatingExecutionDate}
+        loading={isDownloadingZip}
+      />
+
       {/* Content */}
       {isLoading ? (
         <div className="grid grid-cols-1 gap-4 xs:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
@@ -1309,23 +1429,6 @@ export default function OrderDesignsPage() {
 
       {/* Category breakdown — same as the execution page */}
       <OrderStats stats={stats} loading={loadingStats} locale={locale} namespace="execution" onCategoryClick={handleCategoryClick} />
-
-      {/* Floating bulk-action bar — download selected designs */}
-      <BulkAction
-        selectedCount={selectedKeys.size}
-        hideSelector
-        onClear={clearSelection}
-        applyLabel={t('downloadSelected')}
-        applyingLabel={t('downloadSelected')}
-        clearLabel={t('clearSelection')}
-        selectionLabel={`${selectedKeys.size} ${t('selectedCount')}`}
-        applyOptions={[
-          { label: isRTL ? 'صور منفصلة' : 'Separate images', value: 'images', icon: <LuImages size={16} /> },
-          { label: isRTL ? 'ملف مضغوط' : 'ZIP file', value: 'zip', icon: <LuFile size={16} /> },
-        ]}
-        onApplyOption={handleDownloadOption}
-        loading={isDownloadingZip}
-      />
 
       {/* Category Orders Modal — mirrors the execution page's drill-down */}
       <Modal
@@ -1464,6 +1567,16 @@ export default function OrderDesignsPage() {
         accept="image/jpeg,image/png,image/webp"
         className="hidden"
         onChange={handleUploadFileChange}
+      />
+
+      {/* Change Execution Date Modal */}
+      <ChangeExecutionDateModal
+        isOpen={!!executionDateTarget}
+        onClose={() => setExecutionDateTarget(null)}
+        currentDate={getCurrentExecutionDate()}
+        onUpdateDate={handleUpdateExecutionDate}
+        updating={updatingExecutionDate}
+        locale={locale}
       />
 
       {/* Delete Design Confirmation */}

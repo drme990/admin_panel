@@ -298,7 +298,7 @@
       "binance": "Binance"
     },
     "bulkAction": {
-      "selectedCount": "Selected {count} orders",
+      "selectedCount": "{count} selected",
       "executionDateLabel": "Execution Date",
       "apply": "Apply",
       "applying": "Applying...",

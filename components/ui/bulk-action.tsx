@@ -17,9 +17,14 @@ interface BulkActionProps {
   selectedCount: number;
   onApply?: () => void;
   onApplyOption?: (value: string) => void;
+  extraLabel?: string;
+  onExtraApply?: () => void;
+  extraIcon?: ReactNode;
+  extraLoading?: boolean;
+  extraDisabled?: boolean;
   onClear: () => void;
-  applyLabel: string;
-  applyingLabel: string;
+  applyLabel?: string;
+  applyingLabel?: string;
   /** Accessible label for the small "X" clear button (not shown as text). */
   clearLabel: string;
   selectionLabel: string;
@@ -55,6 +60,11 @@ export default function BulkAction({
   onValueChange,
   onApply,
   onApplyOption,
+  extraLabel,
+  onExtraApply,
+  extraIcon,
+  extraLoading,
+  extraDisabled,
   onClear,
   applyLabel,
   applyingLabel,
@@ -70,11 +80,10 @@ export default function BulkAction({
   if (selectedCount === 0) return null;
 
   return (
-    <div className="fixed bottom-6 inset-x-0 z-40 flex justify-center px-4">
+    <div className="w-full mb-4">
       <div
         className={cn(
           'flex flex-col gap-3 rounded-2xl border border-stroke bg-card-bg p-3 shadow-lg sm:flex-row sm:items-center',
-          'animate-in fade-in slide-in-from-bottom-4 duration-200',
         )}
       >
         {/* Clear selection — icon-only, at the start */}
@@ -102,7 +111,6 @@ export default function BulkAction({
                 value={value}
                 onChange={(v) => onValueChange?.(v)}
                 locale={locale}
-                label={dropdownLabel}
                 placeholder={dropdownLabel}
               />
             ) : (
@@ -116,30 +124,49 @@ export default function BulkAction({
           </div>
         )}
 
-        {applyOptions.length > 0 ? (
-          <div className="min-w-40">
-            <Dropdown
-              value=""
-              options={applyOptions}
-              onChange={(v) => onApplyOption?.(v)}
-              placeholder={applyLabel}
-              disabled={disabled || loading || selectedCount === 0}
-            />
-          </div>
-        ) : (
+        {(onApply || applyOptions.length > 0) && (
+          applyOptions.length > 0 ? (
+            <div className="min-w-40">
+              <Dropdown
+                value=""
+                options={applyOptions}
+                onChange={(v) => onApplyOption?.(v)}
+                placeholder={applyLabel}
+                disabled={disabled || loading || selectedCount === 0}
+              />
+            </div>
+          ) : (
+            <Button
+              type="button"
+              variant="primary"
+              onClick={() => onApply?.()}
+              disabled={disabled || loading || (!hideSelector && !value)}
+              className="min-w-32 flex items-center justify-center gap-2"
+            >
+              {loading ? (
+                <LuRefreshCw size={16} className="animate-spin" />
+              ) : (
+                applyIcon ?? <LuSquareCheck size={16} />
+              )}
+              {loading ? applyingLabel : applyLabel}
+            </Button>
+          )
+        )}
+
+        {onExtraApply && extraLabel && (
           <Button
             type="button"
-            variant="primary"
-            onClick={() => onApply?.()}
-            disabled={disabled || loading || (!hideSelector && !value)}
+            variant="outline"
+            onClick={onExtraApply}
+            disabled={extraDisabled || extraLoading || selectedCount === 0}
             className="min-w-32 flex items-center justify-center gap-2"
           >
-            {loading ? (
+            {extraLoading ? (
               <LuRefreshCw size={16} className="animate-spin" />
             ) : (
-              applyIcon ?? <LuSquareCheck size={16} />
+              extraIcon ?? <LuSquareCheck size={16} />
             )}
-            {loading ? applyingLabel : applyLabel}
+            {extraLabel}
           </Button>
         )}
       </div>

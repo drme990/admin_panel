@@ -3,7 +3,7 @@
 import { useEffect, useCallback, useState, useRef } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { toast } from 'react-toastify';
-import { LuDownload, LuPhone, LuEye, LuPalette, LuPencil, LuFileText, LuRefreshCw, LuPlus, LuSparkles } from 'react-icons/lu';
+import { LuDownload, LuPhone, LuEye, LuPalette, LuPencil, LuFileText, LuRefreshCw, LuPlus, LuSparkles, LuCalendar } from 'react-icons/lu';
 import { FaWhatsapp } from 'react-icons/fa6';
 
 import Table from '@/components/ui/table';
@@ -80,6 +80,7 @@ export default function ExecutionPage() {
   const [downloadingInvoiceOrderId, setDownloadingInvoiceOrderId] = useState<string | null>(null);
   const [photoPreviewOrder, setPhotoPreviewOrder] = useState<Order | null>(null);
   const [designPreviewOrder, setDesignPreviewOrder] = useState<Order | null>(null);
+  const [bulkExecutionDateTargetIds, setBulkExecutionDateTargetIds] = useState<string[] | null>(null);
   const [isCreateManualOrderModalOpen, setIsCreateManualOrderModalOpen] = useState(false);
   const { confirm, modalProps } = useConfirmModal();
 
@@ -101,8 +102,6 @@ export default function ExecutionPage() {
     toggleOrderSelection,
     toggleSelectAll,
     clearSelection,
-    setBulkValue,
-    setBulkUpdating,
     viewOrder,
     closeModal,
     handleChangeStatus,
@@ -176,8 +175,6 @@ export default function ExecutionPage() {
     isChangeStatusModalOpen,
     updatingStatus,
     selectedOrderIds,
-    bulkValue,
-    bulkUpdating,
     stats,
     loadingStats,
     whatsappOrderId,
@@ -513,13 +510,23 @@ export default function ExecutionPage() {
   };
 
   const handleChangeExecutionDate = (order: Order) => {
+    setBulkExecutionDateTargetIds(null);
     setChangeExecutionDateModalOpen(true);
     dispatch({ type: 'SET_SELECTED_ORDER', payload: order });
+  };
+
+  const openBulkChangeExecutionDate = () => {
+    const first = orders.find((o) => selectedOrderIds.includes(o._id));
+    if (!first) return;
+    setBulkExecutionDateTargetIds(selectedOrderIds);
+    setChangeExecutionDateModalOpen(true);
+    dispatch({ type: 'SET_SELECTED_ORDER', payload: first });
   };
 
   const closeChangeExecutionDateModal = () => {
     setChangeExecutionDateModalOpen(false);
     setChangingExecutionDateId(null);
+    setBulkExecutionDateTargetIds(null);
   };
 
   const getCurrentExecutionDate = () => {
@@ -1348,69 +1355,61 @@ export default function ExecutionPage() {
       closeChangeExecutionDateModal();
       return;
     }
+    const targetIds = bulkExecutionDateTargetIds ?? [selectedOrder._id];
+    const isBulk = targetIds.length > 1;
     try {
       setChangingExecutionDateId(selectedOrder._id);
-      const res = await fetch(`/api/orders/${selectedOrder._id}/execution-date`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ executionDate: date }),
-      });
-      const data = await res.json();
-      if (!data.success) {
-        throw new Error(data.error || 'Failed to update execution date');
-      }
-      toast.success(t('changeExecutionDate.success'));
-      const nextReservationData = selectedOrder.reservationData?.map((f) =>
-        f.key === 'executionDate' ? { ...f, value: date } : f,
-      ) ?? [];
-      dispatch({
-        type: 'UPDATE_ORDER_RESERVATION_DATA',
-        payload: { orderId: selectedOrder._id, reservationData: nextReservationData },
-      });
-      closeChangeExecutionDateModal();
-    } catch (error) {
-      console.error('Error updating execution date:', error);
-      toast.error(t('changeExecutionDate.failed'));
-    } finally {
-      setChangingExecutionDateId(null);
-    }
-  };
-
-  const applyBulkExecutionDate = async () => {
-    if (selectedOrderIds.length === 0 || !bulkValue) return;
-    try {
-      setBulkUpdating(true);
-      const res = await fetch('/api/execution/bulk-date', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          orderIds: selectedOrderIds,
-          executionDate: bulkValue,
-        }),
-      });
-      const data = await res.json();
-      if (!data.success) {
-        throw new Error(data.error || 'Failed to bulk update execution dates');
-      }
-      toast.success(`Updated ${data.data.updatedCount} orders`);
-      for (const orderId of selectedOrderIds) {
-        const order = orders.find((o) => o._id === orderId);
-        if (!order) continue;
-        const nextReservationData = order.reservationData?.map((f) =>
-          f.key === 'executionDate' ? { ...f, value: bulkValue } : f,
+      if (isBulk) {
+        const res = await fetch('/api/execution/bulk-date', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            orderIds: targetIds,
+            executionDate: date,
+          }),
+        });
+        const data = await res.json();
+        if (!data.success) {
+          throw new Error(data.error || 'Failed to bulk update execution dates');
+        }
+        toast.success(`Updated ${data.data.updatedCount} orders`);
+        for (const orderId of targetIds) {
+          const order = orders.find((o) => o._id === orderId);
+          if (!order) continue;
+          const nextReservationData = order.reservationData?.map((f) =>
+            f.key === 'executionDate' ? { ...f, value: date } : f,
+          ) ?? [];
+          dispatch({
+            type: 'UPDATE_ORDER_RESERVATION_DATA',
+            payload: { orderId, reservationData: nextReservationData },
+          });
+        }
+        clearSelection();
+      } else {
+        const res = await fetch(`/api/orders/${selectedOrder._id}/execution-date`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ executionDate: date }),
+        });
+        const data = await res.json();
+        if (!data.success) {
+          throw new Error(data.error || 'Failed to update execution date');
+        }
+        toast.success(t('changeExecutionDate.success'));
+        const nextReservationData = selectedOrder.reservationData?.map((f) =>
+          f.key === 'executionDate' ? { ...f, value: date } : f,
         ) ?? [];
         dispatch({
           type: 'UPDATE_ORDER_RESERVATION_DATA',
-          payload: { orderId, reservationData: nextReservationData },
+          payload: { orderId: selectedOrder._id, reservationData: nextReservationData },
         });
       }
-      clearSelection();
-      setBulkValue('');
+      closeChangeExecutionDateModal();
     } catch (error) {
-      console.error('Error bulk updating execution dates:', error);
-      toast.error('Failed to bulk update execution dates');
+      console.error('Error updating execution date:', error);
+      toast.error(isBulk ? 'Failed to bulk update execution dates' : t('changeExecutionDate.failed'));
     } finally {
-      setBulkUpdating(false);
+      setChangingExecutionDateId(null);
     }
   };
 
@@ -1579,19 +1578,15 @@ export default function ExecutionPage() {
       {selectedOrderIds.length > 0 && (
         <BulkAction
           selectedCount={selectedOrderIds.length}
-          value={bulkValue}
-          options={[]}
-          onValueChange={setBulkValue}
-          onApply={applyBulkExecutionDate}
+          hideSelector
           onClear={clearSelection}
-          applyLabel={t('bulkAction.apply')}
-          applyingLabel={t('bulkAction.applying')}
+
           clearLabel={t('bulkAction.clear')}
           selectionLabel={t('bulkAction.selectedCount', { count: selectedOrderIds.length })}
-          dropdownLabel={t('bulkAction.executionDateLabel')}
-          locale={locale}
-          disabled={!bulkValue}
-          loading={bulkUpdating}
+          extraLabel={t('bulkAction.executionDateLabel')}
+          onExtraApply={openBulkChangeExecutionDate}
+          extraIcon={<LuCalendar size={16} />}
+          extraLoading={changingExecutionDateId !== null}
         />
       )}
 

@@ -632,7 +632,7 @@ export default function OrderDesignsPage() {
 
   // ── Upload a replacement image for a single design ──────────────────────
   const triggerUploadDesign = (card: DesignCard) => {
-    if (uploadingKey || !card.design) return;
+    if (uploadingKey) return;
     setUploadTargetCard(card);
     uploadInputRef.current?.click();
   };
@@ -640,9 +640,8 @@ export default function OrderDesignsPage() {
   const handleUploadFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     const card = uploadTargetCard;
-    const design = card?.design;
     if (e.target) e.target.value = '';
-    if (!file || !card || !design) return;
+    if (!file || !card) return;
 
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
     if (!allowedTypes.includes(file.type)) {
@@ -655,24 +654,34 @@ export default function OrderDesignsPage() {
     }
 
     const cardOrder = card.order;
-    const key = cardKey(cardOrder._id, design.productId);
+    const existingDesign = card.design;
+    const productId = existingDesign?.productId || card.item.productId || '';
+    const key = cardKey(cardOrder._id, productId);
     setUploadingKey(key);
     try {
       const newUrl = await uploadImageToR2(file);
-      await replaceDesignImage(cardOrder._id, design.productId, newUrl);
+      await replaceDesignImage(cardOrder._id, productId, newUrl);
 
-      const updatedDesignUrls = (cardOrder.designUrls || []).map((d) =>
-        d.productId === design.productId ? { ...d, url: newUrl, reviewed: false } : d,
-      );
+      // Update or add the design entry in the order's designUrls
+      const updatedDesignUrls = existingDesign
+        ? (cardOrder.designUrls || []).map((d) =>
+          d.productId === productId ? { ...d, url: newUrl, reviewed: false } : d,
+        )
+        : [
+          ...(cardOrder.designUrls || []),
+          { productId, url: newUrl, templateType: 'text' as const, reviewed: false, createdAt: new Date().toISOString() },
+        ];
       dispatch({
         type: 'UPDATE_ORDER_IN_LIST',
         payload: { orderId: cardOrder._id, updates: { designUrls: updatedDesignUrls } },
       });
       toast.success(isRTL ? 'تم استبدال التصميم' : 'Design replaced');
 
-      deleteOldImage(design.url).catch((err: unknown) => {
-        console.warn('Failed to delete old design image from R2:', err);
-      });
+      if (existingDesign) {
+        deleteOldImage(existingDesign.url).catch((err: unknown) => {
+          console.warn('Failed to delete old design image from R2:', err);
+        });
+      }
     } catch (error) {
       console.error('Failed to upload design image:', error);
       toast.error(isRTL ? 'فشل رفع الصورة' : 'Failed to upload image');
@@ -1024,135 +1033,153 @@ export default function OrderDesignsPage() {
           </div>
         )}
 
-        {/* Action buttons — top right, stacked vertically */}
+        {/* Action buttons — top right, stacked vertically.
+            All actions always render. When there's no design image,
+            review/edit/download/regenerate/delete are disabled; upload,
+            execution date remain enabled. */}
         <div className="absolute top-2 right-2 z-10 flex flex-col gap-1.5">
-          {design ? (
-            <>
-              {/* Review status toggle */}
-              <Tooltip
-                content={design.reviewed ? t('markAsNotReviewed') : t('markAsReviewed')}
-                position="left"
-              >
-                <button
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); handleToggleReview(cardOrder, design); }}
-                  disabled={reviewingKey === cardKey(cardOrder._id, design.productId)}
-                  className={`flex h-8 w-8 items-center justify-center rounded-lg backdrop-blur-sm border border-stroke transition-colors disabled:opacity-60 ${design.reviewed
-                    ? 'bg-success/90 text-white hover:bg-success'
-                    : 'bg-warning/90 text-white hover:bg-warning'
-                    }`}
+          {(() => {
+            const hasDesign = !!design;
+            const productId = design?.productId || card.item.productId || '';
+            const noDesignTooltip = isRTL ? 'لا يوجد تصميم' : 'No design';
+            return (
+              <>
+                {/* Review status toggle — disabled when no design */}
+                <Tooltip
+                  content={hasDesign ? (design.reviewed ? t('markAsNotReviewed') : t('markAsReviewed')) : noDesignTooltip}
+                  position="left"
                 >
-                  {design.reviewed ? (
-                    <LuCheck className="h-4 w-4" />
-                  ) : (
-                    <LuClock className="h-4 w-4" />
-                  )}
-                </button>
-              </Tooltip>
-              {/* Edit design (opens design app editor) */}
-              {designEditUrl && (
-                <Tooltip content={t('editDesign')} position="left">
-                  <a
-                    href={designEditUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={(e) => e.stopPropagation()}
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); if (hasDesign) handleToggleReview(cardOrder, design); }}
+                    disabled={!hasDesign || reviewingKey === cardKey(cardOrder._id, productId)}
+                    className={`flex h-8 w-8 items-center justify-center rounded-lg backdrop-blur-sm border border-stroke transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${hasDesign && design.reviewed
+                      ? 'bg-success/90 text-white hover:bg-success'
+                      : hasDesign
+                        ? 'bg-warning/90 text-white hover:bg-warning'
+                        : 'bg-background/90 text-secondary'
+                      }`}
                   >
-                    <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-background/90 backdrop-blur-sm border border-stroke text-brand-primary hover:bg-background transition-colors">
+                    {hasDesign && design.reviewed ? (
+                      <LuCheck className="h-4 w-4" />
+                    ) : (
+                      <LuClock className="h-4 w-4" />
+                    )}
+                  </button>
+                </Tooltip>
+                {/* Edit design — disabled when no design */}
+                {hasDesign && designEditUrl ? (
+                  <Tooltip content={t('editDesign')} position="left">
+                    <a
+                      href={designEditUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-background/90 backdrop-blur-sm border border-stroke text-brand-primary hover:bg-background transition-colors">
+                        <LuPencil className="h-4 w-4" />
+                      </span>
+                    </a>
+                  </Tooltip>
+                ) : (
+                  <Tooltip content={noDesignTooltip} position="left">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-background/90 backdrop-blur-sm border border-stroke text-secondary opacity-40 cursor-not-allowed">
                       <LuPencil className="h-4 w-4" />
                     </span>
-                  </a>
-                </Tooltip>
-              )}
-              {/* Download design image */}
-              <Tooltip content={t('downloadDesign')} position="left">
-                <button
-                  type="button"
-                  className="flex h-8 w-8 items-center justify-center rounded-lg bg-background/90 backdrop-blur-sm border border-stroke text-secondary hover:text-primary hover:bg-background transition-colors disabled:opacity-60"
-                  onClick={(e) => { e.stopPropagation(); handleDownloadDesignImage(card); }}
-                  disabled={downloadingKey === cardKey(cardOrder._id, design.productId)}
-                >
-                  {downloadingKey === cardKey(cardOrder._id, design.productId) ? (
-                    <LuRefreshCw className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <LuDownload className="h-4 w-4" />
-                  )}
-                </button>
-              </Tooltip>
-              {/* More actions: upload, regenerate, delete */}
-              {(() => {
-                const moreMenuKey = cardKey(cardOrder._id, design.productId);
-                const isMoreOpen = openMoreMenuKey === moreMenuKey;
-                return (
-                  <>
-                    <Tooltip content={t('more')} position="left">
-                      <button
-                        type="button"
-                        className="flex h-8 w-8 items-center justify-center rounded-lg bg-background/90 backdrop-blur-sm border border-stroke text-secondary hover:text-primary hover:bg-background transition-colors"
-                        onClick={(e) => { e.stopPropagation(); setOpenMoreMenuKey(isMoreOpen ? null : moreMenuKey); }}
-                        aria-label={t('more')}
-                      >
-                        <LuEllipsisVertical className="h-4 w-4" />
-                      </button>
-                    </Tooltip>
-                    {isMoreOpen && (
-                      <>
-                        {/* Upload a replacement image */}
-                        <Tooltip content={t('uploadDesign')} position="left">
-                          <button
-                            type="button"
-                            className="flex h-8 w-8 items-center justify-center rounded-lg bg-background/90 backdrop-blur-sm border border-stroke text-secondary hover:text-primary hover:bg-background transition-colors disabled:opacity-60"
-                            onClick={(e) => { e.stopPropagation(); triggerUploadDesign(card); }}
-                            disabled={uploadingKey === cardKey(cardOrder._id, design.productId)}
-                          >
-                            {uploadingKey === cardKey(cardOrder._id, design.productId) ? (
-                              <LuRefreshCw className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <LuUpload className="h-4 w-4" />
-                            )}
-                          </button>
-                        </Tooltip>
-                        {/* Regenerate design */}
-                        <Tooltip content={tExec('table.regenerateDesign')} position="left">
-                          <button
-                            type="button"
-                            className="flex h-8 w-8 items-center justify-center rounded-lg bg-background/90 backdrop-blur-sm border border-stroke text-secondary hover:text-primary hover:bg-background transition-colors disabled:opacity-60"
-                            onClick={(e) => { e.stopPropagation(); handleRegenerateDesign(cardOrder); }}
-                            disabled={isGenerating}
-                          >
-                            {isGenerating ? (
-                              <LuRefreshCw className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <LuRefreshCw className="h-4 w-4" />
-                            )}
-                          </button>
-                        </Tooltip>
-                        {/* Change execution date */}
-                        <Tooltip content={tExec('table.changeExecutionDate')} position="left">
-                          <button
-                            type="button"
-                            className="flex h-8 w-8 items-center justify-center rounded-lg bg-background/90 backdrop-blur-sm border border-stroke text-secondary hover:text-primary hover:bg-background transition-colors"
-                            onClick={(e) => { e.stopPropagation(); openExecutionDateForOrder(cardOrder); }}
-                          >
-                            <LuCalendar className="h-4 w-4" />
-                          </button>
-                        </Tooltip>
-                        {/* Delete design */}
-                        <Tooltip content={t('delete')} position="left">
-                          <button
-                            className="flex h-8 w-8 items-center justify-center rounded-lg bg-background/90 backdrop-blur-sm border border-stroke text-secondary hover:text-error hover:bg-background transition-colors"
-                            onClick={(e) => { e.stopPropagation(); setDeleteDesign({ order: cardOrder, design }); }}
-                          >
-                            <LuTrash2 className="h-4 w-4" />
-                          </button>
-                        </Tooltip>
-                      </>
+                  </Tooltip>
+                )}
+                {/* Download design image — disabled when no design */}
+                <Tooltip content={hasDesign ? t('downloadDesign') : noDesignTooltip} position="left">
+                  <button
+                    type="button"
+                    className="flex h-8 w-8 items-center justify-center rounded-lg bg-background/90 backdrop-blur-sm border border-stroke text-secondary hover:text-primary hover:bg-background transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    onClick={(e) => { e.stopPropagation(); if (hasDesign) handleDownloadDesignImage(card); }}
+                    disabled={!hasDesign || downloadingKey === cardKey(cardOrder._id, productId)}
+                  >
+                    {hasDesign && downloadingKey === cardKey(cardOrder._id, productId) ? (
+                      <LuRefreshCw className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <LuDownload className="h-4 w-4" />
                     )}
-                  </>
-                );
-              })()}
-            </>
-          ) : null}
+                  </button>
+                </Tooltip>
+                {/* More actions: upload, regenerate, execution date, delete */}
+                {(() => {
+                  const moreMenuKey = cardKey(cardOrder._id, productId);
+                  const isMoreOpen = openMoreMenuKey === moreMenuKey;
+                  return (
+                    <>
+                      <Tooltip content={t('more')} position="left">
+                        <button
+                          type="button"
+                          className="flex h-8 w-8 items-center justify-center rounded-lg bg-background/90 backdrop-blur-sm border border-stroke text-secondary hover:text-primary hover:bg-background transition-colors"
+                          onClick={(e) => { e.stopPropagation(); setOpenMoreMenuKey(isMoreOpen ? null : moreMenuKey); }}
+                          aria-label={t('more')}
+                        >
+                          <LuEllipsisVertical className="h-4 w-4" />
+                        </button>
+                      </Tooltip>
+                      {isMoreOpen && (
+                        <>
+                          {/* Upload a replacement image — always enabled */}
+                          <Tooltip content={t('uploadDesign')} position="left">
+                            <button
+                              type="button"
+                              className="flex h-8 w-8 items-center justify-center rounded-lg bg-background/90 backdrop-blur-sm border border-stroke text-secondary hover:text-primary hover:bg-background transition-colors disabled:opacity-60"
+                              onClick={(e) => { e.stopPropagation(); triggerUploadDesign(card); }}
+                              disabled={uploadingKey === cardKey(cardOrder._id, productId)}
+                            >
+                              {uploadingKey === cardKey(cardOrder._id, productId) ? (
+                                <LuRefreshCw className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <LuUpload className="h-4 w-4" />
+                              )}
+                            </button>
+                          </Tooltip>
+                          {/* Regenerate design — disabled when no design */}
+                          <Tooltip content={hasDesign ? tExec('table.regenerateDesign') : noDesignTooltip} position="left">
+                            <button
+                              type="button"
+                              className="flex h-8 w-8 items-center justify-center rounded-lg bg-background/90 backdrop-blur-sm border border-stroke text-secondary hover:text-primary hover:bg-background transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                              onClick={(e) => { e.stopPropagation(); if (hasDesign) handleRegenerateDesign(cardOrder); }}
+                              disabled={!hasDesign || isGenerating}
+                            >
+                              {isGenerating ? (
+                                <LuRefreshCw className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <LuRefreshCw className="h-4 w-4" />
+                              )}
+                            </button>
+                          </Tooltip>
+                          {/* Change execution date — always enabled */}
+                          <Tooltip content={tExec('table.changeExecutionDate')} position="left">
+                            <button
+                              type="button"
+                              className="flex h-8 w-8 items-center justify-center rounded-lg bg-background/90 backdrop-blur-sm border border-stroke text-secondary hover:text-primary hover:bg-background transition-colors"
+                              onClick={(e) => { e.stopPropagation(); openExecutionDateForOrder(cardOrder); }}
+                            >
+                              <LuCalendar className="h-4 w-4" />
+                            </button>
+                          </Tooltip>
+                          {/* Delete design — disabled when no design */}
+                          <Tooltip content={hasDesign ? t('delete') : noDesignTooltip} position="left">
+                            <button
+                              type="button"
+                              className="flex h-8 w-8 items-center justify-center rounded-lg bg-background/90 backdrop-blur-sm border border-stroke text-secondary hover:text-error hover:bg-background transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                              onClick={(e) => { e.stopPropagation(); if (hasDesign) setDeleteDesign({ order: cardOrder, design }); }}
+                              disabled={!hasDesign}
+                            >
+                              <LuTrash2 className="h-4 w-4" />
+                            </button>
+                          </Tooltip>
+                        </>
+                      )}
+                    </>
+                  );
+                })()}
+              </>
+            );
+          })()}
         </div>
 
         {/* Preview — generated image, or a "generate" placeholder */}

@@ -1,5 +1,10 @@
 'use client';
 
+import type {
+  DesignVersionHistoryResponse,
+  RestoreVersionResponse,
+} from '@/types/OrderDesignVersion';
+
 export function toIsoDateInput(date: Date): string {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -223,4 +228,98 @@ export function getOrderItemDisplayName(
   return locale === 'ar'
     ? item.productName?.ar || item.productName?.en || ''
     : item.productName?.en || item.productName?.ar || '';
+}
+
+// ─── Design version history ──────────────────────────────────────────────
+
+/**
+ * Fetch the full saved-version history for a single order design.
+ * Calls GET /api/admin/design-versions (proxied to the backend's
+ * `/api/admin/design-versions` route).
+ *
+ * Returns `{ currentVersion, versions }` where `currentVersion` is the
+ * explicit active-version pointer (null when the design has been
+ * deleted) and `versions` is the append-only history, newest first.
+ */
+export async function fetchDesignVersionHistory(
+  orderId: string,
+  productId: string,
+): Promise<DesignVersionHistoryResponse> {
+  const params = new URLSearchParams({ orderId, productId });
+  const res = await fetch(`/api/design-versions?${params.toString()}`, {
+    method: 'GET',
+    credentials: 'include',
+  });
+  const data = await res.json();
+  if (!data.success) {
+    throw new Error(data.error?.message || 'Failed to fetch design history');
+  }
+  return data.data as DesignVersionHistoryResponse;
+}
+
+/**
+ * Restore a previous saved version. The backend creates a new
+ * `admin_restore` version (the original is never touched) and updates
+ * the order's current-design pointer.
+ *
+ * Calls POST /api/admin/design-versions/restore (proxied to the
+ * backend's `/api/admin/design-versions/restore` route).
+ */
+export async function restoreDesignVersion(
+  orderId: string,
+  productId: string,
+  version: number,
+): Promise<RestoreVersionResponse> {
+  const res = await fetch(`/api/design-versions/restore`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ orderId, productId, version }),
+  });
+  const data = await res.json();
+  if (!data.success) {
+    throw new Error(data.error?.message || 'Failed to restore version');
+  }
+  return data.data as RestoreVersionResponse;
+}
+
+/**
+ * Sync the order's `designUrls[].url` and `currentVersion` with the
+ * latest version in the design version history.
+ *
+ * This is called by the admin panel on window focus — when the admin
+ * returns from editing a design in the design app's editor, the admin
+ * panel syncs the order's URL with the latest version before refetching.
+ *
+ * The backend checks the `order_design_versions` collection for the
+ * latest version of each (orderNumber, productId) pair and updates the
+ * order's `designUrls[].url` if it's out of sync.
+ *
+ * @param orderNumbers The order numbers to sync (typically the orders
+ *   on the current page).
+ * @param wait When true, the backend long-polls (up to 10 seconds) for
+ *   new versions to appear. This is used after the admin returns from
+ *   the editor — the re-render might still be in progress, so we wait
+ *   for it to complete instead of polling multiple times.
+ * @returns `{ synced, updated, timedOut }` — `synced` is the number of
+ *   orders checked, `updated` is the number of design URLs that were
+ *   changed, `timedOut` is true if the long-poll timed out without
+ *   finding a new version.
+ */
+export async function syncOrderDesigns(
+  orderNumbers: string[],
+  wait: boolean = false,
+): Promise<{ synced: number; updated: number; timedOut: boolean }> {
+  if (orderNumbers.length === 0) return { synced: 0, updated: 0, timedOut: false };
+  const res = await fetch(`/api/orders/sync-designs`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ orderNumbers, wait }),
+  });
+  const data = await res.json();
+  if (!data.success) {
+    throw new Error(data.error?.message || 'Failed to sync designs');
+  }
+  return data.data as { synced: number; updated: number; timedOut: boolean };
 }

@@ -110,6 +110,7 @@
       "close": "إغلاق",
       "designCreated": "تم إنشاء التصميم بنجاح",
       "designRegenerated": "تم إعادة إنشاء التصميم بنجاح",
+      "designRegenerating": "جارٍ إعادة إنشاء التصميم... سيتم تحديث بطاقة التصميم تلقائياً.",
       "regenerateDesignFailed": "فشل إعادة إنشاء التصميم",
       "designCreateFailed": "فشل إنشاء التصميم",
       "designCreateNoTemplate": "لا يوجد قالب لهذا المنتج",
@@ -593,7 +594,30 @@
     "selectedCount": "محدد",
     "downloadSelected": "تحميل التصاميم",
     "clearSelection": "إلغاء التحديد",
-    "more": "المزيد"
+    "more": "المزيد",
+    "history": "سجل التصميم"
+  },
+  "orderDesignHistory": {
+    "title": "سجل التصميم",
+    "empty": "لا توجد نسخ محفوظة بعد.",
+    "retry": "إعادة المحاولة",
+    "current": "الحالي",
+    "versionLabel": "النسخة {version}",
+    "restoredFrom": "مُستعادة من النسخة {version}",
+    "restore": "استعادة",
+    "restoreConfirmTitle": "استعادة النسخة",
+    "restoreConfirmMessage": "استعادة النسخة {version}؟ سيُنشأ هذا إدخالاً جديداً في السجل — لا يتم تعديل الأصل أبداً.",
+    "restoreNote": "تُعيد الاستعادة حالة المراجعة إلى \"بانتظار المراجعة\".",
+    "restoreCancel": "إلغاء",
+    "restoreConfirmBtn": "استعادة",
+    "trigger": {
+      "auto": "إنشاء تلقائي",
+      "admin_regenerate": "إعادة إنشاء (مشرف)",
+      "admin_edit": "تعديل (مشرف)",
+      "admin_upload": "رفع (مشرف)",
+      "admin_restore": "استعادة (مشرف)",
+      "admin_delete": "حذف (مشرف)"
+    }
   },
   "orderDesignLogs": {
     "title": "سجل تصاميم الطلبات",

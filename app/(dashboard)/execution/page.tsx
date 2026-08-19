@@ -41,6 +41,7 @@ import {
   addDaysToIsoDate,
   isImageUrl,
   getOrderItemDisplayName,
+  syncOrderDesigns,
 } from '@/lib/order/order-utils';
 import { downloadFile } from '@/lib/download-utils';
 import { InvoiceUploadMenu, type UploadInvoiceStatus } from '@/components/order/invoic-upload-menu';
@@ -1384,6 +1385,32 @@ export default function ExecutionPage() {
             payload: { orderId, reservationData: nextReservationData },
           });
         }
+
+        // The backend triggers design regeneration (fire-and-forget) for
+        // each order. Show an info toast and sync in the background.
+        toast.info(t('table.designRegenerating'));
+        const bulkOrderNumbers = targetIds
+          .map((id) => orders.find((o) => o._id === id)?.orderNumber)
+          .filter((n): n is string => Boolean(n));
+        try {
+          const result = await syncOrderDesigns(bulkOrderNumbers, true);
+          if (result.updated > 0) {
+            // Refetch each affected order to update the design thumbnail
+            for (const orderId of targetIds) {
+              const updatedOrder = await fetchOrderDetails(orderId, false);
+              if (updatedOrder) {
+                dispatch({
+                  type: 'UPDATE_ORDER_IN_LIST',
+                  payload: { orderId, updates: { designUrls: updatedOrder.designUrls } },
+                });
+              }
+            }
+            toast.success(t('table.designRegenerated'));
+          }
+        } catch {
+          // Best-effort — the window focus handler will catch up
+        }
+
         clearSelection();
       } else {
         const res = await fetch(`/api/orders/${selectedOrder._id}/execution-date`, {
@@ -1403,6 +1430,30 @@ export default function ExecutionPage() {
           type: 'UPDATE_ORDER_RESERVATION_DATA',
           payload: { orderId: selectedOrder._id, reservationData: nextReservationData },
         });
+
+        // The backend triggers design regeneration (fire-and-forget)
+        // when the execution date changes. Show an info toast and sync
+        // in the background to update the design when it's ready.
+        toast.info(t('table.designRegenerating'));
+        try {
+          const result = await syncOrderDesigns([selectedOrder.orderNumber], true);
+          if (result.updated > 0) {
+            // Refetch the order to update the design thumbnail in the table
+            const updatedOrder = await fetchOrderDetails(selectedOrder._id, false);
+            if (updatedOrder) {
+              dispatch({
+                type: 'UPDATE_ORDER_IN_LIST',
+                payload: {
+                  orderId: selectedOrder._id,
+                  updates: { designUrls: updatedOrder.designUrls },
+                },
+              });
+            }
+            toast.success(t('table.designRegenerated'));
+          }
+        } catch {
+          // Best-effort — the window focus handler will catch up
+        }
       }
       closeChangeExecutionDateModal();
     } catch (error) {

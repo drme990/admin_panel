@@ -110,6 +110,7 @@
       "close": "Close",
       "designCreated": "Design created successfully",
       "designRegenerated": "Design regenerated successfully",
+      "designRegenerating": "Design is being regenerated... The design card will update automatically.",
       "regenerateDesignFailed": "Failed to regenerate design",
       "designCreateFailed": "Failed to create design",
       "designCreateNoTemplate": "No template assigned to this product",
@@ -594,7 +595,30 @@
     "selectedCount": "selected",
     "downloadSelected": "Download Designs",
     "clearSelection": "Clear selection",
-    "more": "More"
+    "more": "More",
+    "history": "Design History"
+  },
+  "orderDesignHistory": {
+    "title": "Design History",
+    "empty": "No saved versions yet.",
+    "retry": "Retry",
+    "current": "Current",
+    "versionLabel": "v{version}",
+    "restoredFrom": "restored from v{version}",
+    "restore": "Restore",
+    "restoreConfirmTitle": "Restore Version",
+    "restoreConfirmMessage": "Restore version {version}? This creates a new history entry — the original is never modified.",
+    "restoreNote": "Restoring resets the review status to \"waiting for review\".",
+    "restoreCancel": "Cancel",
+    "restoreConfirmBtn": "Restore",
+    "trigger": {
+      "auto": "Auto generation",
+      "admin_regenerate": "Admin regenerate",
+      "admin_edit": "Admin edit",
+      "admin_upload": "Admin upload",
+      "admin_restore": "Admin restore",
+      "admin_delete": "Admin delete"
+    }
   },
   "orderDesignLogs": {
     "title": "Order Design Logs",

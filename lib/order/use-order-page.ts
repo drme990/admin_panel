@@ -373,7 +373,9 @@ export function useOrderPage(options: UseOrderPageOptions) {
   const fetchOrderDetails = useCallback(
     async (orderId: string, showError = true): Promise<Order | null> => {
       try {
-        const res = await fetch(`/api/orders/${orderId}`);
+        const res = await fetch(`/api/orders/${orderId}`, {
+          cache: 'no-store',
+        });
         const data = await res.json();
         if (!data.success) {
           throw new Error(data.error || 'Failed to fetch order details');
@@ -611,10 +613,47 @@ export function useOrderPage(options: UseOrderPageOptions) {
 
         // Notify the admin when the backend is re-generating designs
         // after a non-status order data edit (names, duaa, items, etc.).
+        // The backend fires this as fire-and-forget, so the design isn't
+        // ready yet — show an INFO toast (not success) and trigger a
+        // background sync to update the design card when it's done.
         if (data.data?.regeneratingDesigns) {
-          const designRegeneratedMsg = t('table.designRegenerated');
-          if (designRegeneratedMsg && designRegeneratedMsg !== 'table.designRegenerated') {
-            toast.success(designRegeneratedMsg);
+          const designRegeneratingMsg = t('table.designRegenerating');
+          if (designRegeneratingMsg && designRegeneratingMsg !== 'table.designRegenerating') {
+            toast.info(designRegeneratingMsg);
+          }
+
+          // Sync the order's design URLs with the latest versions in the
+          // background. Uses long-poll (wait: true) so it waits up to 10s
+          // for the new version to appear, then refetches the order to
+          // update the design card. Best-effort — errors are logged.
+          const orderNumber = state.orders.find((o) => o._id === orderId)?.orderNumber;
+          if (orderNumber) {
+            import('@/lib/order/order-utils').then(({ syncOrderDesigns }) => {
+              syncOrderDesigns([orderNumber], true)
+                .then((result) => {
+                  if (result.updated > 0) {
+                    // The design URL was updated — refetch the order to
+                    // load the new image on the design card.
+                    return fetchOrderDetails(orderId, false);
+                  }
+                  return null;
+                })
+                .then((updatedOrder) => {
+                  if (updatedOrder) {
+                    dispatch({
+                      type: 'UPDATE_ORDER_IN_LIST',
+                      payload: { orderId, updates: { designUrls: updatedOrder.designUrls } },
+                    });
+                    const doneMsg = t('table.designRegenerated');
+                    if (doneMsg && doneMsg !== 'table.designRegenerated') {
+                      toast.success(doneMsg);
+                    }
+                  }
+                })
+                .catch(() => {
+                  // Best-effort — the window focus handler will catch up
+                });
+            });
           }
         }
 
@@ -748,7 +787,7 @@ export function useOrderPage(options: UseOrderPageOptions) {
         setSavingOrderId(null);
       }
     },
-    [state.orders, setSavingOrderId, t],
+    [state.orders, setSavingOrderId, t, fetchOrderDetails],
   );
 
   return {

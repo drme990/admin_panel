@@ -42,6 +42,18 @@ export interface OrderDesignUrl {
   reviewedAt?: string;
   /** Name/email of the admin who marked it reviewed */
   reviewedBy?: string;
+  /**
+   * The currently-active version number for this design (explicit
+   * pointer). The history UI marks `version === currentVersion` as
+   * "current" — never infer current state from array position.
+   *
+   * `null` when the design has been deleted (the `admin_delete` event
+   * preserves the last snapshot but clears the active pointer).
+   * Undefined for legacy entries created before this field was added.
+   *
+   * See `order-history-enhanced.md` §11.
+   */
+  currentVersion?: number | null;
 }
 
 export type PaymentMethod =

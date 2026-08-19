@@ -5,7 +5,7 @@ import { useLocale, useTranslations } from 'next-intl';
 import { toast } from 'react-toastify';
 import {
   LuPencil, LuTrash2, LuImage, LuCopy, LuCheck, LuClock, LuDownload, LuUpload, LuRefreshCw,
-  LuSparkles, LuEye, LuEllipsisVertical, LuX, LuImages, LuFile, LuCalendar,
+  LuSparkles, LuEye, LuEllipsisVertical, LuX, LuImages, LuFile, LuCalendar, LuHistory,
 } from 'react-icons/lu';
 
 import Pagination from '@/components/ui/pagination';
@@ -27,6 +27,7 @@ import OrderDetailModal from '@/components/order/order-detail-modal';
 import EditOrderModal from '@/components/order/edit-order-modal';
 import OrderStats from '@/components/order/order-stats';
 import ChangeExecutionDateModal from '@/components/order/change-execution-date-modal';
+import DesignHistoryModal from '@/components/order/design-history-modal';
 import useOrderPage from '@/lib/order/use-order-page';
 import {
   getRelativeIsoDate,
@@ -37,6 +38,7 @@ import {
   updateDesignReviewStatus,
   replaceDesignImage,
   deleteSingleDesign,
+  syncOrderDesigns,
 } from '@/lib/order/order-utils';
 
 // ── Types ────────────────────────────────────────────────────────────────
@@ -207,6 +209,7 @@ export default function OrderDesignsPage() {
   const [uploadTargetCard, setUploadTargetCard] = useState<DesignCard | null>(null);
   const [openMoreMenuKey, setOpenMoreMenuKey] = useState<string | null>(null);
   const [previewedCard, setPreviewedCard] = useState<{ card: DesignCard; counter: string } | null>(null);
+  const [historyTarget, setHistoryTarget] = useState<DesignCard | null>(null);
   const [executionDateTarget, setExecutionDateTarget] = useState<Order[] | null>(null);
   const [updatingExecutionDate, setUpdatingExecutionDate] = useState(false);
   const uploadInputRef = useRef<HTMLInputElement>(null);
@@ -344,6 +347,56 @@ export default function OrderDesignsPage() {
     void fetchDesigns(controller.signal);
     return () => controller.abort();
   }, [fetchDesigns]);
+
+  // ── Refetch on window focus with long-poll sync ───────────────────────
+  // When the admin returns to this tab after editing a design in the
+  // design app's editor, the order's design URL may have changed. The
+  // re-render on the design app is fire-and-forget (non-blocking), so
+  // the new version might not exist yet.
+  //
+  // Instead of polling multiple times, we use a SINGLE long-poll request:
+  //   1. Call syncOrderDesigns(wait: true) — the backend checks for newer
+  //      versions, and if none found, waits up to 10 seconds (checking
+  //      every 500ms) for a new version to appear.
+  //   2. When the new version appears (or the request returns), refetch
+  //      the orders so the new image URLs are loaded.
+  //
+  // This is one request instead of five, and it responds immediately
+  // when the version is ready — no wasted requests.
+  useEffect(() => {
+    let cancelled = false;
+
+    const handleFocus = async () => {
+      if (cancelled) return;
+
+      // Refetch immediately (catches any other changes like status, etc.)
+      void fetchDesigns();
+
+      // Long-poll sync: waits up to 10s for new versions to appear.
+      // The backend checks every 500ms and returns as soon as a new
+      // version is found. This is a single request — no client-side polling.
+      try {
+        const orderNumbers = state.orders
+          .filter((o) => o.designUrls && o.designUrls.length > 0)
+          .map((o) => o.orderNumber);
+        if (orderNumbers.length > 0) {
+          const result = await syncOrderDesigns(orderNumbers, true);
+          if (!cancelled && result.updated > 0) {
+            // New versions found and URLs updated — refetch to load them
+            void fetchDesigns();
+          }
+        }
+      } catch {
+        // Best-effort — the initial refetch above already happened
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => {
+      cancelled = true;
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [fetchDesigns, state.orders]);
 
   // ── Category breakdown stats (same as the execution page) ──────────────
   const fetchStats = useCallback(
@@ -710,7 +763,13 @@ export default function OrderDesignsPage() {
     setGeneratingOrderId(order._id);
     try {
       if (isRegenerate && (order.designUrls || []).length > 0) {
-        const delRes = await fetch(`/api/orders/${order._id}/designs`, {
+        // Regenerate = overwrite, NOT delete + create.
+        // Pass `?skipVersionEvent=true` so the DELETE route removes the
+        // old designUrls entries WITHOUT creating admin_delete version
+        // events. The subsequent generate-design call creates the new
+        // version (admin_regenerate), so we'd end up with two history
+        // entries (delete + regenerate) instead of just one (regenerate).
+        const delRes = await fetch(`/api/orders/${order._id}/designs?skipVersionEvent=true`, {
           method: 'DELETE',
           credentials: 'include',
         });
@@ -929,6 +988,34 @@ export default function OrderDesignsPage() {
         }
       }
       toast.success(isRTL ? 'تم تحديث تاريخ التنفيذ' : 'Execution date updated');
+
+      // The backend triggers design regeneration (fire-and-forget) when
+      // the execution date changes. Show an info toast and sync in the
+      // background to update the design card when the new design is ready.
+      const orderNumbers = executionDateTarget.map((o) => o.orderNumber);
+      toast.info(isRTL ? 'جارٍ إعادة إنشاء التصميم...' : 'Design is being regenerated...');
+      try {
+        const result = await syncOrderDesigns(orderNumbers, true);
+        if (result.updated > 0) {
+          // New designs are ready — refetch each affected order and
+          // update its design card in the list. We use fetchOrderDetails
+          // (not fetchDesigns) because it's a targeted fetch that
+          // updates the specific order, not the whole page.
+          for (const order of executionDateTarget) {
+            const updatedOrder = await fetchOrderDetails(order._id, false);
+            if (updatedOrder) {
+              dispatch({
+                type: 'UPDATE_ORDER_IN_LIST',
+                payload: { orderId: order._id, updates: { designUrls: updatedOrder.designUrls } },
+              });
+            }
+          }
+          toast.success(isRTL ? 'تم إعادة إنشاء التصميم بنجاح' : 'Design regenerated successfully');
+        }
+      } catch {
+        // Best-effort — the window focus handler will catch up
+      }
+
       setExecutionDateTarget(null);
     } catch (error) {
       console.error('Error updating execution date:', error);
@@ -1151,6 +1238,18 @@ export default function OrderDesignsPage() {
                               )}
                             </button>
                           </Tooltip>
+                          {/* View design history — always enabled (history may
+                              exist even after the current design was deleted) */}
+                          <Tooltip content={t('history')} position="left">
+                            <button
+                              type="button"
+                              className="flex h-8 w-8 items-center justify-center rounded-lg bg-background/90 backdrop-blur-sm border border-stroke text-secondary hover:text-primary hover:bg-background transition-colors"
+                              onClick={(e) => { e.stopPropagation(); setHistoryTarget(card); }}
+                              aria-label={t('history')}
+                            >
+                              <LuHistory className="h-4 w-4" />
+                            </button>
+                          </Tooltip>
                           {/* Change execution date — always enabled */}
                           <Tooltip content={tExec('table.changeExecutionDate')} position="left">
                             <button
@@ -1185,7 +1284,7 @@ export default function OrderDesignsPage() {
         {/* Preview — generated image, or a "generate" placeholder */}
         <div className="relative aspect-square w-full overflow-hidden rounded-t-2xl bg-muted">
           {previewUrl ? (
-            <DesignImage src={previewUrl} alt={productLabel || cardOrder.orderNumber} />
+            <DesignImage key={previewUrl} src={previewUrl} alt={productLabel || cardOrder.orderNumber} />
           ) : (
             <div className="flex h-full w-full flex-col items-center justify-center gap-3 border-2 border-dashed border-stroke/70 p-4">
               <LuImage className="h-9 w-9 text-secondary/30" />
@@ -1617,11 +1716,50 @@ export default function OrderDesignsPage() {
         confirmText={t('deleteConfirmBtn')}
         cancelText={t('deleteCancel')}
       />
+
+      {/* Design History Modal — append-only saved-version history with
+          preview, download, and restore. The history may contain entries
+          even after the current design was deleted. */}
+      <DesignHistoryModal
+        orderId={historyTarget?.order._id || ''}
+        orderNumber={historyTarget?.order.orderNumber || ''}
+        productId={historyTarget?.item.productId || historyTarget?.design?.productId || ''}
+        isOpen={!!historyTarget}
+        onClose={() => setHistoryTarget(null)}
+        onRestored={async (result) => {
+          // Refetch the order so the card shows the restored image + the
+          // updated currentVersion pointer.
+          if (historyTarget) {
+            try {
+              const updatedOrder = await fetchOrderDetails(historyTarget.order._id, false);
+              if (updatedOrder) {
+                dispatch({
+                  type: 'UPDATE_ORDER_IN_LIST',
+                  payload: {
+                    orderId: historyTarget.order._id,
+                    updates: { designUrls: updatedOrder.designUrls },
+                  },
+                });
+              }
+            } catch (refetchError) {
+              console.error('Failed to refetch order after restore:', refetchError);
+            }
+          }
+          toast.success(isRTL ? 'تم استعادة التصميم' : 'Design restored');
+          setHistoryTarget(null);
+          // Mark the result URL as used so eslint doesn't complain — the
+          // refetch above is the source of truth for the new image URL.
+          void result;
+        }}
+      />
     </div>
   );
 }
 
 // ── Design image with loading state ──────────────────────────────────────
+// The `key` prop on the outer wrapper remounts this component when `src`
+// changes, resetting the `loaded`/`error` state automatically — no effect
+// needed. See the call site: `<DesignImage key={previewUrl} ... />`.
 function DesignImage({ src, alt }: { src: string; alt: string }) {
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState(false);

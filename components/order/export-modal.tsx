@@ -8,6 +8,7 @@ import html2canvas from 'html2canvas';
 import * as XLSX from 'xlsx';
 import { toast } from 'react-toastify';
 
+import { getOrderItemDisplayName } from '@/lib/order/order-utils';
 import Modal from '@/components/ui/modal';
 import Button from '@/components/ui/button';
 import Checkbox from '@/components/ui/checkbox';
@@ -97,7 +98,10 @@ function buildExportRows(orders: Order[], locale: string): ExportRow[] {
 
     const items = (order.items || [])
       .map((item) => {
-        const name = locale === 'ar' ? item.productName?.ar : item.productName?.en;
+        // Use getOrderItemDisplayName: returns the size name if the
+        // product has multiple sizes and the ordered size is not
+        // "default/الافتراضي"; otherwise falls back to the product name.
+        const name = getOrderItemDisplayName(item, locale);
         const qty = item.quantity || 1;
         return qty > 1 ? `${qty}x ${name}` : (name || '');
       })

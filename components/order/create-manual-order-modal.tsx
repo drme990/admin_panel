@@ -26,7 +26,6 @@ import { isValidPhoneNumber } from 'libphonenumber-js';
 import { COUNTRIES } from '@/lib/countries';
 import { MANUAL_PAYMENT_METHODS, EASYKASH_PAYMENT_METHOD } from '@/lib/order';
 import type { PaymentMethod } from '@/types/Order';
-import InvoiceUploadModal, { type InvoiceUploadResult } from './invoice-upload-modal';
 
 function extractDigits(value: string): string {
   return value.replace(/\D/g, '');
@@ -469,8 +468,7 @@ export default function CreateManualOrderModal({
   const priceInputRefs = useRef<Map<number, HTMLInputElement>>(new Map());
   const lastLookupRef = useRef<{ phone: string; email: string; source: string }>({ phone: '', email: '', source: '' });
   const skipBlurValidationRef = useRef(false);
-  const [invoiceUploadOpen, setInvoiceUploadOpen] = useState(false);
-  const [invoiceUploadKey, setInvoiceUploadKey] = useState(0);
+  const invoiceInputRef = useRef<HTMLInputElement | null>(null);
 
   const invoicesRef = useRef<InvoiceEntry[]>([]);
   invoicesRef.current = invoices;
@@ -981,41 +979,48 @@ export default function CreateManualOrderModal({
     });
   };
 
-  // Handler for the new InvoiceUploadModal — adds an invoice with all
-  // fields (file, status, value, currency) filled in at once, then
-  // auto-updates the paid amount from confirmed invoices.
-  const handleInvoiceUploadConfirm = (result: InvoiceUploadResult) => {
-    dispatch({
-      type: 'ADD_INVOICE',
-      invoice: {
-        file: result.file,
-        invoiceStatus: result.invoiceStatus,
-        value: result.value,
-        currency: result.currency,
-        previewUrl: result.previewUrl,
-      },
-    });
-    setInvoiceUploadOpen(false);
+  // Handler for inline invoice file selection — adds the file with
+  // default status (waiting) and empty value. The admin then fills in
+  // the value, currency, and status inline in the invoice list.
+  const handleInvoiceFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
 
-    // Auto-update paidAmount from confirmed invoices
-    const confirmedTotal = invoices
-      .filter((inv) => inv.invoiceStatus === 'confirmed')
-      .reduce((sum, inv) => {
-        const v = parseFloat(inv.value);
-        return Number.isFinite(v) && v > 0 ? sum + v : sum;
-      }, 0);
-    const newInvoiceValue = parseFloat(result.value);
-    const newConfirmedTotal =
-      result.invoiceStatus === 'confirmed' && Number.isFinite(newInvoiceValue)
-        ? confirmedTotal + newInvoiceValue
-        : confirmedTotal;
+    for (const file of Array.from(files)) {
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'application/pdf'];
+      if (!allowedTypes.includes(file.type)) {
+        toast.error(t('editOrder.invalidImage') || 'Invalid file type');
+        continue;
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error(t('editOrder.imageTooLarge') || 'File too large');
+        continue;
+      }
 
-    if (newConfirmedTotal > 0) {
-      setForm((prev) => ({
-        ...prev,
-        paidAmount: newConfirmedTotal.toFixed(2),
-      }));
+      const previewUrl = file.type.startsWith('image/') ? URL.createObjectURL(file) : null;
+      dispatch({
+        type: 'ADD_INVOICE',
+        invoice: {
+          file,
+          invoiceStatus: 'waiting',
+          value: '',
+          currency: form.currency || 'EGP',
+          previewUrl,
+        },
+      });
     }
+
+    // Reset the input so the same file can be selected again
+    if (invoiceInputRef.current) invoiceInputRef.current.value = '';
+  };
+
+  // Toggle invoice status between confirmed and waiting, then
+  // recalculate the paid amount from confirmed invoices.
+  const handleToggleInvoiceStatus = (index: number) => {
+    const current = invoices[index];
+    if (!current) return;
+    const newStatus = current.invoiceStatus === 'confirmed' ? 'waiting' : 'confirmed';
+    handleUpdateInvoice(index, { invoiceStatus: newStatus });
   };
 
   // Remove an invoice and recalculate the paid amount from remaining
@@ -1198,6 +1203,12 @@ export default function CreateManualOrderModal({
   }, [t, dispatch, form.source, selectUser]);
 
   useEffect(() => {
+    // Don't run user lookup when the modal is closed — the cached form
+    // data may have phone/email from a previous session, but we don't
+    // want to fire API calls or show toasts until the modal is actually
+    // open and the admin is interacting with it.
+    if (!isOpen) return;
+
     const phone = extractDigits(form.billingData.phone.trim());
     const email = form.billingData.email.trim().toLowerCase();
 
@@ -1222,7 +1233,7 @@ export default function CreateManualOrderModal({
     }, 800);
 
     return () => clearTimeout(timer);
-  }, [form.billingData.phone, form.billingData.email, form.source, lookupUser]);
+  }, [isOpen, form.billingData.phone, form.billingData.email, form.source, lookupUser]);
 
   const handleSubmit = async () => {
     const errors = validateForm();
@@ -1237,19 +1248,28 @@ export default function CreateManualOrderModal({
       let invoiceUrls: { url: string; invoiceStatus: string; value: number; currency: string }[] = [];
       if (!isEasykash && invoices.length > 0) {
         dispatch({ type: 'SET_UPLOADING_INVOICE', uploading: true });
-        const uploaded = await Promise.all(
-          invoices.map(async (inv) => {
-            const url = await uploadInvoiceToR2(inv.file);
-            return {
-              url,
-              invoiceStatus: inv.invoiceStatus,
-              value: parseFloat(inv.value) || 0,
-              currency: inv.currency || 'EGP',
-            };
-          }),
-        );
-        invoiceUrls = uploaded;
-        dispatch({ type: 'SET_UPLOADING_INVOICE', uploading: false });
+        try {
+          const uploaded = await Promise.all(
+            invoices.map(async (inv) => {
+              const url = await uploadInvoiceToR2(inv.file);
+              return {
+                url,
+                invoiceStatus: inv.invoiceStatus,
+                value: parseFloat(inv.value) || 0,
+                currency: inv.currency || 'EGP',
+              };
+            }),
+          );
+          invoiceUrls = uploaded;
+        } catch (uploadError) {
+          console.error('Invoice upload failed:', uploadError);
+          throw new Error(
+            t('createManualOrder.invoiceUploadFailed') ||
+            'Failed to upload invoice file. Please check your connection and try again.',
+          );
+        } finally {
+          dispatch({ type: 'SET_UPLOADING_INVOICE', uploading: false });
+        }
       }
 
       const reservationData = [];
@@ -1275,39 +1295,59 @@ export default function CreateManualOrderModal({
         reservationData.push({ key: 'photo', value: form.reservationData.photo.trim() });
       }
 
-      const res = await fetch('/api/orders/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          source: form.source,
-          items: form.items.map((item) =>
-            item.type === 'custom'
-              ? {
-                type: 'custom' as const,
-                name: item.customName.trim(),
-                size: item.customSize.trim() || undefined,
-                quantity: item.quantity,
-                price: parseFloat(item.customPrice),
-              }
-              : {
-                type: 'existing' as const,
-                productId: item.productId,
-                quantity: item.quantity,
-                sizeIndex: item.sizeIndex,
-                customPrice: item.overridePrice ? parseFloat(item.overridePrice) : undefined,
-              },
-          ),
-          currency: form.currency,
-          referralId: form.referralId || undefined,
-          billingData: form.billingData,
-          reservationData,
-          paymentMethod: form.paymentMethod,
-          invoiceUrls: invoiceUrls.length > 0 ? invoiceUrls : undefined,
-          locale: 'ar',
-          userId: linkedUserId || undefined,
-          paidAmount: paidAmountNum,
-        }),
-      });
+      // Use an AbortController with a generous timeout. The backend route
+      // does user creation, product lookups, order creation, and potentially
+      // an EasyKash API call — all of which can take time. Without this,
+      // the browser gives up silently and throws a "Failed to fetch" error.
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 110_000); // 110s
+
+      let res: Response;
+      try {
+        res = await fetch('/api/orders/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            source: form.source,
+            items: form.items.map((item) =>
+              item.type === 'custom'
+                ? {
+                  type: 'custom' as const,
+                  name: item.customName.trim(),
+                  size: item.customSize.trim() || undefined,
+                  quantity: item.quantity,
+                  price: parseFloat(item.customPrice),
+                }
+                : {
+                  type: 'existing' as const,
+                  productId: item.productId,
+                  quantity: item.quantity,
+                  sizeIndex: item.sizeIndex,
+                  customPrice: item.overridePrice ? parseFloat(item.overridePrice) : undefined,
+                },
+            ),
+            currency: form.currency,
+            referralId: form.referralId || undefined,
+            billingData: form.billingData,
+            reservationData,
+            paymentMethod: form.paymentMethod,
+            invoiceUrls: invoiceUrls.length > 0 ? invoiceUrls : undefined,
+            locale: 'ar',
+            userId: linkedUserId || undefined,
+            paidAmount: paidAmountNum,
+          }),
+          signal: controller.signal,
+        });
+      } catch (fetchError) {
+        clearTimeout(timeoutId);
+        // Distinguish between our timeout and a genuine network error
+        if (fetchError instanceof DOMException && fetchError.name === 'AbortError') {
+          throw new Error('TIMEOUT');
+        }
+        // Browser-level "Failed to fetch" — server crashed or unreachable
+        throw new Error('NETWORK');
+      }
+      clearTimeout(timeoutId);
 
       // Parse the response body safely — the server may return non-JSON
       // (e.g. HTML error page from a proxy, or the connection may drop).
@@ -1384,16 +1424,23 @@ export default function CreateManualOrderModal({
 
       onSuccess();
     } catch (error) {
-      // "Failed to fetch" is a browser-level network error — the server
-      // never responded (crashed, timed out, or was unreachable).
-      if (error instanceof TypeError && error.message.includes('fetch')) {
-        toast.error(
-          t('createManualOrder.networkError') ||
-          'Network error — the server is not responding. Please check your connection and try again.',
-        );
+      // Map our sentinel error codes to user-friendly messages
+      if (error instanceof Error) {
+        if (error.message === 'TIMEOUT') {
+          toast.error(
+            t('createManualOrder.timeoutError') ||
+            'The request is taking too long. The order may still be processing — please check the orders list before trying again.',
+          );
+        } else if (error.message === 'NETWORK') {
+          toast.error(
+            t('createManualOrder.networkError') ||
+            'Network error — the server is not responding. Please check your connection and verify the order was not already created before trying again.',
+          );
+        } else {
+          toast.error(error.message);
+        }
       } else {
-        const message = error instanceof Error ? error.message : t('createManualOrder.failed');
-        toast.error(message);
+        toast.error(t('createManualOrder.failed') || 'Failed to create order');
       }
     } finally {
       dispatch({ type: 'SET_CREATING', creating: false });
@@ -1969,16 +2016,23 @@ export default function CreateManualOrderModal({
                     variant="outline"
                     size="sm"
                     className={formErrors.invoice ? 'border-error text-error hover:text-error hover:border-error' : ''}
-                    onClick={() => {
-                      setInvoiceUploadKey((k) => k + 1);
-                      setInvoiceUploadOpen(true);
-                    }}
+                    onClick={() => invoiceInputRef.current?.click()}
                   >
                     <LuUpload size={16} className="me-2" />
                     {t('createManualOrder.uploadInvoice') || 'Upload Invoice'}
                   </Button>
                 )}
               </div>
+
+              {/* Hidden file input for invoice selection */}
+              <input
+                ref={invoiceInputRef}
+                type="file"
+                accept="image/jpeg,image/jpg,image/png,image/webp,application/pdf"
+                multiple
+                className="hidden"
+                onChange={handleInvoiceFileChange}
+              />
 
               {/* Invoice list */}
               {invoices.length > 0 && (
@@ -1987,11 +2041,16 @@ export default function CreateManualOrderModal({
                     <div key={index} className="rounded-lg border border-stroke p-3 flex flex-col gap-2 bg-background">
                       {/* File info + remove */}
                       <div className="flex items-center gap-2">
-                        <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${invoice.invoiceStatus === 'confirmed' ? 'text-success bg-success/10' : 'text-warning bg-warning/10'}`}>
+                        <button
+                          type="button"
+                          onClick={() => handleToggleInvoiceStatus(index)}
+                          className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full transition-colors cursor-pointer ${invoice.invoiceStatus === 'confirmed' ? 'text-success bg-success/10 hover:bg-success/20' : 'text-warning bg-warning/10 hover:bg-warning/20'}`}
+                          title={t('createManualOrder.toggleInvoiceStatus') || 'Click to toggle status'}
+                        >
                           {invoice.invoiceStatus === 'confirmed'
                             ? (<><LuCheck size={10} /> {t('createManualOrder.uploadConfirmedInvoice') || 'Confirmed'}</>)
                             : (<><LuClock size={10} /> {t('createManualOrder.uploadWaitingInvoice') || 'Waiting'}</>)}
-                        </span>
+                        </button>
                         <span className="text-sm text-foreground truncate flex-1 min-w-0">{invoice.file.name}</span>
                         <span className="text-sm font-semibold text-foreground shrink-0">
                           {invoice.value ? `${parseFloat(invoice.value).toFixed(2)} ${invoice.currency}` : '—'}
@@ -2491,18 +2550,6 @@ export default function CreateManualOrderModal({
           )}
         </Button>
       </div>
-
-      {/* Invoice Upload Modal — keyed so it remounts fresh each open */}
-      <InvoiceUploadModal
-        key={`invoice-upload-${invoiceUploadKey}`}
-        isOpen={invoiceUploadOpen}
-        onClose={() => setInvoiceUploadOpen(false)}
-        onConfirm={handleInvoiceUploadConfirm}
-        orderTotal={fullOrderTotal}
-        currencyOptions={invoiceCurrencyOptions}
-        defaultCurrency={form.currency || 'EGP'}
-        namespace={namespace}
-      />
     </Modal >
   );
 }

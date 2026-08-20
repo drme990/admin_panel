@@ -38,8 +38,8 @@ import {
   updateDesignReviewStatus,
   replaceDesignImage,
   deleteSingleDesign,
-  syncOrderDesigns,
 } from '@/lib/order/order-utils';
+import { cacheExecutionData, getCachedExecutionData, isCacheFresh } from '@/lib/order/execution-cache';
 
 // ── Types ────────────────────────────────────────────────────────────────
 interface ExecutionResponse {
@@ -283,8 +283,8 @@ export default function OrderDesignsPage() {
 
   // ── Fetch orders from execution API ────────────────────────────────────
   const fetchDesigns = useCallback(
-    async (signal?: AbortSignal) => {
-      setLoading(true);
+    async (signal?: AbortSignal, silent: boolean = false) => {
+      if (!silent) setLoading(true);
       try {
         const params = new URLSearchParams();
         params.set('page', String(page));
@@ -301,7 +301,9 @@ export default function OrderDesignsPage() {
         if (normalizedRange.fromDate) params.set('fromDate', normalizedRange.fromDate);
         if (normalizedRange.toDate) params.set('toDate', normalizedRange.toDate);
 
-        const res = await fetch(`/api/execution?${params.toString()}`, {
+        const queryString = params.toString();
+
+        const res = await fetch(`/api/execution?${queryString}`, {
           cache: 'no-store',
           signal,
         });
@@ -324,6 +326,15 @@ export default function OrderDesignsPage() {
             totalPages: data.data.pagination.totalPages,
           },
         });
+
+        // Cache the result so the other page (execution) can
+        // restore it instantly on mount without refetching.
+        cacheExecutionData(
+          queryString,
+          data.data.orders,
+          data.data.pagination.totalOrders,
+          data.data.pagination.totalPages,
+        );
       } catch (err) {
         if ((err as { name?: string }).name === 'AbortError') return;
         toast.error(t('loadFailed'));
@@ -332,7 +343,7 @@ export default function OrderDesignsPage() {
           payload: { orders: [], totalOrders: 0, totalPages: 1 },
         });
       } finally {
-        if (!signal?.aborted) setLoading(false);
+        if (!signal?.aborted && !silent) setLoading(false);
       }
     },
     [
@@ -343,60 +354,59 @@ export default function OrderDesignsPage() {
   );
 
   useEffect(() => {
+    // Build the same query string that fetchDesigns uses, so we
+    // can check the shared cache before making a network request.
+    const params = new URLSearchParams();
+    params.set('page', String(page));
+    params.set('limit', String(pageSize));
+    if (sourceFilter !== 'all') params.set('source', sourceFilter);
+    if (referralFilter) params.set('referralId', referralFilter);
+    if (categoryFilter && categoryFilter !== 'all') params.set('category', categoryFilter);
+    if (statusFilter !== 'all') params.set('status', statusFilter);
+    if (intentionFilter && intentionFilter !== 'all') params.set('intention', intentionFilter);
+    if (countryFilter && countryFilter !== 'all') params.set('country', countryFilter);
+    if (searchQuery) params.set('search', searchQuery);
+    const normalizedRange = normalizeDateRange(fromDateFilter, toDateFilter);
+    if (normalizedRange.fromDate) params.set('fromDate', normalizedRange.fromDate);
+    if (normalizedRange.toDate) params.set('toDate', normalizedRange.toDate);
+    const queryString = params.toString();
+
+    // Restore from cache instantly (no loading spinner)
+    const cached = getCachedExecutionData(queryString);
+    if (cached) {
+      dispatch({
+        type: 'SET_ORDERS',
+        payload: {
+          orders: cached.orders,
+          totalOrders: cached.totalOrders,
+          totalPages: cached.totalPages,
+        },
+      });
+      // If the cache is fresh (< 5s old), skip the refetch entirely.
+      // This prevents flicker when navigating between /order-designs
+      // and /execution with the same filters.
+      if (isCacheFresh(queryString)) return;
+    }
+
     const controller = new AbortController();
     void fetchDesigns(controller.signal);
     return () => controller.abort();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchDesigns]);
 
-  // ── Refetch on window focus with long-poll sync ───────────────────────
-  // When the admin returns to this tab after editing a design in the
-  // design app's editor, the order's design URL may have changed. The
-  // re-render on the design app is fire-and-forget (non-blocking), so
-  // the new version might not exist yet.
-  //
-  // Instead of polling multiple times, we use a SINGLE long-poll request:
-  //   1. Call syncOrderDesigns(wait: true) — the backend checks for newer
-  //      versions, and if none found, waits up to 10 seconds (checking
-  //      every 500ms) for a new version to appear.
-  //   2. When the new version appears (or the request returns), refetch
-  //      the orders so the new image URLs are loaded.
-  //
-  // This is one request instead of five, and it responds immediately
-  // when the version is ready — no wasted requests.
+  // ── Silent refetch on window focus ─────────────────────────────────
+  // When the admin returns from the design app editor, the order's
+  // designUrls have already been updated by the design app's callback
+  // to /api/internal/update-design-url. We do a SILENT refetch (no
+  // loading spinner) so the page updates in place without flicker.
   useEffect(() => {
-    let cancelled = false;
-
-    const handleFocus = async () => {
-      if (cancelled) return;
-
-      // Refetch immediately (catches any other changes like status, etc.)
-      void fetchDesigns();
-
-      // Long-poll sync: waits up to 10s for new versions to appear.
-      // The backend checks every 500ms and returns as soon as a new
-      // version is found. This is a single request — no client-side polling.
-      try {
-        const orderNumbers = state.orders
-          .filter((o) => o.designUrls && o.designUrls.length > 0)
-          .map((o) => o.orderNumber);
-        if (orderNumbers.length > 0) {
-          const result = await syncOrderDesigns(orderNumbers, true);
-          if (!cancelled && result.updated > 0) {
-            // New versions found and URLs updated — refetch to load them
-            void fetchDesigns();
-          }
-        }
-      } catch {
-        // Best-effort — the initial refetch above already happened
-      }
+    const handleFocus = () => {
+      void fetchDesigns(undefined, true);
     };
 
     window.addEventListener('focus', handleFocus);
-    return () => {
-      cancelled = true;
-      window.removeEventListener('focus', handleFocus);
-    };
-  }, [fetchDesigns, state.orders]);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [fetchDesigns]);
 
   // ── Category breakdown stats (same as the execution page) ──────────────
   const fetchStats = useCallback(
@@ -990,31 +1000,14 @@ export default function OrderDesignsPage() {
       toast.success(isRTL ? 'تم تحديث تاريخ التنفيذ' : 'Execution date updated');
 
       // The backend triggers design regeneration (fire-and-forget) when
-      // the execution date changes. Show an info toast and sync in the
-      // background to update the design card when the new design is ready.
-      const orderNumbers = executionDateTarget.map((o) => o.orderNumber);
+      // the execution date changes. The design app will update the
+      // order's designUrls via its callback when the new version is
+      // ready. We just refetch after a short delay to pick up the
+      // updated URLs.
       toast.info(isRTL ? 'جارٍ إعادة إنشاء التصميم...' : 'Design is being regenerated...');
-      try {
-        const result = await syncOrderDesigns(orderNumbers, true);
-        if (result.updated > 0) {
-          // New designs are ready — refetch each affected order and
-          // update its design card in the list. We use fetchOrderDetails
-          // (not fetchDesigns) because it's a targeted fetch that
-          // updates the specific order, not the whole page.
-          for (const order of executionDateTarget) {
-            const updatedOrder = await fetchOrderDetails(order._id, false);
-            if (updatedOrder) {
-              dispatch({
-                type: 'UPDATE_ORDER_IN_LIST',
-                payload: { orderId: order._id, updates: { designUrls: updatedOrder.designUrls } },
-              });
-            }
-          }
-          toast.success(isRTL ? 'تم إعادة إنشاء التصميم بنجاح' : 'Design regenerated successfully');
-        }
-      } catch {
-        // Best-effort — the window focus handler will catch up
-      }
+      setTimeout(() => {
+        void fetchDesigns(undefined, true);
+      }, 3000);
 
       setExecutionDateTarget(null);
     } catch (error) {

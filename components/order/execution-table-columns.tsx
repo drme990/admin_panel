@@ -31,7 +31,6 @@ import { Order } from '@/types/Order';
 import { STATUS_COLORS, WHATSAPP_STATE_CLASSES } from '../../lib/order/order-status';
 import { getOrderItemDisplayName } from '../../lib/order/order-utils';
 import { downloadFile } from '@/lib/download-utils';
-import { InvoiceUploadMenu, type UploadInvoiceStatus } from './invoic-upload-menu';
 
 function getReservationValue(order: Order, key: string): string | undefined {
   return order.reservationData?.find((f) => f.key === key)?.value;
@@ -94,7 +93,7 @@ interface ColumnCallbacks {
   onEditField: (order: Order, field: 'name' | 'items' | 'duaa') => void;
   onUploadPhoto: (order: Order) => void;
   onCopyPhotoUrl: (order: Order) => void;
-  onUploadInvoice: (order: Order, invoiceStatus: UploadInvoiceStatus) => void;
+  onUploadInvoice: (order: Order) => void;
   onDownloadInvoice: (order: Order) => void;
   onChangeStatus: (order: Order) => void;
   onViewHistory: (order: Order) => void;
@@ -631,20 +630,22 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
             </div>
             <div className="flex flex-row gap-1">
               {uploadingInvoiceOrderId === order._id ? (
-                <span className="inlin  e-flex h-5 w-5   items-center justify-center">
+                <span className="inline-flex h-5 w-5 items-center justify-center">
                   <LuRefreshCw size={12} className="animate-spin text-secondary" />
                 </span>
               ) : (
-                <InvoiceUploadMenu
-                  onUpload={(status) => onUploadInvoice(order, status)}
-                  disabled={uploadingInvoiceOrderId === order._id}
-                  tooltipPos={tooltipPos}
-                  labels={{
-                    tooltip: t('table.uploadInvoice') || 'Upload invoice',
-                    uploadConfirmed: t('table.uploadConfirmedInvoice') || 'Upload confirmed',
-                    uploadWaiting: t('table.uploadWaitingInvoice') || 'Upload waiting',
-                  }}
-                />
+                <Tooltip position={tooltipPos} content={t('table.uploadInvoice') || 'Upload invoice'}>
+                  <Button
+                    variant="ghost"
+                    size="custom"
+                    className="h-5 w-5 p-0 text-secondary hover:text-foreground"
+                    onClick={(e) => { e.stopPropagation(); onUploadInvoice(order); }}
+                    disabled={uploadingInvoiceOrderId === order._id}
+                    aria-label={t('table.uploadInvoice') || 'Upload invoice'}
+                  >
+                    <LuUpload size={12} />
+                  </Button>
+                </Tooltip>
               )}
               <Tooltip position={tooltipPos} content={t('table.downloadInvoice')}>
                 <Button

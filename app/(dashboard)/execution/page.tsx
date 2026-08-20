@@ -1,15 +1,16 @@
 'use client';
 
-import { useEffect, useCallback, useState, useRef } from 'react';
+import { useEffect, useCallback, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { toast } from 'react-toastify';
-import { LuDownload, LuPhone, LuEye, LuPalette, LuPencil, LuFileText, LuRefreshCw, LuPlus, LuSparkles, LuCalendar } from 'react-icons/lu';
+import { LuDownload, LuPhone, LuEye, LuPalette, LuPencil, LuFileText, LuRefreshCw, LuPlus, LuSparkles, LuCalendar, LuUpload } from 'react-icons/lu';
 import { FaWhatsapp } from 'react-icons/fa6';
 
 import Table from '@/components/ui/table';
 import Pagination from '@/components/ui/pagination';
 import BulkAction from '@/components/ui/bulk-action';
 import Button from '@/components/ui/button';
+import Tooltip from '@/components/ui/tooltip';
 import ConfirmModal, { useConfirmModal } from '@/components/ui/confirm-modal';
 import Modal from '@/components/ui/modal';
 
@@ -34,6 +35,7 @@ import ChangeStatusModal from '@/components/order/change-status-modal';
 import CreateManualOrderModal from '@/components/order/create-manual-order-modal';
 import OrderStats from '@/components/order/order-stats';
 import OrderGalleryModal from '@/components/order/order-gallery-modal';
+import InvoiceUploadModal, { type InvoiceUploadResult } from '@/components/order/invoice-upload-modal';
 import useOrderPage from '@/lib/order/use-order-page';
 import {
   getRelativeIsoDate,
@@ -44,7 +46,6 @@ import {
   syncOrderDesigns,
 } from '@/lib/order/order-utils';
 import { downloadFile } from '@/lib/download-utils';
-import { InvoiceUploadMenu, type UploadInvoiceStatus } from '@/components/order/invoic-upload-menu';
 
 interface ExecutionResponse {
   success: boolean;
@@ -128,7 +129,6 @@ export default function ExecutionPage() {
     photoUploadOrderRef,
     photoInputRef,
     invoiceUploadOrderRef,
-    invoiceInputRef,
   } = useOrderPage({
     namespace: 'execution',
     initialState: {
@@ -143,7 +143,8 @@ export default function ExecutionPage() {
     },
   });
 
-  const invoiceStatusRef = useRef<UploadInvoiceStatus>('waiting');
+  const [invoiceUploadModalOpen, setInvoiceUploadModalOpen] = useState(false);
+  const [invoiceUploadKey, setInvoiceUploadKey] = useState(0);
 
   const {
     orders,
@@ -393,6 +394,47 @@ export default function ExecutionPage() {
     void fetchExecution(controller.signal);
     return () => controller.abort();
   }, [fetchExecution]);
+
+  // ── Auto-sync designs when the admin returns from the design app ──────
+  // When the admin edits a design in the design app (opened in a new tab)
+  // and comes back to this tab, the window 'focus' event fires. We:
+  //   1. Refetch the execution list immediately (catches status/field changes)
+  //   2. Long-poll sync designs (waits up to 10s for new versions to appear
+  //      in the order_design_versions collection and updates order.designUrls)
+  //   3. If new versions were found, refetch again to load the updated URLs
+  // This mirrors the behavior already present on the /order-designs page.
+  useEffect(() => {
+    let cancelled = false;
+
+    const handleFocus = async () => {
+      if (cancelled) return;
+
+      // Refetch immediately (catches any other changes like status, etc.)
+      void fetchExecution();
+
+      // Long-poll sync: waits up to 10s for new versions to appear.
+      try {
+        const orderNumbers = orders
+          .filter((o) => o.designUrls && o.designUrls.length > 0)
+          .map((o) => o.orderNumber);
+        if (orderNumbers.length > 0) {
+          const result = await syncOrderDesigns(orderNumbers, true);
+          if (!cancelled && result.updated > 0) {
+            // New versions found and URLs updated — refetch to load them
+            void fetchExecution();
+          }
+        }
+      } catch {
+        // Best-effort — the initial refetch above already happened
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => {
+      cancelled = true;
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [fetchExecution, orders]);
 
   const handleRefresh = () => {
     void fetchExecution();
@@ -1026,49 +1068,39 @@ export default function ExecutionPage() {
     }
   };
 
-  const handleUploadInvoice = (order: Order, invoiceStatus: UploadInvoiceStatus) => {
+  const handleUploadInvoice = (order: Order) => {
     invoiceUploadOrderRef.current = order;
-    invoiceStatusRef.current = invoiceStatus;
-    invoiceInputRef.current?.click();
+    setInvoiceUploadKey((k) => k + 1);
+    setInvoiceUploadModalOpen(true);
   };
 
-  const handleInvoiceFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const handleInvoiceUploadConfirm = async (result: InvoiceUploadResult) => {
     const order = invoiceUploadOrderRef.current;
     if (!order) return;
 
-    const allowedTypes = [
-      'image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif',
-      'application/pdf',
-      'application/msword',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      'text/plain',
-    ];
-    if (!allowedTypes.includes(file.type)) {
-      toast.error(t('editOrder.invalidInvoice'));
-      if (invoiceInputRef.current) invoiceInputRef.current.value = '';
-      return;
-    }
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error(t('editOrder.invoiceTooLarge'));
-      if (invoiceInputRef.current) invoiceInputRef.current.value = '';
-      return;
-    }
+    setInvoiceUploadModalOpen(false);
 
     try {
       setUploadingInvoiceOrderId(order._id);
-      const invoiceUrl = await uploadInvoiceToR2(file);
-      await updateOrder(order._id, { invoiceUrl, invoiceStatus: invoiceStatusRef.current });
+      const invoiceUrl = await uploadInvoiceToR2(result.file);
+      const invoiceValue = parseFloat(result.value);
+      await updateOrder(order._id, {
+        invoiceUrl,
+        invoiceStatus: result.invoiceStatus,
+        invoiceValue: Number.isFinite(invoiceValue) ? invoiceValue : 0,
+      });
+      toast.success(t('editOrder.invoiceUploaded') || 'Invoice uploaded successfully');
+      // Refetch the execution list so the table reflects the updated
+      // paidAmount, remainingAmount, and status from the server.
+      void fetchExecution();
+      void fetchExecutionStats();
     } catch (error) {
       const message = error instanceof Error ? error.message : t('editOrder.uploadFailed');
       toast.error(message);
       console.error('Invoice upload failed:', error);
     } finally {
       invoiceUploadOrderRef.current = null;
-      invoiceStatusRef.current = 'waiting';
       setUploadingInvoiceOrderId(null);
-      if (invoiceInputRef.current) invoiceInputRef.current.value = '';
     }
   };
 
@@ -1806,16 +1838,18 @@ export default function ExecutionPage() {
                                     <LuRefreshCw size={12} className="animate-spin text-secondary" />
                                   </span>
                                 ) : (
-                                  <InvoiceUploadMenu
-                                    onUpload={(status) => handleUploadInvoice(order, status)}
-                                    disabled={uploadingInvoiceOrderId === order._id}
-                                    tooltipPos={ToolTipPositions as 'left' | 'right'}
-                                    labels={{
-                                      tooltip: t('table.uploadInvoice') || 'Upload invoice',
-                                      uploadConfirmed: t('table.uploadConfirmedInvoice') || 'Upload confirmed',
-                                      uploadWaiting: t('table.uploadWaitingInvoice') || 'Upload waiting',
-                                    }}
-                                  />
+                                  <Tooltip position={ToolTipPositions as 'left' | 'right'} content={t('table.uploadInvoice') || 'Upload invoice'}>
+                                    <Button
+                                      variant="ghost"
+                                      size="custom"
+                                      className="h-5 w-5 p-0 text-secondary hover:text-foreground"
+                                      onClick={(e) => { e.stopPropagation(); handleUploadInvoice(order); }}
+                                      disabled={uploadingInvoiceOrderId === order._id}
+                                      aria-label={t('table.uploadInvoice') || 'Upload invoice'}
+                                    >
+                                      <LuUpload size={12} />
+                                    </Button>
+                                  </Tooltip>
                                 )}
                                 <Button
                                   variant="ghost"
@@ -2106,12 +2140,19 @@ export default function ExecutionPage() {
         onChange={handlePhotoFileChange}
       />
 
-      <input
-        ref={invoiceInputRef}
-        type="file"
-        accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
-        className="hidden"
-        onChange={handleInvoiceFileChange}
+      {/* Invoice upload modal — replaces the old dropdown menu + file picker */}
+      <InvoiceUploadModal
+        key={`invoice-upload-${invoiceUploadKey}`}
+        isOpen={invoiceUploadModalOpen}
+        onClose={() => {
+          setInvoiceUploadModalOpen(false);
+          invoiceUploadOrderRef.current = null;
+        }}
+        onConfirm={handleInvoiceUploadConfirm}
+        orderTotal={0}
+        currencyOptions={[{ label: 'EGP', value: 'EGP' }, { label: 'SAR', value: 'SAR' }, { label: 'USD', value: 'USD' }]}
+        defaultCurrency="EGP"
+        namespace="execution"
       />
 
       {/* Photo gallery lightbox (customer photos only) */}

@@ -20,12 +20,13 @@ import CustomDatePicker from '@/components/ui/custom-date-picker';
 import Textarea from '@/components/ui/textarea';
 import { uploadImageToR2, uploadInvoiceToR2, deleteOldImage } from '../../lib/image-upload-utils';
 
-import { LuCopy, LuCheck, LuRefreshCw, LuUpload, LuDownload, LuPlus, LuX, LuAtSign, LuPencil, LuUserCheck, LuImage, LuFileText } from 'react-icons/lu';
+import { LuCopy, LuCheck, LuRefreshCw, LuUpload, LuDownload, LuPlus, LuX, LuAtSign, LuPencil, LuUserCheck, LuImage, LuClock } from 'react-icons/lu';
 import { FaWhatsapp } from 'react-icons/fa';
 import { isValidPhoneNumber } from 'libphonenumber-js';
 import { COUNTRIES } from '@/lib/countries';
 import { MANUAL_PAYMENT_METHODS, EASYKASH_PAYMENT_METHOD } from '@/lib/order';
 import type { PaymentMethod } from '@/types/Order';
+import InvoiceUploadModal, { type InvoiceUploadResult } from './invoice-upload-modal';
 
 function extractDigits(value: string): string {
   return value.replace(/\D/g, '');
@@ -166,6 +167,46 @@ const DEFAULT_FORM: FormState = {
   paidAmount: '',
   remainingAmount: '',
 };
+
+// ── Form caching ────────────────────────────────────────────────────────
+// The form state is cached in sessionStorage so the admin doesn't lose
+// their data when they close and reopen the modal. The cache is cleared
+// after a successful order creation.
+const FORM_CACHE_KEY = 'manualOrder.formCache';
+
+function loadCachedForm(): FormState | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.sessionStorage.getItem(FORM_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as FormState;
+    // Basic validation — ensure it has the expected shape
+    if (!parsed || typeof parsed !== 'object' || !Array.isArray(parsed.items)) {
+      return null;
+    }
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function saveCachedForm(form: FormState): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.sessionStorage.setItem(FORM_CACHE_KEY, JSON.stringify(form));
+  } catch {
+    // ignore
+  }
+}
+
+function clearCachedForm(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.sessionStorage.removeItem(FORM_CACHE_KEY);
+  } catch {
+    // ignore
+  }
+}
 
 interface UserSuggestion {
   _id: string;
@@ -389,7 +430,18 @@ export default function CreateManualOrderModal({
   const t = useTranslations(namespace);
   const locale = useLocale();
   const { user } = useAuth();
-  const [form, setForm] = useState<FormState>(DEFAULT_FORM);
+  const [form, setForm] = useState<FormState>(() => {
+    const cached = loadCachedForm();
+    if (cached) {
+      // Ensure the referral ID is correct for the current user
+      const initialReferralId =
+        user?.role !== 'super_admin' && user?.ref ? user.ref : cached.referralId;
+      return { ...cached, referralId: initialReferralId };
+    }
+    const initialReferralId =
+      user?.role !== 'super_admin' && user?.ref ? user.ref : '';
+    return { ...DEFAULT_FORM, referralId: initialReferralId };
+  });
   const [ui, dispatch] = useReducer(uiReducer, UI_INITIAL_STATE);
   const {
     products,
@@ -413,14 +465,12 @@ export default function CreateManualOrderModal({
     recentProductIds,
     paymentEditField,
   } = ui;
-  const invoiceInputRef = useRef<HTMLInputElement | null>(null);
-  const invoiceImageInputRef = useRef<HTMLInputElement | null>(null);
   const photoInputRef = useRef<HTMLInputElement | null>(null);
   const priceInputRefs = useRef<Map<number, HTMLInputElement>>(new Map());
   const lastLookupRef = useRef<{ phone: string; email: string; source: string }>({ phone: '', email: '', source: '' });
   const skipBlurValidationRef = useRef(false);
-  const pendingInvoiceStatusRef = useRef<'confirmed' | 'waiting' | null>(null);
-  const [pendingInvoiceStatus, setPendingInvoiceStatus] = useState<'confirmed' | 'waiting' | null>(null);
+  const [invoiceUploadOpen, setInvoiceUploadOpen] = useState(false);
+  const [invoiceUploadKey, setInvoiceUploadKey] = useState(0);
 
   const invoicesRef = useRef<InvoiceEntry[]>([]);
   invoicesRef.current = invoices;
@@ -435,9 +485,13 @@ export default function CreateManualOrderModal({
     });
     dispatch({ type: 'RESET_UI' });
     lastLookupRef.current = { phone: '', email: '', source: '' };
-    pendingInvoiceStatusRef.current = null;
-    setPendingInvoiceStatus(null);
+    clearCachedForm();
   }, [user]);
+
+  // Save form to cache whenever it changes (so reopening preserves data)
+  useEffect(() => {
+    saveCachedForm(form);
+  }, [form]);
 
   // Load recently used product IDs from localStorage on mount
   useEffect(() => {
@@ -457,7 +511,8 @@ export default function CreateManualOrderModal({
 
   useEffect(() => {
     if (isOpen) {
-      resetForm();
+      // Don't reset the form — the cached form is loaded from the
+      // useState initializer. Only load products and referrals.
       dispatch({ type: 'SET_LOADING_PRODUCTS', loading: true });
       fetch('/api/products?status=Active', { cache: 'no-store' })
         .then((r) => r.json())
@@ -484,7 +539,7 @@ export default function CreateManualOrderModal({
         })
         .finally(() => dispatch({ type: 'SET_LOADING_REFERRALS', loading: false }));
     }
-  }, [isOpen, t, resetForm]);
+  }, [isOpen, t]);
 
   const productOptions = useMemo(() => {
     const base = products.map((p) => ({
@@ -768,6 +823,59 @@ export default function CreateManualOrderModal({
 
   const isPartialPayment = paidAmountNum > 0 && paidAmountNum < fullOrderTotal;
 
+  // When the order total changes (e.g. product changed, quantity changed,
+  // or price override), recalculate the paid/remaining amounts so they
+  // stay consistent with the new total. If the paid amount now exceeds the
+  // new total, clear both fields so the admin re-enters them.
+  useEffect(() => {
+    if (fullOrderTotal <= 0) return;
+    setForm((prev) => {
+      const paid = parseFloat(prev.paidAmount);
+      const remaining = parseFloat(prev.remainingAmount);
+
+      // If the paid amount exceeds the new order total, clear both fields
+      // — the admin needs to re-enter the paid amount for the new product.
+      if (Number.isFinite(paid) && paid > fullOrderTotal) {
+        if (prev.paidAmount === '' && prev.remainingAmount === '') return prev;
+        return { ...prev, paidAmount: '', remainingAmount: '' };
+      }
+
+      if (paymentEditField === 'paid') {
+        // Admin was editing paid → keep paid, recalc remaining
+        if (!Number.isFinite(paid) || paid <= 0) return prev; // nothing to recalc
+        const newRemaining = Math.max(0, fullOrderTotal - paid);
+        const newRemainingStr = newRemaining > 0 ? newRemaining.toFixed(2) : '';
+        if (prev.remainingAmount === newRemainingStr) return prev;
+        return { ...prev, remainingAmount: newRemainingStr };
+      }
+
+      if (paymentEditField === 'remaining') {
+        // Admin was editing remaining → keep remaining, recalc paid
+        if (!Number.isFinite(remaining) || remaining <= 0) return prev;
+        const newPaid = Math.max(0, fullOrderTotal - remaining);
+        const newPaidStr = newPaid > 0 ? newPaid.toFixed(2) : '';
+        if (prev.paidAmount === newPaidStr) return prev;
+        return { ...prev, paidAmount: newPaidStr };
+      }
+
+      // No field was explicitly edited yet — if both are empty, leave them
+      // (placeholders will show the correct values). If the admin had
+      // previously entered values that are now stale, reset them.
+      if (prev.paidAmount || prev.remainingAmount) {
+        const prevPaid = parseFloat(prev.paidAmount);
+        if (Number.isFinite(prevPaid) && prevPaid > 0) {
+          // Had a paid amount → recalc remaining from it
+          const newRemaining = Math.max(0, fullOrderTotal - prevPaid);
+          return {
+            ...prev,
+            remainingAmount: newRemaining > 0 ? newRemaining.toFixed(2) : '',
+          };
+        }
+      }
+      return prev;
+    });
+  }, [fullOrderTotal]); // eslint-disable-line react-hooks/exhaustive-deps -- paymentEditField and setForm are stable enough; we only want to fire when the total changes
+
   const validateForm = useCallback((): Record<string, string | undefined> => {
     const errors: Record<string, string | undefined> = {};
     if (form.items.length === 0) {
@@ -873,47 +981,80 @@ export default function CreateManualOrderModal({
     });
   };
 
-  const handleInvoiceFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
+  // Handler for the new InvoiceUploadModal — adds an invoice with all
+  // fields (file, status, value, currency) filled in at once, then
+  // auto-updates the paid amount from confirmed invoices.
+  const handleInvoiceUploadConfirm = (result: InvoiceUploadResult) => {
+    dispatch({
+      type: 'ADD_INVOICE',
+      invoice: {
+        file: result.file,
+        invoiceStatus: result.invoiceStatus,
+        value: result.value,
+        currency: result.currency,
+        previewUrl: result.previewUrl,
+      },
+    });
+    setInvoiceUploadOpen(false);
 
-    const invoiceStatus = pendingInvoiceStatusRef.current ?? 'waiting';
+    // Auto-update paidAmount from confirmed invoices
+    const confirmedTotal = invoices
+      .filter((inv) => inv.invoiceStatus === 'confirmed')
+      .reduce((sum, inv) => {
+        const v = parseFloat(inv.value);
+        return Number.isFinite(v) && v > 0 ? sum + v : sum;
+      }, 0);
+    const newInvoiceValue = parseFloat(result.value);
+    const newConfirmedTotal =
+      result.invoiceStatus === 'confirmed' && Number.isFinite(newInvoiceValue)
+        ? confirmedTotal + newInvoiceValue
+        : confirmedTotal;
 
-    const allowedTypes = [
-      'image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif',
-      'application/pdf',
-      'application/msword',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      'text/plain',
-    ];
-
-    for (const file of Array.from(files)) {
-      if (!allowedTypes.includes(file.type)) {
-        toast.error(t('editOrder.invalidInvoice'));
-        continue;
-      }
-      if (file.size > 10 * 1024 * 1024) {
-        toast.error(t('editOrder.invoiceTooLarge'));
-        continue;
-      }
-
-      const previewUrl = file.type.startsWith('image/') ? URL.createObjectURL(file) : null;
-      dispatch({
-        type: 'ADD_INVOICE',
-        invoice: {
-          file,
-          invoiceStatus,
-          value: '',
-          currency: 'EGP',
-          previewUrl,
-        },
-      });
+    if (newConfirmedTotal > 0) {
+      setForm((prev) => ({
+        ...prev,
+        paidAmount: newConfirmedTotal.toFixed(2),
+      }));
     }
+  };
 
-    pendingInvoiceStatusRef.current = null;
-    setPendingInvoiceStatus(null);
-    if (invoiceInputRef.current) invoiceInputRef.current.value = '';
-    if (invoiceImageInputRef.current) invoiceImageInputRef.current.value = '';
+  // Remove an invoice and recalculate the paid amount from remaining
+  // confirmed invoices.
+  const handleRemoveInvoice = (index: number) => {
+    dispatch({ type: 'REMOVE_INVOICE', index });
+    // Recalculate paidAmount from remaining confirmed invoices
+    const remainingConfirmedTotal = invoices
+      .filter((_, i) => i !== index)
+      .filter((inv) => inv.invoiceStatus === 'confirmed')
+      .reduce((sum, inv) => {
+        const v = parseFloat(inv.value);
+        return Number.isFinite(v) && v > 0 ? sum + v : sum;
+      }, 0);
+    setForm((prev) => ({
+      ...prev,
+      paidAmount: remainingConfirmedTotal > 0 ? remainingConfirmedTotal.toFixed(2) : '',
+    }));
+  };
+
+  // Update an invoice field and recalculate the paid amount from
+  // confirmed invoices.
+  const handleUpdateInvoice = (index: number, patch: Partial<InvoiceEntry>) => {
+    dispatch({ type: 'UPDATE_INVOICE', index, patch });
+    // Recalculate paidAmount from confirmed invoices (using the updated
+    // values — apply the patch to the current invoices array)
+    const updatedInvoices = invoices.map((inv, i) =>
+      i === index ? { ...inv, ...patch } : inv,
+    );
+    const confirmedTotal = updatedInvoices
+      .filter((inv) => inv.invoiceStatus === 'confirmed')
+      .reduce((sum, inv) => {
+        const v = parseFloat(inv.value);
+        return Number.isFinite(v) && v > 0 ? sum + v : sum;
+      }, 0);
+    setForm((prev) => ({
+      ...prev,
+      paidAmount: confirmedTotal > 0 ? confirmedTotal.toFixed(2) : '',
+    }));
   };
 
   const handlePhotoFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1168,30 +1309,92 @@ export default function CreateManualOrderModal({
         }),
       });
 
-      const data = await res.json();
-      if (!data.success) {
-        throw new Error(data.error || 'Failed to create order');
+      // Parse the response body safely — the server may return non-JSON
+      // (e.g. HTML error page from a proxy, or the connection may drop).
+      let data: {
+        success?: boolean;
+        error?: string | { message?: string; details?: unknown };
+        data?: {
+          order: {
+            orderNumber: string;
+            totalAmount: number;
+            fullAmount: number;
+            paidAmount: number;
+            remainingAmount: number;
+            isPartialPayment: boolean;
+            currency: string;
+          };
+          checkoutUrl: string | null;
+          createdUser?: { email: string; password: string } | null;
+        };
+      };
+      try {
+        data = await res.json();
+      } catch {
+        if (!res.ok) {
+          throw new Error(
+            res.status === 502 || res.status === 504
+              ? t('createManualOrder.serverTimeout') || 'Server is not responding. Please try again.'
+              : t('createManualOrder.serverError') || `Server error (${res.status}). Please try again.`,
+          );
+        }
+        throw new Error(t('createManualOrder.invalidResponse') || 'Received an invalid response from the server.');
       }
 
+      if (!data.success) {
+        // The backend returns errors in two formats:
+        //   { error: "string message" }  — from direct NextResponse.json calls
+        //   { error: { code, message, details } }  — from parseJsonBody/ApiError
+        const rawError = data.error;
+        let message: string;
+        if (typeof rawError === 'string') {
+          message = rawError;
+        } else if (rawError && typeof rawError === 'object' && rawError.message) {
+          message = rawError.message;
+          // Zod validation errors include field-level details
+          const details = (rawError as { details?: unknown }).details;
+          if (typeof details === 'string' && details.trim()) {
+            message = `${message}: ${details}`;
+          }
+        } else {
+          message = t('createManualOrder.failed') || 'Failed to create order';
+        }
+        throw new Error(message);
+      }
+
+      if (!data.data?.order) {
+        throw new Error(t('createManualOrder.invalidResponse') || 'Received an invalid response from the server.');
+      }
+
+      const { order, checkoutUrl, createdUser } = data.data;
       dispatch({
         type: 'SET_RESULT',
         result: {
-          orderNumber: data.data.order.orderNumber,
-          totalAmount: data.data.order.totalAmount,
-          fullAmount: data.data.order.fullAmount,
-          paidAmount: data.data.order.paidAmount,
-          remainingAmount: data.data.order.remainingAmount,
-          isPartialPayment: data.data.order.isPartialPayment,
-          currency: data.data.order.currency,
-          checkoutUrl: data.data.checkoutUrl,
-          createdUser: data.data.createdUser || null,
+          orderNumber: order.orderNumber,
+          totalAmount: order.totalAmount,
+          fullAmount: order.fullAmount,
+          paidAmount: order.paidAmount,
+          remainingAmount: order.remainingAmount,
+          isPartialPayment: order.isPartialPayment,
+          currency: order.currency,
+          checkoutUrl,
+          createdUser: createdUser || null,
         },
       });
 
       onSuccess();
     } catch (error) {
-      const message = error instanceof Error ? error.message : t('createManualOrder.failed');
-      toast.error(message);
+      // "Failed to fetch" is a browser-level network error — the server
+      // never responded (crashed, timed out, or was unreachable).
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        toast.error(
+          t('createManualOrder.networkError') ||
+          'Network error — the server is not responding. Please check your connection and try again.',
+        );
+      } else {
+        const message = error instanceof Error ? error.message : t('createManualOrder.failed');
+        toast.error(message);
+      }
     } finally {
       dispatch({ type: 'SET_CREATING', creating: false });
       dispatch({ type: 'SET_UPLOADING_INVOICE', uploading: false });
@@ -1222,6 +1425,23 @@ export default function CreateManualOrderModal({
   };
 
   const handleClose = () => {
+    // Don't reset the form — the data is cached in sessionStorage so
+    // the admin can reopen the modal and continue where they left off.
+    // The form is only reset after a successful order creation.
+    // Revoke invoice preview URLs since the file objects won't be
+    // valid after the modal closes.
+    invoicesRef.current.forEach((inv) => {
+      if (inv.previewUrl) URL.revokeObjectURL(inv.previewUrl);
+    });
+    dispatch({ type: 'RESET_UI' });
+    // Reset the lookup ref so the user lookup fires again when the
+    // modal reopens (restoring linkedUserId from the cached phone/email).
+    lastLookupRef.current = { phone: '', email: '', source: '' };
+    onClose();
+  };
+
+  const handleCloseAfterSuccess = () => {
+    // After a successful order creation, reset everything and clear the cache
     resetForm();
     onClose();
   };
@@ -1230,7 +1450,7 @@ export default function CreateManualOrderModal({
     return (
       <Modal
         isOpen={isOpen}
-        onClose={handleClose}
+        onClose={handleCloseAfterSuccess}
         title={t('createManualOrder.successTitle')}
         size="sm"
       >
@@ -1338,7 +1558,7 @@ export default function CreateManualOrderModal({
           )}
 
           <div className="flex gap-2 justify-end pt-2">
-            <Button variant="outline" onClick={handleClose}>
+            <Button variant="outline" onClick={handleCloseAfterSuccess}>
               {t('createManualOrder.close')}
             </Button>
             {result.checkoutUrl && (
@@ -1736,75 +1956,27 @@ export default function CreateManualOrderModal({
 
           {!isEasykash && (
             <div className="flex flex-col gap-3">
-              {/* Upload buttons */}
+              {/* Upload button */}
               <div className="flex flex-wrap items-center gap-3">
                 {uploadingInvoice ? (
                   <span className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-stroke text-secondary">
                     <LuRefreshCw size={16} className="animate-spin" />
                     {t('createManualOrder.uploadingInvoice') || 'Uploading...'}
                   </span>
-                ) : pendingInvoiceStatus !== null ? (
-                  <div className="flex flex-wrap items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        invoiceImageInputRef.current?.click();
-                      }}
-                      className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-stroke hover:border-primary hover:text-primary transition-colors text-sm"
-                    >
-                      <LuImage size={16} />
-                      {t('createManualOrder.uploadAsImage') || 'Image'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        invoiceInputRef.current?.click();
-                      }}
-                      className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-stroke hover:border-primary hover:text-primary transition-colors text-sm"
-                    >
-                      <LuFileText size={16} />
-                      {t('createManualOrder.uploadAsFile') || 'File'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        pendingInvoiceStatusRef.current = null;
-                        setPendingInvoiceStatus(null);
-                      }}
-                      className="inline-flex items-center gap-1 px-2 py-2 rounded-lg text-secondary hover:text-foreground transition-colors text-sm"
-                    >
-                      <LuX size={16} />
-                    </button>
-                  </div>
                 ) : (
-                  <>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className={formErrors.invoice ? 'border-error text-error hover:text-error hover:border-error' : ''}
-                      onClick={() => {
-                        pendingInvoiceStatusRef.current = 'confirmed';
-                        setPendingInvoiceStatus('confirmed');
-                      }}
-                    >
-                      <LuUpload size={16} className="me-2" />
-                      {t('createManualOrder.uploadConfirmedInvoice') || 'Confirmed Invoice'}
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className={formErrors.invoice ? 'border-error text-error hover:text-error hover:border-error' : ''}
-                      onClick={() => {
-                        pendingInvoiceStatusRef.current = 'waiting';
-                        setPendingInvoiceStatus('waiting');
-                      }}
-                    >
-                      <LuUpload size={16} className="me-2" />
-                      {t('createManualOrder.uploadWaitingInvoice') || 'Waiting Invoice'}
-                    </Button>
-                  </>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className={formErrors.invoice ? 'border-error text-error hover:text-error hover:border-error' : ''}
+                    onClick={() => {
+                      setInvoiceUploadKey((k) => k + 1);
+                      setInvoiceUploadOpen(true);
+                    }}
+                  >
+                    <LuUpload size={16} className="me-2" />
+                    {t('createManualOrder.uploadInvoice') || 'Upload Invoice'}
+                  </Button>
                 )}
               </div>
 
@@ -1815,15 +1987,18 @@ export default function CreateManualOrderModal({
                     <div key={index} className="rounded-lg border border-stroke p-3 flex flex-col gap-2 bg-background">
                       {/* File info + remove */}
                       <div className="flex items-center gap-2">
-                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${invoice.invoiceStatus === 'confirmed' ? 'text-success bg-success/10' : 'text-warning bg-warning/10'}`}>
+                        <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${invoice.invoiceStatus === 'confirmed' ? 'text-success bg-success/10' : 'text-warning bg-warning/10'}`}>
                           {invoice.invoiceStatus === 'confirmed'
-                            ? (t('createManualOrder.uploadConfirmedInvoice') || 'Confirmed')
-                            : (t('createManualOrder.uploadWaitingInvoice') || 'Waiting')}
+                            ? (<><LuCheck size={10} /> {t('createManualOrder.uploadConfirmedInvoice') || 'Confirmed'}</>)
+                            : (<><LuClock size={10} /> {t('createManualOrder.uploadWaitingInvoice') || 'Waiting'}</>)}
                         </span>
                         <span className="text-sm text-foreground truncate flex-1 min-w-0">{invoice.file.name}</span>
+                        <span className="text-sm font-semibold text-foreground shrink-0">
+                          {invoice.value ? `${parseFloat(invoice.value).toFixed(2)} ${invoice.currency}` : '—'}
+                        </span>
                         <button
                           type="button"
-                          onClick={() => dispatch({ type: 'REMOVE_INVOICE', index })}
+                          onClick={() => handleRemoveInvoice(index)}
                           className="shrink-0 w-7 h-7 flex items-center justify-center rounded-lg text-error hover:bg-error/10 transition-colors"
                           aria-label="Remove invoice"
                         >
@@ -1841,7 +2016,7 @@ export default function CreateManualOrderModal({
                           />
                         </div>
                       )}
-                      {/* Value + currency */}
+                      {/* Value + currency (editable inline) */}
                       <div className="flex flex-row gap-2 items-start">
                         <div className="flex-1 min-w-0">
                           <Input
@@ -1851,7 +2026,7 @@ export default function CreateManualOrderModal({
                             value={invoice.value}
                             placeholder={t('createManualOrder.invoiceValue') || 'Invoice Value'}
                             onChange={(e) =>
-                              dispatch({ type: 'UPDATE_INVOICE', index, patch: { value: e.target.value } })
+                              handleUpdateInvoice(index, { value: e.target.value })
                             }
                             error={formErrors[`invoice_${index}_value`]}
                           />
@@ -1861,7 +2036,7 @@ export default function CreateManualOrderModal({
                             value={invoice.currency}
                             options={invoiceCurrencyOptions}
                             onChange={(val) =>
-                              dispatch({ type: 'UPDATE_INVOICE', index, patch: { currency: val } })
+                              handleUpdateInvoice(index, { currency: val })
                             }
                           />
                         </div>
@@ -1874,22 +2049,6 @@ export default function CreateManualOrderModal({
               {formErrors.invoice && (
                 <p className="text-xs text-error">{formErrors.invoice}</p>
               )}
-              <input
-                ref={invoiceInputRef}
-                type="file"
-                multiple
-                accept="application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
-                className="hidden"
-                onChange={handleInvoiceFileChange}
-              />
-              <input
-                ref={invoiceImageInputRef}
-                type="file"
-                multiple
-                accept="image/*"
-                className="hidden"
-                onChange={handleInvoiceFileChange}
-              />
             </div>
           )}
 
@@ -2215,12 +2374,15 @@ export default function CreateManualOrderModal({
               </p>
             )}
             {focusedField === 'phone' && foundUsers.length > 0 && (
-              <div className="absolute z-20 left-0 right-0 top-full mt-1 rounded-lg border border-stroke bg-card-bg shadow-xl max-h-60 overflow-y-auto p-1">
+              <div className="absolute z-50 left-0 right-0 top-full mt-1 rounded-lg border border-stroke bg-card-bg shadow-xl max-h-60 overflow-y-auto p-1">
                 {foundUsers.map((user) => (
                   <button
                     key={user._id}
                     type="button"
-                    onClick={() => selectUser(user)}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      selectUser(user);
+                    }}
                     className="w-full px-3 py-2 text-start text-sm hover:bg-background rounded-lg transition-colors"
                   >
                     <div className="font-medium truncate">{user.name || '-'}</div>
@@ -2276,12 +2438,15 @@ export default function CreateManualOrderModal({
               </button>
             </div>
             {focusedField === 'email' && foundUsers.length > 0 && (
-              <div className="absolute z-20 left-0 right-0 top-full mt-1 rounded-lg border border-stroke bg-card-bg shadow-xl max-h-60 overflow-y-auto p-1">
+              <div className="absolute z-50 left-0 right-0 top-full mt-1 rounded-lg border border-stroke bg-card-bg shadow-xl max-h-60 overflow-y-auto p-1">
                 {foundUsers.map((user) => (
                   <button
                     key={user._id}
                     type="button"
-                    onClick={() => selectUser(user)}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      selectUser(user);
+                    }}
                     className="w-full px-3 py-2 text-start text-sm hover:bg-background rounded-lg transition-colors"
                   >
                     <div className="font-medium truncate">{user.name || '-'}</div>
@@ -2326,6 +2491,18 @@ export default function CreateManualOrderModal({
           )}
         </Button>
       </div>
+
+      {/* Invoice Upload Modal — keyed so it remounts fresh each open */}
+      <InvoiceUploadModal
+        key={`invoice-upload-${invoiceUploadKey}`}
+        isOpen={invoiceUploadOpen}
+        onClose={() => setInvoiceUploadOpen(false)}
+        onConfirm={handleInvoiceUploadConfirm}
+        orderTotal={fullOrderTotal}
+        currencyOptions={invoiceCurrencyOptions}
+        defaultCurrency={form.currency || 'EGP'}
+        namespace={namespace}
+      />
     </Modal >
   );
 }

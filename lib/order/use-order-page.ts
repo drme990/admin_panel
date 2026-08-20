@@ -582,6 +582,9 @@ export function useOrderPage(options: UseOrderPageOptions) {
         gender?: string;
         isAlive?: string;
         intention?: string;
+        status?: OrderStatus;
+        paidAmount?: number;
+        remainingAmount?: number;
       },
     ): Promise<boolean> => {
       try {
@@ -598,6 +601,9 @@ export function useOrderPage(options: UseOrderPageOptions) {
         if ('gender' in fields) body.gender = fields.gender;
         if ('isAlive' in fields) body.isAlive = fields.isAlive;
         if ('intention' in fields) body.intention = fields.intention;
+        if ('status' in fields) body.status = fields.status;
+        if ('paidAmount' in fields) body.paidAmount = fields.paidAmount;
+        if ('remainingAmount' in fields) body.remainingAmount = fields.remainingAmount;
 
         const res = await fetch(`/api/orders/${orderId}`, {
           method: 'PATCH',
@@ -756,25 +762,42 @@ export function useOrderPage(options: UseOrderPageOptions) {
             ? currentInvoices
             : [...currentInvoices, { url: fields.invoiceUrl, invoiceStatus, rejectionReason: '', value: fields.invoiceValue ?? 0 }];
 
+          // Use the backend response to update financial fields (status,
+          // paidAmount, remainingAmount) that may have been auto-updated
+          // by the invoice recalculation logic.
+          const backendUpdates: Record<string, unknown> = {
+            invoiceUrls: data.data?.invoiceUrls || nextInvoices,
+          };
+          if (data.data?.status) backendUpdates.status = data.data.status;
+          if (typeof data.data?.paidAmount === 'number') backendUpdates.paidAmount = data.data.paidAmount;
+          if (typeof data.data?.remainingAmount === 'number') backendUpdates.remainingAmount = data.data.remainingAmount;
+          if (typeof data.data?.isPartialPayment === 'boolean') backendUpdates.isPartialPayment = data.data.isPartialPayment;
+
           dispatch({
             type: 'UPDATE_ORDER_IN_LIST',
             payload: {
               orderId,
-              updates: {
-                invoiceUrls: nextInvoices,
-              },
+              updates: backendUpdates,
             },
           });
         }
 
         if (fields.invoiceUrls !== undefined) {
+          // Use the backend response to update financial fields that may
+          // have been auto-updated by the invoice recalculation logic.
+          const backendUpdates: Record<string, unknown> = {
+            invoiceUrls: data.data?.invoiceUrls || fields.invoiceUrls,
+          };
+          if (data.data?.status) backendUpdates.status = data.data.status;
+          if (typeof data.data?.paidAmount === 'number') backendUpdates.paidAmount = data.data.paidAmount;
+          if (typeof data.data?.remainingAmount === 'number') backendUpdates.remainingAmount = data.data.remainingAmount;
+          if (typeof data.data?.isPartialPayment === 'boolean') backendUpdates.isPartialPayment = data.data.isPartialPayment;
+
           dispatch({
             type: 'UPDATE_ORDER_IN_LIST',
             payload: {
               orderId,
-              updates: {
-                invoiceUrls: fields.invoiceUrls,
-              },
+              updates: backendUpdates,
             },
           });
         }

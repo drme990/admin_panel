@@ -35,6 +35,7 @@ import ChangeStatusModal from '@/components/order/change-status-modal';
 import CreateManualOrderModal from '@/components/order/create-manual-order-modal';
 import OrderStats from '@/components/order/order-stats';
 import OrderGalleryModal from '@/components/order/order-gallery-modal';
+import InvoicePreviewModal from '@/components/order/invoice-preview-modal';
 import InvoiceUploadModal, { type InvoiceUploadResult } from '@/components/order/invoice-upload-modal';
 import useOrderPage from '@/lib/order/use-order-page';
 import {
@@ -1124,12 +1125,12 @@ export default function ExecutionPage() {
       setUploadingInvoiceOrderId(order._id);
       const invoiceUrl = await uploadInvoiceToR2(result.file);
       const invoiceValue = parseFloat(result.value);
-      const invoicePaidAmount = parseFloat(result.paidAmount);
       await updateOrder(order._id, {
         invoiceUrl,
         invoiceStatus: result.invoiceStatus,
         invoiceValue: Number.isFinite(invoiceValue) ? invoiceValue : 0,
-        invoicePaidAmount: Number.isFinite(invoicePaidAmount) ? invoicePaidAmount : 0,
+        invoicePaymentMethod: result.paymentMethod,
+        invoiceCurrency: result.currency,
       });
       toast.success(t('editOrder.invoiceUploaded') || 'Invoice uploaded successfully');
       // Refetch the execution list so the table reflects the updated
@@ -1175,6 +1176,17 @@ export default function ExecutionPage() {
     } finally {
       setDownloadingInvoiceOrderId(null);
     }
+  };
+
+  // Handle invoice status change from the InvoicePreviewModal
+  const handleInvoiceStatusChange = async (
+    orderId: string,
+    invoiceUrls: Order['invoiceUrls'],
+  ) => {
+    await updateOrder(orderId, { invoiceUrls }, { silent: true });
+    // Refetch so the table reflects the updated invoice status
+    void fetchExecution();
+    void fetchExecutionStats();
   };
 
   // ── Design generation ──────────────────────────────────────────────
@@ -2182,6 +2194,7 @@ export default function ExecutionPage() {
         alreadyPaid={invoiceUploadOrderRef.current?.paidAmount ?? 0}
         currencyOptions={[{ label: 'EGP', value: 'EGP' }, { label: 'SAR', value: 'SAR' }, { label: 'USD', value: 'USD' }]}
         defaultCurrency={invoiceUploadOrderRef.current?.currency ?? 'EGP'}
+        orderCurrency={invoiceUploadOrderRef.current?.currency ?? 'EGP'}
         namespace="execution"
       />
 
@@ -2215,14 +2228,14 @@ export default function ExecutionPage() {
         onDesignReviewChange={handleDesignReviewChange}
       />
 
-      {/* Invoice gallery lightbox (invoices/receipts only) */}
-      <OrderGalleryModal
+      {/* Invoice preview modal (invoices/receipts only) */}
+      <InvoicePreviewModal
         key={`invoice-${invoicePreviewOrder?._id ?? 'closed'}`}
         order={invoicePreviewOrder}
-        mode="invoice"
         onClose={() => {
           setInvoicePreviewOrder(null);
         }}
+        onStatusChange={handleInvoiceStatusChange}
       />
     </div>
   );

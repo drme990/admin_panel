@@ -28,6 +28,7 @@ import { MANUAL_PAYMENT_METHODS, EASYKASH_PAYMENT_METHOD } from '@/lib/order';
 import type { PaymentMethod, Order } from '@/types/Order';
 import { buildOrderWhatsappMessageFromOrder } from '@/lib/order-whatsapp';
 import { normalizeWhatsappPhone } from '@/lib/order/order-utils';
+import ExchangeRateDisplay from '@/components/order/exchange-rate-display';
 
 function extractDigits(value: string): string {
   return value.replace(/\D/g, '');
@@ -1926,10 +1927,11 @@ export default function CreateManualOrderModal({
               <div className="grid grid-cols-2 gap-3">
                 {/* Paid — green */}
                 <div className="flex flex-col gap-1">
-                  <input
+                  <Input
                     type="number"
                     min={0}
                     step="0.01"
+                    fullWidth={false}
                     value={form.paidAmount}
                     placeholder={fullOrderTotal > 0 ? `${t('createManualOrder.paid') || 'Paid'}: ${fullOrderTotal.toFixed(2)}` : '0.00'}
                     readOnly={paymentEditField === 'remaining'}
@@ -1953,7 +1955,7 @@ export default function CreateManualOrderModal({
                       }
                       dispatch({ type: 'SET_PAYMENT_EDIT_FIELD', field: 'paid' });
                     }}
-                    className={`w-full px-3 py-2 rounded-lg border text-sm font-bold transition-colors focus:outline-none focus:ring-2 ${paymentEditField === 'remaining'
+                    className={`px-3 py-2 text-sm font-bold ${paymentEditField === 'remaining'
                       ? 'border-success/30 bg-success/5 text-success cursor-not-allowed'
                       : 'border-success/40 bg-success/5 text-success focus:ring-success/20 focus:border-success'
                       }`}
@@ -1964,10 +1966,11 @@ export default function CreateManualOrderModal({
                 </div>
                 {/* Remaining — red */}
                 <div className="flex flex-col gap-1">
-                  <input
+                  <Input
                     type="number"
                     min={0}
                     step="0.01"
+                    fullWidth={false}
                     value={form.remainingAmount}
                     placeholder={fullOrderTotal > 0 ? `${t('createManualOrder.remaining') || 'Remaining'}: ${(fullOrderTotal - paidAmountNum).toFixed(2)}` : `0.00 ${form.currency}`}
                     readOnly={paymentEditField === 'paid'}
@@ -1991,7 +1994,7 @@ export default function CreateManualOrderModal({
                       }
                       dispatch({ type: 'SET_PAYMENT_EDIT_FIELD', field: 'remaining' });
                     }}
-                    className={`w-full px-3 py-2 rounded-lg border text-sm font-bold transition-colors focus:outline-none focus:ring-2 ${paymentEditField === 'paid'
+                    className={`px-3 py-2 text-sm font-bold ${paymentEditField === 'paid'
                       ? 'border-error/30 bg-error/5 text-error cursor-not-allowed'
                       : 'border-error/40 bg-error/5 text-error focus:ring-error/20 focus:border-error'
                       }`}
@@ -2143,6 +2146,13 @@ export default function CreateManualOrderModal({
                           />
                         </div>
                       </div>
+                      {/* Exchange rate display when invoice currency differs from order currency */}
+                      <ExchangeRateDisplay
+                        fromCurrency={invoice.currency}
+                        toCurrency={form.currency || 'EGP'}
+                        amount={parseFloat(invoice.value) || 0}
+                        namespace="orders"
+                      />
                     </div>
                   ))}
                 </div>

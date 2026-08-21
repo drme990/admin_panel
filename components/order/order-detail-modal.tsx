@@ -963,6 +963,31 @@ export default function OrderDetailModal({
               </>
             );
           })()}
+
+          {/* Internal Notes — only show if there are notes */}
+          {order.internalNotes && order.internalNotes.length > 0 && (
+            <div className="flex flex-col gap-2 border-t border-stroke pt-4">
+              <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                <LuFileText size={16} className="text-secondary" />
+                {t('internalNotes') || 'Internal Notes'}
+              </h3>
+              <div className="flex flex-col gap-2">
+                {order.internalNotes.map((note, idx) => (
+                  <div
+                    key={note._id || idx}
+                    className="flex flex-col gap-1 rounded-lg border border-stroke bg-muted/20 px-3 py-2"
+                  >
+                    <p className="text-sm text-foreground">{note.text}</p>
+                    <div className="flex items-center gap-2 text-xs text-secondary">
+                      <span className="font-medium">{note.author}</span>
+                      <span>·</span>
+                      <span>{formatDate(note.createdAt)}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       ) : null}
     </Modal>

@@ -572,6 +572,8 @@ export function useOrderPage(options: UseOrderPageOptions) {
         invoiceStatus?: 'confirmed' | 'waiting' | 'pending' | 'rejected';
         invoiceValue?: number;
         invoicePaidAmount?: number;
+        invoicePaymentMethod?: string;
+        invoiceCurrency?: string;
         invoiceUrls?: Array<{
           url: string;
           invoiceStatus?: 'confirmed' | 'waiting' | 'pending' | 'rejected';
@@ -587,6 +589,7 @@ export function useOrderPage(options: UseOrderPageOptions) {
         paidAmount?: number;
         remainingAmount?: number;
       },
+      options?: { silent?: boolean },
     ): Promise<boolean> => {
       try {
         setSavingOrderId(orderId);
@@ -598,6 +601,8 @@ export function useOrderPage(options: UseOrderPageOptions) {
         if ('invoiceStatus' in fields) body.invoiceStatus = fields.invoiceStatus;
         if ('invoiceValue' in fields) body.invoiceValue = fields.invoiceValue;
         if ('invoicePaidAmount' in fields) body.invoicePaidAmount = fields.invoicePaidAmount;
+        if ('invoicePaymentMethod' in fields) body.invoicePaymentMethod = fields.invoicePaymentMethod;
+        if ('invoiceCurrency' in fields) body.invoiceCurrency = fields.invoiceCurrency;
         if ('invoiceUrls' in fields) body.invoiceUrls = fields.invoiceUrls;
         if ('items' in fields) body.items = fields.items;
         if ('gender' in fields) body.gender = fields.gender;
@@ -617,7 +622,9 @@ export function useOrderPage(options: UseOrderPageOptions) {
           throw new Error(data.error || 'Failed to update order');
         }
 
-        toast.success(t('editOrder.success'));
+        if (!options?.silent) {
+          toast.success(t('editOrder.success'));
+        }
 
         // Notify the admin when the backend is re-generating designs
         // after a non-status order data edit (names, duaa, items, etc.).

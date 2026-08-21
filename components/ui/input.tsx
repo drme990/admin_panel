@@ -23,11 +23,21 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
       type = 'text',
       suffix,
       requiredClassName = 'text-error ml-1',
+      onWheel,
       ...props
     },
     ref,
   ) => {
     const inputId = id || label?.toLowerCase().replace(/\s+/g, '-');
+
+    // Prevent number inputs from changing value on scroll — blur the
+    // input so the page scrolls normally instead of incrementing/decrementing.
+    const handleWheel = (e: React.WheelEvent<HTMLInputElement>) => {
+      if (type === 'number') {
+        e.currentTarget.blur();
+      }
+      onWheel?.(e);
+    };
 
     return (
       <div className={cn('space-y-2', fullWidth && 'w-full')}>
@@ -45,6 +55,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
             ref={ref}
             id={inputId}
             type={type}
+            onWheel={handleWheel}
             className={cn(
               'w-full px-4 py-2 rounded-lg border bg-background text-foreground',
               'focus:outline-none focus:ring-2 transition-colors',

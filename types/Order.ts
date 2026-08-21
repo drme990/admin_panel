@@ -212,8 +212,16 @@ export interface Order {
   source?: 'manasik' | 'ghadaq';
   location?: string;
   locale?: string;
+  internalNotes?: InternalNote[];
   createdAt: string;
   updatedAt: string;
+}
+
+export interface InternalNote {
+  _id?: string;
+  text: string;
+  author: string;
+  createdAt: string;
 }
 
 // Extended order with populated product info (from API)

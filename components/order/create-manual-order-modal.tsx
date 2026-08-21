@@ -20,12 +20,14 @@ import CustomDatePicker from '@/components/ui/custom-date-picker';
 import Textarea from '@/components/ui/textarea';
 import { uploadImageToR2, uploadInvoiceToR2, deleteOldImage } from '../../lib/image-upload-utils';
 
-import { LuCopy, LuCheck, LuRefreshCw, LuUpload, LuPlus, LuX, LuAtSign, LuPencil, LuUserCheck, LuImage, LuClock, LuLink } from 'react-icons/lu';
+import { LuCopy, LuCheck, LuRefreshCw, LuUpload, LuPlus, LuX, LuAtSign, LuPencil, LuUserCheck, LuImage, LuClock, LuLink, LuFileText } from 'react-icons/lu';
 import { FaWhatsapp } from 'react-icons/fa';
 import { isValidPhoneNumber } from 'libphonenumber-js';
 import { COUNTRIES } from '@/lib/countries';
 import { MANUAL_PAYMENT_METHODS, EASYKASH_PAYMENT_METHOD } from '@/lib/order';
-import type { PaymentMethod } from '@/types/Order';
+import type { PaymentMethod, Order } from '@/types/Order';
+import { buildOrderWhatsappMessageFromOrder } from '@/lib/order-whatsapp';
+import { normalizeWhatsappPhone } from '@/lib/order/order-utils';
 
 function extractDigits(value: string): string {
   return value.replace(/\D/g, '');
@@ -217,6 +219,7 @@ interface UserSuggestion {
 }
 
 interface OrderResult {
+  _id: string;
   orderNumber: string;
   totalAmount: number;
   fullAmount: number;
@@ -224,6 +227,7 @@ interface OrderResult {
   remainingAmount: number;
   isPartialPayment: boolean;
   currency: string;
+  status: string;
   checkoutUrl: string | null;
   createdUser?: { email: string; password: string } | null;
 }
@@ -469,6 +473,7 @@ export default function CreateManualOrderModal({
   const lastLookupRef = useRef<{ phone: string; email: string; source: string }>({ phone: '', email: '', source: '' });
   const skipBlurValidationRef = useRef(false);
   const invoiceInputRef = useRef<HTMLInputElement | null>(null);
+  const invoiceFileInputRef = useRef<HTMLInputElement | null>(null);
 
   const invoicesRef = useRef<InvoiceEntry[]>([]);
   invoicesRef.current = invoices;
@@ -982,12 +987,19 @@ export default function CreateManualOrderModal({
   // Handler for inline invoice file selection — adds the file with
   // default status (waiting) and empty value. The admin then fills in
   // the value, currency, and status inline in the invoice list.
-  const handleInvoiceFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // `mode` determines which file types are accepted: "image" or "file".
+  const handleInvoiceFileChange = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    mode: 'image' | 'file',
+  ) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
+    const imageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    const fileTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    const allowedTypes = mode === 'image' ? imageTypes : fileTypes;
+
     for (const file of Array.from(files)) {
-      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'application/pdf'];
       if (!allowedTypes.includes(file.type)) {
         toast.error(t('editOrder.invalidImage') || 'Invalid file type');
         continue;
@@ -1011,7 +1023,8 @@ export default function CreateManualOrderModal({
     }
 
     // Reset the input so the same file can be selected again
-    if (invoiceInputRef.current) invoiceInputRef.current.value = '';
+    const ref = mode === 'image' ? invoiceInputRef : invoiceFileInputRef;
+    if (ref.current) ref.current.value = '';
   };
 
   // Toggle invoice status between confirmed and waiting, then
@@ -1379,10 +1392,15 @@ export default function CreateManualOrderModal({
         throw new Error(t('createManualOrder.invalidResponse') || 'Received an invalid response from the server.');
       }
 
-      const { order, checkoutUrl, createdUser } = data.data;
+      const { order, checkoutUrl, createdUser } = data.data as {
+        order: { _id: string; orderNumber: string; totalAmount: number; fullAmount: number; paidAmount: number; remainingAmount: number; isPartialPayment: boolean; currency: string; status: string };
+        checkoutUrl: string | null;
+        createdUser?: { email: string; password: string } | null;
+      };
       dispatch({
         type: 'SET_RESULT',
         result: {
+          _id: order._id,
           orderNumber: order.orderNumber,
           totalAmount: order.totalAmount,
           fullAmount: order.fullAmount,
@@ -1390,6 +1408,7 @@ export default function CreateManualOrderModal({
           remainingAmount: order.remainingAmount,
           isPartialPayment: order.isPartialPayment,
           currency: order.currency,
+          status: order.status,
           checkoutUrl,
           createdUser: createdUser || null,
         },
@@ -1429,6 +1448,36 @@ export default function CreateManualOrderModal({
       setTimeout(() => dispatch({ type: 'SET_COPIED', copied: false }), 2000);
     } catch {
       toast.error(t('createManualOrder.copyFailed'));
+    }
+  };
+
+  const [whatsappLoading, setWhatsappLoading] = useState(false);
+
+  // Fetch the full order from the API and build the same WhatsApp
+  // message used by the execution table's "Start Chat" button.
+  const handleStartWhatsappChat = async () => {
+    if (!result?._id) return;
+    setWhatsappLoading(true);
+    try {
+      const res = await fetch(`/api/orders/${result._id}`, { cache: 'no-store' });
+      const data = await res.json();
+      if (!data.success || !data.data) {
+        throw new Error(data.error || 'Failed to fetch order');
+      }
+      const fullOrder = data.data as Order;
+      const message = buildOrderWhatsappMessageFromOrder(fullOrder);
+      const whatsappPhone = normalizeWhatsappPhone(fullOrder.billingData?.phone);
+      if (!whatsappPhone) {
+        toast.error(t('copyWhatsapp.invalidPhone') || 'Invalid phone number');
+        return;
+      }
+      const whatsappUrl = `https://wa.me/${whatsappPhone}?text=${encodeURIComponent(message)}`;
+      window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+    } catch (error) {
+      console.error('Error starting WhatsApp chat:', error);
+      toast.error(t('copyWhatsapp.failed') || 'Failed to start WhatsApp chat');
+    } finally {
+      setWhatsappLoading(false);
     }
   };
 
@@ -1500,14 +1549,12 @@ export default function CreateManualOrderModal({
               type="button"
               variant="custom"
               className="w-full bg-green-500! hover:bg-green-600! text-white flex items-center justify-center gap-2"
-              onClick={() => {
-                const phoneDigits = form.billingData.phone.replace(/\D/g, '');
-                if (phoneDigits) {
-                  window.open(`https://wa.me/${phoneDigits}`, '_blank', 'noopener,noreferrer');
-                }
-              }}
+              onClick={handleStartWhatsappChat}
+              disabled={whatsappLoading}
             >
-              <FaWhatsapp size={18} />
+              {whatsappLoading
+                ? <LuRefreshCw size={18} className="animate-spin" />
+                : <FaWhatsapp size={18} />}
               {t('createManualOrder.startWhatsappChat') || 'Start WhatsApp Chat'}
             </Button>
           )}
@@ -1983,27 +2030,47 @@ export default function CreateManualOrderModal({
                     {t('createManualOrder.uploadingInvoice') || 'Uploading...'}
                   </span>
                 ) : (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className={formErrors.invoice ? 'border-error text-error hover:text-error hover:border-error' : ''}
-                    onClick={() => invoiceInputRef.current?.click()}
-                  >
-                    <LuUpload size={16} className="me-2" />
-                    {t('createManualOrder.uploadInvoice') || 'Upload Invoice'}
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className={formErrors.invoice ? 'border-error text-error hover:text-error hover:border-error' : ''}
+                      onClick={() => invoiceInputRef.current?.click()}
+                    >
+                      <LuImage size={16} className="me-2" />
+                      {t('createManualOrder.uploadImageInvoice') || 'Image Invoice'}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className={formErrors.invoice ? 'border-error text-error hover:text-error hover:border-error' : ''}
+                      onClick={() => invoiceFileInputRef.current?.click()}
+                    >
+                      <LuFileText size={16} className="me-2" />
+                      {t('createManualOrder.uploadFileInvoice') || 'File Invoice'}
+                    </Button>
+                  </div>
                 )}
               </div>
 
-              {/* Hidden file input for invoice selection */}
+              {/* Hidden file inputs for invoice selection */}
               <input
                 ref={invoiceInputRef}
                 type="file"
-                accept="image/jpeg,image/jpg,image/png,image/webp,application/pdf"
+                accept="image/jpeg,image/jpg,image/png,image/webp"
                 multiple
                 className="hidden"
-                onChange={handleInvoiceFileChange}
+                onChange={(e) => handleInvoiceFileChange(e, 'image')}
+              />
+              <input
+                ref={invoiceFileInputRef}
+                type="file"
+                accept="application/pdf,image/jpeg,image/jpg,image/png,image/webp"
+                multiple
+                className="hidden"
+                onChange={(e) => handleInvoiceFileChange(e, 'file')}
               />
 
               {/* Invoice list */}
@@ -2037,7 +2104,7 @@ export default function CreateManualOrderModal({
                         </button>
                       </div>
                       {/* Preview */}
-                      {invoice.previewUrl && (
+                      {invoice.previewUrl ? (
                         <div className="w-fit">
                           {/* eslint-disable-next-line @next/next/no-img-element -- previewUrl is a blob URL from File, not optimizable by next/image */}
                           <img
@@ -2045,6 +2112,10 @@ export default function CreateManualOrderModal({
                             alt="Invoice preview"
                             className="h-24 rounded-lg border border-stroke object-contain bg-background"
                           />
+                        </div>
+                      ) : (
+                        <div className="w-fit h-24 px-4 flex items-center justify-center rounded-lg border border-stroke bg-background">
+                          <LuFileText size={32} className="text-secondary" />
                         </div>
                       )}
                       {/* Value + currency (editable inline) */}

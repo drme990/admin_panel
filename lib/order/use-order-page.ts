@@ -571,6 +571,7 @@ export function useOrderPage(options: UseOrderPageOptions) {
         invoiceUrl?: string;
         invoiceStatus?: 'confirmed' | 'waiting' | 'pending' | 'rejected';
         invoiceValue?: number;
+        invoicePaidAmount?: number;
         invoiceUrls?: Array<{
           url: string;
           invoiceStatus?: 'confirmed' | 'waiting' | 'pending' | 'rejected';
@@ -596,6 +597,7 @@ export function useOrderPage(options: UseOrderPageOptions) {
         if ('invoiceUrl' in fields) body.invoiceUrl = fields.invoiceUrl;
         if ('invoiceStatus' in fields) body.invoiceStatus = fields.invoiceStatus;
         if ('invoiceValue' in fields) body.invoiceValue = fields.invoiceValue;
+        if ('invoicePaidAmount' in fields) body.invoicePaidAmount = fields.invoicePaidAmount;
         if ('invoiceUrls' in fields) body.invoiceUrls = fields.invoiceUrls;
         if ('items' in fields) body.items = fields.items;
         if ('gender' in fields) body.gender = fields.gender;
@@ -760,7 +762,12 @@ export function useOrderPage(options: UseOrderPageOptions) {
           const invoiceStatus = fields.invoiceStatus ?? 'waiting';
           const nextInvoices = alreadyExists
             ? currentInvoices
-            : [...currentInvoices, { url: fields.invoiceUrl, invoiceStatus, rejectionReason: '', value: fields.invoiceValue ?? 0 }];
+            : [...currentInvoices, {
+              url: fields.invoiceUrl,
+              invoiceStatus,
+              rejectionReason: '',
+              value: fields.invoiceValue ?? 0,
+            }];
 
           // Use the backend response to update financial fields (status,
           // paidAmount, remainingAmount) that may have been auto-updated

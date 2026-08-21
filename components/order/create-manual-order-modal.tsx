@@ -20,7 +20,7 @@ import CustomDatePicker from '@/components/ui/custom-date-picker';
 import Textarea from '@/components/ui/textarea';
 import { uploadImageToR2, uploadInvoiceToR2, deleteOldImage } from '../../lib/image-upload-utils';
 
-import { LuCopy, LuCheck, LuRefreshCw, LuUpload, LuDownload, LuPlus, LuX, LuAtSign, LuPencil, LuUserCheck, LuImage, LuClock } from 'react-icons/lu';
+import { LuCopy, LuCheck, LuRefreshCw, LuUpload, LuPlus, LuX, LuAtSign, LuPencil, LuUserCheck, LuImage, LuClock, LuLink } from 'react-icons/lu';
 import { FaWhatsapp } from 'react-icons/fa';
 import { isValidPhoneNumber } from 'libphonenumber-js';
 import { COUNTRIES } from '@/lib/countries';
@@ -1023,43 +1023,16 @@ export default function CreateManualOrderModal({
     handleUpdateInvoice(index, { invoiceStatus: newStatus });
   };
 
-  // Remove an invoice and recalculate the paid amount from remaining
-  // confirmed invoices.
+  // Remove an invoice. The paidAmount is NOT recalculated from invoices —
+  // it's an independent user-entered field.
   const handleRemoveInvoice = (index: number) => {
     dispatch({ type: 'REMOVE_INVOICE', index });
-    // Recalculate paidAmount from remaining confirmed invoices
-    const remainingConfirmedTotal = invoices
-      .filter((_, i) => i !== index)
-      .filter((inv) => inv.invoiceStatus === 'confirmed')
-      .reduce((sum, inv) => {
-        const v = parseFloat(inv.value);
-        return Number.isFinite(v) && v > 0 ? sum + v : sum;
-      }, 0);
-    setForm((prev) => ({
-      ...prev,
-      paidAmount: remainingConfirmedTotal > 0 ? remainingConfirmedTotal.toFixed(2) : '',
-    }));
   };
 
-  // Update an invoice field and recalculate the paid amount from
-  // confirmed invoices.
+  // Update an invoice field. The paidAmount is NOT recalculated from
+  // invoices — it's an independent user-entered field.
   const handleUpdateInvoice = (index: number, patch: Partial<InvoiceEntry>) => {
     dispatch({ type: 'UPDATE_INVOICE', index, patch });
-    // Recalculate paidAmount from confirmed invoices (using the updated
-    // values — apply the patch to the current invoices array)
-    const updatedInvoices = invoices.map((inv, i) =>
-      i === index ? { ...inv, ...patch } : inv,
-    );
-    const confirmedTotal = updatedInvoices
-      .filter((inv) => inv.invoiceStatus === 'confirmed')
-      .reduce((sum, inv) => {
-        const v = parseFloat(inv.value);
-        return Number.isFinite(v) && v > 0 ? sum + v : sum;
-      }, 0);
-    setForm((prev) => ({
-      ...prev,
-      paidAmount: confirmedTotal > 0 ? confirmedTotal.toFixed(2) : '',
-    }));
   };
 
   const handlePhotoFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1605,15 +1578,14 @@ export default function CreateManualOrderModal({
           )}
 
           <div className="flex gap-2 justify-end pt-2">
-            <Button variant="outline" onClick={handleCloseAfterSuccess}>
-              {t('createManualOrder.close')}
-            </Button>
+
             {result.checkoutUrl && (
               <Button
                 variant="primary"
                 onClick={() => window.open(result.checkoutUrl!, '_blank')}
+                className="flex-1"
               >
-                <LuDownload size={16} className="me-2" />
+                <LuLink size={16} className="me-2" />
                 {t('createManualOrder.openLink')}
               </Button>
             )}

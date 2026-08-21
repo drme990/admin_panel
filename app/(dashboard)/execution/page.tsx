@@ -1124,10 +1124,12 @@ export default function ExecutionPage() {
       setUploadingInvoiceOrderId(order._id);
       const invoiceUrl = await uploadInvoiceToR2(result.file);
       const invoiceValue = parseFloat(result.value);
+      const invoicePaidAmount = parseFloat(result.paidAmount);
       await updateOrder(order._id, {
         invoiceUrl,
         invoiceStatus: result.invoiceStatus,
         invoiceValue: Number.isFinite(invoiceValue) ? invoiceValue : 0,
+        invoicePaidAmount: Number.isFinite(invoicePaidAmount) ? invoicePaidAmount : 0,
       });
       toast.success(t('editOrder.invoiceUploaded') || 'Invoice uploaded successfully');
       // Refetch the execution list so the table reflects the updated
@@ -2176,9 +2178,10 @@ export default function ExecutionPage() {
           invoiceUploadOrderRef.current = null;
         }}
         onConfirm={handleInvoiceUploadConfirm}
-        orderTotal={0}
+        orderTotal={invoiceUploadOrderRef.current?.fullAmount ?? invoiceUploadOrderRef.current?.totalAmount ?? 0}
+        alreadyPaid={invoiceUploadOrderRef.current?.paidAmount ?? 0}
         currencyOptions={[{ label: 'EGP', value: 'EGP' }, { label: 'SAR', value: 'SAR' }, { label: 'USD', value: 'USD' }]}
-        defaultCurrency="EGP"
+        defaultCurrency={invoiceUploadOrderRef.current?.currency ?? 'EGP'}
         namespace="execution"
       />
 

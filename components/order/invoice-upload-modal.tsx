@@ -15,14 +15,18 @@ export interface InvoiceUploadResult {
   value: string;
   currency: string;
   previewUrl: string | null;
+  /** How much the user actually paid for this invoice (independent of invoice value) */
+  paidAmount: string;
 }
 
 interface InvoiceUploadModalProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: (result: InvoiceUploadResult) => void;
-  /** Order total for showing the remaining amount hint */
+  /** Order full total (the full price, not the paid portion) */
   orderTotal: number;
+  /** How much is already paid on this order (to compute remaining) */
+  alreadyPaid?: number;
   /** Currency options for the dropdown */
   currencyOptions: Array<{ label: string; value: string }>;
   /** Default currency */
@@ -50,6 +54,7 @@ export default function InvoiceUploadModal({
   onClose,
   onConfirm,
   orderTotal,
+  alreadyPaid = 0,
   currencyOptions,
   defaultCurrency,
   namespace = 'orders',
@@ -62,8 +67,10 @@ export default function InvoiceUploadModal({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [status, setStatus] = useState<InvoiceStatus>('confirmed');
   const [value, setValue] = useState('');
+  const [paidAmount, setPaidAmount] = useState('');
   const [currency, setCurrency] = useState(defaultCurrency);
   const [error, setError] = useState<string | null>(null);
+  const [paidError, setPaidError] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const imageInputRef = useRef<HTMLInputElement | null>(null);
@@ -120,9 +127,13 @@ export default function InvoiceUploadModal({
     setFile(null);
     setPreviewUrl(null);
     setError(null);
+    setPaidError(null);
   };
 
   const handleConfirm = () => {
+    setError(null);
+    setPaidError(null);
+
     if (!file) {
       setError(t('errors.invoiceRequired') || 'Please select a file');
       return;
@@ -138,12 +149,33 @@ export default function InvoiceUploadModal({
       return;
     }
 
+    // paidAmount is optional — defaults to 0 if not entered
+    const numPaid = parseFloat(paidAmount);
+    const paidAmountValue = paidAmount.trim() && Number.isFinite(numPaid) && numPaid >= 0
+      ? paidAmount
+      : '0';
+
+    // Validate: paidAmount must not exceed the remaining unpaid amount.
+    // The invoice `value` can be larger (fees, taxes, etc.), but the actual
+    // paid amount cannot exceed what's left on the order.
+    const remaining = Math.max(0, orderTotal - alreadyPaid);
+    if (orderTotal > 0 && Number.isFinite(numPaid) && numPaid > remaining) {
+      setPaidError(
+        t('errors.paidAmountExceedsRemaining', {
+          paid: numPaid.toFixed(2),
+          remaining: remaining.toFixed(2),
+        }),
+      );
+      return;
+    }
+
     onConfirm({
       file,
       invoiceStatus: status,
       value,
       currency,
       previewUrl,
+      paidAmount: paidAmountValue,
     });
   };
 
@@ -154,10 +186,16 @@ export default function InvoiceUploadModal({
     onClose();
   };
 
-  const remainingHint = orderTotal > 0 && value.trim()
-    ? parseFloat(value) > 0
-      ? `${t('remaining') || 'Remaining'}: ${Math.max(0, orderTotal - parseFloat(value)).toFixed(2)} ${currency}`
-      : null
+  // Remaining amount hint — based on paidAmount (not invoice value, which
+  // may include fees/taxes and exceed the order total).
+  const remainingAfterPayment = orderTotal > 0
+    ? Math.max(0, orderTotal - alreadyPaid - (parseFloat(paidAmount) || 0))
+    : null;
+  const remainingHint = remainingAfterPayment !== null && paidAmount.trim()
+    ? `${t('remaining') || 'Remaining'}: ${remainingAfterPayment.toFixed(2)} ${currency}`
+    : null;
+  const currentRemaining = orderTotal > 0
+    ? Math.max(0, orderTotal - alreadyPaid)
     : null;
 
   return (
@@ -338,6 +376,38 @@ export default function InvoiceUploadModal({
               </select>
             </div>
           </div>
+          <p className="text-xs text-secondary">
+            {t('invoiceValueHint') || 'The invoice document amount (may include fees/taxes).'}
+          </p>
+        </div>
+
+        {/* Paid amount — how much the user actually paid for this invoice.
+            Capped at the remaining unpaid amount on the order. */}
+        <div className="flex flex-col gap-2">
+          <label className="text-sm font-medium text-foreground">
+            {t('paidAmount') || 'Paid Amount'}
+          </label>
+          <Input
+            type="number"
+            min={0}
+            max={currentRemaining ?? undefined}
+            step="0.01"
+            value={paidAmount}
+            placeholder={t('paidAmountPlaceholder') || 'How much did the customer pay?'}
+            onChange={(e) => {
+              setPaidAmount(e.target.value);
+              setPaidError(null);
+            }}
+            error={paidError || undefined}
+            className="w-full"
+          />
+          {currentRemaining !== null && (
+            <p className="text-xs text-secondary">
+              {t('paidAmountHint') || 'This amount will be added to the order\'s total paid amount.'}
+              {' '}
+              ({t('remaining') || 'Remaining'}: {currentRemaining.toFixed(2)} {currency})
+            </p>
+          )}
           {remainingHint && (
             <p className="text-xs text-secondary">{remainingHint}</p>
           )}

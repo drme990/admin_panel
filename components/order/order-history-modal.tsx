@@ -27,7 +27,8 @@ export interface OrderHistoryEntry {
   | 'gender'
   | 'isAlive'
   | 'intention'
-  | 'status';
+  | 'status'
+  | 'payment';
   previousValue: string | null;
   newValue: string | null;
   changedByUserName: string;
@@ -65,6 +66,7 @@ function formatChangeType(
     isAlive: 'orderHistory.typeIsAlive',
     intention: 'orderHistory.typeIntention',
     status: 'orderHistory.typeStatus',
+    payment: 'orderHistory.typePayment',
   };
   return t(keyMap[type] || 'orderHistory.typeUnknown');
 }

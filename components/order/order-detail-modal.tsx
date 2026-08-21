@@ -422,10 +422,16 @@ export default function OrderDetailModal({
                             className="rounded-lg bg-background border border-stroke p-3"
                           >
                             <div className="flex items-center justify-between mb-2">
-                              <span className="text-sm font-semibold text-foreground">
+                              <span className="text-sm font-semibold text-foreground flex items-center gap-2">
                                 {t('paymentTimeline.paymentLabel', {
                                   index: index + 1,
                                 })}
+                                {payment.paymentId?.startsWith('manual_invoice_') && (
+                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-xs font-medium rounded-full bg-primary/10 text-primary">
+                                    <LuFileText size={12} />
+                                    {t('paymentTimeline.invoicePayment') || 'Invoice'}
+                                  </span>
+                                )}
                               </span>
                               <div className="flex items-center gap-2">
                                 {hasPaymentLink(payment) && (

@@ -38,6 +38,7 @@ import {
   updateDesignReviewStatus,
   replaceDesignImage,
   deleteSingleDesign,
+  syncOrderDesigns,
 } from '@/lib/order/order-utils';
 import { cacheExecutionData, getCachedExecutionData, isCacheFresh } from '@/lib/order/execution-cache';
 
@@ -395,18 +396,34 @@ export default function OrderDesignsPage() {
   }, [fetchDesigns]);
 
   // ── Silent refetch on window focus ─────────────────────────────────
-  // When the admin returns from the design app editor, the order's
-  // designUrls have already been updated by the design app's callback
-  // to /api/internal/update-design-url. We do a SILENT refetch (no
-  // loading spinner) so the page updates in place without flicker.
+  // When the admin returns from the design app editor, we need to:
+  //   1. Sync the order's designUrls with the latest versions in the
+  //      order_design_versions collection (safety net — the design app
+  //      updates the order directly in MongoDB, but this sync catches
+  //      up if that write failed or hasn't propagated yet).
+  //   2. Then do a SILENT refetch (no loading spinner) so the page
+  //      updates in place without flicker.
   useEffect(() => {
     const handleFocus = () => {
-      void fetchDesigns(undefined, true);
+      const orderNumbers = orders
+        .map((o) => o.orderNumber)
+        .filter((n): n is string => typeof n === 'string' && n.length > 0);
+      if (orderNumbers.length > 0) {
+        syncOrderDesigns(orderNumbers, false)
+          .catch(() => {
+            // Best-effort — the refetch will still load whatever is in the DB
+          })
+          .finally(() => {
+            void fetchDesigns(undefined, true);
+          });
+      } else {
+        void fetchDesigns(undefined, true);
+      }
     };
 
     window.addEventListener('focus', handleFocus);
     return () => window.removeEventListener('focus', handleFocus);
-  }, [fetchDesigns]);
+  }, [fetchDesigns, orders]);
 
   // ── Category breakdown stats (same as the execution page) ──────────────
   const fetchStats = useCallback(

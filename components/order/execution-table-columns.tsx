@@ -95,6 +95,7 @@ interface ColumnCallbacks {
   onCopyPhotoUrl: (order: Order) => void;
   onUploadInvoice: (order: Order) => void;
   onDownloadInvoice: (order: Order) => void;
+  onPreviewInvoice: (order: Order) => void;
   onChangeStatus: (order: Order) => void;
   onViewHistory: (order: Order) => void;
   onBlock: (order: Order) => void;
@@ -141,6 +142,7 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
     onCopyPhotoUrl,
     onUploadInvoice,
     onDownloadInvoice,
+    onPreviewInvoice,
     onChangeStatus,
     onViewHistory,
     onBlock,
@@ -475,7 +477,7 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
                   )}
                   {!isCreating && (
                     <span
-                      className={`absolute top-0.5 right-0.5 h-2 w-2 rounded-full border border-card-bg ${allReviewed ? 'bg-success' : 'bg-warning'
+                      className={`absolute top-0.5 left-0.5 h-2 w-2 rounded-full border border-card-bg ${allReviewed ? 'bg-success' : 'bg-warning'
                         }`}
                     />
                   )}
@@ -621,12 +623,30 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
         return (
           <div className="flex flex-col items-center gap-1">
             <div className="flex flex-row gap-1 items-center min-h-12">
-              <span className={`relative inline-flex items-center justify-center p-2 ${iconColor}`}>
-                <LuFileText size={24} />
-                {hasUnreviewedInvoice && (
-                  <LuCircleAlert className='absolute -top-0.5 -right-0.5 h-3.5 w-3.5 text-error' />
-                )}
-              </span>
+              {hasInvoice ? (
+                <Tooltip position={tooltipPos} content={invoices.length > 1 ? `${t('table.viewInvoice') || t('table.invoice')} (${invoices.length})` : (t('table.viewInvoice') || t('table.invoice'))}>
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); onPreviewInvoice(order); }}
+                    className={`relative inline-flex items-center justify-center p-2 ${iconColor}`}
+                    aria-label={t('table.viewInvoice') || t('table.invoice')}
+                  >
+                    <LuFileText size={24} />
+                    {invoices.length > 1 && (
+                      <span className="absolute -top-1 -right-1 bg-primary text-primary-text text-[10px] rounded-full w-4 h-4 flex items-center justify-center">
+                        {invoices.length}
+                      </span>
+                    )}
+                    {hasUnreviewedInvoice && (
+                      <LuCircleAlert className='absolute -top-0.5 -left-0.5 h-3.5 w-3.5 text-error' />
+                    )}
+                  </button>
+                </Tooltip>
+              ) : (
+                <span className={`relative inline-flex items-center justify-center p-2 ${iconColor}`}>
+                  <LuFileText size={24} />
+                </span>
+              )}
             </div>
             <div className="flex flex-row gap-1">
               {uploadingInvoiceOrderId === order._id ? (

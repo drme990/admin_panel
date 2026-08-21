@@ -43,6 +43,7 @@ import {
   addDaysToIsoDate,
   isImageUrl,
   getOrderItemDisplayName,
+  syncOrderDesigns,
 } from '@/lib/order/order-utils';
 import { downloadFile } from '@/lib/download-utils';
 import { cacheExecutionData, getCachedExecutionData, isCacheFresh } from '@/lib/order/execution-cache';
@@ -82,6 +83,7 @@ export default function ExecutionPage() {
   const [downloadingInvoiceOrderId, setDownloadingInvoiceOrderId] = useState<string | null>(null);
   const [photoPreviewOrder, setPhotoPreviewOrder] = useState<Order | null>(null);
   const [designPreviewOrder, setDesignPreviewOrder] = useState<Order | null>(null);
+  const [invoicePreviewOrder, setInvoicePreviewOrder] = useState<Order | null>(null);
   const [bulkExecutionDateTargetIds, setBulkExecutionDateTargetIds] = useState<string[] | null>(null);
   const [isCreateManualOrderModalOpen, setIsCreateManualOrderModalOpen] = useState(false);
   const { confirm, modalProps } = useConfirmModal();
@@ -442,18 +444,37 @@ export default function ExecutionPage() {
   }, [fetchExecution]);
 
   // ── Silent refetch on window focus ─────────────────────────────────
-  // When the admin returns from the design app editor, the order's
-  // designUrls have already been updated by the design app's callback
-  // to /api/internal/update-design-url. We do a SILENT refetch (no
-  // loading spinner) so the table updates in place without flicker.
+  // When the admin returns from the design app editor, we need to:
+  //   1. Sync the order's designUrls with the latest versions in the
+  //      order_design_versions collection (safety net — the design app
+  //      updates the order directly in MongoDB, but this sync catches
+  //      up if that write failed or hasn't propagated yet).
+  //   2. Then do a SILENT refetch (no loading spinner) so the table
+  //      updates in place without flicker.
   useEffect(() => {
     const handleFocus = () => {
-      void fetchExecution(undefined, true);
+      // Sync design URLs with the latest versions before refetching.
+      // This ensures the order's designUrls[].url points to the newest
+      // version even if the design app's direct notification failed.
+      const orderNumbers = orders
+        .map((o) => o.orderNumber)
+        .filter((n): n is string => typeof n === 'string' && n.length > 0);
+      if (orderNumbers.length > 0) {
+        syncOrderDesigns(orderNumbers, false)
+          .catch(() => {
+            // Best-effort — the refetch will still load whatever is in the DB
+          })
+          .finally(() => {
+            void fetchExecution(undefined, true);
+          });
+      } else {
+        void fetchExecution(undefined, true);
+      }
     };
 
     window.addEventListener('focus', handleFocus);
     return () => window.removeEventListener('focus', handleFocus);
-  }, [fetchExecution]);
+  }, [fetchExecution, orders]);
 
   const handleRefresh = () => {
     void fetchExecution();
@@ -1132,7 +1153,20 @@ export default function ExecutionPage() {
     }
     setDownloadingInvoiceOrderId(order._id);
     try {
-      await downloadFile(invoices[invoices.length - 1].url, `invoice-${order.orderNumber}`);
+      // Download each invoice as an individual file. If there's only
+      // one invoice, keep the simple filename. If there are multiple,
+      // append the index so they don't overwrite each other.
+      for (let i = 0; i < invoices.length; i++) {
+        const invoice = invoices[i];
+        const filename = invoices.length > 1
+          ? `invoice-${order.orderNumber}-${i + 1}`
+          : `invoice-${order.orderNumber}`;
+        await downloadFile(invoice.url, filename);
+        // Small delay between downloads so the browser doesn't block them
+        if (i < invoices.length - 1) {
+          await new Promise((resolve) => setTimeout(resolve, 300));
+        }
+      }
     } catch (error) {
       console.error('Error downloading invoice:', error);
       toast.error(t('messages.downloadFailed') || 'Failed to download invoice');
@@ -1565,6 +1599,11 @@ export default function ExecutionPage() {
       const photoField = order.reservationData?.find((f) => f.key === 'photo');
       if (!photoField?.value) return;
       setPhotoPreviewOrder(order);
+    },
+    onPreviewInvoice: (order) => {
+      const invoices = order.invoiceUrls || [];
+      if (invoices.length === 0) return;
+      setInvoicePreviewOrder(order);
     },
     creatingDesignOrderId,
     downloadingDesignOrderId,
@@ -2171,6 +2210,16 @@ export default function ExecutionPage() {
           }
         } : undefined}
         onDesignReviewChange={handleDesignReviewChange}
+      />
+
+      {/* Invoice gallery lightbox (invoices/receipts only) */}
+      <OrderGalleryModal
+        key={`invoice-${invoicePreviewOrder?._id ?? 'closed'}`}
+        order={invoicePreviewOrder}
+        mode="invoice"
+        onClose={() => {
+          setInvoicePreviewOrder(null);
+        }}
       />
     </div>
   );

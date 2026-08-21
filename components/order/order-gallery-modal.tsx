@@ -2,12 +2,13 @@
 
 import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import Image from 'next/image';
-import { LuDownload, LuPencil, LuChevronLeft, LuChevronRight, LuRefreshCw, LuTrash2, LuReplace, LuCheck, LuClock } from 'react-icons/lu';
-import { useTranslations } from 'next-intl';
+import { LuDownload, LuPencil, LuChevronLeft, LuChevronRight, LuRefreshCw, LuTrash2, LuReplace, LuCheck, LuClock, LuFileText, LuExternalLink } from 'react-icons/lu';
+import { useTranslations, useLocale } from 'next-intl';
 import { toast } from 'react-toastify';
 import Modal from '@/components/ui/modal';
 import Button from '@/components/ui/button';
 import { downloadFile } from '@/lib/download-utils';
+import { isImageUrl } from '@/lib/order/order-utils';
 import { cn } from '@/lib/utils';
 import { updateDesignReviewStatus } from '../../lib/order/order-utils';
 import type { Order, OrderDesignUrl } from '@/types/Order';
@@ -19,9 +20,9 @@ import type { Order, OrderDesignUrl } from '@/types/Order';
 export interface GalleryItem {
   /** Stable unique key for React lists */
   id: string;
-  /** 'photo' = customer-uploaded image, 'design' = generated design */
-  kind: 'photo' | 'design';
-  /** Public R2 URL of the image */
+  /** 'photo' = customer-uploaded image, 'design' = generated design, 'invoice' = uploaded invoice/receipt */
+  kind: 'photo' | 'design' | 'invoice';
+  /** Public R2 URL of the image/file */
   url: string;
   /** Human-readable label shown in the thumbnail strip */
   label: string;
@@ -33,6 +34,8 @@ export interface GalleryItem {
   productId?: string;
   /** For design items: whether it has been reviewed */
   reviewed?: boolean;
+  /** For invoice items: whether the invoice URL points to an image (vs a document) */
+  isImage?: boolean;
 }
 
 /**
@@ -65,7 +68,7 @@ function parsePhotoValue(value: string | undefined): string[] {
  */
 function buildGalleryItems(
   order: Order | null,
-  mode: 'photo' | 'design',
+  mode: 'photo' | 'design' | 'invoice',
   t: (key: string) => string,
 ): GalleryItem[] {
   if (!order) return [];
@@ -86,6 +89,24 @@ function buildGalleryItems(
           photoUrls.length > 1
             ? `${t('photo')} ${index + 1}`
             : t('photo'),
+      });
+    });
+  }
+
+  // ── Invoices / receipts ──
+  if (mode === 'invoice') {
+    const invoices = order.invoiceUrls || [];
+    invoices.forEach((inv, index) => {
+      const isImg = isImageUrl(inv.url);
+      items.push({
+        id: `invoice-${index}`,
+        kind: 'invoice',
+        url: inv.url,
+        label:
+          invoices.length > 1
+            ? `${t('invoice')} ${index + 1}`
+            : t('invoice'),
+        isImage: isImg,
       });
     });
   }
@@ -139,8 +160,8 @@ function withCacheBust(url: string): string {
 interface OrderGalleryModalProps {
   /** The order to display. null = modal closed. */
   order: Order | null;
-  /** Which kind of images to show: 'photo' = customer photos only, 'design' = designs only */
-  mode: 'photo' | 'design';
+  /** Which kind of images to show: 'photo' = customer photos, 'design' = designs, 'invoice' = invoices/receipts */
+  mode: 'photo' | 'design' | 'invoice';
   /** Called when the modal is closed (click outside, Escape, X button). */
   onClose: () => void;
   /** Called when the "edit design" button is clicked. Receives the design item. */
@@ -177,6 +198,8 @@ export default function OrderGalleryModal({
   onDesignReviewChange,
 }: OrderGalleryModalProps) {
   const t = useTranslations('execution.table');
+  const locale = useLocale();
+  const isRtl = locale === 'ar';
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [isDownloading, setIsDownloading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -225,27 +248,33 @@ export default function OrderGalleryModal({
     setSelectedIndex((prev) => (prev < items.length - 1 ? prev + 1 : 0));
   }, [items.length]);
 
-  // Keyboard navigation
+  // Keyboard navigation — in RTL (Arabic), arrow keys are mirrored:
+  // ArrowLeft → next, ArrowRight → previous (opposite of LTR/English)
   useEffect(() => {
     if (!isOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'ArrowLeft') {
         e.preventDefault();
-        goToPrevious();
+        if (isRtl) goToNext();
+        else goToPrevious();
       } else if (e.key === 'ArrowRight') {
         e.preventDefault();
-        goToNext();
+        if (isRtl) goToPrevious();
+        else goToNext();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, goToPrevious, goToNext]);
+  }, [isOpen, goToPrevious, goToNext, isRtl]);
 
   const handleDownload = async () => {
     if (!currentItem || isDownloading) return;
-    const filename = currentItem.kind === 'design'
-      ? `design-${order?.orderNumber || ''}`
-      : `photo-${order?.orderNumber || ''}`;
+    const filename =
+      currentItem.kind === 'design'
+        ? `design-${order?.orderNumber || ''}`
+        : currentItem.kind === 'invoice'
+          ? `invoice-${order?.orderNumber || ''}-${selectedIndex + 1}`
+          : `photo-${order?.orderNumber || ''}`;
     const url =
       currentItem.kind === 'design'
         ? withCacheBust(currentItem.url)
@@ -343,7 +372,7 @@ export default function OrderGalleryModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={mode === 'photo' ? t('viewPhoto') : t('viewDesign')}
+      title={mode === 'photo' ? t('viewPhoto') : mode === 'design' ? t('viewDesign') : t('viewInvoice') || t('invoice')}
       size="xl"
       contentClassName="flex flex-col items-center justify-center p-0 overflow-hidden"
       footer={
@@ -353,14 +382,18 @@ export default function OrderGalleryModal({
               <LuRefreshCw size={16} className="mr-1 animate-spin" />
               {currentItem?.kind === 'design'
                 ? t('downloadDesign')
-                : t('downloadPhoto')}
+                : currentItem?.kind === 'invoice'
+                  ? (t('downloadInvoice') || t('invoice'))
+                  : t('downloadPhoto')}
             </Button>
           ) : (
             <Button variant="outline" size="sm" onClick={handleDownload}>
               <LuDownload size={16} className="mr-1" />
               {currentItem?.kind === 'design'
                 ? t('downloadDesign')
-                : t('downloadPhoto')}
+                : currentItem?.kind === 'invoice'
+                  ? (t('downloadInvoice') || t('invoice'))
+                  : t('downloadPhoto')}
             </Button>
           )}
           {canEdit && (
@@ -425,7 +458,23 @@ export default function OrderGalleryModal({
     >
       {/* Main image — fixed height, fits viewport, no scroll */}
       <div className="relative flex items-center justify-center w-full h-[60vh] shrink-0">
-        {displayUrl && (
+        {displayUrl && currentItem?.kind === 'invoice' && !currentItem.isImage && (
+          <div className="flex flex-col items-center gap-4 p-8">
+            <LuFileText size={64} className="text-secondary" />
+            <span className="text-sm text-secondary text-center">{currentItem.label}</span>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={handleDownload} disabled={isDownloading}>
+                {isDownloading ? <LuRefreshCw size={16} className="mr-1 animate-spin" /> : <LuDownload size={16} className="mr-1" />}
+                {t('downloadInvoice') || t('invoice')}
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => window.open(currentItem.url, '_blank')}>
+                <LuExternalLink size={16} className="mr-1" />
+                {t('openUrl') || 'Open'}
+              </Button>
+            </div>
+          </div>
+        )}
+        {displayUrl && !(currentItem?.kind === 'invoice' && !currentItem.isImage) && (
           <Image
             src={displayUrl}
             alt={currentItem?.label || t('design')}
@@ -436,24 +485,36 @@ export default function OrderGalleryModal({
           />
         )}
 
-        {/* Navigation arrows (only when multiple items) */}
+        {/* Navigation arrows (only when multiple items) ──
+            In RTL (Arabic), the layout is mirrored:
+            - Previous button → right side, right-chevron icon
+            - Next button → left side, left-chevron icon
+            In LTR (English):
+            - Previous button → left side, left-chevron icon
+            - Next button → right side, right-chevron icon */}
         {items.length > 1 && (
           <>
             <button
               type="button"
               onClick={goToPrevious}
-              className="absolute left-2 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-black/40 text-white hover:bg-black/60 transition-colors"
+              className={cn(
+                'absolute top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-black/40 text-white hover:bg-black/60 transition-colors',
+                isRtl ? 'right-2' : 'left-2',
+              )}
               aria-label="Previous"
             >
-              <LuChevronLeft size={24} />
+              {isRtl ? <LuChevronRight size={24} /> : <LuChevronLeft size={24} />}
             </button>
             <button
               type="button"
               onClick={goToNext}
-              className="absolute right-2 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-black/40 text-white hover:bg-black/60 transition-colors"
+              className={cn(
+                'absolute top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-black/40 text-white hover:bg-black/60 transition-colors',
+                isRtl ? 'left-2' : 'right-2',
+              )}
               aria-label="Next"
             >
-              <LuChevronRight size={24} />
+              {isRtl ? <LuChevronLeft size={24} /> : <LuChevronRight size={24} />}
             </button>
           </>
         )}
@@ -479,18 +540,24 @@ export default function OrderGalleryModal({
                 )}
                 aria-label={item.label}
               >
-                <Image
-                  src={
-                    item.kind === 'design'
-                      ? withCacheBust(item.url)
-                      : item.url
-                  }
-                  alt={item.label}
-                  fill
-                  className="object-cover"
-                  sizes="56px"
-                  unoptimized
-                />
+                {item.kind === 'invoice' && !item.isImage ? (
+                  <div className="flex h-full w-full items-center justify-center bg-card-bg">
+                    <LuFileText size={24} className="text-secondary" />
+                  </div>
+                ) : (
+                  <Image
+                    src={
+                      item.kind === 'design'
+                        ? withCacheBust(item.url)
+                        : item.url
+                    }
+                    alt={item.label}
+                    fill
+                    className="object-cover"
+                    sizes="56px"
+                    unoptimized
+                  />
+                )}
                 {item.kind === 'design' && item.productId && (
                   <span
                     className={cn(

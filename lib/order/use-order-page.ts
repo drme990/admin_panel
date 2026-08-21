@@ -770,8 +770,8 @@ export function useOrderPage(options: UseOrderPageOptions) {
             }];
 
           // Use the backend response to update financial fields (status,
-          // paidAmount, remainingAmount) that may have been auto-updated
-          // by the invoice recalculation logic.
+          // paidAmount, remainingAmount, payments) that may have been
+          // auto-updated by the invoice recalculation logic.
           const backendUpdates: Record<string, unknown> = {
             invoiceUrls: data.data?.invoiceUrls || nextInvoices,
           };
@@ -779,6 +779,7 @@ export function useOrderPage(options: UseOrderPageOptions) {
           if (typeof data.data?.paidAmount === 'number') backendUpdates.paidAmount = data.data.paidAmount;
           if (typeof data.data?.remainingAmount === 'number') backendUpdates.remainingAmount = data.data.remainingAmount;
           if (typeof data.data?.isPartialPayment === 'boolean') backendUpdates.isPartialPayment = data.data.isPartialPayment;
+          if (Array.isArray(data.data?.payments)) backendUpdates.payments = data.data.payments;
 
           dispatch({
             type: 'UPDATE_ORDER_IN_LIST',

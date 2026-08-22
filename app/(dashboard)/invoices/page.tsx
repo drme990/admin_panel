@@ -649,7 +649,7 @@ export default function InvoicesPage() {
 
         setUploadingInvoiceId(uploadInvoiceTarget._id);
         try {
-            const newUrl = await uploadInvoiceToR2(file);
+            const newUrl = await uploadInvoiceToR2(file, uploadInvoiceTarget.url);
             const fetchRes = await fetch(`/api/orders/${uploadInvoiceTarget.orderId}`, { cache: 'no-store' });
             const fetchData = await fetchRes.json();
             if (!fetchData.success) {

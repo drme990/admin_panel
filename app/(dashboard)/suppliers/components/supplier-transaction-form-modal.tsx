@@ -32,6 +32,9 @@ export default function TransactionFormModal({ isOpen, onClose, supplierId, tran
   const [loadingAccounts, setLoadingAccounts] = useState(false);
   const [uploadingFile, setUploadingFile] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Tracks the original attachment URL from the transaction being edited.
+  // Used to delete the old file from R2 when it's replaced or removed.
+  const originalAttachmentRef = useRef<string>('');
 
   const fetchAccounts = useCallback(async () => {
     setLoadingAccounts(true);
@@ -59,6 +62,7 @@ export default function TransactionFormModal({ isOpen, onClose, supplierId, tran
       setReferenceNumber(transaction.referenceNumber || '');
       setNotes(transaction.notes || '');
       setAttachment(transaction.attachment || '');
+      originalAttachmentRef.current = transaction.attachment || '';
     } else {
       setAmount('');
       setAccountId('');
@@ -67,6 +71,7 @@ export default function TransactionFormModal({ isOpen, onClose, supplierId, tran
       setReferenceNumber('');
       setNotes('');
       setAttachment('');
+      originalAttachmentRef.current = '';
     }
   }, [transaction, isOpen]);
 
@@ -78,6 +83,11 @@ export default function TransactionFormModal({ isOpen, onClose, supplierId, tran
     try {
       const formData = new FormData();
       formData.append('file', file);
+      // Pass the current attachment as oldUrl so the backend deletes it
+      // from R2 after the new upload succeeds — prevents orphaned files.
+      if (attachment) {
+        formData.append('oldUrl', attachment);
+      }
 
       const res = await fetch('/api/upload/invoice', {
         method: 'POST',
@@ -201,7 +211,27 @@ export default function TransactionFormModal({ isOpen, onClose, supplierId, tran
           {attachment && (
             <div className="mt-2 flex items-center gap-2">
               <a href={attachment} target="_blank" rel="noopener noreferrer" className="text-sm text-success underline">View attachment</a>
-              <Button type="button" variant="custom" size="custom" onClick={() => setAttachment('')} className="text-xs text-error hover:underline">
+              <Button
+                type="button"
+                variant="custom"
+                size="custom"
+                onClick={() => {
+                  // Best-effort: delete the file from R2 so it doesn't
+                  // become an orphan when the attachment is removed.
+                  if (attachment && !attachment.startsWith('data:')) {
+                    fetch('/api/upload/invoice', {
+                      method: 'DELETE',
+                      headers: { 'Content-Type': 'application/json' },
+                      credentials: 'include',
+                      body: JSON.stringify({ url: attachment }),
+                    }).catch((err) => {
+                      console.warn('Failed to delete attachment from R2:', err);
+                    });
+                  }
+                  setAttachment('');
+                }}
+                className="text-xs text-error hover:underline"
+              >
                 Remove
               </Button>
             </div>

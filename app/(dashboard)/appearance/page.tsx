@@ -104,15 +104,15 @@ function normalizeProductsBanners(value: unknown): ProductBanner[] {
 
       const platform =
         raw.platform === 'ghadaq' ||
-        raw.platform === 'manasik' ||
-        raw.platform === 'shared'
+          raw.platform === 'manasik' ||
+          raw.platform === 'shared'
           ? raw.platform
           : 'shared';
 
       const language =
         raw.language === 'ar' ||
-        raw.language === 'en' ||
-        raw.language === 'shared'
+          raw.language === 'en' ||
+          raw.language === 'shared'
           ? raw.language
           : 'shared';
 
@@ -150,33 +150,33 @@ function normalizeFAQs(value: unknown): FAQ[] {
       const question =
         typeof raw.question === 'object' && raw.question !== null
           ? {
-              ar:
-                typeof (raw.question as { ar?: unknown }).ar === 'string'
-                  ? (raw.question as { ar: string }).ar.trim()
-                  : '',
-              en:
-                typeof (raw.question as { en?: unknown }).en === 'string'
-                  ? (raw.question as { en: string }).en.trim()
-                  : '',
-            }
+            ar:
+              typeof (raw.question as { ar?: unknown }).ar === 'string'
+                ? (raw.question as { ar: string }).ar.trim()
+                : '',
+            en:
+              typeof (raw.question as { en?: unknown }).en === 'string'
+                ? (raw.question as { en: string }).en.trim()
+                : '',
+          }
           : { ar: '', en: '' };
       const answer =
         typeof raw.answer === 'object' && raw.answer !== null
           ? {
-              ar:
-                typeof (raw.answer as { ar?: unknown }).ar === 'string'
-                  ? (raw.answer as { ar: string }).ar.trim()
-                  : '',
-              en:
-                typeof (raw.answer as { en?: unknown }).en === 'string'
-                  ? (raw.answer as { en: string }).en.trim()
-                  : '',
-            }
+            ar:
+              typeof (raw.answer as { ar?: unknown }).ar === 'string'
+                ? (raw.answer as { ar: string }).ar.trim()
+                : '',
+            en:
+              typeof (raw.answer as { en?: unknown }).en === 'string'
+                ? (raw.answer as { en: string }).en.trim()
+                : '',
+          }
           : { ar: '', en: '' };
       const platform =
         raw.platform === 'ghadaq' ||
-        raw.platform === 'manasik' ||
-        raw.platform === 'shared'
+          raw.platform === 'manasik' ||
+          raw.platform === 'shared'
           ? raw.platform
           : 'shared';
       const showOnProductDetails =
@@ -320,17 +320,17 @@ export default function AppearancePage() {
       setDefaultMessages({
         ghadaq:
           byProject.ghadaq?.success &&
-          typeof byProject.ghadaq.data?.whatsAppDefaultMessage === 'string'
+            typeof byProject.ghadaq.data?.whatsAppDefaultMessage === 'string'
             ? byProject.ghadaq.data.whatsAppDefaultMessage
             : '',
         manasik:
           byProject.manasik?.success &&
-          typeof byProject.manasik.data?.whatsAppDefaultMessage === 'string'
+            typeof byProject.manasik.data?.whatsAppDefaultMessage === 'string'
             ? byProject.manasik.data.whatsAppDefaultMessage
             : '',
         shared:
           byProject.shared?.success &&
-          typeof byProject.shared.data?.whatsAppDefaultMessage === 'string'
+            typeof byProject.shared.data?.whatsAppDefaultMessage === 'string'
             ? byProject.shared.data.whatsAppDefaultMessage
             : '',
       });
@@ -416,6 +416,7 @@ export default function AppearancePage() {
   );
 
   const handleDeleteImage = (row: 'row1' | 'row2', index: number) => {
+    const imageToDelete = images[activeProject]?.[row]?.[index];
     setImages((prev) => ({
       ...prev,
       [activeProject]: {
@@ -423,6 +424,16 @@ export default function AppearancePage() {
         [row]: prev[activeProject][row].filter((_, i) => i !== index),
       },
     }));
+
+    // Best-effort: delete the image from R2 so it doesn't become an orphan.
+    if (imageToDelete && !imageToDelete.startsWith('data:')) {
+      fetch(`/api/upload/image?url=${encodeURIComponent(imageToDelete)}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      }).catch((err) => {
+        console.warn('Failed to delete image from R2:', err);
+      });
+    }
   };
 
   const handleDeleteAudio = async (id: string) => {
@@ -487,7 +498,20 @@ export default function AppearancePage() {
   );
 
   const handleDeleteProductBanner = useCallback((id: string) => {
-    setProductsBanners((prev) => prev.filter((banner) => banner.id !== id));
+    setProductsBanners((prev) => {
+      const bannerToDelete = prev.find((b) => b.id === id);
+      // Best-effort: delete the banner image from R2 so it doesn't
+      // become an orphan.
+      if (bannerToDelete?.imageUrl && !bannerToDelete.imageUrl.startsWith('data:')) {
+        fetch(`/api/upload/image?url=${encodeURIComponent(bannerToDelete.imageUrl)}`, {
+          method: 'DELETE',
+          credentials: 'include',
+        }).catch((err) => {
+          console.warn('Failed to delete product banner from R2:', err);
+        });
+      }
+      return prev.filter((banner) => banner.id !== id);
+    });
   }, []);
 
   const handleUpdateProductBanner = useCallback(
@@ -523,19 +547,19 @@ export default function AppearancePage() {
     value: ProductBannerPlatform;
     label: string;
   }> = [
-    { value: 'ghadaq', label: t('productsBannerTargetGhadaq') },
-    { value: 'manasik', label: t('productsBannerTargetManasik') },
-    { value: 'shared', label: t('productsBannerTargetBoth') },
-  ];
+      { value: 'ghadaq', label: t('productsBannerTargetGhadaq') },
+      { value: 'manasik', label: t('productsBannerTargetManasik') },
+      { value: 'shared', label: t('productsBannerTargetBoth') },
+    ];
 
   const productBannerLanguageOptions: Array<{
     value: ProductBannerLanguage;
     label: string;
   }> = [
-    { value: 'ar', label: t('productsBannerLanguageAr') },
-    { value: 'en', label: t('productsBannerLanguageEn') },
-    { value: 'shared', label: t('productsBannerLanguageShared') },
-  ];
+      { value: 'ar', label: t('productsBannerLanguageAr') },
+      { value: 'en', label: t('productsBannerLanguageEn') },
+      { value: 'shared', label: t('productsBannerLanguageShared') },
+    ];
 
   const handleMoveImage = (fromRow: 'row1' | 'row2', index: number) => {
     const toRow = fromRow === 'row1' ? 'row2' : 'row1';
@@ -694,7 +718,18 @@ export default function AppearancePage() {
             onDelete={handleDeleteAudio}
             onUpdate={handleAudioUpdate}
             onSetMain={handleAudioSetMain}
-            onRemoveImage={(id) => handleAudioUpdate(id, { userImage: '' })}
+            onRemoveImage={(id) => {
+              const audio = audioReviews.find((a) => a.id === id);
+              if (audio?.userImage && !audio.userImage.startsWith('data:')) {
+                fetch(`/api/upload/image?url=${encodeURIComponent(audio.userImage)}`, {
+                  method: 'DELETE',
+                  credentials: 'include',
+                }).catch((err) => {
+                  console.warn('Failed to delete audio user image from R2:', err);
+                });
+              }
+              handleAudioUpdate(id, { userImage: '' });
+            }}
             t={t}
           />
 

@@ -473,8 +473,12 @@ export default function CreateManualOrderModal({
   const priceInputRefs = useRef<Map<number, HTMLInputElement>>(new Map());
   const lastLookupRef = useRef<{ phone: string; email: string; source: string }>({ phone: '', email: '', source: '' });
   const skipBlurValidationRef = useRef(false);
+  const pendingInvoiceStatusRef = useRef<'confirmed' | 'waiting' | null>(null);
+  const [pendingInvoiceStatus, setPendingInvoiceStatus] = useState<'confirmed' | 'waiting' | null>(null);
+  // invoiceInputRef → for files (PDF, DOC, TXT)
+  // invoiceImageInputRef → for images (JPG, PNG, WebP)
   const invoiceInputRef = useRef<HTMLInputElement | null>(null);
-  const invoiceFileInputRef = useRef<HTMLInputElement | null>(null);
+  const invoiceImageInputRef = useRef<HTMLInputElement | null>(null);
 
   const invoicesRef = useRef<InvoiceEntry[]>([]);
   invoicesRef.current = invoices;
@@ -489,6 +493,8 @@ export default function CreateManualOrderModal({
     });
     dispatch({ type: 'RESET_UI' });
     lastLookupRef.current = { phone: '', email: '', source: '' };
+    pendingInvoiceStatusRef.current = null;
+    setPendingInvoiceStatus(null);
     clearCachedForm();
   }, [user]);
 
@@ -985,28 +991,29 @@ export default function CreateManualOrderModal({
     });
   };
 
-  // Handler for inline invoice file selection — adds the file with
-  // default status (waiting) and empty value. The admin then fills in
-  // the value, currency, and status inline in the invoice list.
-  // `mode` determines which file types are accepted: "image" or "file".
-  const handleInvoiceFileChange = (
-    e: React.ChangeEvent<HTMLInputElement>,
-    mode: 'image' | 'file',
-  ) => {
+  // Handler for invoice file selection — uses the pending invoice status
+  // (confirmed/waiting) that the admin selected before picking the file.
+  const handleInvoiceFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    const imageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-    const fileTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-    const allowedTypes = mode === 'image' ? imageTypes : fileTypes;
+    const invoiceStatus = pendingInvoiceStatusRef.current ?? 'waiting';
+
+    const allowedTypes = [
+      'image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif',
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'text/plain',
+    ];
 
     for (const file of Array.from(files)) {
       if (!allowedTypes.includes(file.type)) {
-        toast.error(t('editOrder.invalidImage') || 'Invalid file type');
+        toast.error(t('editOrder.invalidInvoice') || 'Invalid file type');
         continue;
       }
       if (file.size > 10 * 1024 * 1024) {
-        toast.error(t('editOrder.imageTooLarge') || 'File too large');
+        toast.error(t('editOrder.invoiceTooLarge') || 'File too large');
         continue;
       }
 
@@ -1015,7 +1022,7 @@ export default function CreateManualOrderModal({
         type: 'ADD_INVOICE',
         invoice: {
           file,
-          invoiceStatus: 'waiting',
+          invoiceStatus,
           value: '',
           currency: form.currency || 'EGP',
           previewUrl,
@@ -1023,9 +1030,11 @@ export default function CreateManualOrderModal({
       });
     }
 
-    // Reset the input so the same file can be selected again
-    const ref = mode === 'image' ? invoiceInputRef : invoiceFileInputRef;
-    if (ref.current) ref.current.value = '';
+    // Reset the pending status and the input so the same file can be selected again
+    pendingInvoiceStatusRef.current = null;
+    setPendingInvoiceStatus(null);
+    if (invoiceInputRef.current) invoiceInputRef.current.value = '';
+    if (invoiceImageInputRef.current) invoiceImageInputRef.current.value = '';
   };
 
   // Toggle invoice status between confirmed and waiting, then
@@ -1507,6 +1516,9 @@ export default function CreateManualOrderModal({
     // Reset the lookup ref so the user lookup fires again when the
     // modal reopens (restoring linkedUserId from the cached phone/email).
     lastLookupRef.current = { phone: '', email: '', source: '' };
+    // Reset the pending invoice status
+    pendingInvoiceStatusRef.current = null;
+    setPendingInvoiceStatus(null);
     onClose();
   };
 
@@ -1661,12 +1673,14 @@ export default function CreateManualOrderModal({
 
       {/* Referral */}
       <div className="flex flex-col gap-2">
-        <Tabs
-          value={form.referralId}
-          options={referralOptions}
-          onChange={(val) => setForm((prev) => ({ ...prev, referralId: val ?? '' }))}
-          size="md"
-        />
+        <div className="overflow-x-auto">
+          <Tabs
+            value={form.referralId}
+            options={referralOptions}
+            onChange={(val) => setForm((prev) => ({ ...prev, referralId: val ?? '' }))}
+            size="md"
+          />
+        </div>
       </div>
 
       {/* Items */}
@@ -2025,36 +2039,71 @@ export default function CreateManualOrderModal({
 
           {!isEasykash && (
             <div className="flex flex-col gap-3">
-              {/* Upload button */}
+              {/* Upload buttons — two-step flow: first pick status, then pick file type */}
               <div className="flex flex-wrap items-center gap-3">
                 {uploadingInvoice ? (
                   <span className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-stroke text-secondary">
                     <LuRefreshCw size={16} className="animate-spin" />
                     {t('createManualOrder.uploadingInvoice') || 'Uploading...'}
                   </span>
-                ) : (
-                  <div className="flex gap-2">
-                    <Button
+                ) : pendingInvoiceStatus !== null ? (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
                       type="button"
-                      variant="outline"
-                      size="sm"
-                      className={formErrors.invoice ? 'border-error text-error hover:text-error hover:border-error' : ''}
+                      onClick={() => invoiceImageInputRef.current?.click()}
+                      className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-stroke hover:border-primary hover:text-primary transition-colors text-sm"
+                    >
+                      <LuImage size={16} />
+                      {t('createManualOrder.uploadAsImage') || 'Image'}
+                    </button>
+                    <button
+                      type="button"
                       onClick={() => invoiceInputRef.current?.click()}
+                      className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-stroke hover:border-primary hover:text-primary transition-colors text-sm"
                     >
-                      <LuImage size={16} className="me-2" />
-                      {t('createManualOrder.uploadImageInvoice') || 'Image Invoice'}
+                      <LuFileText size={16} />
+                      {t('createManualOrder.uploadAsFile') || 'File'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        pendingInvoiceStatusRef.current = null;
+                        setPendingInvoiceStatus(null);
+                      }}
+                      className="inline-flex items-center gap-1 px-2 py-2 rounded-lg text-secondary hover:text-foreground transition-colors text-sm"
+                    >
+                      <LuX size={16} />
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className={formErrors.invoice ? 'border-error text-error hover:text-error hover:border-error' : ''}
+                      onClick={() => {
+                        pendingInvoiceStatusRef.current = 'confirmed';
+                        setPendingInvoiceStatus('confirmed');
+                      }}
+                    >
+                      <LuUpload size={16} className="me-2" />
+                      {t('createManualOrder.uploadConfirmedInvoice') || 'Confirmed Invoice'}
                     </Button>
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
                       className={formErrors.invoice ? 'border-error text-error hover:text-error hover:border-error' : ''}
-                      onClick={() => invoiceFileInputRef.current?.click()}
+                      onClick={() => {
+                        pendingInvoiceStatusRef.current = 'waiting';
+                        setPendingInvoiceStatus('waiting');
+                      }}
                     >
-                      <LuFileText size={16} className="me-2" />
-                      {t('createManualOrder.uploadFileInvoice') || 'File Invoice'}
+                      <LuUpload size={16} className="me-2" />
+                      {t('createManualOrder.uploadWaitingInvoice') || 'Waiting Invoice'}
                     </Button>
-                  </div>
+                  </>
                 )}
               </div>
 
@@ -2062,18 +2111,18 @@ export default function CreateManualOrderModal({
               <input
                 ref={invoiceInputRef}
                 type="file"
-                accept="image/jpeg,image/jpg,image/png,image/webp"
                 multiple
+                accept="application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
                 className="hidden"
-                onChange={(e) => handleInvoiceFileChange(e, 'image')}
+                onChange={handleInvoiceFileChange}
               />
               <input
-                ref={invoiceFileInputRef}
+                ref={invoiceImageInputRef}
                 type="file"
-                accept="application/pdf,image/jpeg,image/jpg,image/png,image/webp"
                 multiple
+                accept="image/*"
                 className="hidden"
-                onChange={(e) => handleInvoiceFileChange(e, 'file')}
+                onChange={handleInvoiceFileChange}
               />
 
               {/* Invoice list */}

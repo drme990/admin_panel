@@ -41,18 +41,13 @@ interface InvoiceUploadModalProps {
   namespace?: 'orders' | 'execution';
 }
 
-const ALLOWED_IMAGE_TYPES = [
+const ALL_ALLOWED_TYPES = [
   'image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif',
-];
-
-const ALLOWED_FILE_TYPES = [
   'application/pdf',
   'application/msword',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   'text/plain',
 ];
-
-const ALL_ALLOWED_TYPES = [...ALLOWED_IMAGE_TYPES, ...ALLOWED_FILE_TYPES];
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
 export default function InvoiceUploadModal({
@@ -68,62 +63,87 @@ export default function InvoiceUploadModal({
 }: InvoiceUploadModalProps) {
   const t = useTranslations(`${namespace}.createManualOrder`);
   const tPay = useTranslations(`${namespace}.createManualPayment`);
-  // Use orders.editOrder for error messages since execution.editOrder
-  // is just a string label, not an object with error keys.
   const tEdit = useTranslations('orders.editOrder');
+
+  // ── Invoice file state ──
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [status, setStatus] = useState<InvoiceStatus>('confirmed');
+  const [invoiceValue, setInvoiceValue] = useState('');
+  const [invoiceCurrency, setInvoiceCurrency] = useState(defaultCurrency);
+
+  // ── Two-step upload flow state (same as create-manual-order-modal) ──
+  const [pendingInvoiceStatus, setPendingInvoiceStatus] = useState<'confirmed' | 'waiting' | null>(null);
+  const pendingInvoiceStatusRef = useRef<'confirmed' | 'waiting' | null>(null);
+
+  // ── Paid/remaining state (same logic as create-manual-order-modal) ──
   const [paidAmount, setPaidAmount] = useState('');
   const [remainingAmount, setRemainingAmount] = useState('');
   const [paymentEditField, setPaymentEditField] = useState<'paid' | 'remaining' | null>(null);
-  const [currency, setCurrency] = useState(defaultCurrency);
+
+  // ── Payment method ──
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | ''>('');
+
+  // ── Errors ──
   const [error, setError] = useState<string | null>(null);
   const [methodError, setMethodError] = useState<string | null>(null);
-  const [dragOver, setDragOver] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const imageInputRef = useRef<HTMLInputElement | null>(null);
 
-  // The remaining unpaid amount on the order — this is the "total" for
-  // the paid/remaining calculation in this modal.
+  // ── Refs ──
+  const invoiceInputRef = useRef<HTMLInputElement | null>(null);
+  const invoiceImageInputRef = useRef<HTMLInputElement | null>(null);
+
+  // The remaining unpaid amount on the order
   const orderRemaining = Math.max(0, orderTotal - alreadyPaid);
+  const orderCur = (orderCurrency || defaultCurrency).toUpperCase();
+  const invoiceCur = invoiceCurrency.toUpperCase();
 
   // Initialize paid amount to the full remaining order value when the
-  // modal opens (or when the remaining value changes). This runs once
-  // per open since the parent remounts with a fresh key.
+  // modal opens. Paid = remaining order value, remaining = 0.
   useEffect(() => {
-    if (isOpen && orderRemaining > 0) {
-      setPaidAmount(orderRemaining.toFixed(2));
-      setRemainingAmount('');
-      setPaymentEditField('paid');
+    if (isOpen) {
+      if (orderRemaining > 0) {
+        setPaidAmount(orderRemaining.toFixed(2));
+        setRemainingAmount('');
+        setPaymentEditField('paid');
+      } else {
+        setPaidAmount('');
+        setRemainingAmount('');
+        setPaymentEditField(null);
+      }
+      // Reset invoice state
+      setFile(null);
+      setPreviewUrl(null);
+      setStatus('confirmed');
+      setInvoiceValue('');
+      setInvoiceCurrency(defaultCurrency);
+      setPaymentMethod('');
+      setError(null);
+      setMethodError(null);
+      pendingInvoiceStatusRef.current = null;
+      setPendingInvoiceStatus(null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
-  // Cleanup preview URL on unmount.
+  // Cleanup preview URL on unmount
   useEffect(() => {
     return () => {
       if (previewUrl) URL.revokeObjectURL(previewUrl);
     };
   }, [previewUrl]);
 
-  // Exchange rate display: shown when invoice currency differs from order currency.
-  // Connected to the PAID amount only.
-  const orderCur = (orderCurrency || defaultCurrency).toUpperCase();
-  const invoiceCur = currency.toUpperCase();
-  const numericPaid = parseFloat(paidAmount) || 0;
-  const showExchangeRate = orderCur !== invoiceCur && numericPaid > 0;
+  // ── File selection handler (same as create-manual-order-modal) ──
+  const handleInvoiceFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selected = e.target.files?.[0];
+    if (!selected) return;
 
-  const handleFileSelect = (selectedFile: File) => {
-    setError(null);
+    const invoiceStatus = pendingInvoiceStatusRef.current ?? 'waiting';
 
-    if (!ALL_ALLOWED_TYPES.includes(selectedFile.type)) {
+    if (!ALL_ALLOWED_TYPES.includes(selected.type)) {
       setError(tEdit('invalidInvoice') || 'Invalid file type');
       return;
     }
-
-    if (selectedFile.size > MAX_FILE_SIZE) {
+    if (selected.size > MAX_FILE_SIZE) {
       setError(tEdit('invoiceTooLarge') || 'File size exceeds 10MB limit');
       return;
     }
@@ -131,35 +151,37 @@ export default function InvoiceUploadModal({
     // Revoke previous preview URL
     if (previewUrl) URL.revokeObjectURL(previewUrl);
 
-    setFile(selectedFile);
-    const newPreviewUrl = selectedFile.type.startsWith('image/')
-      ? URL.createObjectURL(selectedFile)
+    const newPreviewUrl = selected.type.startsWith('image/')
+      ? URL.createObjectURL(selected)
       : null;
+
+    setFile(selected);
     setPreviewUrl(newPreviewUrl);
-  };
+    setStatus(invoiceStatus);
+    setError(null);
 
-  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selected = e.target.files?.[0];
-    if (selected) handleFileSelect(selected);
+    // Reset pending status
+    pendingInvoiceStatusRef.current = null;
+    setPendingInvoiceStatus(null);
+
     // Reset input so the same file can be selected again
-    if (fileInputRef.current) fileInputRef.current.value = '';
-    if (imageInputRef.current) imageInputRef.current.value = '';
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setDragOver(false);
-    const droppedFile = e.dataTransfer.files?.[0];
-    if (droppedFile) handleFileSelect(droppedFile);
+    if (invoiceInputRef.current) invoiceInputRef.current.value = '';
+    if (invoiceImageInputRef.current) invoiceImageInputRef.current.value = '';
   };
 
   const handleRemoveFile = () => {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     setFile(null);
     setPreviewUrl(null);
+    setInvoiceValue('');
     setError(null);
   };
 
+  const handleToggleStatus = () => {
+    setStatus((prev) => (prev === 'confirmed' ? 'waiting' : 'confirmed'));
+  };
+
+  // ── Paid/remaining handlers (same as create-manual-order-modal) ──
   const handlePaidChange = (val: string) => {
     const paidNum = parseFloat(val);
     const rem = Number.isFinite(paidNum) && paidNum >= 0
@@ -183,7 +205,6 @@ export default function InvoiceUploadModal({
   };
 
   const handlePaidFocus = () => {
-    // Swapping from remaining → paid: reset both fields
     if (paymentEditField === 'remaining') {
       setPaidAmount('');
       setRemainingAmount('');
@@ -192,7 +213,6 @@ export default function InvoiceUploadModal({
   };
 
   const handleRemainingFocus = () => {
-    // Swapping from paid → remaining: reset both fields
     if (paymentEditField === 'paid') {
       setPaidAmount('');
       setRemainingAmount('');
@@ -200,6 +220,7 @@ export default function InvoiceUploadModal({
     setPaymentEditField('remaining');
   };
 
+  // ── Confirm handler ──
   const handleConfirm = () => {
     setError(null);
     setMethodError(null);
@@ -231,7 +252,7 @@ export default function InvoiceUploadModal({
       file,
       invoiceStatus: status,
       value: paidAmount,
-      currency,
+      currency: invoiceCurrency,
       previewUrl,
       paymentMethod: paymentMethod as PaymentMethod,
     });
@@ -239,8 +260,7 @@ export default function InvoiceUploadModal({
 
   const handleClose = () => {
     // Don't revoke the preview URL here — it's passed to the parent
-    // component which takes ownership. The parent will revoke it when
-    // the invoice is removed or the modal is closed.
+    // component which takes ownership.
     onClose();
   };
 
@@ -289,139 +309,27 @@ export default function InvoiceUploadModal({
       }
     >
       <div className="flex flex-col gap-4">
-        {/* File upload area */}
-        {!file ? (
-          <div
-            onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-            onDragLeave={() => setDragOver(false)}
-            onDrop={handleDrop}
-            className={`flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed p-8 transition-colors cursor-pointer ${dragOver
-              ? 'border-primary bg-primary/5'
-              : 'border-stroke hover:border-primary/50 hover:bg-muted/30'
-              }`}
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <div className="flex items-center gap-2 text-secondary">
-              <LuUpload size={28} />
-            </div>
-            <p className="text-sm text-center text-secondary">
-              {t('dropFileHere') || 'Click to browse or drag and drop a file here'}
-            </p>
-            <p className="text-xs text-center text-secondary/70">
-              {t('fileTypesHint') || 'Images (JPG, PNG, WebP, GIF) or documents (PDF, DOC, DOCX, TXT) — max 10MB'}
-            </p>
-            <div className="flex items-center gap-2 mt-1">
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  imageInputRef.current?.click();
-                }}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-stroke hover:border-primary hover:text-primary transition-colors text-xs"
-              >
-                <LuImage size={14} />
-                {t('uploadAsImage') || 'Image'}
-              </button>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  fileInputRef.current?.click();
-                }}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-stroke hover:border-primary hover:text-primary transition-colors text-xs"
-              >
-                <LuFileText size={14} />
-                {t('uploadAsFile') || 'File'}
-              </button>
-            </div>
+        {/* ── Order total + remaining summary ── */}
+        <div className="flex items-center justify-between rounded-lg border border-stroke bg-muted/30 px-4 py-3">
+          <div className="flex flex-col">
+            <span className="text-xs text-secondary">
+              {t('orderTotal') || 'Order Total'}
+            </span>
+            <span className="text-sm font-semibold text-foreground">
+              {orderTotal.toFixed(2)} {orderCur}
+            </span>
           </div>
-        ) : (
-          <div className="rounded-xl border border-stroke p-4 flex flex-col gap-3 bg-background">
-            {/* File info + remove */}
-            <div className="flex items-center gap-2">
-              {file.type.startsWith('image/') ? (
-                <LuImage size={18} className="text-secondary shrink-0" />
-              ) : (
-                <LuFileText size={18} className="text-secondary shrink-0" />
-              )}
-              <span className="text-sm text-foreground truncate flex-1 min-w-0">{file.name}</span>
-              <button
-                type="button"
-                onClick={handleRemoveFile}
-                className="shrink-0 w-7 h-7 flex items-center justify-center rounded-lg text-error hover:bg-error/10 transition-colors"
-                aria-label="Remove file"
-              >
-                <LuX size={16} />
-              </button>
-            </div>
-            {/* Preview */}
-            {previewUrl && (
-              <div className="flex justify-center">
-                {/* eslint-disable-next-line @next/next/no-img-element -- blob URL preview */}
-                <img
-                  src={previewUrl}
-                  alt="Invoice preview"
-                  className="max-h-48 rounded-lg border border-stroke object-contain bg-background"
-                />
-              </div>
-            )}
-            {/* Change file button */}
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-stroke hover:border-primary hover:text-primary transition-colors text-xs self-center"
-            >
-              <LuUpload size={14} />
-              {t('changeInvoice') || 'Change File'}
-            </button>
-          </div>
-        )}
-
-        {/* Status selection */}
-        <div className="flex flex-col gap-2">
-          <label className="text-sm font-medium text-foreground">
-            {t('invoiceStatus') || 'Invoice Status'}
-          </label>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => setStatus('confirmed')}
-              className={`flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border transition-colors text-sm font-medium ${status === 'confirmed'
-                ? 'border-success text-success bg-success/10'
-                : 'border-stroke text-secondary hover:border-success/50 hover:text-success/70'
-                }`}
-            >
-              <LuCheck size={16} />
-              {t('uploadConfirmedInvoice') || 'Confirmed'}
-            </button>
-            <button
-              type="button"
-              onClick={() => setStatus('waiting')}
-              className={`flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border transition-colors text-sm font-medium ${status === 'waiting'
-                ? 'border-warning text-warning bg-warning/10'
-                : 'border-stroke text-secondary hover:border-warning/50 hover:text-warning/70'
-                }`}
-            >
-              <LuClock size={16} />
-              {t('uploadWaitingInvoice') || 'Waiting'}
-            </button>
+          <div className="flex flex-col text-end">
+            <span className="text-xs text-secondary">
+              {t('remaining') || 'Remaining'}
+            </span>
+            <span className="text-sm font-semibold text-error">
+              {orderRemaining.toFixed(2)} {orderCur}
+            </span>
           </div>
         </div>
 
-        {/* Payment method selector */}
-        <Dropdown
-          value={paymentMethod}
-          options={paymentMethodOptions}
-          onChange={(val) => {
-            setPaymentMethod(val as PaymentMethod | '');
-            setMethodError(null);
-          }}
-          placeholder={t('paymentMethod') || 'Payment Method'}
-          error={methodError || undefined}
-        />
-
-
-        {/* Paid + Remaining inputs (same logic as create-manual-order-modal) */}
+        {/* ── Paid + Remaining inputs (same as create-manual-order-modal) ── */}
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between">
             <label className="text-sm font-medium text-foreground">
@@ -443,7 +351,6 @@ export default function InvoiceUploadModal({
                 readOnly={paymentEditField === 'remaining'}
                 onChange={(e) => handlePaidChange(e.target.value)}
                 onFocus={handlePaidFocus}
-                error={error || undefined}
                 className={`px-3 py-2 text-sm font-bold ${paymentEditField === 'remaining'
                   ? 'border-success/30 bg-success/5 text-success cursor-not-allowed'
                   : 'border-success/40 bg-success/5 text-success focus:ring-success/20 focus:border-success'
@@ -467,50 +374,183 @@ export default function InvoiceUploadModal({
                   }`}
               />
             </div>
-            {/* Currency selector */}
-            <div className="shrink-0 w-24">
-              <select
-                value={currency}
-                onChange={(e) => setCurrency(e.target.value)}
-                className="w-full h-10.5 px-3 rounded-lg border border-stroke bg-background text-sm text-foreground"
-              >
-                {currencyOptions.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
           </div>
           <p className="text-xs text-secondary">
             {t('paidAmountHint') || 'This amount will be added to the order\'s total paid amount.'}
           </p>
-          {/* Exchange rate display — connected to PAID amount only,
-              shown only when invoice currency differs from order currency */}
-          {showExchangeRate && (
+        </div>
+
+        {/* ── Payment method selector ── */}
+        <Dropdown
+          value={paymentMethod}
+          options={paymentMethodOptions}
+          onChange={(val) => {
+            setPaymentMethod(val as PaymentMethod | '');
+            setMethodError(null);
+          }}
+          placeholder={t('paymentMethod') || 'Payment Method'}
+          error={methodError || undefined}
+        />
+
+        {/* ── Invoice upload area ── */}
+        {!file ? (
+          <div className="flex flex-col gap-3">
+            {/* Two-step upload buttons (same as create-manual-order-modal) */}
+            <div className="flex flex-wrap items-center gap-3">
+              {pendingInvoiceStatus !== null ? (
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => invoiceImageInputRef.current?.click()}
+                    className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-stroke hover:border-primary hover:text-primary transition-colors text-sm"
+                  >
+                    <LuImage size={16} />
+                    {t('uploadAsImage') || 'Image'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => invoiceInputRef.current?.click()}
+                    className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-stroke hover:border-primary hover:text-primary transition-colors text-sm"
+                  >
+                    <LuFileText size={16} />
+                    {t('uploadAsFile') || 'File'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      pendingInvoiceStatusRef.current = null;
+                      setPendingInvoiceStatus(null);
+                    }}
+                    className="inline-flex items-center gap-1 px-2 py-2 rounded-lg text-secondary hover:text-foreground transition-colors text-sm"
+                  >
+                    <LuX size={16} />
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className={error ? 'border-error text-error hover:text-error hover:border-error' : ''}
+                    onClick={() => {
+                      pendingInvoiceStatusRef.current = 'confirmed';
+                      setPendingInvoiceStatus('confirmed');
+                    }}
+                  >
+                    <LuUpload size={16} className="me-2" />
+                    {t('uploadConfirmedInvoice') || 'Confirmed Invoice'}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className={error ? 'border-error text-error hover:text-error hover:border-error' : ''}
+                    onClick={() => {
+                      pendingInvoiceStatusRef.current = 'waiting';
+                      setPendingInvoiceStatus('waiting');
+                    }}
+                  >
+                    <LuUpload size={16} className="me-2" />
+                    {t('uploadWaitingInvoice') || 'Waiting Invoice'}
+                  </Button>
+                </>
+              )}
+            </div>
+            {error && <p className="text-xs text-error">{error}</p>}
+          </div>
+        ) : (
+          /* ── Invoice card (same style as create-manual-order-modal) ── */
+          <div className="rounded-lg border border-stroke p-3 flex flex-col gap-2 bg-background">
+            {/* File info + status badge + remove */}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleToggleStatus}
+                className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full transition-colors cursor-pointer ${status === 'confirmed' ? 'text-success bg-success/10 hover:bg-success/20' : 'text-warning bg-warning/10 hover:bg-warning/20'}`}
+                title={t('toggleInvoiceStatus') || 'Click to toggle status'}
+              >
+                {status === 'confirmed'
+                  ? (<><LuCheck size={10} /> {t('uploadConfirmedInvoice') || 'Confirmed'}</>)
+                  : (<><LuClock size={10} /> {t('uploadWaitingInvoice') || 'Waiting'}</>)}
+              </button>
+              <span className="text-sm text-foreground truncate flex-1 min-w-0">{file.name}</span>
+              <span className="text-sm font-semibold text-foreground shrink-0">
+                {invoiceValue ? `${parseFloat(invoiceValue).toFixed(2)} ${invoiceCurrency}` : '—'}
+              </span>
+              <button
+                type="button"
+                onClick={handleRemoveFile}
+                className="shrink-0 w-7 h-7 flex items-center justify-center rounded-lg text-error hover:bg-error/10 transition-colors"
+                aria-label="Remove invoice"
+              >
+                <LuX size={16} />
+              </button>
+            </div>
+            {/* Preview or file icon placeholder */}
+            {previewUrl ? (
+              <div className="w-fit">
+                {/* eslint-disable-next-line @next/next/no-img-element -- blob URL preview */}
+                <img
+                  src={previewUrl}
+                  alt="Invoice preview"
+                  className="h-24 rounded-lg border border-stroke object-contain bg-background"
+                />
+              </div>
+            ) : (
+              <div className="w-fit h-24 px-4 flex items-center justify-center rounded-lg border border-stroke bg-background">
+                <LuFileText size={32} className="text-secondary" />
+              </div>
+            )}
+            {/* Invoice value + currency (editable inline) */}
+            <div className="flex flex-row gap-2 items-start">
+              <div className="flex-1 min-w-0">
+                <Input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={invoiceValue}
+                  placeholder={t('invoiceValue') || 'Invoice Value'}
+                  onChange={(e) => {
+                    setInvoiceValue(e.target.value);
+                    // Sync paid amount with invoice value
+                    handlePaidChange(e.target.value);
+                  }}
+                  error={error || undefined}
+                />
+              </div>
+              <div className="shrink-0 w-24 pt-px">
+                <Dropdown
+                  value={invoiceCurrency}
+                  options={currencyOptions}
+                  onChange={(val) => setInvoiceCurrency(val)}
+                />
+              </div>
+            </div>
+            {/* Exchange rate display */}
             <ExchangeRateDisplay
               fromCurrency={invoiceCur}
               toCurrency={orderCur}
-              amount={numericPaid}
+              amount={parseFloat(invoiceValue) || 0}
               namespace={namespace}
             />
-          )}
-        </div>
+          </div>
+        )}
 
-        {/* Hidden file inputs */}
+        {/* Hidden file inputs (same as create-manual-order-modal) */}
         <input
-          ref={fileInputRef}
+          ref={invoiceInputRef}
           type="file"
-          accept={ALL_ALLOWED_TYPES.join(',')}
+          accept="application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
           className="hidden"
-          onChange={handleFileInputChange}
+          onChange={handleInvoiceFileChange}
         />
         <input
-          ref={imageInputRef}
+          ref={invoiceImageInputRef}
           type="file"
-          accept={ALLOWED_IMAGE_TYPES.join(',')}
+          accept="image/*"
           className="hidden"
-          onChange={handleFileInputChange}
+          onChange={handleInvoiceFileChange}
         />
       </div>
     </Modal>

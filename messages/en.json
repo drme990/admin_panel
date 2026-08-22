@@ -2544,6 +2544,8 @@
       "cutoffTime": "Cutoff Time",
       "cutoffHint": "Orders placed after this time will be scheduled for the day after tomorrow.",
       "cutoffTimeHint": "Set the daily closing time. After this time, new orders default to the next day.",
+      "summerTime": "Summer Time (DST)",
+      "summerTimeHint": "When enabled, Egypt time is calculated as UTC+3 (daylight saving time). When disabled, UTC+2 (standard time) is used. Enable it during summer and disable it during winter.",
       "notSet": "Not set"
     },
     "exchange": {

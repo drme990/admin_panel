@@ -1,17 +1,70 @@
 const EGYPT_TIMEZONE = 'Africa/Cairo';
 
 /**
+ * Summer-time override type.
+ * - `true`  → force UTC+3 (Egypt DST / summer time)
+ * - `false` → force UTC+2 (Egypt standard time)
+ * - `null`/`undefined` → auto-detect using the `Africa/Cairo` IANA timezone
+ */
+type SummerTimeOverride = boolean | null | undefined;
+
+/**
+ * Get the effective UTC offset in minutes for Egypt, respecting the
+ * manual summer-time override.
+ */
+function getEgyptOffsetMinutes(summerTime: SummerTimeOverride): number {
+  if (summerTime === true) return 180;
+  if (summerTime === false) return 120;
+
+  // Auto-detect from Africa/Cairo IANA timezone
+  const now = new Date();
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: EGYPT_TIMEZONE,
+    timeZoneName: 'shortOffset',
+  }).formatToParts(now);
+  const offsetPart = parts.find((p) => p.type === 'timeZoneName');
+  if (offsetPart) {
+    const match = offsetPart.value.match(/GMT([+-])(\d{1,2})(?::(\d{2}))?/);
+    if (match) {
+      const sign = match[1] === '+' ? 1 : -1;
+      const hours = parseInt(match[2], 10);
+      const minutes = match[3] ? parseInt(match[3], 10) : 0;
+      return sign * (hours * 60 + minutes);
+    }
+  }
+  return 120;
+}
+
+/**
+ * Convert a Date to a YYYY-MM-DD string in Egypt time, respecting the
+ * summer-time override.
+ */
+function toEgyptDateString(date: Date, summerTime: SummerTimeOverride = undefined): string {
+  const offsetMs = getEgyptOffsetMinutes(summerTime) * 60 * 1000;
+  const local = new Date(date.getTime() + offsetMs);
+  const y = local.getUTCFullYear();
+  const m = String(local.getUTCMonth() + 1).padStart(2, '0');
+  const d = String(local.getUTCDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+/**
+ * Convert a Date to an HH:mm string in Egypt time, respecting the
+ * summer-time override.
+ */
+function toEgyptTimeString(date: Date, summerTime: SummerTimeOverride = undefined): string {
+  const offsetMs = getEgyptOffsetMinutes(summerTime) * 60 * 1000;
+  const local = new Date(date.getTime() + offsetMs);
+  const h = String(local.getUTCHours()).padStart(2, '0');
+  const m = String(local.getUTCMinutes()).padStart(2, '0');
+  return `${h}:${m}`;
+}
+
+/**
  * Get the current date in Egypt as a YYYY-MM-DD string.
  */
-function getEgyptToday(): string {
-  const now = new Date();
-  const formatter = new Intl.DateTimeFormat('en-CA', {
-    timeZone: EGYPT_TIMEZONE,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  });
-  return formatter.format(now);
+function getEgyptToday(summerTime: SummerTimeOverride = undefined): string {
+  return toEgyptDateString(new Date(), summerTime);
 }
 
 /**
@@ -34,15 +87,19 @@ function addDays(dateStr: string, days: number): string {
 function isAtOrAfterCutoff(
   cutoffTime: string | null | undefined,
   baseDate: string,
+  summerTime: SummerTimeOverride = undefined,
 ): boolean {
   if (!cutoffTime || !baseDate) return false;
 
-  const iso = `${baseDate}T${cutoffTime}:00+02:00`;
-  const cutoffDate = new Date(iso);
-  if (Number.isNaN(cutoffDate.getTime())) return false;
+  const egyptToday = getEgyptToday(summerTime);
+  const egyptNowTime = toEgyptTimeString(new Date(), summerTime);
 
-  const now = new Date();
-  return now.getTime() >= cutoffDate.getTime();
+  if (egyptToday > baseDate) return true;
+  if (egyptToday < baseDate) return false;
+
+  const [ah, am] = egyptNowTime.split(':').map(Number);
+  const [bh, bm] = cutoffTime.split(':').map(Number);
+  return (ah * 60 + am) - (bh * 60 + bm) >= 0;
 }
 
 /**
@@ -65,18 +122,16 @@ function skipBlockedDates(
 /**
  * Check if lastDayEndAt is for the current Egypt day.
  */
-function isDayEndedToday(lastDayEndAt: string | null | undefined): boolean {
+function isDayEndedToday(
+  lastDayEndAt: string | null | undefined,
+  summerTime: SummerTimeOverride = undefined,
+): boolean {
   if (!lastDayEndAt) return false;
   const endedDate = new Date(lastDayEndAt);
   if (Number.isNaN(endedDate.getTime())) return false;
 
-  const egyptToday = getEgyptToday();
-  const endedEgyptDate = new Intl.DateTimeFormat('en-CA', {
-    timeZone: EGYPT_TIMEZONE,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(endedDate);
+  const egyptToday = getEgyptToday(summerTime);
+  const endedEgyptDate = toEgyptDateString(endedDate, summerTime);
 
   return endedEgyptDate === egyptToday;
 }
@@ -86,6 +141,7 @@ export interface BookingSettings {
   cutoffTime: string | null;
   lastDayEndAt: string | null;
   defaultExecutionDate: string | null;
+  summerTimeEnabled?: boolean;
 }
 
 /**
@@ -101,7 +157,8 @@ export interface BookingSettings {
 export function computeDefaultExecutionDate(
   settings: BookingSettings,
 ): string {
-  const today = getEgyptToday();
+  const summerTime = settings.summerTimeEnabled;
+  const today = getEgyptToday(summerTime);
   const tomorrow = addDays(today, 1);
   const blockedDates = new Set(
     (settings.blockedExecutionDates ?? []).filter((d) =>
@@ -115,13 +172,13 @@ export function computeDefaultExecutionDate(
     base = tomorrow;
   }
 
-  if (base === tomorrow && isAtOrAfterCutoff(settings.cutoffTime, base)) {
+  if (base === tomorrow && isAtOrAfterCutoff(settings.cutoffTime, base, summerTime)) {
     base = addDays(base, 1);
   }
 
   base = skipBlockedDates(base, blockedDates);
 
-  if (isDayEndedToday(settings.lastDayEndAt)) {
+  if (isDayEndedToday(settings.lastDayEndAt, summerTime)) {
     base = addDays(base, 1);
     base = skipBlockedDates(base, blockedDates);
   }

@@ -11,6 +11,7 @@ import {
 import Button from '@/components/ui/button';
 import CustomDatePicker from '@/components/ui/custom-date-picker';
 import TimePicker from '@/components/ui/time-picker';
+import Switch from '@/components/ui/switch';
 import ConfirmModal, { useConfirmModal } from '@/components/ui/confirm-modal';
 
 function formatDateForDisplay(value: string): string {
@@ -76,6 +77,7 @@ export default function BookingAdminPage() {
   const [cutoffTime, setCutoffTime] = useState('');
   const [lastDayEndAt, setLastDayEndAt] = useState<string | null>(null);
   const [defaultExecutionDate, setDefaultExecutionDate] = useState<string>('');
+  const [summerTimeEnabled, setSummerTimeEnabled] = useState<boolean>(false);
 
   const { confirm, modalProps } = useConfirmModal();
 
@@ -114,6 +116,7 @@ export default function BookingAdminPage() {
           setCutoffTime(data.data?.cutoffTime ?? '02:00');
           setLastDayEndAt(data.data?.lastDayEndAt ?? null);
           setDefaultExecutionDate(data.data?.defaultExecutionDate ?? '');
+          setSummerTimeEnabled(data.data?.summerTimeEnabled ?? false);
         } else {
           toast.error(t('loadFailed'));
         }
@@ -190,6 +193,7 @@ export default function BookingAdminPage() {
 
       setLastDayEndAt(iso);
       setDefaultExecutionDate(data.data?.defaultExecutionDate ?? '');
+      setSummerTimeEnabled(data.data?.summerTimeEnabled ?? false);
       toast.success(t('dayEndSuccess'));
     } catch {
       toast.error(t('dayEndFailed'));
@@ -214,6 +218,7 @@ export default function BookingAdminPage() {
 
       setLastDayEndAt(null);
       setDefaultExecutionDate(data.data?.defaultExecutionDate ?? '');
+      setSummerTimeEnabled(data.data?.summerTimeEnabled ?? false);
       toast.success(t('dayOpenSuccess'));
     } catch {
       toast.error(t('dayOpenFailed'));
@@ -228,6 +233,7 @@ export default function BookingAdminPage() {
       const body: Record<string, unknown> = {
         blockedExecutionDates: sortedDates,
         cutoffTime: cutoffTime || null,
+        summerTimeEnabled,
       };
 
       if (defaultExecutionDate) {
@@ -246,6 +252,7 @@ export default function BookingAdminPage() {
       }
 
       setDefaultExecutionDate(data.data?.defaultExecutionDate ?? '');
+      setSummerTimeEnabled(data.data?.summerTimeEnabled ?? false);
       toast.success(t('saveSuccess'));
     } catch {
       toast.error(t('saveFailed'));
@@ -354,6 +361,25 @@ export default function BookingAdminPage() {
                 </Button>
               )}
             </div>
+          </div>
+        </div>
+
+        {/* Summer Time Toggle */}
+        <div className="rounded-site border border-stroke bg-background p-4">
+          <div className="flex items-center justify-between gap-4">
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-foreground">
+                {t('summerTime')}
+              </p>
+              <p className="text-xs text-secondary">
+                {t('summerTimeHint')}
+              </p>
+            </div>
+            <Switch
+              checked={summerTimeEnabled}
+              onChange={setSummerTimeEnabled}
+              disabled={saving}
+            />
           </div>
         </div>
       </div>

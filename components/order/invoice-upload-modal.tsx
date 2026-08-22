@@ -513,8 +513,7 @@ export default function InvoiceUploadModal({
                   placeholder={t('invoiceValue') || 'Invoice Value'}
                   onChange={(e) => {
                     setInvoiceValue(e.target.value);
-                    // Sync paid amount with invoice value
-                    handlePaidChange(e.target.value);
+                    setError(null);
                   }}
                   error={error || undefined}
                 />

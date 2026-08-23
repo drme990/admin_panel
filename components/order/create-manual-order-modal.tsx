@@ -2015,14 +2015,14 @@ export default function CreateManualOrderModal({
           {!isEasykash && (
             <div className="flex flex-col gap-3">
               {/* Upload buttons — two-step flow: first pick status, then pick file type */}
-              <div className="flex flex-wrap items-center gap-3">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full">
                 {uploadingInvoice ? (
                   <span className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-stroke text-secondary">
                     <LuRefreshCw size={16} className="animate-spin" />
                     {t('createManualOrder.uploadingInvoice') || 'Uploading...'}
                   </span>
                 ) : pendingInvoiceStatus !== null ? (
-                  <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2 w-full">
                     <button
                       type="button"
                       onClick={() => invoiceImageInputRef.current?.click()}
@@ -2056,26 +2056,26 @@ export default function CreateManualOrderModal({
                       type="button"
                       variant="outline"
                       size="sm"
-                      className={formErrors.invoice ? 'border-error text-error hover:text-error hover:border-error' : ''}
+                      className={`flex-1 min-w-35 text-xs sm:text-sm ${formErrors.invoice ? 'border-error text-error hover:text-error hover:border-error' : ''}`}
                       onClick={() => {
                         pendingInvoiceStatusRef.current = 'confirmed';
                         setPendingInvoiceStatus('confirmed');
                       }}
                     >
-                      <LuUpload size={16} className="me-2" />
+                      <LuUpload size={14} className="me-1.5 shrink-0" />
                       {t('createManualOrder.uploadConfirmedInvoice') || 'Confirmed Invoice'}
                     </Button>
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
-                      className={formErrors.invoice ? 'border-error text-error hover:text-error hover:border-error' : ''}
+                      className={`flex-1 min-w-35 text-xs sm:text-sm ${formErrors.invoice ? 'border-error text-error hover:text-error hover:border-error' : ''}`}
                       onClick={() => {
                         pendingInvoiceStatusRef.current = 'waiting';
                         setPendingInvoiceStatus('waiting');
                       }}
                     >
-                      <LuUpload size={16} className="me-2" />
+                      <LuUpload size={14} className="me-1.5 shrink-0" />
                       {t('createManualOrder.uploadWaitingInvoice') || 'Waiting Invoice'}
                     </Button>
                   </>

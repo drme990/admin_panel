@@ -8,6 +8,7 @@ import Button from '@/components/ui/button';
 import Input from '@/components/ui/input';
 import Dropdown from '@/components/ui/dropdown';
 import { MANUAL_PAYMENT_METHODS } from '@/lib/order';
+import { useExchangeRate } from '@/lib/order/use-exchange-rate';
 import ExchangeRateDisplay from '@/components/order/exchange-rate-display';
 import type { PaymentMethod } from '@/types/Order';
 
@@ -131,6 +132,18 @@ export default function InvoiceUploadModal({
   const orderRemaining = Math.max(0, orderTotal - alreadyPaid);
   const orderCur = (orderCurrency || defaultCurrency).toUpperCase();
   const invoiceCur = invoiceCurrency.toUpperCase();
+
+  // Exchange rate: convert invoice value → order currency for remaining calc
+  const typedInvoiceValue = parseFloat(invoiceValue) || 0;
+  const { convertedAmount: invoiceValueInOrderCurrency } = useExchangeRate(
+    invoiceCur,
+    orderCur,
+    typedInvoiceValue,
+  );
+  // The invoice value expressed in the order's currency (for remaining calc + tolerance)
+  const invoiceValueInOrderCur = invoiceCur === orderCur
+    ? typedInvoiceValue
+    : (invoiceValueInOrderCurrency ?? 0);
 
   // Reset invoice state when the modal opens. The paid/remaining amounts
   // are now read-only informational displays — the invoice value entered
@@ -487,9 +500,10 @@ export default function InvoiceUploadModal({
 
               {/* ── Remaining amount (auto-calculated, with tolerance badge) ── */}
               {orderRemaining > 0 && (() => {
-                const typedValue = parseFloat(invoiceValue) || 0;
-                const remainingAfter = Math.max(0, orderRemaining - typedValue);
+                // Use the invoice value converted to the order's currency
+                const remainingAfter = Math.max(0, orderRemaining - invoiceValueInOrderCur);
                 const hasTolerance = allowRate && allowRate.value > 0;
+                // Tolerance is in the order's currency (EGP), so it applies directly
                 const toleranceAmount = hasTolerance
                   ? allowRate!.type === 'percentage'
                     ? orderRemaining * allowRate!.value / 100
@@ -497,6 +511,8 @@ export default function InvoiceUploadModal({
                   : 0;
                 const remainingWithTolerance = Math.max(0, remainingAfter - toleranceAmount);
                 const isPaid = hasTolerance ? remainingWithTolerance <= 0.001 : remainingAfter <= 0.001;
+                // Show a loading state while exchange rate is being fetched (different currencies only)
+                const isConverting = invoiceCur !== orderCur && typedInvoiceValue > 0 && invoiceValueInOrderCur === 0;
 
                 return (
                   <div className="mt-1.5 flex items-center justify-between rounded-lg border border-stroke bg-muted/20 px-3 py-1.5">
@@ -504,7 +520,7 @@ export default function InvoiceUploadModal({
                       {t('remainingAfterInvoice') || 'Remaining'}
                     </span>
                     <div className="flex items-center gap-2">
-                      {/* Tolerance badge — only show if tolerance applies */}
+                      {/* Tolerance badge — only show if tolerance is what makes it paid */}
                       {hasTolerance && remainingAfter > 0.001 && remainingWithTolerance <= 0.001 && (
                         <span className="rounded-full bg-info/10 px-2 py-0.5 text-xs font-medium text-info">
                           {allowRate!.type === 'percentage'
@@ -512,8 +528,8 @@ export default function InvoiceUploadModal({
                             : `${allowRate!.value.toFixed(2)} ${orderCur}`}
                         </span>
                       )}
-                      <span className={`text-sm font-bold ${isPaid ? 'text-success' : remainingAfter <= 0.001 ? 'text-success' : 'text-foreground'}`}>
-                        {remainingAfter.toFixed(2)} {orderCur}
+                      <span className={`text-sm font-bold ${isPaid ? 'text-success' : 'text-foreground'}`}>
+                        {isConverting ? '...' : `${remainingAfter.toFixed(2)} ${orderCur}`}
                       </span>
                     </div>
                   </div>

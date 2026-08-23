@@ -2192,7 +2192,6 @@ export default function ExecutionPage() {
         onConfirm={handleInvoiceUploadConfirm}
         orderTotal={invoiceUploadOrderRef.current?.fullAmount ?? invoiceUploadOrderRef.current?.totalAmount ?? 0}
         alreadyPaid={invoiceUploadOrderRef.current?.paidAmount ?? 0}
-        currencyOptions={[{ label: 'EGP', value: 'EGP' }, { label: 'SAR', value: 'SAR' }, { label: 'USD', value: 'USD' }]}
         defaultCurrency={invoiceUploadOrderRef.current?.currency ?? 'EGP'}
         orderCurrency={invoiceUploadOrderRef.current?.currency ?? 'EGP'}
         namespace="execution"

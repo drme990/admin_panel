@@ -10,6 +10,7 @@ import Dropdown from '@/components/ui/dropdown';
 import { MANUAL_PAYMENT_METHODS } from '@/lib/order';
 import { useExchangeRate } from '@/lib/order/use-exchange-rate';
 import ExchangeRateDisplay from '@/components/order/exchange-rate-display';
+import CurrencySelector from '@/components/shared/currency-selector';
 import type { PaymentMethod } from '@/types/Order';
 
 export type InvoiceStatus = 'confirmed' | 'waiting';
@@ -32,8 +33,6 @@ interface InvoiceUploadModalProps {
   orderTotal: number;
   /** How much is already paid on this order (to compute remaining) */
   alreadyPaid?: number;
-  /** Currency options for the dropdown */
-  currencyOptions: Array<{ label: string; value: string }>;
   /** Default currency */
   defaultCurrency: string;
   /** The order's own currency — used to show exchange rate when invoice currency differs */
@@ -57,7 +56,6 @@ export default function InvoiceUploadModal({
   onConfirm,
   orderTotal,
   alreadyPaid = 0,
-  currencyOptions,
   defaultCurrency,
   orderCurrency,
   namespace = 'orders',
@@ -311,6 +309,8 @@ export default function InvoiceUploadModal({
           </Button>
         </div>
       }
+      contentClassName="overflow-visible"
+       className="overflow-visible"
     >
       <div className="flex flex-col gap-4">
         {/* ── Order total (title + value only, no remaining) ── */}
@@ -486,10 +486,9 @@ export default function InvoiceUploadModal({
                     error={error || undefined}
                   />
                 </div>
-                <div className="shrink-0 w-24 pt-px">
-                  <Dropdown
+                <div className="shrink-0 w-28 pt-px">
+                  <CurrencySelector
                     value={invoiceCurrency}
-                    options={currencyOptions}
                     onChange={(val) => setInvoiceCurrency(val)}
                   />
                 </div>
@@ -498,7 +497,7 @@ export default function InvoiceUploadModal({
                 {t('invoicePaymentHint') || 'This amount will be recorded as the payment for this order.'}
               </p>
 
-              {/* ── Remaining amount (auto-calculated, with tolerance badge) ── */}
+              {/* ── Remaining after this invoice (auto-calculated) ── */}
               {orderRemaining > 0 && (() => {
                 // Use the invoice value converted to the order's currency
                 const remainingAfter = Math.max(0, orderRemaining - invoiceValueInOrderCur);
@@ -510,30 +509,65 @@ export default function InvoiceUploadModal({
                     : allowRate!.value
                   : 0;
                 const remainingWithTolerance = Math.max(0, remainingAfter - toleranceAmount);
-                const isPaid = hasTolerance ? remainingWithTolerance <= 0.001 : remainingAfter <= 0.001;
+                const isCleanExact = remainingAfter <= 0.001;
+                const isCleanWithTolerance = hasTolerance && remainingAfter > 0.001 && remainingWithTolerance <= 0.001;
+                const hasRemaining = remainingAfter > 0.001 && !isCleanWithTolerance;
                 // Show a loading state while exchange rate is being fetched (different currencies only)
                 const isConverting = invoiceCur !== orderCur && typedInvoiceValue > 0 && invoiceValueInOrderCur === 0;
 
-                return (
-                  <div className="mt-1.5 flex items-center justify-between rounded-lg border border-stroke bg-muted/20 px-3 py-1.5">
-                    <span className="text-xs text-secondary">
-                      {t('remainingAfterInvoice') || 'Remaining'}
-                    </span>
-                    <div className="flex items-center gap-2">
-                      {/* Tolerance badge — only show if tolerance is what makes it paid */}
-                      {hasTolerance && remainingAfter > 0.001 && remainingWithTolerance <= 0.001 && (
-                        <span className="rounded-full bg-info/10 px-2 py-0.5 text-xs font-medium text-info">
-                          {allowRate!.type === 'percentage'
-                            ? `${allowRate!.value}%`
-                            : `${allowRate!.value.toFixed(2)} ${orderCur}`}
-                        </span>
-                      )}
-                      <span className={`text-sm font-bold ${isPaid ? 'text-success' : 'text-foreground'}`}>
-                        {isConverting ? '...' : `${remainingAfter.toFixed(2)} ${orderCur}`}
+                // Don't show anything if user hasn't typed a value yet
+                if (typedInvoiceValue <= 0 && !isConverting) return null;
+
+                if (isConverting) {
+                  return (
+                    <div className="mt-1.5 flex items-center gap-1.5 text-xs text-secondary">
+                      <span>...</span>
+                    </div>
+                  );
+                }
+
+                // Case 1: Remaining > 0 — show red X with remaining amount
+                if (hasRemaining) {
+                  return (
+                    <div className="mt-1.5 flex items-center gap-1.5 text-xs text-error">
+                      <LuX size={14} className="shrink-0" />
+                      <span>
+                        {t('remainingAfterInvoice') || 'Remaining after this invoice'}: {remainingAfter.toFixed(2)} {orderCur}
                       </span>
                     </div>
-                  </div>
-                );
+                  );
+                }
+
+                // Case 2: Clean without tolerance — green check
+                if (isCleanExact) {
+                  return (
+                    <div className="mt-1.5 flex items-center gap-1.5 text-xs text-success">
+                      <LuCheck size={14} className="shrink-0" />
+                      <span className="font-medium">
+                        {t('allClean') || 'All clean — fully paid'}
+                      </span>
+                    </div>
+                  );
+                }
+
+                // Case 3: Clean with tolerance — green check + tolerance badge
+                if (isCleanWithTolerance) {
+                  return (
+                    <div className="mt-1.5 flex items-center gap-1.5 text-xs text-success">
+                      <LuCheck size={14} className="shrink-0" />
+                      <span className="font-medium">
+                        {t('allClean') || 'All clean — fully paid'}
+                      </span>
+                      <span className="rounded-full bg-info/10 px-2 py-0.5 text-xs font-medium text-info">
+                        {allowRate!.type === 'percentage'
+                          ? `${allowRate!.value}% ${t('toleranceApplied') || 'tolerance'}`
+                          : `${allowRate!.value.toFixed(2)} ${orderCur} ${t('toleranceApplied') || 'tolerance'}`}
+                      </span>
+                    </div>
+                  );
+                }
+
+                return null;
               })()}
             </div>
             {/* Exchange rate display */}

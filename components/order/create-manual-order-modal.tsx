@@ -25,6 +25,7 @@ import { FaWhatsapp } from 'react-icons/fa';
 import { isValidPhoneNumber } from 'libphonenumber-js';
 import { COUNTRIES } from '@/lib/countries';
 import { MANUAL_PAYMENT_METHODS, EASYKASH_PAYMENT_METHOD } from '@/lib/order';
+import CurrencySelector from '@/components/shared/currency-selector';
 import type { PaymentMethod, Order } from '@/types/Order';
 import { buildOrderWhatsappMessageFromOrder } from '@/lib/order-whatsapp';
 import { normalizeWhatsappPhone } from '@/lib/order/order-utils';
@@ -589,35 +590,13 @@ export default function CreateManualOrderModal({
     [getProduct, locale],
   );
 
-  // Global currency options: union of all currencies across all products
-  const currencyOptions = useMemo(() => {
-    const currencies = new Set<string>();
-    products.forEach((p) => {
-      currencies.add(p.baseCurrency);
-      p.sizes.forEach((s) => {
-        s.prices?.forEach((pr) => currencies.add(pr.currencyCode));
-      });
-    });
-    return Array.from(currencies).map((c) => ({ label: c, value: c }));
-  }, [products]);
-
-  // Invoice currency options: product currencies + common fallbacks
-  const invoiceCurrencyOptions = useMemo(() => {
-    const currencies = new Set<string>(['EGP', 'SAR', 'USD', 'EUR', 'AED', 'KWD']);
-    products.forEach((p) => {
-      currencies.add(p.baseCurrency);
-      p.sizes.forEach((s) => {
-        s.prices?.forEach((pr) => currencies.add(pr.currencyCode));
-      });
-    });
-    return Array.from(currencies).map((c) => ({ label: c, value: c }));
-  }, [products]);
-
+  // Default currency: use first product's currency, or EGP
   useEffect(() => {
-    if (currencyOptions.length > 0 && !form.currency) {
-      setForm((prev) => ({ ...prev, currency: currencyOptions[0].value }));
+    if (!form.currency) {
+      const firstProductCurrency = products.find((p) => p.baseCurrency)?.baseCurrency;
+      setForm((prev) => ({ ...prev, currency: firstProductCurrency || 'EGP' }));
     }
-  }, [currencyOptions, form.currency]);
+  }, [products, form.currency]);
 
   useEffect(() => {
     dispatch({ type: 'CLEAR_FORM_ERRORS' });
@@ -1661,7 +1640,8 @@ export default function CreateManualOrderModal({
       onClose={handleClose}
       title={t('createManualOrder.title')}
       size="xl"
-      contentClassName="flex flex-col gap-4 pr-1 px-4"
+      className="overflow-visible"
+      contentClassName="flex flex-col gap-4 pr-1 px-4 overflow-visible"
     >
       {/* Source */}
       <Dropdown
@@ -1831,12 +1811,10 @@ export default function CreateManualOrderModal({
                           }
                         />
                       </div>
-                      <div className="shrink-0 w-20 sm:w-24">
-                        <Dropdown
+                      <div className="shrink-0 w-24 sm:w-28">
+                        <CurrencySelector
                           value={form.currency}
-                          options={currencyOptions}
                           onChange={handleCurrencyChange}
-                          placeholder={t('createManualOrder.selectCurrency')}
                         />
                       </div>
                     </div>
@@ -1892,12 +1870,10 @@ export default function CreateManualOrderModal({
                           error={formErrors[`item_${index}_price`]}
                         />
                       </div>
-                      <div className="shrink-0 w-20 sm:w-24">
-                        <Dropdown
+                      <div className="shrink-0 w-24 sm:w-28">
+                        <CurrencySelector
                           value={form.currency}
-                          options={currencyOptions}
                           onChange={handleCurrencyChange}
-                          placeholder={t('createManualOrder.selectCurrency')}
                         />
                       </div>
                     </div>
@@ -2185,10 +2161,9 @@ export default function CreateManualOrderModal({
                             error={formErrors[`invoice_${index}_value`]}
                           />
                         </div>
-                        <div className="shrink-0 w-24 pt-px">
-                          <Dropdown
+                        <div className="shrink-0 w-28 pt-px">
+                          <CurrencySelector
                             value={invoice.currency}
-                            options={invoiceCurrencyOptions}
                             onChange={(val) =>
                               handleUpdateInvoice(index, { currency: val })
                             }

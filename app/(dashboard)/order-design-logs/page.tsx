@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
-import { toast } from 'react-toastify';
 import {
     LuRefreshCw,
     LuSearch,
@@ -17,8 +16,6 @@ import {
     LuFileText,
     LuChevronDown,
     LuChevronUp,
-    LuWand,
-    LuOctagonX,
 } from 'react-icons/lu';
 import Loading from '@/components/ui/loading';
 import Dropdown from '@/components/ui/dropdown';
@@ -93,8 +90,6 @@ export default function OrderDesignLogsPage() {
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(25);
     const [expandedId, setExpandedId] = useState<string | null>(null);
-    const [retrying, setRetrying] = useState(false);
-    const [cancelling, setCancelling] = useState(false);
 
     const [filters, setFilters] = useState({
         status: '',
@@ -139,60 +134,6 @@ export default function OrderDesignLogsPage() {
         fetchLogs();
     };
 
-    const handleRetryMissing = async () => {
-        try {
-            setRetrying(true);
-            const res = await fetch('/api/orders/retry-missing-designs', {
-                method: 'POST',
-            });
-            const data = await res.json();
-            if (data.success) {
-                const count = data.data.queuedCount;
-                if (count === 0) {
-                    toast.success('No orders missing designs found.');
-                } else {
-                    toast.success(`Queued ${count} order(s) for design generation.`);
-                    // Refresh logs after a short delay so the new entries appear
-                    setTimeout(() => fetchLogs(), 2000);
-                }
-            } else {
-                toast.error(data.error || 'Failed to retry missing designs');
-            }
-        } catch (error) {
-            console.error('Error retrying missing designs:', error);
-            toast.error('Failed to retry missing designs');
-        } finally {
-            setRetrying(false);
-        }
-    };
-
-    const handleCancelGeneration = async () => {
-        try {
-            setCancelling(true);
-            const res = await fetch('/api/orders/cancel-design-generation', {
-                method: 'POST',
-            });
-            const data = await res.json();
-            if (data.success) {
-                const drained = data.data.drained;
-                if (drained > 0) {
-                    toast.success(`Cancelled ${drained} pending task(s). In-progress tasks will finish naturally.`);
-                } else {
-                    toast.info('No pending tasks in queue. In-progress tasks will finish naturally.');
-                }
-                // Refresh logs to show the cancellation entries
-                setTimeout(() => fetchLogs(), 1500);
-            } else {
-                toast.error(data.error || 'Failed to cancel design generation');
-            }
-        } catch (error) {
-            console.error('Error cancelling design generation:', error);
-            toast.error('Failed to cancel design generation');
-        } finally {
-            setCancelling(false);
-        }
-    };
-
     const statusOptions = [
         { value: '', label: t('filters.allStatuses') },
         ...STATUS_OPTIONS.map((s) => ({ value: s, label: t(`status.${s}`) })),
@@ -214,24 +155,6 @@ export default function OrderDesignLogsPage() {
                     <p className="text-secondary">{t('description')}</p>
                 </div>
                 <div className="flex items-center gap-2">
-                    <Button
-                        onClick={handleRetryMissing}
-                        variant="outline"
-                        className="flex gap-2"
-                        disabled={retrying}
-                    >
-                        <LuWand size={18} className={retrying ? 'animate-pulse' : ''} />
-                        {retrying ? '...' : 'Retry Missing'}
-                    </Button>
-                    <Button
-                        onClick={handleCancelGeneration}
-                        variant="outline"
-                        className="flex gap-2 text-error border-error/30 hover:border-error hover:text-error"
-                        disabled={cancelling}
-                    >
-                        <LuOctagonX size={18} className={cancelling ? 'animate-pulse' : ''} />
-                        {cancelling ? '...' : 'Cancel'}
-                    </Button>
                     <Button onClick={handleRefresh} className="flex gap-2" disabled={loading}>
                         <LuRefreshCw size={18} className={loading ? 'animate-spin' : ''} />
                         {t('refresh')}

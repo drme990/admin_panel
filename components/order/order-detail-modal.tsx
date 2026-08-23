@@ -29,6 +29,7 @@ import {
   LuRotateCw,
   LuDownload,
   LuRefreshCw,
+  LuPercent,
 } from 'react-icons/lu';
 import Image from 'next/image';
 
@@ -155,6 +156,15 @@ export default function OrderDetailModal({
   const t = useTranslations(namespace);
   const [copiedPaymentId, setCopiedPaymentId] = useState<string | null>(null);
   const [now, setNow] = useState<number>(() => Date.now());
+  // Stable cache-bust value for design images — uses the order's
+  // updatedAt timestamp so it only changes when the order actually
+  // changes, NOT every second (unlike `now` which ticks for
+  // payment-link expiry checks).
+  const designCacheBust = order?.updatedAt
+    ? new Date(order.updatedAt).getTime()
+    : order?._id
+      ? String(order._id).length
+      : Date.now();
   const [downloadingInvoiceUrl, setDownloadingInvoiceUrl] = useState<string | null>(null);
   const [reviewOverrides, setReviewOverrides] = useState<Record<string, boolean>>({});
   const [reviewingProductId, setReviewingProductId] = useState<string | null>(null);
@@ -285,10 +295,13 @@ export default function OrderDetailModal({
                   </div>
                 </div>
 
-                {/* Total amount hero */}
+                {/* Total paid hero */}
                 <div className="bg-background rounded-site p-4 border border-stroke text-center">
+                  <p className="text-xs text-secondary mb-1">
+                    {t('totals.paidAmount')}
+                  </p>
                   <p className="text-3xl font-bold text-success">
-                    {order.totalAmount.toFixed(2)} {order.currency}
+                    {(order.paidAmount ?? 0).toFixed(2)} {order.currency}
                   </p>
                   {hasRemaining && (
                     <p className="mt-1 text-sm font-medium text-orange-600 dark:text-orange-400">
@@ -482,7 +495,7 @@ export default function OrderDetailModal({
                                 label={t('paymentTimeline.orderAmount')}
                                 value={formatMoney(
                                   payment.orderAmount ?? payment.amount,
-                                  payment.currency || order.currency,
+                                  order.currency,
                                 )}
                               />
                               {typeof payment.gatewayAmount === 'number' && (
@@ -491,7 +504,18 @@ export default function OrderDetailModal({
                                   label={t('paymentTimeline.gatewayAmount')}
                                   value={formatMoney(
                                     payment.gatewayAmount,
-                                    payment.gatewayCurrency || payment.currency,
+                                    payment.gatewayCurrency || order.currency,
+                                  )}
+                                />
+                              )}
+                              {/* Show the raw invoice amount when it differs from the order currency */}
+                              {payment.currency && payment.currency.toUpperCase() !== order.currency.toUpperCase() && (
+                                <InfoRow
+                                  icon={<LuCreditCard size={14} />}
+                                  label={t('paymentTimeline.invoiceAmount') || 'Invoice Amount'}
+                                  value={formatMoney(
+                                    payment.amount,
+                                    payment.currency,
                                   )}
                                 />
                               )}
@@ -539,6 +563,72 @@ export default function OrderDetailModal({
                                 />
                               )}
                             </div>
+
+                            {/* Allow Rate tolerance info */}
+                            {payment.allowRateApplied && (
+                              <div className="mt-2 rounded-lg border border-info/30 bg-info/5 px-3 py-2">
+                                <div className="flex items-center gap-1.5 mb-1.5">
+                                  <LuPercent size={14} className="text-info" />
+                                  <span className="text-xs font-semibold text-info">
+                                    {t('paymentTimeline.allowRateApplied') || 'Payment Tolerance Applied'}
+                                  </span>
+                                </div>
+                                <p className="text-xs text-secondary mb-1.5">
+                                  {t('paymentTimeline.allowRateSummary', {
+                                    invoice: payment.allowRateApplied.invoiceValue.toFixed(2),
+                                    difference: payment.allowRateApplied.difference.toFixed(2),
+                                    remaining: payment.allowRateApplied.remainingBefore.toFixed(2),
+                                    currency: order.currency,
+                                  }) || `Invoice ${payment.allowRateApplied.invoiceValue.toFixed(2)} + tolerance ${payment.allowRateApplied.difference.toFixed(2)} = ${payment.allowRateApplied.remainingBefore.toFixed(2)} (remaining)`}
+                                </p>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-xs">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-secondary">
+                                      {t('paymentTimeline.allowRateType') || 'Tolerance type'}
+                                    </span>
+                                    <span className="font-medium text-foreground">
+                                      {payment.allowRateApplied.type === 'percentage'
+                                        ? `${payment.allowRateApplied.value}%`
+                                        : `${payment.allowRateApplied.value.toFixed(2)}`}
+                                    </span>
+                                  </div>
+                                  {payment.allowRateApplied.paymentMethod && (
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-secondary">
+                                        {t('paymentTimeline.allowRatePaymentMethod') || 'Payment method'}
+                                      </span>
+                                      <span className="font-medium text-foreground">
+                                        {payment.allowRateApplied.paymentMethod}
+                                      </span>
+                                    </div>
+                                  )}
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-secondary">
+                                      {t('paymentTimeline.allowRateInvoiceValue') || 'Invoice value'}
+                                    </span>
+                                    <span className="font-medium text-foreground">
+                                      {payment.allowRateApplied.invoiceValue.toFixed(2)} {order.currency}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-secondary">
+                                      {t('paymentTimeline.allowRateRemainingBefore') || 'Remaining before'}
+                                    </span>
+                                    <span className="font-medium text-foreground">
+                                      {payment.allowRateApplied.remainingBefore.toFixed(2)} {order.currency}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-secondary">
+                                      {t('paymentTimeline.allowRateDifference') || 'Difference covered by tolerance'}
+                                    </span>
+                                    <span className="font-bold text-info">
+                                      {payment.allowRateApplied.difference.toFixed(2)} {order.currency}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
                           </div>
                         );
                       })}
@@ -915,7 +1005,7 @@ export default function OrderDetailModal({
                             >
                               <div className="relative overflow-hidden">
                                 <Image
-                                  src={`${design.url}${design.url.includes('?') ? '&' : '?'}v=${now}`}
+                                  src={`${design.url}${design.url.includes('?') ? '&' : '?'}v=${designCacheBust}`}
                                   alt={`Design ${designIndex + 1} (${variantLabel})`}
                                   className="w-full max-w-50 h-auto object-cover rounded"
                                   width={200}
@@ -945,7 +1035,7 @@ export default function OrderDetailModal({
                                   : t('reservationData.waitingForReview')}
                               </button>
                               <a
-                                href={`${design.url}${design.url.includes('?') ? '&' : '?'}v=${now}`}
+                                href={`${design.url}${design.url.includes('?') ? '&' : '?'}v=${designCacheBust}`}
                                 download
                                 target="_blank"
                                 rel="noopener noreferrer"

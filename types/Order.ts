@@ -113,6 +113,15 @@ export interface BillingData {
 
 export type PaymentRecordStatus = 'pending' | 'paid' | 'failed' | 'expired';
 
+export interface AllowRateApplied {
+  type: 'percentage' | 'fixnumber';
+  value: number;
+  invoiceValue: number;
+  remainingBefore: number;
+  difference: number;
+  paymentMethod?: string;
+}
+
 export interface OrderPayment {
   paymentId: string;
   easykashOrderId?: string;
@@ -131,6 +140,7 @@ export interface OrderPayment {
   expiresAt?: string;
   createdAt: string;
   paidAt?: string;
+  allowRateApplied?: AllowRateApplied | null;
 }
 
 export interface PaymentAttempt {

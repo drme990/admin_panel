@@ -76,11 +76,6 @@ export default function InvoiceUploadModal({
   const [pendingInvoiceStatus, setPendingInvoiceStatus] = useState<'confirmed' | 'waiting' | null>(null);
   const pendingInvoiceStatusRef = useRef<'confirmed' | 'waiting' | null>(null);
 
-  // ── Paid/remaining state (same logic as create-manual-order-modal) ──
-  const [paidAmount, setPaidAmount] = useState('');
-  const [remainingAmount, setRemainingAmount] = useState('');
-  const [paymentEditField, setPaymentEditField] = useState<'paid' | 'remaining' | null>(null);
-
   // ── Payment method ──
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | ''>('');
 
@@ -88,28 +83,60 @@ export default function InvoiceUploadModal({
   const [error, setError] = useState<string | null>(null);
   const [methodError, setMethodError] = useState<string | null>(null);
 
+  // ── Payment tolerance — fetched from booking settings by payment method ──
+  const [allTolerances, setAllTolerances] = useState<Record<string, { type: 'percentage' | 'fixnumber'; value: number }>>({});
+  const [allowRate, setAllowRate] = useState<{ type: 'percentage' | 'fixnumber'; value: number } | null>(null);
+
+  // Fetch all tolerances once when modal opens
+  useEffect(() => {
+    if (!isOpen) {
+      setAllTolerances({});
+      setAllowRate(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch('/api/booking');
+        const data = await res.json();
+        if (cancelled || !data.success) return;
+        const tolerances = data.data?.paymentMethodTolerances ?? {};
+        setAllTolerances(tolerances);
+      } catch {
+        // Non-fatal
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [isOpen]);
+
+  // Update the active tolerance when the selected payment method changes
+  useEffect(() => {
+    if (!paymentMethod || !allTolerances[paymentMethod]) {
+      setAllowRate(null);
+      return;
+    }
+    const t = allTolerances[paymentMethod];
+    if (t && t.value > 0) {
+      setAllowRate(t);
+    } else {
+      setAllowRate(null);
+    }
+  }, [paymentMethod, allTolerances]);
+
   // ── Refs ──
   const invoiceInputRef = useRef<HTMLInputElement | null>(null);
   const invoiceImageInputRef = useRef<HTMLInputElement | null>(null);
 
-  // The remaining unpaid amount on the order
+  // The remaining unpaid amount on the order (read-only display only)
   const orderRemaining = Math.max(0, orderTotal - alreadyPaid);
   const orderCur = (orderCurrency || defaultCurrency).toUpperCase();
   const invoiceCur = invoiceCurrency.toUpperCase();
 
-  // Initialize paid amount to the full remaining order value when the
-  // modal opens. Paid = remaining order value, remaining = 0.
+  // Reset invoice state when the modal opens. The paid/remaining amounts
+  // are now read-only informational displays — the invoice value entered
+  // by the user is the actual payment amount.
   useEffect(() => {
     if (isOpen) {
-      if (orderRemaining > 0) {
-        setPaidAmount(orderRemaining.toFixed(2));
-        setRemainingAmount('');
-        setPaymentEditField('paid');
-      } else {
-        setPaidAmount('');
-        setRemainingAmount('');
-        setPaymentEditField(null);
-      }
       // Reset invoice state
       setFile(null);
       setPreviewUrl(null);
@@ -181,46 +208,9 @@ export default function InvoiceUploadModal({
     setStatus((prev) => (prev === 'confirmed' ? 'waiting' : 'confirmed'));
   };
 
-  // ── Paid/remaining handlers (same as create-manual-order-modal) ──
-  const handlePaidChange = (val: string) => {
-    const paidNum = parseFloat(val);
-    const rem = Number.isFinite(paidNum) && paidNum >= 0
-      ? Math.max(0, orderRemaining - paidNum)
-      : 0;
-    setPaidAmount(val);
-    setRemainingAmount(rem > 0 ? rem.toFixed(2) : '');
-    setPaymentEditField('paid');
-    setError(null);
-  };
-
-  const handleRemainingChange = (val: string) => {
-    const remNum = parseFloat(val);
-    const paid = Number.isFinite(remNum) && remNum >= 0
-      ? Math.max(0, orderRemaining - remNum)
-      : 0;
-    setRemainingAmount(val);
-    setPaidAmount(paid > 0 ? paid.toFixed(2) : '');
-    setPaymentEditField('remaining');
-    setError(null);
-  };
-
-  const handlePaidFocus = () => {
-    if (paymentEditField === 'remaining') {
-      setPaidAmount('');
-      setRemainingAmount('');
-    }
-    setPaymentEditField('paid');
-  };
-
-  const handleRemainingFocus = () => {
-    if (paymentEditField === 'paid') {
-      setPaidAmount('');
-      setRemainingAmount('');
-    }
-    setPaymentEditField('remaining');
-  };
-
   // ── Confirm handler ──
+  // The invoice value entered by the user is the actual payment amount.
+  // The paid/remaining displays above are informational only.
   const handleConfirm = () => {
     setError(null);
     setMethodError(null);
@@ -230,18 +220,19 @@ export default function InvoiceUploadModal({
       return;
     }
 
-    const numPaid = parseFloat(paidAmount);
-    if (!paidAmount.trim() || !Number.isFinite(numPaid)) {
-      setError(t('errors.invoiceValueRequired') || 'Paid amount is required');
+    const numValue = parseFloat(invoiceValue);
+    if (!invoiceValue.trim() || !Number.isFinite(numValue)) {
+      setError(t('errors.invoiceValueRequired') || 'Invoice value is required');
       return;
     }
-    if (numPaid <= 0) {
-      setError(t('errors.invoiceValueInvalid') || 'Paid amount must be greater than 0');
+    if (numValue <= 0) {
+      setError(t('errors.invoiceValueInvalid') || 'Invoice value must be greater than 0');
       return;
     }
 
-    // NOTE: The paid amount is allowed to exceed the order's remaining
-    // balance — invoices may include fees, taxes, or tips.
+    // NOTE: The invoice value is allowed to differ from the order's
+    // remaining balance — the allowRate tolerance on the country
+    // determines whether the order is marked as paid.
 
     if (!paymentMethod) {
       setMethodError(t('errors.paymentMethodRequired') || 'Payment method is required');
@@ -251,7 +242,7 @@ export default function InvoiceUploadModal({
     onConfirm({
       file,
       invoiceStatus: status,
-      value: paidAmount,
+      value: invoiceValue,
       currency: invoiceCurrency,
       previewUrl,
       paymentMethod: paymentMethod as PaymentMethod,
@@ -309,75 +300,34 @@ export default function InvoiceUploadModal({
       }
     >
       <div className="flex flex-col gap-4">
-        {/* ── Order total + remaining summary ── */}
+        {/* ── Order total (title + value only, no remaining) ── */}
         <div className="flex items-center justify-between rounded-lg border border-stroke bg-muted/30 px-4 py-3">
-          <div className="flex flex-col">
-            <span className="text-xs text-secondary">
-              {t('orderTotal') || 'Order Total'}
+          <span className="text-xs text-secondary">
+            {t('orderTotal') || 'Order Total'}
+          </span>
+          <span className="text-sm font-semibold text-foreground">
+            {orderTotal.toFixed(2)} {orderCur}
+          </span>
+        </div>
+
+        {/* ── Already paid + remaining (read-only, informational only) ── */}
+        <div className="grid grid-cols-2 gap-2">
+          <div className="flex flex-col gap-1 rounded-lg border border-success/30 bg-success/5 px-3 py-2">
+            <span className="text-xs text-success/80">
+              {t('paid') || 'Paid'}
             </span>
-            <span className="text-sm font-semibold text-foreground">
-              {orderTotal.toFixed(2)} {orderCur}
+            <span className="text-sm font-bold text-success">
+              {alreadyPaid.toFixed(2)} {orderCur}
             </span>
           </div>
-          <div className="flex flex-col text-end">
-            <span className="text-xs text-secondary">
+          <div className="flex flex-col gap-1 rounded-lg border border-error/30 bg-error/5 px-3 py-2">
+            <span className="text-xs text-error/80">
               {t('remaining') || 'Remaining'}
             </span>
-            <span className="text-sm font-semibold text-error">
+            <span className="text-sm font-bold text-error">
               {orderRemaining.toFixed(2)} {orderCur}
             </span>
           </div>
-        </div>
-
-        {/* ── Paid + Remaining inputs (same as create-manual-order-modal) ── */}
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center justify-between">
-            <label className="text-sm font-medium text-foreground">
-              {t('paid') || 'Paid'}
-            </label>
-            <span className="text-xs text-secondary">
-              {t('remaining') || 'Remaining'}: {orderRemaining.toFixed(2)} {orderCur}
-            </span>
-          </div>
-          <div className="flex gap-2">
-            {/* Paid — green */}
-            <div className="flex-1 flex flex-col gap-1">
-              <Input
-                type="number"
-                min={0}
-                step="0.01"
-                value={paidAmount}
-                placeholder={orderRemaining > 0 ? `${orderRemaining.toFixed(2)}` : '0.00'}
-                readOnly={paymentEditField === 'remaining'}
-                onChange={(e) => handlePaidChange(e.target.value)}
-                onFocus={handlePaidFocus}
-                className={`px-3 py-2 text-sm font-bold ${paymentEditField === 'remaining'
-                  ? 'border-success/30 bg-success/5 text-success cursor-not-allowed'
-                  : 'border-success/40 bg-success/5 text-success focus:ring-success/20 focus:border-success'
-                  }`}
-              />
-            </div>
-            {/* Remaining — red */}
-            <div className="flex-1 flex flex-col gap-1">
-              <Input
-                type="number"
-                min={0}
-                step="0.01"
-                value={remainingAmount}
-                placeholder="0.00"
-                readOnly={paymentEditField === 'paid'}
-                onChange={(e) => handleRemainingChange(e.target.value)}
-                onFocus={handleRemainingFocus}
-                className={`px-3 py-2 text-sm font-bold ${paymentEditField === 'paid'
-                  ? 'border-error/30 bg-error/5 text-error cursor-not-allowed'
-                  : 'border-error/40 bg-error/5 text-error focus:ring-error/20 focus:border-error'
-                  }`}
-              />
-            </div>
-          </div>
-          <p className="text-xs text-secondary">
-            {t('paidAmountHint') || 'This amount will be added to the order\'s total paid amount.'}
-          </p>
         </div>
 
         {/* ── Payment method selector ── */}
@@ -395,24 +345,25 @@ export default function InvoiceUploadModal({
         {/* ── Invoice upload area ── */}
         {!file ? (
           <div className="flex flex-col gap-3">
-            {/* Two-step upload buttons (same as create-manual-order-modal) */}
-            <div className="flex flex-wrap items-center gap-3">
+            {/* Two-step upload buttons — always kept next to each other
+                and shrink to stay visible on small screens. */}
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
               {pendingInvoiceStatus !== null ? (
                 <div className="flex flex-wrap items-center gap-2">
                   <button
                     type="button"
                     onClick={() => invoiceImageInputRef.current?.click()}
-                    className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-stroke hover:border-primary hover:text-primary transition-colors text-sm"
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-stroke hover:border-primary hover:text-primary transition-colors text-xs sm:text-sm whitespace-nowrap"
                   >
-                    <LuImage size={16} />
+                    <LuImage size={14} className="shrink-0" />
                     {t('uploadAsImage') || 'Image'}
                   </button>
                   <button
                     type="button"
                     onClick={() => invoiceInputRef.current?.click()}
-                    className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-stroke hover:border-primary hover:text-primary transition-colors text-sm"
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-stroke hover:border-primary hover:text-primary transition-colors text-xs sm:text-sm whitespace-nowrap"
                   >
-                    <LuFileText size={16} />
+                    <LuFileText size={14} className="shrink-0" />
                     {t('uploadAsFile') || 'File'}
                   </button>
                   <button
@@ -421,40 +372,40 @@ export default function InvoiceUploadModal({
                       pendingInvoiceStatusRef.current = null;
                       setPendingInvoiceStatus(null);
                     }}
-                    className="inline-flex items-center gap-1 px-2 py-2 rounded-lg text-secondary hover:text-foreground transition-colors text-sm"
+                    className="inline-flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-secondary hover:text-foreground transition-colors text-xs sm:text-sm"
                   >
-                    <LuX size={16} />
+                    <LuX size={14} />
                   </button>
                 </div>
               ) : (
-                <>
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full">
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
-                    className={error ? 'border-error text-error hover:text-error hover:border-error' : ''}
+                    className={`flex-1 min-w-35 text-xs sm:text-sm ${error ? 'border-error text-error hover:text-error hover:border-error' : ''}`}
                     onClick={() => {
                       pendingInvoiceStatusRef.current = 'confirmed';
                       setPendingInvoiceStatus('confirmed');
                     }}
                   >
-                    <LuUpload size={16} className="me-2" />
+                    <LuUpload size={14} className="me-1.5 shrink-0" />
                     {t('uploadConfirmedInvoice') || 'Confirmed Invoice'}
                   </Button>
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
-                    className={error ? 'border-error text-error hover:text-error hover:border-error' : ''}
+                    className={`flex-1 min-w-35 text-xs sm:text-sm ${error ? 'border-error text-error hover:text-error hover:border-error' : ''}`}
                     onClick={() => {
                       pendingInvoiceStatusRef.current = 'waiting';
                       setPendingInvoiceStatus('waiting');
                     }}
                   >
-                    <LuUpload size={16} className="me-2" />
+                    <LuUpload size={14} className="me-1.5 shrink-0" />
                     {t('uploadWaitingInvoice') || 'Waiting Invoice'}
                   </Button>
-                </>
+                </div>
               )}
             </div>
             {error && <p className="text-xs text-error">{error}</p>}
@@ -502,29 +453,72 @@ export default function InvoiceUploadModal({
                 <LuFileText size={32} className="text-secondary" />
               </div>
             )}
-            {/* Invoice value + currency (editable inline) */}
-            <div className="flex flex-row gap-2 items-start">
-              <div className="flex-1 min-w-0">
-                <Input
-                  type="number"
-                  min={0}
-                  step="0.01"
-                  value={invoiceValue}
-                  placeholder={t('invoiceValue') || 'Invoice Value'}
-                  onChange={(e) => {
-                    setInvoiceValue(e.target.value);
-                    setError(null);
-                  }}
-                  error={error || undefined}
-                />
+            {/* Invoice value + currency — this is the actual payment amount */}
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-secondary">
+                {t('invoiceValue') || 'Invoice Value'}
+              </label>
+              <div className="flex flex-row gap-2 items-start">
+                <div className="flex-1 min-w-0">
+                  <Input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={invoiceValue}
+                    placeholder={t('invoiceValuePlaceholder') || 'Enter the invoice amount'}
+                    onChange={(e) => {
+                      setInvoiceValue(e.target.value);
+                      setError(null);
+                    }}
+                    error={error || undefined}
+                  />
+                </div>
+                <div className="shrink-0 w-24 pt-px">
+                  <Dropdown
+                    value={invoiceCurrency}
+                    options={currencyOptions}
+                    onChange={(val) => setInvoiceCurrency(val)}
+                  />
+                </div>
               </div>
-              <div className="shrink-0 w-24 pt-px">
-                <Dropdown
-                  value={invoiceCurrency}
-                  options={currencyOptions}
-                  onChange={(val) => setInvoiceCurrency(val)}
-                />
-              </div>
+              <p className="text-xs text-secondary">
+                {t('invoicePaymentHint') || 'This amount will be recorded as the payment for this order.'}
+              </p>
+
+              {/* ── Remaining amount (auto-calculated, with tolerance badge) ── */}
+              {orderRemaining > 0 && (() => {
+                const typedValue = parseFloat(invoiceValue) || 0;
+                const remainingAfter = Math.max(0, orderRemaining - typedValue);
+                const hasTolerance = allowRate && allowRate.value > 0;
+                const toleranceAmount = hasTolerance
+                  ? allowRate!.type === 'percentage'
+                    ? orderRemaining * allowRate!.value / 100
+                    : allowRate!.value
+                  : 0;
+                const remainingWithTolerance = Math.max(0, remainingAfter - toleranceAmount);
+                const isPaid = hasTolerance ? remainingWithTolerance <= 0.001 : remainingAfter <= 0.001;
+
+                return (
+                  <div className="mt-1.5 flex items-center justify-between rounded-lg border border-stroke bg-muted/20 px-3 py-1.5">
+                    <span className="text-xs text-secondary">
+                      {t('remainingAfterInvoice') || 'Remaining'}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      {/* Tolerance badge — only show if tolerance applies */}
+                      {hasTolerance && remainingAfter > 0.001 && remainingWithTolerance <= 0.001 && (
+                        <span className="rounded-full bg-info/10 px-2 py-0.5 text-xs font-medium text-info">
+                          {allowRate!.type === 'percentage'
+                            ? `${allowRate!.value}%`
+                            : `${allowRate!.value.toFixed(2)} ${orderCur}`}
+                        </span>
+                      )}
+                      <span className={`text-sm font-bold ${isPaid ? 'text-success' : remainingAfter <= 0.001 ? 'text-success' : 'text-foreground'}`}>
+                        {remainingAfter.toFixed(2)} {orderCur}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
             {/* Exchange rate display */}
             <ExchangeRateDisplay

@@ -7,6 +7,7 @@ import {
   LuArrowDown as ArrowDown,
   LuListOrdered as ListOrdered,
   LuSettings2 as Settings2,
+  LuPercent as Percent,
 } from 'react-icons/lu';
 import * as flags from 'country-flag-icons/react/3x2';
 import { useTranslations, useLocale } from 'next-intl';
@@ -18,6 +19,7 @@ import Button from '@/components/ui/button';
 import Tabs from '@/components/ui/tabs';
 import { toast } from 'react-toastify';
 import VisibilitySettingsModal from './components/visibility-settings-modal';
+import PaymentToleranceModal from './components/payment-tolerance-modal';
 
 type FlagComponents = Record<
   string,
@@ -49,6 +51,10 @@ interface Country {
       exchangePrice?: boolean;
     }
   >;
+  allowRate?: {
+    type: 'percentage' | 'fixnumber';
+    value: number;
+  } | null;
 }
 
 type VisibilityTab = 'realPrice' | 'exchangePrice';
@@ -97,8 +103,10 @@ export default function CountriesPage() {
     useState<VisibilityCountryMap>({});
   const [visibilitySaving, setVisibilitySaving] = useState(false);
   const [regionFilter, setRegionFilter] = useState('all');
+
   const [copyFromCountryModalOpen, setCopyFromCountryModalOpen] = useState(false);
   const [copyFromCountryId, setCopyFromCountryId] = useState<string | null>(null);
+  const [toleranceModalOpen, setToleranceModalOpen] = useState(false);
 
   const t = useTranslations('admin.countries');
   const locale = useLocale();
@@ -835,17 +843,19 @@ export default function CountriesPage() {
       {
         header: t('table.actions'),
         accessor: (c: Country) => (
-          <Button
-            variant="ghost"
-            size="custom"
-            onClick={() => openVisibilityModal(c)}
-            className="p-2 hover:text-primary"
-            title={t('visibilitySettings.title')}
-          >
-            <Settings2 size={18} />
-          </Button>
+          <div className="flex items-center justify-center gap-1">
+            <Button
+              variant="ghost"
+              size="custom"
+              onClick={() => openVisibilityModal(c)}
+              className="p-2 hover:text-primary"
+              title={t('visibilitySettings.title')}
+            >
+              <Settings2 size={18} />
+            </Button>
+          </div>
         ),
-        className: 'text-center w-20',
+        className: 'text-center w-24',
       },
     ],
     [
@@ -891,29 +901,39 @@ export default function CountriesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground mb-2">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-1 sm:mb-2">
             {t('title')}
           </h1>
-          <p className="text-secondary">
+          <p className="text-secondary text-sm sm:text-base">
             {t('description')} &middot; {activeCount} / {countries.length}{' '}
             {t('status.active').toLowerCase()}
           </p>
         </div>
-        <div className="flex items-center gap-2.5">
+        <div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap sm:items-center sm:gap-2.5">
+          <Button
+            variant="secondary"
+            onClick={() => setToleranceModalOpen(true)}
+            className="w-full sm:w-auto"
+          >
+            <Percent size={18} className="shrink-0" />
+            <span className="whitespace-nowrap">{t('tolerance.button')}</span>
+          </Button>
           <Button
             variant="secondary"
             onClick={openReorderModal}
             disabled={activeCount === 0}
+            className="w-full sm:w-auto"
           >
-            <ListOrdered size={20} />
-            {t('reorderButton')}
+            <ListOrdered size={18} className="shrink-0" />
+            <span className="whitespace-nowrap">{t('reorderButton')}</span>
           </Button>
           <Button
             variant="primary"
             onClick={() => void savePendingRoundingChanges()}
             disabled={!hasPendingRoundingChanges || isSavingRoundingChanges}
+            className="w-full sm:w-auto"
           >
             {isSavingRoundingChanges
               ? '...'
@@ -1122,6 +1142,11 @@ export default function CountriesPage() {
         setCopyFromCountryId={setCopyFromCountryId}
         allCountries={countries}
         onCopyFromCountry={handleCopyFromCountry}
+      />
+
+      <PaymentToleranceModal
+        isOpen={toleranceModalOpen}
+        onClose={() => setToleranceModalOpen(false)}
       />
     </div>
   );

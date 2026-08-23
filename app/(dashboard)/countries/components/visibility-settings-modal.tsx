@@ -118,11 +118,10 @@ export default function VisibilitySettingsModal({
       }}
       title={
         visibilityCountry
-          ? `${t('visibilitySettings.title')} - ${
-              locale === 'ar'
-                ? visibilityCountry.name.ar
-                : visibilityCountry.name.en
-            }`
+          ? `${t('visibilitySettings.title')} - ${locale === 'ar'
+            ? visibilityCountry.name.ar
+            : visibilityCountry.name.en
+          }`
           : t('visibilitySettings.title')
       }
       size="lg"
@@ -228,9 +227,8 @@ export default function VisibilitySettingsModal({
                     countriesToSee[country.code.toUpperCase()]?.[visibilityTab],
                   )}
                   onChange={() => toggleVisibleToCountry(country.code)}
-                  label={`${
-                    locale === 'ar' ? country.name.ar : country.name.en
-                  } (${country.code})`}
+                  label={`${locale === 'ar' ? country.name.ar : country.name.en
+                    } (${country.code})`}
                 />
               ))}
 

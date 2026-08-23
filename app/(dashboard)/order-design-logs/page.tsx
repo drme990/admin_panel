@@ -18,6 +18,7 @@ import {
     LuChevronDown,
     LuChevronUp,
     LuWand,
+    LuOctagonX,
 } from 'react-icons/lu';
 import Loading from '@/components/ui/loading';
 import Dropdown from '@/components/ui/dropdown';
@@ -93,6 +94,7 @@ export default function OrderDesignLogsPage() {
     const [pageSize, setPageSize] = useState(25);
     const [expandedId, setExpandedId] = useState<string | null>(null);
     const [retrying, setRetrying] = useState(false);
+    const [cancelling, setCancelling] = useState(false);
 
     const [filters, setFilters] = useState({
         status: '',
@@ -164,6 +166,33 @@ export default function OrderDesignLogsPage() {
         }
     };
 
+    const handleCancelGeneration = async () => {
+        try {
+            setCancelling(true);
+            const res = await fetch('/api/orders/cancel-design-generation', {
+                method: 'POST',
+            });
+            const data = await res.json();
+            if (data.success) {
+                const drained = data.data.drained;
+                if (drained > 0) {
+                    toast.success(`Cancelled ${drained} pending task(s). In-progress tasks will finish naturally.`);
+                } else {
+                    toast.info('No pending tasks in queue. In-progress tasks will finish naturally.');
+                }
+                // Refresh logs to show the cancellation entries
+                setTimeout(() => fetchLogs(), 1500);
+            } else {
+                toast.error(data.error || 'Failed to cancel design generation');
+            }
+        } catch (error) {
+            console.error('Error cancelling design generation:', error);
+            toast.error('Failed to cancel design generation');
+        } finally {
+            setCancelling(false);
+        }
+    };
+
     const statusOptions = [
         { value: '', label: t('filters.allStatuses') },
         ...STATUS_OPTIONS.map((s) => ({ value: s, label: t(`status.${s}`) })),
@@ -193,6 +222,15 @@ export default function OrderDesignLogsPage() {
                     >
                         <LuWand size={18} className={retrying ? 'animate-pulse' : ''} />
                         {retrying ? '...' : 'Retry Missing'}
+                    </Button>
+                    <Button
+                        onClick={handleCancelGeneration}
+                        variant="outline"
+                        className="flex gap-2 text-error border-error/30 hover:border-error hover:text-error"
+                        disabled={cancelling}
+                    >
+                        <LuOctagonX size={18} className={cancelling ? 'animate-pulse' : ''} />
+                        {cancelling ? '...' : 'Cancel'}
                     </Button>
                     <Button onClick={handleRefresh} className="flex gap-2" disabled={loading}>
                         <LuRefreshCw size={18} className={loading ? 'animate-spin' : ''} />

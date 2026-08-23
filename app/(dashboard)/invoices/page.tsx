@@ -830,6 +830,8 @@ export default function InvoicesPage() {
             );
             toast.success(t('statusUpdated'));
             closeChangeStatusModal();
+            // Refetch so the invoice list reflects the updated order status
+            void fetchInvoices();
         } catch (error) {
             console.error('Error updating order status:', error);
             toast.error(t('updateFailed'));

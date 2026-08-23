@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
+import { toast } from 'react-toastify';
 import {
     LuRefreshCw,
     LuSearch,
@@ -16,6 +17,7 @@ import {
     LuFileText,
     LuChevronDown,
     LuChevronUp,
+    LuWand,
 } from 'react-icons/lu';
 import Loading from '@/components/ui/loading';
 import Dropdown from '@/components/ui/dropdown';
@@ -90,6 +92,7 @@ export default function OrderDesignLogsPage() {
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(25);
     const [expandedId, setExpandedId] = useState<string | null>(null);
+    const [retrying, setRetrying] = useState(false);
 
     const [filters, setFilters] = useState({
         status: '',
@@ -134,6 +137,33 @@ export default function OrderDesignLogsPage() {
         fetchLogs();
     };
 
+    const handleRetryMissing = async () => {
+        try {
+            setRetrying(true);
+            const res = await fetch('/api/orders/retry-missing-designs', {
+                method: 'POST',
+            });
+            const data = await res.json();
+            if (data.success) {
+                const count = data.data.queuedCount;
+                if (count === 0) {
+                    toast.success('No orders missing designs found.');
+                } else {
+                    toast.success(`Queued ${count} order(s) for design generation.`);
+                    // Refresh logs after a short delay so the new entries appear
+                    setTimeout(() => fetchLogs(), 2000);
+                }
+            } else {
+                toast.error(data.error || 'Failed to retry missing designs');
+            }
+        } catch (error) {
+            console.error('Error retrying missing designs:', error);
+            toast.error('Failed to retry missing designs');
+        } finally {
+            setRetrying(false);
+        }
+    };
+
     const statusOptions = [
         { value: '', label: t('filters.allStatuses') },
         ...STATUS_OPTIONS.map((s) => ({ value: s, label: t(`status.${s}`) })),
@@ -154,10 +184,21 @@ export default function OrderDesignLogsPage() {
                     </h1>
                     <p className="text-secondary">{t('description')}</p>
                 </div>
-                <Button onClick={handleRefresh} className="flex gap-2" disabled={loading}>
-                    <LuRefreshCw size={18} className={loading ? 'animate-spin' : ''} />
-                    {t('refresh')}
-                </Button>
+                <div className="flex items-center gap-2">
+                    <Button
+                        onClick={handleRetryMissing}
+                        variant="outline"
+                        className="flex gap-2"
+                        disabled={retrying}
+                    >
+                        <LuWand size={18} className={retrying ? 'animate-pulse' : ''} />
+                        {retrying ? '...' : 'Retry Missing'}
+                    </Button>
+                    <Button onClick={handleRefresh} className="flex gap-2" disabled={loading}>
+                        <LuRefreshCw size={18} className={loading ? 'animate-spin' : ''} />
+                        {t('refresh')}
+                    </Button>
+                </div>
             </div>
 
             {/* Filters */}
@@ -444,6 +485,14 @@ function ExpandedDetails({
                 <div className="bg-error/10 border border-error/20 rounded-lg p-3">
                     <p className="text-error font-medium text-sm mb-1">{t('details.error')}</p>
                     <p className="text-error/80 text-sm font-mono break-all">{log.error}</p>
+                </div>
+            )}
+
+            {/* Skip reason (if the attempt was skipped) */}
+            {log.skipReason && (
+                <div className="bg-secondary/10 border border-secondary/20 rounded-lg p-3">
+                    <p className="text-secondary font-medium text-sm mb-1">Skip Reason</p>
+                    <p className="text-secondary/80 text-sm">{log.skipReason}</p>
                 </div>
             )}
 

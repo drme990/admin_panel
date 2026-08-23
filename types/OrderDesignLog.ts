@@ -32,6 +32,7 @@ export interface OrderDesignLog {
   finishedAt: string;
   durationMs: number;
   error?: string;
+  skipReason?: string;
   createdAt: string;
 }
 

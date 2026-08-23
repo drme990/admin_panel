@@ -382,6 +382,19 @@ export default function OrderHistoryPage() {
     };
   }, [fetchStats]);
 
+  // Wrap updateOrderStatus so that after a successful status change
+  // (which may remove the order from the current filter), the list is refetched.
+  const handleUpdateOrderStatus = useCallback(
+    async (status: OrderStatus, cancellationReason?: string, isScammer?: boolean) => {
+      const success = await updateOrderStatus(status, cancellationReason, isScammer);
+      if (success) {
+        void fetchOrders();
+        void fetchStats();
+      }
+    },
+    [updateOrderStatus, fetchOrders, fetchStats],
+  );
+
   const applyBulkStatus = async () => {
     if (selectedOrderIds.length === 0 || !bulkValue) return;
 
@@ -891,7 +904,7 @@ export default function OrderHistoryPage() {
         isOpen={isChangeStatusModalOpen}
         onClose={closeChangeStatusModal}
         currentStatus={selectedOrder?.status ?? 'pending'}
-        onUpdateStatus={updateOrderStatus}
+        onUpdateStatus={handleUpdateOrderStatus}
         updating={updatingStatus}
         namespace="orders"
       />

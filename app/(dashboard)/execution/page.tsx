@@ -584,6 +584,20 @@ export default function ExecutionPage() {
     return () => controller.abort();
   }, [fetchExecutionStats]);
 
+  // Wrap updateOrderStatus so that after a successful status change
+  // (which may remove the order from the current filter), the list is
+  // refetched and the order count / pagination stay correct.
+  const handleUpdateOrderStatus = useCallback(
+    async (status: OrderStatus, cancellationReason?: string, isScammer?: boolean) => {
+      const success = await updateOrderStatus(status, cancellationReason, isScammer);
+      if (success) {
+        void fetchExecution();
+        void fetchExecutionStats();
+      }
+    },
+    [updateOrderStatus, fetchExecution, fetchExecutionStats],
+  );
+
   const formatDate = (date: string | Date | undefined) => {
     if (!date) return '-';
     return new Date(date).toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-US', {
@@ -1485,9 +1499,14 @@ export default function ExecutionPage() {
           });
         }
 
+        // Refetch immediately so orders that no longer match the current
+        // date filter are removed from the list right away.
+        void fetchExecution();
+        void fetchExecutionStats();
+
         // The backend triggers design regeneration (fire-and-forget) for
         // each order. The design app will update the order's designUrls
-        // via its callback when the new version is ready. We just refetch
+        // via its callback when the new version is ready. We refetch
         // after a short delay to pick up the updated URLs.
         toast.info(t('table.designRegenerating'));
         setTimeout(() => {
@@ -1514,10 +1533,15 @@ export default function ExecutionPage() {
           payload: { orderId: selectedOrder._id, reservationData: nextReservationData },
         });
 
+        // Refetch immediately so the order is removed if the new date
+        // no longer matches the current date filter.
+        void fetchExecution();
+        void fetchExecutionStats();
+
         // The backend triggers design regeneration (fire-and-forget)
         // when the execution date changes. The design app will update
-        // the order's designUrls via its callback when ready. We just
-        // refetch after a short delay to pick up the updated URL.
+        // the order's designUrls via its callback when ready. We refetch
+        // after a short delay to pick up the updated URL.
         toast.info(t('table.designRegenerating'));
         setTimeout(() => {
           void fetchExecution(undefined, true);
@@ -2126,7 +2150,7 @@ export default function ExecutionPage() {
         isOpen={isChangeStatusModalOpen}
         onClose={closeChangeStatusModal}
         currentStatus={selectedOrder?.status || 'paid'}
-        onUpdateStatus={updateOrderStatus}
+        onUpdateStatus={handleUpdateOrderStatus}
         updating={updatingStatus}
         namespace="execution"
       />

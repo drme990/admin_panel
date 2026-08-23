@@ -508,11 +508,13 @@ export function useOrderPage(options: UseOrderPageOptions) {
   );
 
   // Update status (PUT /api/orders/:id)
+  // Returns true on success, false on failure. The caller can use this
+  // to trigger a refetch of the order list after a successful update.
   const updateOrderStatus = useCallback(
-    async (status: OrderStatus, cancellationReason?: string, isScammer?: boolean) => {
+    async (status: OrderStatus, cancellationReason?: string, isScammer?: boolean): Promise<boolean> => {
       if (!state.selectedOrder || status === state.selectedOrder.status) {
         closeChangeStatusModal();
-        return;
+        return false;
       }
 
       try {
@@ -550,9 +552,12 @@ export function useOrderPage(options: UseOrderPageOptions) {
         if (isScammer && status === 'cancelled' && state.selectedOrder.userId && !state.selectedOrder.isGuest) {
           dispatch({ type: 'SET_PENDING_BAN_ORDER', payload: state.selectedOrder });
         }
+
+        return true;
       } catch (error) {
         console.error('Error updating order status:', error);
         toast.error(t('statusUpdateFailed') || t('changeStatusModal.failed'));
+        return false;
       } finally {
         setUpdatingStatus(false);
       }

@@ -1640,8 +1640,7 @@ export default function CreateManualOrderModal({
       onClose={handleClose}
       title={t('createManualOrder.title')}
       size="xl"
-      className="overflow-visible"
-      contentClassName="flex flex-col gap-4 pr-1 px-4 overflow-visible"
+      contentClassName="flex flex-col gap-4 pr-1 px-4"
     >
       {/* Source */}
       <Dropdown

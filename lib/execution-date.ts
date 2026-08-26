@@ -1,45 +1,23 @@
-const EGYPT_TIMEZONE = 'Africa/Cairo';
-
 /**
  * Summer-time override type.
  *
  * - `true`  → UTC+3 (summer time active)
- * - `false` → UTC+2 (standard time — Egypt abolished DST in 2014)
- * - `null`/`undefined` → auto-detect using the `Africa/Cairo` IANA
- *   timezone (fallback for legacy data that predates the toggle)
+ * - `false`/`null`/`undefined` → UTC+2 (standard time)
+ *
+ * No auto-detection. The admin controls this via the DB toggle.
  */
 type SummerTimeOverride = boolean | null | undefined;
 
 /**
- * Get the effective UTC offset in minutes for Egypt, respecting the
- * manual summer-time override.
+ * Get the effective UTC offset in minutes for Egypt.
  *
- * - `true`  → 180 (UTC+3, summer time active)
- * - `false` → 120 (UTC+2, standard time — Egypt abolished DST in 2014)
- * - `null`/`undefined` → auto-detect from `Africa/Cairo` IANA timezone
- *   (fallback for legacy data that predates the toggle)
+ * - `true`  → 180 (UTC+3, summer time)
+ * - `false`/`null`/`undefined` → 120 (UTC+2, standard time)
+ *
+ * No auto-detection — the admin explicitly sets the toggle in the DB.
  */
 function getEgyptOffsetMinutes(summerTime: SummerTimeOverride): number {
-  if (summerTime === true) return 180;  // UTC+3 — summer time
-  if (summerTime === false) return 120; // UTC+2 — standard time
-
-  // Auto-detect only for null/undefined (legacy data without the flag)
-  const now = new Date();
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: EGYPT_TIMEZONE,
-    timeZoneName: 'shortOffset',
-  }).formatToParts(now);
-  const offsetPart = parts.find((p) => p.type === 'timeZoneName');
-  if (offsetPart) {
-    const match = offsetPart.value.match(/GMT([+-])(\d{1,2})(?::(\d{2}))?/);
-    if (match) {
-      const sign = match[1] === '+' ? 1 : -1;
-      const hours = parseInt(match[2], 10);
-      const minutes = match[3] ? parseInt(match[3], 10) : 0;
-      return sign * (hours * 60 + minutes);
-    }
-  }
-  return 120;
+  return summerTime === true ? 180 : 120;
 }
 
 /**

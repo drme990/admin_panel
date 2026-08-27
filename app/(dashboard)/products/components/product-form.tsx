@@ -7,8 +7,8 @@ import Input from '@/components/ui/input';
 import Switch from '@/components/ui/switch';
 import Button from '@/components/ui/button';
 import Tooltip from '@/components/ui/tooltip';
-import Checkbox from '../ui/checkbox';
-import CollapsibleSection from '@/components/ui/collapsible-section';
+import Checkbox from '../../../../components/ui/checkbox';
+import CollapsibleSection from '@/app/(dashboard)/products/components/collapsible-section';
 import MultiCurrencyPriceEditor, {
   CurrencyPrice,
 } from '@/components/admin/multi-currency-price-editor';
@@ -21,7 +21,7 @@ import MultiMediaUpload, {
 import UploadProgressDisplay from '@/components/admin/upload-progress-display';
 import RichTextEditor from '@/components/ui/rich-text-editor';
 
-import Loading from '../ui/loading';
+import Loading from '../../../../components/ui/loading';
 import {
   buildCurrencyRoundingMap,
   roundPrice,

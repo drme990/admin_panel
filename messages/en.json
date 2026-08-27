@@ -2213,7 +2213,8 @@
         "accounts": "Accounts",
         "crm": "CRM",
         "orderDesignLogs": "Design Logs",
-        "errorLogs": "Error Logs"
+        "errorLogs": "Error Logs",
+        "orderStatsComponent": "Order Stats"
       },
       "buttons": {
         "cancel": "Cancel",

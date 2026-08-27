@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { toast } from 'react-toastify';
-import ProductForm from '@/components/admin/product-form';
+import ProductForm from '@/app/(dashboard)/products/components/product-form';
 import BackButton from '@/components/shared/back-button';
 import ConfirmModal, { useConfirmModal } from '@/components/ui/confirm-modal';
 

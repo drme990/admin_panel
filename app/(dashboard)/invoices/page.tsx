@@ -61,7 +61,7 @@ export default function InvoicesPage() {
     const [invoices, setInvoices] = useState<InvoiceRow[]>([]);
     const [loading, setLoading] = useState(true);
     const [page, setPage] = useState(1);
-    const [pageSize, setPageSize] = useState<number>(25);
+    const [pageSize, setPageSize] = useState<number>(52);
     const [totalPages, setTotalPages] = useState(1);
 
     const [searchInput, setSearchInput] = useState('');

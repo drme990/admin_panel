@@ -26,7 +26,7 @@ export default function SuppliersPage() {
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
     const [page, setPage] = useState(1);
-    const [pageSize, setPageSize] = useState<number>(25);
+    const [pageSize, setPageSize] = useState<number>(52);
     const [total, setTotal] = useState(0);
 
     const [isFormOpen, setIsFormOpen] = useState(false);

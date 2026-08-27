@@ -177,7 +177,7 @@ export default function CustomersPage() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
   const [totalCustomers, setTotalCustomers] = useState(0);
-  const [pageSize, setPageSize] = useState<number>(25);
+  const [pageSize, setPageSize] = useState<number>(52);
 
   const handleDatePreset = (preset: Exclude<DateQuickPreset, 'custom'>) => {
     setActiveDatePreset(preset);

@@ -20,6 +20,7 @@ import { uploadImageToR2, deleteOldImage } from '@/lib/image-upload-utils';
 import { Order, OrderDesignUrl, OrderItem, ReservationOrderField } from '@/types/Order';
 import { Category } from '@/types/Category';
 import { Referral } from '@/types/Referral';
+import { useAuth } from '@/components/providers/auth-provider';
 
 import ExecutionFilters from '@/components/order/execution-filters';
 import ExecutionTitle from '@/components/order/execution-title';
@@ -121,6 +122,8 @@ export default function OrderDesignsPage() {
   const tExec = useTranslations('execution');
   const locale = useLocale();
   const isRTL = locale === 'ar';
+  const { user } = useAuth();
+  const canSeeStats = user?.role === 'super_admin' || user?.allowedPages?.includes('orderStatsComponent');
 
   const tomorrow = getRelativeIsoDate(1);
 
@@ -1564,7 +1567,9 @@ export default function OrderDesignsPage() {
       )}
 
       {/* Category breakdown — same as the execution page */}
-      <OrderStats stats={stats} loading={loadingStats} locale={locale} namespace="execution" onCategoryClick={handleCategoryClick} />
+      {canSeeStats && (
+        <OrderStats stats={stats} loading={loadingStats} locale={locale} namespace="execution" onCategoryClick={handleCategoryClick} />
+      )}
 
       {/* Category Orders Modal — mirrors the execution page's drill-down */}
       <Modal

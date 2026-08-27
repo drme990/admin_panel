@@ -13,6 +13,7 @@ import ConfirmModal, { useConfirmModal } from '@/components/ui/confirm-modal';
 
 import { Order, OrderStatus } from '@/types/Order';
 import { Referral } from '@/types/Referral';
+import { useAuth } from '@/components/providers/auth-provider';
 
 import OrderFilters from '@/components/order/order-filters';
 import { useOrderColumns } from '@/components/order/order-table-columns';
@@ -52,6 +53,8 @@ export default function OrderHistoryPage() {
   const t = useTranslations('orders');
   const locale = useLocale();
   const ToolTipPositions = locale === 'ar' ? 'right' : 'left';
+  const { user } = useAuth();
+  const canSeeStats = user?.role === 'super_admin' || user?.allowedPages?.includes('orderStatsComponent');
   const searchParams = useSearchParams();
   const initialQuery = searchParams.get('q') || '';
   const initialStatusParam = searchParams.get('s');
@@ -121,7 +124,7 @@ export default function OrderHistoryPage() {
       whatsappFilter: initialWhatsappState,
       searchInput: initialQuery,
       searchQuery: initialQuery,
-      pageSize: 25,
+      pageSize: 52,
     },
   });
 
@@ -886,7 +889,9 @@ export default function OrderHistoryPage() {
         onPageSizeChange={setPageSize}
       />
 
-      <OrderStats stats={stats} loading={loadingStats} locale={locale} namespace="orders" />
+      {canSeeStats && (
+        <OrderStats stats={stats} loading={loadingStats} locale={locale} namespace="orders" />
+      )}
 
       <OrderDetailModal
         isOpen={isModalOpen}

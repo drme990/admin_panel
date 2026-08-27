@@ -585,6 +585,7 @@ export function useOrderPage(options: UseOrderPageOptions) {
           rejectionReason?: string;
           value: number;
           currency?: string;
+          whileCreating?: boolean;
         }>;
         items?: Order['items'];
         gender?: string;

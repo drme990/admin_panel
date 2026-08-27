@@ -1875,6 +1875,12 @@ export default function CreateManualOrderModal({
                         {priceWarnings.find((w) => w.index === index)?.message}
                       </p>
                     )}
+                    <ExchangeRateDisplay
+                      fromCurrency={form.currency || 'EGP'}
+                      toCurrency="EGP"
+                      amount={(Number.isFinite(parseFloat(item.overridePrice)) ? parseFloat(item.overridePrice) : getLoadedUnitPrice(item)) * item.quantity}
+                      namespace="orders"
+                    />
                   </>
                 ) : (
                   <>
@@ -1929,6 +1935,12 @@ export default function CreateManualOrderModal({
                         />
                       </div>
                     </div>
+                    <ExchangeRateDisplay
+                      fromCurrency={form.currency || 'EGP'}
+                      toCurrency="EGP"
+                      amount={(Number.isFinite(parseFloat(item.customPrice)) ? parseFloat(item.customPrice) : 0) * item.quantity}
+                      namespace="orders"
+                    />
                   </>
                 )}
               </div>

@@ -207,6 +207,7 @@ export interface Order {
     rejectionReason?: string;
     value: number;
     currency?: string;
+    whileCreating?: boolean;
   }>;
   /** Generated design images — one entry per product with a template */
   designUrls?: OrderDesignUrl[];

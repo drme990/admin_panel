@@ -17,6 +17,7 @@ import Modal from '@/components/ui/modal';
 import { Order, OrderStatus } from '@/types/Order';
 import { Category } from '@/types/Category';
 import { Referral } from '@/types/Referral';
+import { useAuth } from '@/components/providers/auth-provider';
 
 import ExecutionFilters from '@/components/order/execution-filters';
 import { useExecutionColumns } from '@/components/order/execution-table-columns';
@@ -71,6 +72,9 @@ type DateQuickPreset = 'today' | 'tomorrow' | 'yesterday' | 'last7Days' | 'all';
 export default function ExecutionPage() {
   const t = useTranslations('execution');
   const locale = useLocale();
+  const { user: currentUser } = useAuth();
+  const isSuperAdmin = currentUser?.role === 'super_admin';
+  const canSeeStats = isSuperAdmin || currentUser?.allowedPages?.includes('orderStatsComponent');
 
   const tomorrow = getRelativeIsoDate(1);
 
@@ -1667,14 +1671,16 @@ export default function ExecutionPage() {
             <LuPlus size={16} className="me-2" />
             {t('createManualOrder.title')}
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setIsExportModalOpen(true)}
-          >
-            <LuDownload size={16} className="me-2" />
-            {t('export.button')}
-          </Button>
+          {isSuperAdmin && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsExportModalOpen(true)}
+            >
+              <LuDownload size={16} className="me-2" />
+              {t('export.button')}
+            </Button>
+          )}
         </div>
       </div>
 
@@ -1756,7 +1762,9 @@ export default function ExecutionPage() {
         onPageSizeChange={setPageSize}
       />
 
-      <OrderStats stats={stats} loading={loadingStats} locale={locale} namespace="execution" onCategoryClick={handleCategoryClick} />
+      {canSeeStats && (
+        <OrderStats stats={stats} loading={loadingStats} locale={locale} namespace="execution" onCategoryClick={handleCategoryClick} />
+      )}
 
       {/* Category Orders Modal */}
       <Modal

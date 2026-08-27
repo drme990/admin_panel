@@ -88,7 +88,7 @@ export default function OrderDesignLogsPage() {
     const [loading, setLoading] = useState(true);
     const [pagination, setPagination] = useState<OrderDesignLogPagination | null>(null);
     const [page, setPage] = useState(1);
-    const [pageSize, setPageSize] = useState(25);
+    const [pageSize, setPageSize] = useState(52);
     const [expandedId, setExpandedId] = useState<string | null>(null);
 
     const [filters, setFilters] = useState({

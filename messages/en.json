@@ -1791,7 +1791,35 @@
         "reservationSupportsMulti": "Allow entering multiple names",
         "reservationSupportsMultiTooltip": "Enable this when customers may submit more than one beneficiary name for the same field.",
         "intentionOptionsLabel": "Available Options (Select which options to show for this product)",
-        "aqeeqahOptionHidden": "Aqeeqah option is hidden because this product is not marked as Sacrifice"
+        "aqeeqahOptionHidden": "Aqeeqah option is hidden because this product is not marked as Sacrifice",
+        "sectionBasicInfo": "Basic Information",
+        "sectionBasicInfoDesc": "Name, slug, content and media",
+        "sectionMedia": "Product Media",
+        "sectionMediaDesc": "Images and videos for the product",
+        "sectionDisplay": "Display & Visibility",
+        "sectionDisplayDesc": "Stock, labels, bestseller and active status",
+        "sectionPricing": "Pricing & Payment",
+        "sectionPricingDesc": "Currency, sizes, prices and payment options",
+        "sectionSizes": "Product Sizes",
+        "sectionSizesDesc": "Size variants with individual pricing",
+        "sectionSacrifice": "Aqiqah / Sacrifice",
+        "sectionSacrificeDesc": "Sacrifice settings and count",
+        "sectionUpgrade": "Upgrade & Recommendations",
+        "sectionUpgradeDesc": "Product upgrades and checkout recommendations",
+        "sectionReservation": "Reservation Fields",
+        "sectionReservationDesc": "Custom fields for customer input",
+        "errors": {
+          "nameArRequired": "Arabic name is required",
+          "nameEnRequired": "English name is required",
+          "slugRequired": "Slug is required",
+          "mediaRequired": "At least one media item is required",
+          "sizeNameArRequired": "Arabic size name is required",
+          "sizeNameEnRequired": "English size name is required",
+          "sizePriceRequired": "Price must be greater than 0",
+          "minPaymentRequired": "Valid minimum payment values are required",
+          "upgradeDiscountRange": "Discount must be between 0 and 100",
+          "fixErrorsBeforeSave": "Please fix the highlighted errors before saving"
+        }
       },
       "buttons": {
         "cancel": "Cancel",
@@ -1822,7 +1850,11 @@
         "primaryMediaMustStayImage": "Primary media must stay an image.",
         "refreshDisabled": "Page refresh is disabled while editing to prevent data loss",
         "reorderFailed": "Failed to reorder products",
-        "reorderSuccess": "Products reordered successfully"
+        "reorderSuccess": "Products reordered successfully",
+        "discardChangesTitle": "Discard changes?",
+        "discardChangesMessage": "You have unsaved changes. Are you sure you want to leave without saving?",
+        "discard": "Discard",
+        "continueEditing": "Continue editing"
       }
     },
     "productsPricing": {

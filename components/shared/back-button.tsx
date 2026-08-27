@@ -6,7 +6,14 @@ import { useRouter } from 'next/navigation';
 import { LuArrowLeft, LuArrowRight } from 'react-icons/lu';
 import { useState } from 'react';
 
-export default function BackButton({ className }: { className?: string }) {
+export default function BackButton({
+  className,
+  onClick,
+}: {
+  className?: string;
+  /** Override default back navigation — useful for confirming unsaved changes */
+  onClick?: () => void;
+}) {
   const locale = useLocale();
   const router = useRouter();
   const [hasHistory] = useState(
@@ -14,6 +21,10 @@ export default function BackButton({ className }: { className?: string }) {
   );
 
   const handleBack = () => {
+    if (onClick) {
+      onClick();
+      return;
+    }
     if (hasHistory) {
       router.back();
     } else {

@@ -7,6 +7,7 @@ import { toast } from 'react-toastify';
 import ProductForm from '@/components/admin/product-form';
 import BackButton from '@/components/shared/back-button';
 import { PageLoading } from '@/components/ui/loading';
+import ConfirmModal, { useConfirmModal } from '@/components/ui/confirm-modal';
 import { Product } from '@/types/Product';
 
 export default function ProductEditPage() {
@@ -16,6 +17,8 @@ export default function ProductEditPage() {
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [hasChanges, setHasChanges] = useState(false);
+  const { confirm, modalProps } = useConfirmModal();
   const t = useTranslations('admin.products');
 
   useEffect(() => {
@@ -57,6 +60,7 @@ export default function ProductEditPage() {
 
       if (res.ok) {
         toast.success(t('messages.updateSuccess'));
+        setHasChanges(false);
         router.push('/products');
       } else {
         const resData = await res.json();
@@ -70,6 +74,22 @@ export default function ProductEditPage() {
     }
   };
 
+  const handleBack = async () => {
+    if (hasChanges) {
+      const confirmed = await confirm({
+        title: t('messages.discardChangesTitle') || 'Discard changes?',
+        message:
+          t('messages.discardChangesMessage') ||
+          'You have unsaved changes. Are you sure you want to leave without saving?',
+        type: 'warning',
+        confirmText: t('messages.discard') || 'Discard',
+        cancelText: t('messages.continueEditing') || 'Continue editing',
+      });
+      if (!confirmed) return;
+    }
+    router.push('/products');
+  };
+
   if (loading) {
     return <PageLoading />;
   }
@@ -79,24 +99,25 @@ export default function ProductEditPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      <div className="flex items-center gap-3">
-        <BackButton />
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">
+    <div className="max-w-4xl mx-auto space-y-6 pb-24">
+      <div className="flex items-center gap-3 sticky top-0 z-40 bg-background/80 backdrop-blur-sm py-3 -mx-4 px-4">
+        <BackButton onClick={handleBack} />
+        <div className="min-w-0">
+          <h1 className="text-2xl font-bold text-foreground truncate">
             {t('editProduct')}
           </h1>
-          <p className="text-sm text-secondary">{product.name.ar}</p>
+          <p className="text-sm text-secondary truncate">{product.name.ar}</p>
         </div>
       </div>
 
-      <div className="bg-card-bg rounded-xl border border-stroke p-6">
-        <ProductForm
-          product={product}
-          onSubmit={handleSubmit}
-          loading={saving}
-        />
-      </div>
+      <ProductForm
+        product={product}
+        onSubmit={handleSubmit}
+        loading={saving}
+        onChangesChange={setHasChanges}
+      />
+
+      <ConfirmModal {...modalProps} />
     </div>
   );
 }

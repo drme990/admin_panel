@@ -1790,7 +1790,35 @@
         "reservationSupportsMulti": "السماح بإدخال أكثر من اسم",
         "reservationSupportsMultiTooltip": "فعّل هذا الخيار عندما يمكن للعميل إدخال أكثر من اسم مستفيد داخل نفس الحقل.",
         "intentionOptionsLabel": "الخيارات المتاحة (حدد الخيارات التي تريد عرضها لهذا المنتج)",
-        "aqeeqahOptionHidden": "خيار العقيقة مخفي لأن هذا المنتج غير مُعلَّم كأضحية"
+        "aqeeqahOptionHidden": "خيار العقيقة مخفي لأن هذا المنتج غير مُعلَّم كأضحية",
+        "sectionBasicInfo": "المعلومات الأساسية",
+        "sectionBasicInfoDesc": "الاسم، الرابط، المحتوى والوسائط",
+        "sectionMedia": "وسائط المنتج",
+        "sectionMediaDesc": "الصور والفيديوهات للمنتج",
+        "sectionDisplay": "العرض والظهور",
+        "sectionDisplayDesc": "المخزون، التصنيفات، الأكثر مبيعاً والحالة",
+        "sectionPricing": "التسعير والدفع",
+        "sectionPricingDesc": "العملة، الأحجام، الأسعار وخيارات الدفع",
+        "sectionSizes": "أحجام المنتج",
+        "sectionSizesDesc": "أنواع الأحجام بأسعار فردية",
+        "sectionSacrifice": "العقيقة / الأضحية",
+        "sectionSacrificeDesc": "إعدادات الأضحية والعدد",
+        "sectionUpgrade": "الترقية والتوصيات",
+        "sectionUpgradeDesc": "ترقية المنتج والتوصيات عند الدفع",
+        "sectionReservation": "حقول الحجز",
+        "sectionReservationDesc": "حقول مخصصة لإدخال بيانات العميل",
+        "errors": {
+          "nameArRequired": "الاسم بالعربية مطلوب",
+          "nameEnRequired": "الاسم بالإنجليزية مطلوب",
+          "slugRequired": "الرابط مطلوب",
+          "mediaRequired": "مطلوب عنصر وسائط واحد على الأقل",
+          "sizeNameArRequired": "اسم الحجم بالعربية مطلوب",
+          "sizeNameEnRequired": "اسم الحجم بالإنجليزية مطلوب",
+          "sizePriceRequired": "السعر يجب أن يكون أكبر من 0",
+          "minPaymentRequired": "مطلوب قيم دفع صحيحة",
+          "upgradeDiscountRange": "الخصم يجب أن يكون بين 0 و 100",
+          "fixErrorsBeforeSave": "يرجى إصلاح الأخطاء المظللة قبل الحفظ"
+        }
       },
       "buttons": {
         "cancel": "إلغاء",
@@ -1821,7 +1849,11 @@
         "primaryMediaMustStayImage": "يجب أن تبقى الوسائط الأساسية صورة.",
         "refreshDisabled": "تم تعطيل تحديث الصفحة أثناء التحرير لمنع فقدان البيانات",
         "reorderFailed": "فشل في إعادة ترتيب المنتجات",
-        "reorderSuccess": "تم إعادة ترتيب المنتجات بنجاح"
+        "reorderSuccess": "تم إعادة ترتيب المنتجات بنجاح",
+        "discardChangesTitle": "تجاهل التغييرات؟",
+        "discardChangesMessage": "لديك تغييرات غير محفوظة. هل أنت متأكد أنك تريد المغادرة دون حفظ؟",
+        "discard": "تجاهل",
+        "continueEditing": "متابعة التحرير"
       }
     },
     "productsPricing": {

@@ -154,13 +154,22 @@ export default function MultiCurrencyMinimumPaymentEditor({
         // For fixed amounts, convert based on exchange rates
         let rates: Record<string, number>;
         try {
-          rates = await fetchRatesForDate(mainCurrency, today);
-        } catch (todayError) {
+          // Try @latest first (always available)
+          rates = await fetchRatesForDate(mainCurrency, 'latest');
+        } catch (latestError) {
           console.warn(
-            `Exchange rate release ${today} unavailable for ${mainCurrency}; retrying ${yesterday}`,
-            todayError,
+            `@latest rates unavailable for ${mainCurrency}; trying ${today}`,
+            latestError,
           );
-          rates = await fetchRatesForDate(mainCurrency, yesterday);
+          try {
+            rates = await fetchRatesForDate(mainCurrency, today);
+          } catch (todayError) {
+            console.warn(
+              `Exchange rate release ${today} unavailable for ${mainCurrency}; retrying ${yesterday}`,
+              todayError,
+            );
+            rates = await fetchRatesForDate(mainCurrency, yesterday);
+          }
         }
 
         // Calculate minimum payments for all currencies
@@ -383,9 +392,8 @@ export default function MultiCurrencyMinimumPaymentEditor({
                             parseFloat(e.target.value) || 0,
                           )
                         }
-                        className={`flex-1 px-2 py-1 text-sm bg-background border rounded text-foreground focus:outline-none focus:ring-1 focus:ring-success/20 focus:border-success ${
-                          isManual ? 'border-success' : 'border-stroke'
-                        }`}
+                        className={`flex-1 px-2 py-1 text-sm bg-background border rounded text-foreground focus:outline-none focus:ring-1 focus:ring-success/20 focus:border-success ${isManual ? 'border-success' : 'border-stroke'
+                          }`}
                         placeholder="0.00"
                       />
                     </div>

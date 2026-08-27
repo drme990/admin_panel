@@ -182,13 +182,22 @@ export default function MultiCurrencyPriceEditor({
 
       let rates: Record<string, number>;
       try {
-        rates = await fetchRatesForDate(mainCurrency, today);
-      } catch (todayError) {
+        // Try @latest first (always available)
+        rates = await fetchRatesForDate(mainCurrency, 'latest');
+      } catch (latestError) {
         console.warn(
-          `Exchange rate release ${today} unavailable for ${mainCurrency}; retrying ${yesterday}`,
-          todayError,
+          `@latest rates unavailable for ${mainCurrency}; trying ${today}`,
+          latestError,
         );
-        rates = await fetchRatesForDate(mainCurrency, yesterday);
+        try {
+          rates = await fetchRatesForDate(mainCurrency, today);
+        } catch (todayError) {
+          console.warn(
+            `Exchange rate release ${today} unavailable for ${mainCurrency}; retrying ${yesterday}`,
+            todayError,
+          );
+          rates = await fetchRatesForDate(mainCurrency, yesterday);
+        }
       }
 
       // Calculate prices for all currencies

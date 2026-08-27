@@ -1900,7 +1900,10 @@
       "clearFilters": "Clear filters",
       "minPartialPayment": "Min partial payment",
       "minPartialUnavailable": "Not set",
-      "loading": "Loading..."
+      "loading": "Loading...",
+      "viewAs": "View As",
+      "viewAsPlaceholder": "Admin",
+      "viewAsAdmin": "Admin (raw prices)"
     },
     "countries": {
       "title": "Countries Management",

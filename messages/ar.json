@@ -1899,7 +1899,10 @@
       "clearFilters": "مسح الفلاتر",
       "minPartialPayment": "الحد الأدنى للدفع الجزئي",
       "minPartialUnavailable": "غير محدد",
-      "loading": "جاري التحميل..."
+      "loading": "جاري التحميل...",
+      "viewAs": "عرض كـ",
+      "viewAsPlaceholder": "المشرف",
+      "viewAsAdmin": "المشرف (الأسعار الخام)"
     },
     "countries": {
       "title": "إدارة البلدان",

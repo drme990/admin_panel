@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Product } from '@/types/Product';
 import { useLocale, useTranslations } from 'next-intl';
 import ProductCard from './components/product-card';
 import CountrySelector from '@/app/(dashboard)/products-discovery/components/country-selector';
 import Tabs from '@/components/ui/tabs';
+import { LuEye } from 'react-icons/lu';
 
 interface CountryOption {
   code: string;
@@ -16,6 +17,7 @@ interface CountryOption {
 
 type CountryFilter = 'ALL' | string;
 type LabelFilter = 'ALL' | string;
+type ViewAsMode = 'admin' | string; // 'admin' or a country code
 
 interface LabelOption {
   value: string;
@@ -32,9 +34,10 @@ function createLabelKey(label: { ar: string; en: string }): string {
 function readStoredFilters(): {
   countryCode: CountryFilter;
   labelFilter: LabelFilter;
+  viewAs: ViewAsMode;
 } {
   if (typeof window === 'undefined') {
-    return { countryCode: 'ALL', labelFilter: 'ALL' };
+    return { countryCode: 'ALL', labelFilter: 'ALL', viewAs: 'admin' };
   }
 
   try {
@@ -44,12 +47,14 @@ function readStoredFilters(): {
       return {
         countryCode: 'ALL',
         labelFilter: 'ALL',
+        viewAs: 'admin',
       };
     }
 
     const parsed = JSON.parse(raw) as {
       countryCode?: unknown;
       labelFilter?: unknown;
+      viewAs?: unknown;
     };
 
     return {
@@ -62,11 +67,17 @@ function readStoredFilters(): {
         typeof parsed.labelFilter === 'string' && parsed.labelFilter.trim()
           ? parsed.labelFilter
           : 'ALL',
+
+      viewAs:
+        typeof parsed.viewAs === 'string' && parsed.viewAs.trim()
+          ? parsed.viewAs
+          : 'admin',
     };
   } catch {
     return {
       countryCode: 'ALL',
       labelFilter: 'ALL',
+      viewAs: 'admin',
     };
   }
 }
@@ -74,6 +85,7 @@ function readStoredFilters(): {
 function saveFilters(filters: {
   countryCode: CountryFilter;
   labelFilter: LabelFilter;
+  viewAs: ViewAsMode;
 }): void {
   if (typeof window === 'undefined') return;
 
@@ -95,24 +107,23 @@ export default function ProductsPricing() {
     () => readStoredFilters().labelFilter,
   );
 
+  const [viewAs, setViewAs] = useState<ViewAsMode>(
+    () => readStoredFilters().viewAs,
+  );
+
   const locale = useLocale();
   const t = useTranslations('admin.productsPricing');
 
-  useEffect(() => {
-    void fetchProducts();
-    void fetchCountries();
-  }, []);
+  const isViewAsAdmin = viewAs === 'admin';
 
-  useEffect(() => {
-    saveFilters({
-      countryCode,
-      labelFilter,
-    });
-  }, [countryCode, labelFilter]);
-
-  const fetchProducts = async () => {
+  const fetchProducts = useCallback(async () => {
+    setLoading(true);
     try {
-      const res = await fetch('/api/products-discovery?limit=100');
+      const params = new URLSearchParams({ limit: '100' });
+      if (viewAs !== 'admin') {
+        params.set('viewerCountryCode', viewAs);
+      }
+      const res = await fetch(`/api/products-discovery?${params.toString()}`);
 
       const data = await res.json();
 
@@ -124,9 +135,9 @@ export default function ProductsPricing() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [viewAs]);
 
-  const fetchCountries = async () => {
+  const fetchCountries = useCallback(async () => {
     try {
       const res = await fetch('/api/countries?active=true');
 
@@ -140,7 +151,25 @@ export default function ProductsPricing() {
     } finally {
       setCountriesLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    void fetchCountries();
+  }, [fetchCountries]);
+
+  // Fetch products — re-fetch when viewAs changes so prices are resolved
+  // for the selected viewer country (or raw when in admin mode).
+  useEffect(() => {
+    void fetchProducts();
+  }, [fetchProducts]);
+
+  useEffect(() => {
+    saveFilters({
+      countryCode,
+      labelFilter,
+      viewAs,
+    });
+  }, [countryCode, labelFilter, viewAs]);
 
   const labelOptions = useMemo<LabelOption[]>(() => {
     const labelMap = new Map<string, { ar: string; en: string }>();
@@ -195,6 +224,14 @@ export default function ProductsPricing() {
 
   const currencyFilter = selectedCountry?.currencyCode ?? 'ALL';
 
+  // When in "view as" mode, determine the viewer's currency from the
+  // selected country so the ProductCard can highlight the relevant price.
+  const viewAsCountry = useMemo(
+    () => countries.find((c) => c.code === viewAs) || null,
+    [countries, viewAs],
+  );
+  const viewAsCurrency = viewAsCountry?.currencyCode ?? '';
+
   const filteredProducts = useMemo(() => {
     if (labelFilter === 'ALL') {
       return products;
@@ -233,6 +270,16 @@ export default function ProductsPricing() {
       setCountryCode('ALL');
     }
   }, [countries, countryCode, countriesLoading]);
+
+  useEffect(() => {
+    if (
+      !countriesLoading &&
+      !isViewAsAdmin &&
+      !countries.some((c) => c.code === viewAs)
+    ) {
+      setViewAs('admin');
+    }
+  }, [countries, viewAs, countriesLoading, isViewAsAdmin]);
 
   useEffect(() => {
     if (
@@ -279,18 +326,43 @@ export default function ProductsPricing() {
             />
           </div>
 
-          {/* Country Selector */}
-          <div className="w-full shrink-0 xl:w-64">
-            <CountrySelector
-              value={countryCode}
-              onChange={setCountryCode}
-              countries={countries}
-              placeholder={t('countryPlaceholder')}
-              allOptionLabel={t('allCountries')}
-              searchPlaceholder={t('searchCountry')}
-              noResultsLabel={t('noCountriesFound')}
-              disabled={countriesLoading}
-            />
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            {/* View As Selector */}
+            <div className="w-full shrink-0 sm:w-56 xl:w-64">
+              <label className="mb-1 flex items-center gap-1.5 text-xs font-medium text-secondary">
+                <LuEye size={14} />
+                {t('viewAs')}
+              </label>
+              <CountrySelector
+                value={viewAs}
+                onChange={setViewAs}
+                countries={countries}
+                placeholder={t('viewAsPlaceholder')}
+                searchPlaceholder={t('searchCountry')}
+                noResultsLabel={t('noCountriesFound')}
+                disabled={countriesLoading}
+                adminOptionLabel={t('viewAsAdmin')}
+              />
+            </div>
+
+            {/* Country Selector (currency filter) — only relevant in admin mode */}
+            {isViewAsAdmin && (
+              <div className="w-full shrink-0 xl:w-64">
+                <label className="mb-1 block text-xs font-medium text-secondary">
+                  {t('countryPlaceholder')}
+                </label>
+                <CountrySelector
+                  value={countryCode}
+                  onChange={setCountryCode}
+                  countries={countries}
+                  placeholder={t('countryPlaceholder')}
+                  allOptionLabel={t('allCountries')}
+                  searchPlaceholder={t('searchCountry')}
+                  noResultsLabel={t('noCountriesFound')}
+                  disabled={countriesLoading}
+                />
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -319,6 +391,7 @@ export default function ProductsPricing() {
               key={product._id}
               product={product}
               currencyCode={currencyFilter}
+              viewAsCurrency={isViewAsAdmin ? '' : viewAsCurrency}
             />
           ))}
         </div>

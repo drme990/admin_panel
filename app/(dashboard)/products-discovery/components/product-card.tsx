@@ -13,9 +13,16 @@ import { cn } from '@/lib/utils';
 interface Props {
   product: Product;
   currencyCode: string;
+  /**
+   * When non-empty, the card is in "view as" mode — prices come from
+   * `resolvedPrices[]` (pre-resolved by the backend for a specific
+   * viewer country). Only the price matching this currency is shown,
+   * with a real/exchange badge.
+   */
+  viewAsCurrency?: string;
 }
 
-export default function ProductCard({ product, currencyCode }: Props) {
+export default function ProductCard({ product, currencyCode, viewAsCurrency = '' }: Props) {
   const locale = useLocale();
   const t = useTranslations('admin.productsPricing');
 
@@ -36,7 +43,21 @@ export default function ProductCard({ product, currencyCode }: Props) {
 
   const productName = locale === 'ar' ? product.name.ar : product.name.en;
 
+  const isViewAsMode = viewAsCurrency.length > 0;
+
+  // ── "View As" mode: use resolvedPrices[] from the backend ──
+  // The backend already filters by visibility (hide/exchange/real),
+  // so resolvedPrices[] contains every currency this viewer is allowed
+  // to see — we display all of them with real/exchange badges.
+  const viewAsPrices = useMemo(() => {
+    if (!isViewAsMode || !activeSize) return [];
+    const resolved = (activeSize as unknown as { resolvedPrices?: Array<{ currencyCode: string; amount: number; type?: 'real' | 'exchange' }> }).resolvedPrices;
+    return resolved ?? [];
+  }, [activeSize, isViewAsMode]);
+
+  // ── Admin mode: show raw prices[] ──
   const availablePrices = useMemo(() => {
+    if (isViewAsMode) return [];
     if (!activeSize) return [];
 
     // Read base price from prices[] (source of truth), fall back to deprecated price field
@@ -69,7 +90,7 @@ export default function ProductCard({ product, currencyCode }: Props) {
     }
 
     return uniquePrices.filter((price) => price.currencyCode === currencyCode);
-  }, [activeSize, currencyCode, product.baseCurrency]);
+  }, [activeSize, currencyCode, product.baseCurrency, isViewAsMode]);
 
   if (!activeSize) return null;
 
@@ -150,46 +171,116 @@ export default function ProductCard({ product, currencyCode }: Props) {
 
         {/* Prices */}
         <div className="max-h-52 space-y-2 overflow-y-auto pr-1">
-          {availablePrices.map((price) => {
-            const minimum = getMinimumPayment(price.currencyCode, price.amount);
+          {/* View As mode — show resolved price with real/exchange badge */}
+          {isViewAsMode &&
+            viewAsPrices.map((price) => {
+              const minimum = getMinimumPayment(price.currencyCode, price.amount);
+              const isReal = price.type === 'real';
 
-            return (
-              <div
-                key={`${price.currencyCode}-${price.amount}`}
-                className={cn(
-                  'rounded-2xl border border-primary/15',
-                  'bg-primary/5 px-3 py-2.5',
-                  'transition hover:border-primary/30 hover:bg-primary/10',
-                )}
-              >
-                {/* Price */}
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold uppercase tracking-wide text-primary/60">
-                    {price.currencyCode}
-                  </span>
+              return (
+                <div
+                  key={`${price.currencyCode}-${price.amount}`}
+                  className={cn(
+                    'rounded-2xl border',
+                    'px-3 py-2.5',
+                    'transition hover:border-primary/30',
+                    isReal
+                      ? 'border-success/20 bg-success/5'
+                      : 'border-primary/15 bg-primary/5',
+                  )}
+                >
+                  {/* Price */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs font-semibold uppercase tracking-wide text-primary/60">
+                        {price.currencyCode}
+                      </span>
+                      <span
+                        className={cn(
+                          'rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase',
+                          isReal
+                            ? 'bg-success/15 text-success'
+                            : 'bg-primary/15 text-primary',
+                        )}
+                      >
+                        {isReal ? (locale === 'ar' ? 'حقيقي' : 'Real') : (locale === 'ar' ? 'صرف' : 'Exchange')}
+                      </span>
+                    </div>
 
-                  <span className="text-lg font-bold leading-none text-primary">
-                    {formatAmount(price.amount)}
-                  </span>
-                </div>
-
-                {/* Partial Payment */}
-                {hasPartialPayment && (
-                  <div className="mt-2 flex items-center justify-between text-[11px]">
-                    <span className="text-primary/60">
-                      {t('minPartialPayment')}
-                    </span>
-
-                    <span className="font-semibold text-primary">
-                      {minimum === null
-                        ? t('minPartialUnavailable')
-                        : `${formatAmount(minimum)} ${price.currencyCode}`}
+                    <span className="text-lg font-bold leading-none text-primary">
+                      {formatAmount(price.amount)}
                     </span>
                   </div>
-                )}
-              </div>
-            );
-          })}
+
+                  {/* Partial Payment */}
+                  {hasPartialPayment && (
+                    <div className="mt-2 flex items-center justify-between text-[11px]">
+                      <span className="text-primary/60">
+                        {t('minPartialPayment')}
+                      </span>
+
+                      <span className="font-semibold text-primary">
+                        {minimum === null
+                          ? t('minPartialUnavailable')
+                          : `${formatAmount(minimum)} ${price.currencyCode}`}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+
+          {/* View As mode but no resolved price for this currency */}
+          {isViewAsMode && viewAsPrices.length === 0 && (
+            <div className="rounded-2xl border border-dashed border-stroke px-3 py-3 text-center">
+              <span className="text-xs text-secondary">
+                {locale === 'ar' ? 'السعر غير متاح لهذه العملة' : 'Price unavailable for this currency'}
+              </span>
+            </div>
+          )}
+
+          {/* Admin mode — show all raw prices */}
+          {!isViewAsMode &&
+            availablePrices.map((price) => {
+              const minimum = getMinimumPayment(price.currencyCode, price.amount);
+
+              return (
+                <div
+                  key={`${price.currencyCode}-${price.amount}`}
+                  className={cn(
+                    'rounded-2xl border border-primary/15',
+                    'bg-primary/5 px-3 py-2.5',
+                    'transition hover:border-primary/30 hover:bg-primary/10',
+                  )}
+                >
+                  {/* Price */}
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold uppercase tracking-wide text-primary/60">
+                      {price.currencyCode}
+                    </span>
+
+                    <span className="text-lg font-bold leading-none text-primary">
+                      {formatAmount(price.amount)}
+                    </span>
+                  </div>
+
+                  {/* Partial Payment */}
+                  {hasPartialPayment && (
+                    <div className="mt-2 flex items-center justify-between text-[11px]">
+                      <span className="text-primary/60">
+                        {t('minPartialPayment')}
+                      </span>
+
+                      <span className="font-semibold text-primary">
+                        {minimum === null
+                          ? t('minPartialUnavailable')
+                          : `${formatAmount(minimum)} ${price.currencyCode}`}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
         </div>
       </div>
     </div>

@@ -23,6 +23,8 @@ interface CountrySelectorProps {
   disabled?: boolean;
   className?: string;
   allOptionLabel?: string;
+  /** Label for the "Admin" option (shown at the top, code = 'admin'). */
+  adminOptionLabel?: string;
 }
 
 export default function CountrySelector({
@@ -35,6 +37,7 @@ export default function CountrySelector({
   disabled = false,
   className,
   allOptionLabel,
+  adminOptionLabel,
 }: CountrySelectorProps) {
   const locale = useLocale();
   const [isOpen, setIsOpen] = useState(false);
@@ -47,6 +50,14 @@ export default function CountrySelector({
   const options = useMemo(() => {
     const base = countries.slice();
 
+    if (adminOptionLabel) {
+      base.unshift({
+        code: 'admin',
+        name: { en: adminOptionLabel, ar: adminOptionLabel },
+        currencyCode: '',
+      });
+    }
+
     if (allOptionLabel) {
       base.unshift({
         code: 'ALL',
@@ -56,7 +67,7 @@ export default function CountrySelector({
     }
 
     return base;
-  }, [countries, allOptionLabel]);
+  }, [countries, allOptionLabel, adminOptionLabel]);
 
   const filteredOptions = useMemo(() => {
     const query = searchTerm.trim().toLowerCase();
@@ -113,7 +124,7 @@ export default function CountrySelector({
     : placeholder;
 
   const renderFlag = (countryCode: string) => {
-    if (countryCode === 'ALL') return null;
+    if (countryCode === 'ALL' || countryCode === 'admin') return null;
 
     const Flag = Flags[
       countryCode as keyof typeof Flags
@@ -152,7 +163,7 @@ export default function CountrySelector({
         </div>
 
         <div className="flex items-center gap-2">
-          {selectedCountry?.currencyCode && selectedCountry.code !== 'ALL' && (
+          {selectedCountry?.currencyCode && selectedCountry.code !== 'ALL' && selectedCountry.code !== 'admin' && (
             <span className="text-xs text-secondary">
               {selectedCountry.currencyCode}
             </span>
@@ -218,7 +229,7 @@ export default function CountrySelector({
                         {label}
                       </span>
 
-                      {country.code !== 'ALL' && (
+                      {country.code !== 'ALL' && country.code !== 'admin' && (
                         <span className="text-xs text-secondary">
                           {country.code} - {country.currencyCode}
                         </span>

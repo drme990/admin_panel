@@ -105,6 +105,8 @@ export default function ProductForm({
       feedsUp: number;
       isAvailable: boolean;
     }[],
+    // Note: price is kept as number in the form state for editing.
+    // At submit time, it's synced into prices[] as the baseCurrency entry.
     workAsSacrifice: false,
     sacrificeCount: 1,
     upgradeTo: '' as string,
@@ -200,15 +202,23 @@ export default function ProductForm({
         },
         sizes:
           product.sizes?.length > 0
-            ? product.sizes.map((s) => ({
-              name: { ar: s.name.ar || '', en: s.name.en || '' },
-              designName: s.designName || '',
-              price: s.price || 0,
-              prices: s.prices || [],
-              manualPrice: s.manualPrice ?? null,
-              feedsUp: s.feedsUp ?? 0,
-              isAvailable: s.isAvailable !== false,
-            }))
+            ? product.sizes.map((s) => {
+              // When loading, if price is missing, read it from prices[]
+              // (the baseCurrency entry is the source of truth).
+              const baseCurrency = (product.baseCurrency || 'SAR').toUpperCase();
+              const basePriceEntry = s.prices?.find(
+                (p) => p.currencyCode.toUpperCase() === baseCurrency,
+              );
+              return {
+                name: { ar: s.name.ar || '', en: s.name.en || '' },
+                designName: s.designName || '',
+                price: s.price || basePriceEntry?.amount || 0,
+                prices: s.prices || [],
+                manualPrice: s.manualPrice ?? null,
+                feedsUp: s.feedsUp ?? 0,
+                isAvailable: s.isAvailable !== false,
+              };
+            })
             : [{ ...defaultSize }],
         workAsSacrifice: product.workAsSacrifice || false,
         sacrificeCount: product.sacrificeCount ?? 1,
@@ -552,7 +562,35 @@ export default function ProductForm({
         minimumType: formData.partialPayment.minimumType,
         minimumPayments: formData.partialPayment.minimumPayments,
       },
-      sizes: formData.sizes,
+      sizes: formData.sizes.map((s) => {
+        // Sync the base price into prices[] as the baseCurrency entry.
+        // The prices[] array is the single source of truth — size.price
+        // is deprecated and kept only for backward compatibility.
+        const baseCurrency = formData.baseCurrency.toUpperCase();
+        const prices = [...s.prices];
+        const baseIdx = prices.findIndex(
+          (p) => p.currencyCode.toUpperCase() === baseCurrency,
+        );
+        if (baseIdx >= 0) {
+          prices[baseIdx] = {
+            ...prices[baseIdx],
+            amount: s.price,
+            isManual: true,
+          };
+        } else {
+          prices.push({
+            currencyCode: baseCurrency,
+            amount: s.price,
+            isManual: true,
+          });
+        }
+        return {
+          ...s,
+          prices,
+          // Keep price in sync for backward compatibility
+          price: s.price,
+        };
+      }),
       workAsSacrifice: formData.workAsSacrifice,
       sacrificeCount: formData.workAsSacrifice ? formData.sacrificeCount : 1,
       upgradeTo: formData.upgradeTo || null,

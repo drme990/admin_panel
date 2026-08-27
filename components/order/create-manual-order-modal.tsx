@@ -22,7 +22,7 @@ import { uploadImageToR2, uploadInvoiceToR2, deleteOldImage } from '../../lib/im
 
 import { LuCopy, LuCheck, LuRefreshCw, LuUpload, LuPlus, LuX, LuAtSign, LuPencil, LuUserCheck, LuImage, LuClock, LuLink, LuFileText } from 'react-icons/lu';
 import { FaWhatsapp } from 'react-icons/fa';
-import { isValidPhoneNumber } from 'libphonenumber-js';
+import { isValidPhoneNumber, parsePhoneNumberFromString } from 'libphonenumber-js';
 import { COUNTRIES } from '@/lib/countries';
 import { MANUAL_PAYMENT_METHODS, EASYKASH_PAYMENT_METHOD } from '@/lib/order';
 import CurrencySelector from '@/components/shared/currency-selector';
@@ -33,6 +33,42 @@ import ExchangeRateDisplay from '@/components/order/exchange-rate-display';
 
 function extractDigits(value: string): string {
   return value.replace(/\D/g, '');
+}
+
+/**
+ * Detect the country from a full international phone number (e.g. "+201234567890").
+ * Returns the country name (matching COUNTRIES[].value) or null if detection fails.
+ */
+function detectCountryFromPhone(phone: string): string | null {
+  const trimmed = phone.trim();
+  if (!trimmed) return null;
+
+  // Ensure the number starts with "+" so libphonenumber treats it as international
+  const normalized = trimmed.startsWith('+') ? trimmed : `+${trimmed.replace(/^\+?/, '')}`;
+
+  try {
+    const parsed = parsePhoneNumberFromString(normalized);
+    if (parsed?.country) {
+      const country = COUNTRIES.find((c) => c.code === parsed.country);
+      if (country) return country.value;
+    }
+  } catch {
+    // ignore parse errors
+  }
+
+  // Fallback: match by phone code prefix against COUNTRIES
+  const digits = extractDigits(trimmed);
+  if (digits.length >= 2) {
+    // Sort by phoneCode length descending so longer prefixes match first
+    const sorted = [...COUNTRIES].sort((a, b) => b.phoneCode.length - a.phoneCode.length);
+    for (const c of sorted) {
+      if (digits.startsWith(c.phoneCode)) {
+        return c.value;
+      }
+    }
+  }
+
+  return null;
 }
 
 function validatePhoneNumber(phone: string, countryName: string): boolean {
@@ -720,12 +756,20 @@ export default function CreateManualOrderModal({
       if (typeof size.manualPrice === 'number' && size.manualPrice > 0 && form.currency === 'EGP') {
         return size.manualPrice;
       }
-      let unitPrice = size.price ?? 0;
+      // Try prices[] first (source of truth), then fall back to deprecated price field
       const currencyPrice = size.prices?.find(
         (p: { currencyCode: string; amount: number }) => p.currencyCode === form.currency,
       );
-      if (currencyPrice) unitPrice = currencyPrice.amount;
-      return unitPrice;
+      if (currencyPrice) return currencyPrice.amount;
+      // If currency matches base currency, use base price from prices[] or legacy field
+      if (form.currency === product.baseCurrency) {
+        const baseEntry = size.prices?.find(
+          (p: { currencyCode: string; amount: number }) =>
+            p.currencyCode === product.baseCurrency,
+        );
+        return baseEntry?.amount ?? size.price ?? 0;
+      }
+      return size.price ?? 0;
     },
     [getProduct, form.currency],
   );
@@ -747,11 +791,20 @@ export default function CreateManualOrderModal({
           if (typeof size.manualPrice === 'number' && size.manualPrice > 0 && val === 'EGP') {
             unitPrice = size.manualPrice;
           } else {
-            unitPrice = size.price ?? 0;
             const currencyPrice = size.prices?.find(
               (p: { currencyCode: string; amount: number }) => p.currencyCode === val,
             );
-            if (currencyPrice) unitPrice = currencyPrice.amount;
+            if (currencyPrice) {
+              unitPrice = currencyPrice.amount;
+            } else if (val === product.baseCurrency) {
+              const baseEntry = size.prices?.find(
+                (p: { currencyCode: string; amount: number }) =>
+                  p.currencyCode === product.baseCurrency,
+              );
+              unitPrice = baseEntry?.amount ?? size.price ?? 0;
+            } else {
+              unitPrice = size.price ?? 0;
+            }
           }
           return {
             ...item,
@@ -2434,10 +2487,27 @@ export default function CreateManualOrderModal({
                 placeholder={t('createManualOrder.phonePlaceholder')}
                 value={form.billingData.phone}
                 onChange={(e) => {
-                  setForm((prev) => ({
-                    ...prev,
-                    billingData: { ...prev.billingData, phone: e.target.value },
-                  }));
+                  const newPhone = e.target.value;
+                  setForm((prev) => {
+                    // Auto-detect country from the full international phone
+                    // number. Only set the country if it's currently empty
+                    // or the detected country differs — this avoids
+                    // overriding a manual selection with the same value.
+                    const detectedCountry = detectCountryFromPhone(newPhone);
+                    const currentCountry = prev.billingData.country;
+                    const country =
+                      detectedCountry && detectedCountry !== currentCountry
+                        ? detectedCountry
+                        : currentCountry;
+                    return {
+                      ...prev,
+                      billingData: {
+                        ...prev.billingData,
+                        phone: newPhone,
+                        country,
+                      },
+                    };
+                  });
                   dispatch({ type: 'SET_LINKED_USER_ID', userId: null });
                   dispatch({ type: 'PATCH_FORM_ERRORS', errors: { phone: '' } });
                   if (phoneWhatsappClicked) {

@@ -14,8 +14,24 @@ import Input from '@/components/ui/input';
 import Textarea from '@/components/ui/textarea';
 import Dropdown from '@/components/ui/dropdown';
 import { Order, OrderItem } from '@/types/Order';
-import { Product } from '@/types/Product';
+import { Product, ProductSize } from '@/types/Product';
 import { RESERVATION_FIELD_PRESETS } from '@/lib/reservation-fields';
+
+/**
+ * Get the base-currency price for a size from prices[] (source of truth),
+ * falling back to the deprecated size.price field.
+ */
+function getBasePriceForSize(
+  size: ProductSize | undefined,
+  baseCurrency: string,
+): number {
+  if (!size) return 0;
+  const base = baseCurrency.toUpperCase();
+  const entry = size.prices?.find(
+    (p) => p.currencyCode.toUpperCase() === base,
+  );
+  return entry?.amount ?? size.price ?? 0;
+}
 
 interface Props {
   isOpen: boolean;
@@ -180,7 +196,7 @@ export default function EditOrderModal({
         productId: product._id,
         productSlug: product.slug,
         productName: product.name,
-        price: size?.price ?? 0,
+        price: getBasePriceForSize(size, product.baseCurrency),
         currency: product.baseCurrency,
         sizeIndex: keptIndex,
         sizeName: size?.name ?? { ar: '', en: '' },
@@ -200,7 +216,7 @@ export default function EditOrderModal({
       const next = [...prev];
       next[index] = {
         ...next[index],
-        price: size.price ?? 0,
+        price: getBasePriceForSize(size, product.baseCurrency),
         currency: product.baseCurrency,
         sizeIndex,
         sizeName: size.name ?? { ar: '', en: '' },
@@ -219,7 +235,7 @@ export default function EditOrderModal({
         productId: product._id,
         productSlug: product.slug,
         productName: product.name,
-        price: size?.price ?? 0,
+        price: getBasePriceForSize(size, product.baseCurrency),
         currency: product.baseCurrency,
         quantity: 1,
         sizeIndex: 0,

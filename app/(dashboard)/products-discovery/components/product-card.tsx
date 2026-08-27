@@ -39,10 +39,17 @@ export default function ProductCard({ product, currencyCode }: Props) {
   const availablePrices = useMemo(() => {
     if (!activeSize) return [];
 
+    // Read base price from prices[] (source of truth), fall back to deprecated price field
+    const baseCur = product.baseCurrency.toUpperCase();
+    const baseEntry = activeSize.prices?.find(
+      (p) => p.currencyCode.toUpperCase() === baseCur,
+    );
+    const baseAmount = baseEntry?.amount ?? activeSize.price ?? 0;
+
     const rawPrices = [
       {
         currencyCode: product.baseCurrency,
-        amount: activeSize.price,
+        amount: baseAmount,
       },
 
       ...(activeSize.prices ?? []).map((price) => ({

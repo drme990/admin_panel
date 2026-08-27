@@ -22,9 +22,12 @@ export interface ProductSize {
    * Single string (Arabic). Falls back to `name.ar` if not set.
    */
   designName?: string;
-  /** Price in baseCurrency */
-  price: number;
-  /** Multi-currency converted / manually-set prices */
+  /**
+   * @deprecated Use `prices[]` instead. The base-currency price is
+   * stored as an entry in `prices[]` with `currencyCode === baseCurrency`.
+   */
+  price?: number;
+  /** Single source of truth for all currency prices. */
   prices: CurrencyPrice[];
   /** Manual order price in EGP (single currency). Null = use regular price. */
   manualPrice?: number | null;

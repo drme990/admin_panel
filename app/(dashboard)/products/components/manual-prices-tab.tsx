@@ -190,7 +190,11 @@ export default function ManualPricesTab({
                           {isRTL ? size.name.ar : size.name.en}
                         </div>
                         <div className="text-xs text-secondary">
-                          {t('manualPrices.regularPrice', { defaultValue: 'Regular' })}: {size.price} {product.baseCurrency}
+                          {t('manualPrices.regularPrice', { defaultValue: 'Regular' })}: {size.price ?? (() => {
+                            const baseCur = (product.baseCurrency || '').toUpperCase();
+                            const entry = size.prices?.find((p) => p.currencyCode.toUpperCase() === baseCur);
+                            return entry?.amount ?? 0;
+                          })()} {product.baseCurrency}
                         </div>
                       </div>
 

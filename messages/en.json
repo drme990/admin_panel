@@ -1203,6 +1203,7 @@
       "refTracker": "Ref Tracker",
       "activityLogs": "Activity Logs",
       "orderDesignLogs": "Design Logs",
+      "errorLogs": "Error Logs",
       "appearance": "Appearance",
       "exchange": "Exchange Rates",
       "storageManager": "Storage Manager",
@@ -1857,6 +1858,37 @@
         "continueEditing": "Continue editing"
       }
     },
+    "errorLogs": {
+      "title": "Error Logs",
+      "description": "Track errors and exceptions across the application in real time.",
+      "refresh": "Refresh",
+      "deleteAll": "Delete All",
+      "deleteAllTitle": "Delete all error logs?",
+      "deleteAllMessage": "This will permanently delete all error logs. This action cannot be undone.",
+      "deleteAllConfirm": "Delete All",
+      "deletedCount": "Deleted {count} error log(s)",
+      "deletedOne": "Error log deleted",
+      "deleteOne": "Delete",
+      "cancel": "Cancel",
+      "allLevels": "All Levels",
+      "levelError": "Error",
+      "levelWarn": "Warning",
+      "levelFatal": "Fatal",
+      "filterLevel": "Level",
+      "search": "Search",
+      "searchPlaceholder": "Search message, stack, or source...",
+      "clearFilters": "Clear filters",
+      "totalErrors": "Total Errors",
+      "currentPage": "Page",
+      "showing": "Showing",
+      "emptyMessage": "No error logs found. Everything is running smoothly!",
+      "userData": "User Data",
+      "sessionData": "Session Data",
+      "stackTrace": "Stack Trace",
+      "metadata": "Metadata",
+      "prev": "Previous",
+      "next": "Next"
+    },
     "productsPricing": {
       "title": "Products Pricing",
       "description": "Review product pricing across countries and sizes",
@@ -2180,7 +2212,8 @@
         "suppliers": "Suppliers",
         "accounts": "Accounts",
         "crm": "CRM",
-        "orderDesignLogs": "Design Logs"
+        "orderDesignLogs": "Design Logs",
+        "errorLogs": "Error Logs"
       },
       "buttons": {
         "cancel": "Cancel",

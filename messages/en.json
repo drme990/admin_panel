@@ -2691,7 +2691,24 @@
       "updateSuccess": "Prices updated successfully",
       "updateFailed": "Failed to update prices",
       "noLogs": "No price update logs yet",
+      "loading": "Loading...",
+      "noPriceChanges": "No price changes recorded for this run",
+      "oldLogNoData": "This log was created before price tracking was enabled. Click \"Update All Prices Now\" to generate a new log with detailed price changes.",
+      "noMatchingEntries": "No entries match the selected filters",
+      "errorGeneric": "An error occurred during the price update",
       "refresh": "Refresh",
+      "changed": "changed",
+      "notChanged": "not changed",
+      "manual": "manual",
+      "entries": "entries",
+      "logDetails": "Log Details",
+      "summary": "Summary",
+      "filterBy": "Filter",
+      "filter": {
+        "all": "All",
+        "changed": "Changed",
+        "not_changed": "Not Changed"
+      },
       "table": {
         "date": "Date",
         "status": "Status",
@@ -2699,7 +2716,13 @@
         "products": "Products Updated",
         "currencies": "Currencies",
         "duration": "Duration",
-        "error": "Error"
+        "error": "Error",
+        "product": "Product",
+        "size": "Size",
+        "currency": "Currency",
+        "prevValue": "Previous",
+        "newValue": "New",
+        "state": "State"
       },
       "status": {
         "success": "Success",

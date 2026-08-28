@@ -18,8 +18,7 @@ import { Product, ProductSize } from '@/types/Product';
 import { RESERVATION_FIELD_PRESETS } from '@/lib/reservation-fields';
 
 /**
- * Get the base-currency price for a size from prices[] (source of truth),
- * falling back to the deprecated size.price field.
+ * Get the base-currency price for a size from prices[] (source of truth).
  */
 function getBasePriceForSize(
   size: ProductSize | undefined,
@@ -30,7 +29,7 @@ function getBasePriceForSize(
   const entry = size.prices?.find(
     (p) => p.currencyCode.toUpperCase() === base,
   );
-  return entry?.amount ?? size.price ?? 0;
+  return entry?.amount ?? 0;
 }
 
 interface Props {

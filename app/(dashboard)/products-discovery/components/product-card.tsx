@@ -60,12 +60,12 @@ export default function ProductCard({ product, currencyCode, viewAsCurrency = ''
     if (isViewAsMode) return [];
     if (!activeSize) return [];
 
-    // Read base price from prices[] (source of truth), fall back to deprecated price field
+    // Read base price from prices[] (source of truth)
     const baseCur = product.baseCurrency.toUpperCase();
     const baseEntry = activeSize.prices?.find(
       (p) => p.currencyCode.toUpperCase() === baseCur,
     );
-    const baseAmount = baseEntry?.amount ?? activeSize.price ?? 0;
+    const baseAmount = baseEntry?.amount ?? 0;
 
     const rawPrices = [
       {

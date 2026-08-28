@@ -255,13 +255,13 @@ export default function ProductsPage() {
     {
       header: t('table.price'),
       accessor: (product: Product) => {
-        // Read base price from prices[] (source of truth), fall back to deprecated price field
+        // Read base price from prices[] (source of truth)
         const baseCur = (product.baseCurrency || '').toUpperCase();
         const firstSize = product.sizes?.[0];
         const baseEntry = firstSize?.prices?.find(
           (p) => p.currencyCode.toUpperCase() === baseCur,
         );
-        const basePrice = baseEntry?.amount ?? firstSize?.price ?? 0;
+        const basePrice = baseEntry?.amount ?? 0;
         return (
           <span>
             {basePrice} {product.baseCurrency}

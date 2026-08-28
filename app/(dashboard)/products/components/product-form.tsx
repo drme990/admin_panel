@@ -70,6 +70,30 @@ export default function ProductForm({
   loading = false,
   onChangesChange,
 }: ProductFormProps) {
+  // ─── Helpers for base price in prices[] ────────────────────────────
+  // The base price is the entry in prices[] whose currencyCode matches
+  // the product's baseCurrency. These helpers read/write that entry
+  // directly — there is no separate `price` field anymore.
+  const getBasePrice = (prices: CurrencyPrice[], baseCurrency: string): number => {
+    const base = baseCurrency.toUpperCase();
+    return prices.find((p) => p.currencyCode.toUpperCase() === base)?.amount ?? 0;
+  };
+
+  const setBasePrice = (
+    prices: CurrencyPrice[],
+    baseCurrency: string,
+    amount: number,
+  ): CurrencyPrice[] => {
+    const base = baseCurrency.toUpperCase();
+    const idx = prices.findIndex((p) => p.currencyCode.toUpperCase() === base);
+    if (idx >= 0) {
+      const updated = [...prices];
+      updated[idx] = { ...updated[idx], amount, isManual: true };
+      return updated;
+    }
+    return [...prices, { currencyCode: base, amount, isManual: true }];
+  };
+
   const initialUploadState: UploadProgressState = {
     isUploading: false,
     overallProgress: 0,
@@ -84,7 +108,6 @@ export default function ProductForm({
   const defaultSize = {
     name: { ar: '', en: '' },
     designName: '',
-    price: 0,
     prices: [] as CurrencyPrice[],
     manualPrice: null as number | null,
     feedsUp: 0,
@@ -115,7 +138,6 @@ export default function ProductForm({
     sizes: [{ ...defaultSize }] as {
       name: { ar: string; en: string };
       designName: string;
-      price: number;
       prices: CurrencyPrice[];
       manualPrice: number | null;
       feedsUp: number;
@@ -180,7 +202,8 @@ export default function ProductForm({
       if (!size.name.en.trim()) {
         errors[`size_${index}_name_en`] = t('form.errors.sizeNameEnRequired');
       }
-      if (!Number.isFinite(size.price) || size.price <= 0) {
+      const basePrice = getBasePrice(size.prices, formData.baseCurrency);
+      if (!Number.isFinite(basePrice) || basePrice <= 0) {
         errors[`size_${index}_price`] = t('form.errors.sizePriceRequired');
       }
     });
@@ -356,14 +379,9 @@ export default function ProductForm({
         sizes:
           product.sizes?.length > 0
             ? product.sizes.map((s) => {
-              const baseCurrency = (product.baseCurrency || 'SAR').toUpperCase();
-              const basePriceEntry = s.prices?.find(
-                (p) => p.currencyCode.toUpperCase() === baseCurrency,
-              );
               return {
                 name: { ar: s.name.ar || '', en: s.name.en || '' },
                 designName: s.designName || '',
-                price: s.price || basePriceEntry?.amount || 0,
                 prices: s.prices || [],
                 manualPrice: s.manualPrice ?? null,
                 feedsUp: s.feedsUp ?? 0,
@@ -458,7 +476,6 @@ export default function ProductForm({
     const multiplier = 1 + addedPricePercentage / 100;
     const updatedSizes = formData.sizes.map((size) => ({
       ...size,
-      price: Math.ceil(size.price * multiplier),
       prices: size.prices.map((p) => ({
         ...p,
         amount: roundPrice(
@@ -511,7 +528,8 @@ export default function ProductForm({
     } else if (field === 'designName') {
       size.designName = value as string;
     } else if (field === 'price') {
-      size.price = value as number;
+      // Base price is stored as the baseCurrency entry in prices[]
+      size.prices = setBasePrice(size.prices, formData.baseCurrency, value as number);
     } else if (field === 'manualPrice') {
       size.manualPrice = value as number | null;
     } else if (field === 'prices') {
@@ -668,28 +686,15 @@ export default function ProductForm({
         minimumPayments: formData.partialPayment.minimumPayments,
       },
       sizes: formData.sizes.map((s) => {
-        const baseCurrency = formData.baseCurrency.toUpperCase();
-        const prices = [...s.prices];
-        const baseIdx = prices.findIndex(
-          (p) => p.currencyCode.toUpperCase() === baseCurrency,
-        );
-        if (baseIdx >= 0) {
-          prices[baseIdx] = {
-            ...prices[baseIdx],
-            amount: s.price,
-            isManual: true,
-          };
-        } else {
-          prices.push({
-            currencyCode: baseCurrency,
-            amount: s.price,
-            isManual: true,
-          });
-        }
+        // prices[] already contains the base-currency entry (updated
+        // live via updateSize('price', ...)). No sync needed here.
         return {
-          ...s,
-          prices,
-          price: s.price,
+          name: s.name,
+          designName: s.designName,
+          prices: s.prices,
+          manualPrice: s.manualPrice,
+          feedsUp: s.feedsUp,
+          isAvailable: s.isAvailable,
         };
       }),
       workAsSacrifice: formData.workAsSacrifice,
@@ -934,7 +939,7 @@ export default function ProductForm({
       >
         <MultiCurrencyPriceEditor
           mainCurrency={formData.baseCurrency}
-          basePrice={formData.sizes[0]?.price ?? 0}
+          basePrice={getBasePrice(formData.sizes[0]?.prices ?? [], formData.baseCurrency)}
           prices={[]}
           onChange={() => { }}
           onMainCurrencyChange={(currency) => {
@@ -1146,7 +1151,7 @@ export default function ProductForm({
                 <Input
                   label={`${t('form.sizeBasePrice')} (${formData.baseCurrency})`}
                   type="number"
-                  value={size.price || ''}
+                  value={getBasePrice(size.prices, formData.baseCurrency) || ''}
                   onChange={(e) =>
                     updateSize(index, 'price', parseFloat(e.target.value) || 0)
                   }
@@ -1154,10 +1159,10 @@ export default function ProductForm({
                   step="0.01"
                   error={formErrors[`size_${index}_price`]}
                 />
-                {size.price > 0 && (
+                {getBasePrice(size.prices, formData.baseCurrency) > 0 && (
                   <MultiCurrencyPriceEditor
                     mainCurrency={formData.baseCurrency}
-                    basePrice={size.price}
+                    basePrice={getBasePrice(size.prices, formData.baseCurrency)}
                     prices={size.prices}
                     onChange={(prices) => updateSize(index, 'prices', prices)}
                     onMainCurrencyChange={() => { }}

@@ -103,7 +103,6 @@ interface Product {
   baseCurrency: string;
   sizes: Array<{
     name?: { ar: string; en: string };
-    price: number;
     prices?: Array<{ currencyCode: string; amount: number }>;
     manualPrice?: number | null;
     isAvailable?: boolean;
@@ -761,15 +760,15 @@ export default function CreateManualOrderModal({
         (p: { currencyCode: string; amount: number }) => p.currencyCode === form.currency,
       );
       if (currencyPrice) return currencyPrice.amount;
-      // If currency matches base currency, use base price from prices[] or legacy field
+      // If currency matches base currency, use base price from prices[]
       if (form.currency === product.baseCurrency) {
         const baseEntry = size.prices?.find(
           (p: { currencyCode: string; amount: number }) =>
             p.currencyCode === product.baseCurrency,
         );
-        return baseEntry?.amount ?? size.price ?? 0;
+        return baseEntry?.amount ?? 0;
       }
-      return size.price ?? 0;
+      return 0;
     },
     [getProduct, form.currency],
   );
@@ -801,9 +800,9 @@ export default function CreateManualOrderModal({
                 (p: { currencyCode: string; amount: number }) =>
                   p.currencyCode === product.baseCurrency,
               );
-              unitPrice = baseEntry?.amount ?? size.price ?? 0;
+              unitPrice = baseEntry?.amount ?? 0;
             } else {
-              unitPrice = size.price ?? 0;
+              unitPrice = 0;
             }
           }
           return {

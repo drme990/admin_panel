@@ -8,6 +8,7 @@ import Switch from '@/components/ui/switch';
 import Button from '@/components/ui/button';
 import Tooltip from '@/components/ui/tooltip';
 import Checkbox from '../../../../components/ui/checkbox';
+import { cn } from '@/lib/utils';
 import CollapsibleSection from '@/app/(dashboard)/products/components/collapsible-section';
 import MultiCurrencyPriceEditor, {
   CurrencyPrice,
@@ -51,6 +52,7 @@ import {
   LuListChecks as ListChecksIcon,
   LuCircleAlert as AlertIcon,
   LuSave as SaveIcon,
+  LuChevronDown as ChevronDownIcon,
 } from 'react-icons/lu';
 
 interface ProductFormProps {
@@ -108,6 +110,8 @@ export default function ProductForm({
   const defaultSize = {
     name: { ar: '', en: '' },
     designName: '',
+    basePrice: 0 as number,
+    baseCurrency: '' as string,
     prices: [] as CurrencyPrice[],
     manualPrice: null as number | null,
     feedsUp: 0,
@@ -135,9 +139,11 @@ export default function ProductForm({
       minimumPayments: [] as CurrencyMinimumPayment[],
       baseMinimumValue: 50,
     },
-    sizes: [{ ...defaultSize }] as {
+    sizes: [{ ...defaultSize, baseCurrency: 'SAR' }] as {
       name: { ar: string; en: string };
       designName: string;
+      basePrice: number;
+      baseCurrency: string;
       prices: CurrencyPrice[];
       manualPrice: number | null;
       feedsUp: number;
@@ -168,6 +174,64 @@ export default function ProductForm({
   const [attemptedSubmit, setAttemptedSubmit] = useState(false);
   const isInitialMount = useRef(true);
   const t = useTranslations('admin.products');
+
+  // ─── Section accordion state ──────────────────────────────────────
+  // Create mode: first section ("section-basic") is open, rest closed.
+  // Edit mode: all sections closed (user opens what they need).
+  // Opening a section closes all other non-locked open sections.
+  // Locking a section preserves its state when other sections toggle.
+  const [openSections, setOpenSections] = useState<Set<string>>(
+    () => new Set(product ? [] : ['section-basic']),
+  );
+  const [lockedSections, setLockedSections] = useState<Set<string>>(
+    () => new Set(),
+  );
+  // Track which size cards are expanded (by index). First size is open by default.
+  const [expandedSizes, setExpandedSizes] = useState<Set<number>>(
+    () => new Set([0]),
+  );
+
+  const handleSectionToggle = (sectionId: string, open: boolean) => {
+    setOpenSections((prev) => {
+      const next = new Set(prev);
+      if (open) {
+        next.add(sectionId);
+        // Accordion: close all other non-locked open sections
+        for (const id of next) {
+          if (id !== sectionId && !lockedSections.has(id)) {
+            next.delete(id);
+          }
+        }
+      } else {
+        next.delete(sectionId);
+      }
+      return next;
+    });
+  };
+
+  const handleLockToggle = (sectionId: string) => {
+    setLockedSections((prev) => {
+      const next = new Set(prev);
+      if (next.has(sectionId)) {
+        next.delete(sectionId);
+      } else {
+        next.add(sectionId);
+      }
+      return next;
+    });
+  };
+
+  const toggleSizeExpand = (index: number) => {
+    setExpandedSizes((prev) => {
+      const next = new Set(prev);
+      if (next.has(index)) {
+        next.delete(index);
+      } else {
+        next.add(index);
+      }
+      return next;
+    });
+  };
 
   // ─── Validation logic ──────────────────────────────────────────────
   const validateForm = useCallback((): FormErrors => {
@@ -202,7 +266,7 @@ export default function ProductForm({
       if (!size.name.en.trim()) {
         errors[`size_${index}_name_en`] = t('form.errors.sizeNameEnRequired');
       }
-      const basePrice = getBasePrice(size.prices, formData.baseCurrency);
+      const basePrice = size.basePrice || getBasePrice(size.prices, formData.baseCurrency);
       if (!Number.isFinite(basePrice) || basePrice <= 0) {
         errors[`size_${index}_price`] = t('form.errors.sizePriceRequired');
       }
@@ -382,6 +446,10 @@ export default function ProductForm({
               return {
                 name: { ar: s.name.ar || '', en: s.name.en || '' },
                 designName: s.designName || '',
+                // Use basePrice from the size if available; fall back to
+                // the base-currency entry in prices[] for old docs.
+                basePrice: s.basePrice ?? getBasePrice(s.prices || [], product.baseCurrency || 'SAR'),
+                baseCurrency: s.baseCurrency || product.baseCurrency || 'SAR',
                 prices: s.prices || [],
                 manualPrice: s.manualPrice ?? null,
                 feedsUp: s.feedsUp ?? 0,
@@ -408,10 +476,18 @@ export default function ProductForm({
         setHasChanges(false);
         setFormErrors({});
         setAttemptedSubmit(false);
+        // Reset sections: edit mode starts with all sections closed
+        setOpenSections(new Set());
+        setLockedSections(new Set());
+        setExpandedSizes(new Set());
         isInitialMount.current = true;
       }, 0);
     } else {
       setIsFormDataReady(true);
+      // Create mode: first section open, rest closed
+      setOpenSections(new Set(['section-basic']));
+      setLockedSections(new Set());
+      setExpandedSizes(new Set([0]));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [product?._id]);
@@ -496,7 +572,7 @@ export default function ProductForm({
   const addSize = () => {
     setFormData({
       ...formData,
-      sizes: [...formData.sizes, { ...defaultSize }],
+      sizes: [...formData.sizes, { ...defaultSize, baseCurrency: formData.baseCurrency }],
     });
   };
 
@@ -528,7 +604,11 @@ export default function ProductForm({
     } else if (field === 'designName') {
       size.designName = value as string;
     } else if (field === 'price') {
-      // Base price is stored as the baseCurrency entry in prices[]
+      // Update the dedicated basePrice field (used by cron job / exchange
+      // calculations) AND sync the baseCurrency entry in prices[] (used
+      // for display/checkout). Both stay in sync.
+      size.basePrice = value as number;
+      size.baseCurrency = formData.baseCurrency;
       size.prices = setBasePrice(size.prices, formData.baseCurrency, value as number);
     } else if (field === 'manualPrice') {
       size.manualPrice = value as number | null;
@@ -686,11 +766,14 @@ export default function ProductForm({
         minimumPayments: formData.partialPayment.minimumPayments,
       },
       sizes: formData.sizes.map((s) => {
-        // prices[] already contains the base-currency entry (updated
-        // live via updateSize('price', ...)). No sync needed here.
+        // basePrice + baseCurrency are saved on each size for exchange
+        // calculations. prices[] stays in sync (updated live via
+        // updateSize('price', ...)) for display/checkout.
         return {
           name: s.name,
           designName: s.designName,
+          basePrice: s.basePrice,
+          baseCurrency: s.baseCurrency || formData.baseCurrency,
           prices: s.prices,
           manualPrice: s.manualPrice,
           feedsUp: s.feedsUp,
@@ -756,7 +839,10 @@ export default function ProductForm({
         icon={<Info size={18} />}
         hasError={sectionErrorCounts.basic > 0}
         errorCount={sectionErrorCounts.basic}
-        defaultOpen={true}
+        open={openSections.has('section-basic')}
+        onToggle={(open) => handleSectionToggle('section-basic', open)}
+        locked={lockedSections.has('section-basic')}
+        onLockToggle={() => handleLockToggle('section-basic')}
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Input
@@ -825,7 +911,10 @@ export default function ProductForm({
         icon={<ImageIcon size={18} />}
         hasError={sectionErrorCounts.media > 0}
         errorCount={sectionErrorCounts.media}
-        defaultOpen={true}
+        open={openSections.has('section-media')}
+        onToggle={(open) => handleSectionToggle('section-media', open)}
+        locked={lockedSections.has('section-media')}
+        onLockToggle={() => handleLockToggle('section-media')}
       >
         {formErrors.media && (
           <div className="flex items-center gap-2 rounded-lg border border-error/40 bg-error/10 px-3 py-2 text-sm text-error">
@@ -847,7 +936,10 @@ export default function ProductForm({
         title={t('form.sectionDisplay')}
         description={t('form.sectionDisplayDesc')}
         icon={<EyeIcon size={18} />}
-        defaultOpen={false}
+        open={openSections.has('section-display')}
+        onToggle={(open) => handleSectionToggle('section-display', open)}
+        locked={lockedSections.has('section-display')}
+        onLockToggle={() => handleLockToggle('section-display')}
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <Switch
@@ -935,17 +1027,26 @@ export default function ProductForm({
         icon={<DollarIcon size={18} />}
         hasError={sectionErrorCounts.pricing > 0}
         errorCount={sectionErrorCounts.pricing}
-        defaultOpen={true}
+        open={openSections.has('section-pricing')}
+        onToggle={(open) => handleSectionToggle('section-pricing', open)}
+        locked={lockedSections.has('section-pricing')}
+        onLockToggle={() => handleLockToggle('section-pricing')}
       >
         <MultiCurrencyPriceEditor
           mainCurrency={formData.baseCurrency}
-          basePrice={getBasePrice(formData.sizes[0]?.prices ?? [], formData.baseCurrency)}
+          basePrice={formData.sizes[0]?.basePrice || getBasePrice(formData.sizes[0]?.prices ?? [], formData.baseCurrency)}
           prices={[]}
           onChange={() => { }}
           onMainCurrencyChange={(currency) => {
+            // Update the product's base currency AND sync each size's
+            // baseCurrency field (used by the cron job for exchange).
             setFormData({
               ...formData,
               baseCurrency: currency,
+              sizes: formData.sizes.map((s) => ({
+                ...s,
+                baseCurrency: currency,
+              })),
             });
           }}
           onBasePriceChange={() => { }}
@@ -1065,7 +1166,10 @@ export default function ProductForm({
         icon={<LayersIcon size={18} />}
         hasError={sectionErrorCounts.sizes > 0}
         errorCount={sectionErrorCounts.sizes}
-        defaultOpen={true}
+        open={openSections.has('section-sizes')}
+        onToggle={(open) => handleSectionToggle('section-sizes', open)}
+        locked={lockedSections.has('section-sizes')}
+        onLockToggle={() => handleLockToggle('section-sizes')}
       >
         <div className="flex items-center justify-between">
           <div>
@@ -1084,123 +1188,153 @@ export default function ProductForm({
           </Button>
         </div>
 
-        {formData.sizes.map((size, index) => (
-          <div
-            key={index}
-            className="border border-stroke rounded-lg p-4 space-y-3"
-          >
-            <div className="flex items-center justify-between">
-              <h4 className="text-sm font-semibold">
-                {t('form.sizeNumber', { number: index + 1 })}
-              </h4>
-              <Button
-                variant="custom"
-                type="button"
-                onClick={() => removeSize(index)}
-                className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-950 rounded-lg transition-colors"
-                title={t('form.removeSize')}
-              >
-                <X size={16} />
-              </Button>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <Input
-                label={t('form.sizeNameAr')}
-                type="text"
-                value={size.name.ar}
-                onChange={(e) => updateSize(index, 'name.ar', e.target.value)}
-                error={formErrors[`size_${index}_name_ar`]}
-              />
-              <Input
-                label={t('form.sizeNameEn')}
-                type="text"
-                value={size.name.en}
-                onChange={(e) => updateSize(index, 'name.en', e.target.value)}
-                error={formErrors[`size_${index}_name_en`]}
-              />
-            </div>
-
-            <Input
-              label={t('form.sizeDesignName')}
-              type="text"
-              value={size.designName}
-              onChange={(e) => updateSize(index, 'designName', e.target.value)}
-              helperText={t('form.sizeDesignNameHelp')}
-            />
-
-            <Switch
-              id={`sizeAvailable_${index}`}
-              checked={size.isAvailable !== false}
-              onChange={(checked) =>
-                updateSize(index, 'isAvailable', checked)
-              }
-              label={t('form.sizeAvailableLabel')}
-            />
-            <p className="text-xs text-secondary">
-              {t('form.sizeAvailabilityHelp')}
-            </p>
-
-            <div className="space-y-3">
-              <label className="text-xs font-medium text-secondary">
-                {t('form.sizePrice')}
-              </label>
-
-              {/* Base Price section */}
-              <div className="space-y-2 p-3 rounded-lg border border-stroke bg-card-bg/50">
-                <Input
-                  label={`${t('form.sizeBasePrice')} (${formData.baseCurrency})`}
-                  type="number"
-                  value={getBasePrice(size.prices, formData.baseCurrency) || ''}
-                  onChange={(e) =>
-                    updateSize(index, 'price', parseFloat(e.target.value) || 0)
-                  }
-                  min="0"
-                  step="0.01"
-                  error={formErrors[`size_${index}_price`]}
-                />
-                {getBasePrice(size.prices, formData.baseCurrency) > 0 && (
-                  <MultiCurrencyPriceEditor
-                    mainCurrency={formData.baseCurrency}
-                    basePrice={getBasePrice(size.prices, formData.baseCurrency)}
-                    prices={size.prices}
-                    onChange={(prices) => updateSize(index, 'prices', prices)}
-                    onMainCurrencyChange={() => { }}
-                    onBasePriceChange={() => { }}
-                    compact
+        {formData.sizes.map((size, index) => {
+          const isExpanded = expandedSizes.has(index);
+          const sizeLabel = size.name.ar || size.name.en
+            ? `${size.name.ar || size.name.en}${size.basePrice ? ` — ${size.basePrice} ${formData.baseCurrency}` : ''}`
+            : t('form.sizeNumber', { number: index + 1 });
+          return (
+            <div
+              key={index}
+              className="border border-stroke rounded-lg overflow-hidden"
+            >
+              {/* Size header — click to expand/collapse */}
+              <div className="flex items-center justify-between px-4 py-3 hover:bg-muted/40 transition-colors">
+                <button
+                  type="button"
+                  onClick={() => toggleSizeExpand(index)}
+                  className="flex items-center gap-2 flex-1 min-w-0 text-start"
+                >
+                  <ChevronDownIcon
+                    size={16}
+                    className={cn(
+                      'shrink-0 text-secondary transition-transform duration-200',
+                      isExpanded ? 'rotate-180' : '',
+                    )}
                   />
-                )}
+                  <span className="text-sm font-semibold truncate">
+                    {t('form.sizeNumber', { number: index + 1 })}
+                  </span>
+                  {size.name.ar && (
+                    <span className="text-xs text-secondary truncate">
+                      {sizeLabel}
+                    </span>
+                  )}
+                </button>
+                <Button
+                  variant="custom"
+                  type="button"
+                  onClick={() => removeSize(index)}
+                  className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-950 rounded-lg transition-colors shrink-0"
+                  title={t('form.removeSize')}
+                >
+                  <X size={16} />
+                </Button>
               </div>
 
-              {/* Manual Price section */}
-              <div className="space-y-2 p-3 rounded-lg border border-stroke bg-card-bg/50">
-                <Input
-                  label={`${t('form.sizeManualPrice') || 'Manual Price'} (EGP)`}
-                  type="number"
-                  value={size.manualPrice ?? ''}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    updateSize(index, 'manualPrice', value === '' ? null : parseFloat(value) || 0);
-                  }}
-                  min="0"
-                  step="0.01"
-                  helperText={t('form.sizeManualPriceHelp') || 'Price in EGP used for manual orders. Leave empty to use the regular price.'}
-                />
-              </div>
+              {/* Size body — collapsible */}
+              {isExpanded && (
+                <div className="px-4 pb-4 space-y-3 border-t border-stroke">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-3">
+                    <Input
+                      label={t('form.sizeNameAr')}
+                      type="text"
+                      value={size.name.ar}
+                      onChange={(e) => updateSize(index, 'name.ar', e.target.value)}
+                      error={formErrors[`size_${index}_name_ar`]}
+                    />
+                    <Input
+                      label={t('form.sizeNameEn')}
+                      type="text"
+                      value={size.name.en}
+                      onChange={(e) => updateSize(index, 'name.en', e.target.value)}
+                      error={formErrors[`size_${index}_name_en`]}
+                    />
+                  </div>
+
+                  <Input
+                    label={t('form.sizeDesignName')}
+                    type="text"
+                    value={size.designName}
+                    onChange={(e) => updateSize(index, 'designName', e.target.value)}
+                    helperText={t('form.sizeDesignNameHelp')}
+                  />
+
+                  <Switch
+                    id={`sizeAvailable_${index}`}
+                    checked={size.isAvailable !== false}
+                    onChange={(checked) =>
+                      updateSize(index, 'isAvailable', checked)
+                    }
+                    label={t('form.sizeAvailableLabel')}
+                  />
+                  <p className="text-xs text-secondary">
+                    {t('form.sizeAvailabilityHelp')}
+                  </p>
+
+                  <div className="space-y-3">
+                    <label className="text-xs font-medium text-secondary">
+                      {t('form.sizePrice')}
+                    </label>
+
+                    {/* Base Price section */}
+                    <div className="space-y-2 p-3 rounded-lg border border-stroke bg-card-bg/50">
+                      <Input
+                        label={`${t('form.sizeBasePrice')} (${formData.baseCurrency})`}
+                        type="number"
+                        value={size.basePrice || ''}
+                        onChange={(e) =>
+                          updateSize(index, 'price', parseFloat(e.target.value) || 0)
+                        }
+                        min="0"
+                        step="0.01"
+                        error={formErrors[`size_${index}_price`]}
+                      />
+                      {size.basePrice > 0 && (
+                        <MultiCurrencyPriceEditor
+                          mainCurrency={formData.baseCurrency}
+                          basePrice={size.basePrice}
+                          prices={size.prices}
+                          onChange={(prices) => updateSize(index, 'prices', prices)}
+                          onMainCurrencyChange={() => { }}
+                          onBasePriceChange={() => { }}
+                          compact
+                        />
+                      )}
+                    </div>
+
+                    {/* Manual Price section */}
+                    <div className="space-y-2 p-3 rounded-lg border border-stroke bg-card-bg/50">
+                      <Input
+                        label={`${t('form.sizeManualPrice') || 'Manual Price'} (EGP)`}
+                        type="number"
+                        value={size.manualPrice ?? ''}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          updateSize(index, 'manualPrice', value === '' ? null : parseFloat(value) || 0);
+                        }}
+                        min="0"
+                        step="0.01"
+                        helperText={t('form.sizeManualPriceHelp') || 'Price in EGP used for manual orders. Leave empty to use the regular price.'}
+                      />
+                    </div>
+                  </div>
+
+                  <Input
+                    label={t('form.feedsUpLabel')}
+                    type="number"
+                    value={size.feedsUp || ''}
+                    onChange={(e) =>
+                      updateSize(index, 'feedsUp', parseInt(e.target.value) || 0)
+                    }
+                    min="0"
+                    helperText={t('form.feedsUpHelp')}
+                  />
+                </div>
+              )}
             </div>
-
-            <Input
-              label={t('form.feedsUpLabel')}
-              type="number"
-              value={size.feedsUp || ''}
-              onChange={(e) =>
-                updateSize(index, 'feedsUp', parseInt(e.target.value) || 0)
-              }
-              min="0"
-              helperText={t('form.feedsUpHelp')}
-            />
-          </div>
-        ))}
+          );
+        })}
       </CollapsibleSection>
 
       {/* ═══ Aqiqah / Sacrifice ═══ */}
@@ -1209,7 +1343,10 @@ export default function ProductForm({
         title={t('form.sectionSacrifice')}
         description={t('form.sectionSacrificeDesc')}
         icon={<HeartIcon size={18} />}
-        defaultOpen={false}
+        open={openSections.has('section-sacrifice')}
+        onToggle={(open) => handleSectionToggle('section-sacrifice', open)}
+        locked={lockedSections.has('section-sacrifice')}
+        onLockToggle={() => handleLockToggle('section-sacrifice')}
       >
         <Switch
           id="workAsSacrifice"
@@ -1289,7 +1426,10 @@ export default function ProductForm({
         icon={<ArrowUpIcon size={18} />}
         hasError={sectionErrorCounts.upgrade > 0}
         errorCount={sectionErrorCounts.upgrade}
-        defaultOpen={false}
+        open={openSections.has('section-upgrade')}
+        onToggle={(open) => handleSectionToggle('section-upgrade', open)}
+        locked={lockedSections.has('section-upgrade')}
+        onLockToggle={() => handleLockToggle('section-upgrade')}
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div>
@@ -1456,7 +1596,10 @@ export default function ProductForm({
         title={t('form.sectionReservation')}
         description={t('form.sectionReservationDesc')}
         icon={<ListChecksIcon size={18} />}
-        defaultOpen={false}
+        open={openSections.has('section-reservation')}
+        onToggle={(open) => handleSectionToggle('section-reservation', open)}
+        locked={lockedSections.has('section-reservation')}
+        onLockToggle={() => handleLockToggle('section-reservation')}
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">

@@ -401,7 +401,7 @@ export default function OrderDesignsPage() {
   // ── Silent refetch on window focus ─────────────────────────────────
   // When the admin returns from the design app editor, we need to:
   //   1. Sync the order's designUrls with the latest versions in the
-  //      order_design_versions collection (safety net — the design app
+  //      design_order_versions collection (safety net — the design app
   //      updates the order directly in MongoDB, but this sync catches
   //      up if that write failed or hasn't propagated yet).
   //   2. Then do a SILENT refetch (no loading spinner) so the page

@@ -29,6 +29,7 @@ interface Country {
   name: { ar: string; en: string };
   isActive: boolean;
   roundingRule?: 'nearest-ten' | 'nearest-five' | 'ceil';
+  currencyOrder?: number | null;
 }
 
 interface MultiCurrencyMinimumPaymentEditorProps {
@@ -55,11 +56,61 @@ export default function MultiCurrencyMinimumPaymentEditor({
   const [countries, setCountries] = useState<Country[]>([]);
   const [loading, setLoading] = useState(true);
   const [autoCalculating, setAutoCalculating] = useState(false);
+  const [mainRates, setMainRates] = useState<Record<string, number> | null>(
+    null,
+  );
   const t = useTranslations('admin.products');
+
+  const roundToNearestTen = (value: number) => {
+    return Math.ceil(value / 10) * 10;
+  };
 
   useEffect(() => {
     fetchCountries();
   }, []);
+
+  // Fetch exchange rates for the main currency — used for the EGP hint
+  useEffect(() => {
+    if (!mainCurrency) return;
+
+    let isActive = true;
+
+    const fetchMainRates = async () => {
+      try {
+        const now = new Date();
+        const today = formatDate(now);
+        const yesterdayDate = new Date(now);
+        yesterdayDate.setDate(now.getDate() - 1);
+        const yesterday = formatDate(yesterdayDate);
+
+        let rates: Record<string, number>;
+        try {
+          rates = await fetchRatesForDate(mainCurrency, today);
+        } catch (todayError) {
+          console.warn(
+            `Exchange rate release ${today} unavailable for ${mainCurrency}; retrying ${yesterday}`,
+            todayError,
+          );
+          rates = await fetchRatesForDate(mainCurrency, yesterday);
+        }
+
+        if (isActive) {
+          setMainRates(rates);
+        }
+      } catch (error) {
+        console.warn('Failed to load exchange rates', error);
+        if (isActive) {
+          setMainRates(null);
+        }
+      }
+    };
+
+    void fetchMainRates();
+
+    return () => {
+      isActive = false;
+    };
+  }, [mainCurrency]);
 
   const fetchCountries = async () => {
     try {
@@ -124,10 +175,17 @@ export default function MultiCurrencyMinimumPaymentEditor({
       yesterdayDate.setDate(now.getDate() - 1);
       const yesterday = formatDate(yesterdayDate);
 
-      // Get all unique currency codes
+      // Get all unique currency codes — sorted by currencyOrder (same as display)
       const targetCurrencies = [
         ...new Set(countries.map((c) => c.currencyCode)),
-      ];
+      ].sort((a, b) => {
+        const aOrder = countries.find((c) => c.currencyCode === a)?.currencyOrder ?? null;
+        const bOrder = countries.find((c) => c.currencyCode === b)?.currencyOrder ?? null;
+        const aSort = aOrder ?? Infinity;
+        const bSort = bOrder ?? Infinity;
+        if (aSort !== bSort) return aSort - bSort;
+        return a.localeCompare(b);
+      });
       const roundingMap = buildCurrencyRoundingMap(countries);
 
       if (minimumPaymentType === 'percentage') {
@@ -256,10 +314,69 @@ export default function MultiCurrencyMinimumPaymentEditor({
     return price?.amount || 0;
   };
 
-  // Get unique currencies
+  // Convert any currency's amount back to EGP for the exchange hint.
+  // Same logic as MultiCurrencyPriceEditor.getEgpValue.
+  const getEgpValue = (code: string, amount: number): number | null => {
+    if (!mainRates || amount <= 0) return null;
+
+    const rateToEgp = mainRates.egp;
+    if (!Number.isFinite(rateToEgp)) return null;
+
+    const upperCode = code.toUpperCase();
+    const upperMain = mainCurrency.toUpperCase();
+
+    if (upperCode === 'EGP') {
+      return amount;
+    }
+
+    if (upperCode === upperMain) {
+      return amount * (rateToEgp as number);
+    }
+
+    const rateToCode = mainRates[code.toLowerCase()];
+    if (!Number.isFinite(rateToCode) || !rateToCode) return null;
+
+    return (amount / rateToCode) * (rateToEgp as number);
+  };
+
+  // Get unique currencies sorted by currencyOrder (if set), then alphabetically as fallback
+  // — same ordering as MultiCurrencyPriceEditor
   const availableCurrencies = [
     ...new Set(countries.map((c) => c.currencyCode)),
-  ];
+  ].sort((a, b) => {
+    const aOrder = countries.find((c) => c.currencyCode === a)?.currencyOrder ?? null;
+    const bOrder = countries.find((c) => c.currencyCode === b)?.currencyOrder ?? null;
+    const aSort = aOrder ?? Infinity;
+    const bSort = bOrder ?? Infinity;
+    if (aSort !== bSort) return aSort - bSort;
+    return a.localeCompare(b);
+  });
+
+  // Bulk set all currencies to manual or auto — same as MultiCurrencyPriceEditor
+  const applyManualState = (manual: boolean) => {
+    const updated: CurrencyMinimumPayment[] = availableCurrencies.map((code) => {
+      const existing = minimumPayments.find((p) => p.currencyCode === code);
+      return {
+        currencyCode: code,
+        value: existing?.value ?? 0,
+        isManual: manual,
+      };
+    });
+    onChange(updated);
+  };
+
+  const toggleManualState = () => {
+    const updated: CurrencyMinimumPayment[] = availableCurrencies.map((code) => {
+      const existing = minimumPayments.find((p) => p.currencyCode === code);
+      const currentManual = existing?.isManual ?? false;
+      return {
+        currencyCode: code,
+        value: existing?.value ?? 0,
+        isManual: !currentManual,
+      };
+    });
+    onChange(updated);
+  };
 
   if (loading) {
     return (
@@ -327,6 +444,39 @@ export default function MultiCurrencyMinimumPaymentEditor({
         </Button>
       )}
 
+      {/* Bulk manual/auto toggles — same as MultiCurrencyPriceEditor */}
+      {minimumPaymentType === 'fixed' && (
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => applyManualState(true)}
+            className="w-full"
+          >
+            {t('form.setAllManual')}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => applyManualState(false)}
+            className="w-full"
+          >
+            {t('form.setAllAuto')}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={toggleManualState}
+            className="w-full"
+          >
+            {t('form.oppositeAll')}
+          </Button>
+        </div>
+      )}
+
       {/* Currency-specific Minimum Payments (only for fixed type) */}
       {minimumPaymentType === 'fixed' && (
         <div className="space-y-3">
@@ -340,6 +490,7 @@ export default function MultiCurrencyMinimumPaymentEditor({
               const isManual = isManualValue(code);
               const value = getValueForCurrency(code);
               const price = getPriceForCurrency(code);
+              const egpValue = getEgpValue(code, value);
 
               return (
                 <div
@@ -402,6 +553,15 @@ export default function MultiCurrencyMinimumPaymentEditor({
                         {t('form.priceLabel')}: {getCurrencySymbol(code)}{' '}
                         {price}
                       </div>
+                    )}
+                    {egpValue !== null && (
+                      <p className="text-xs mt-0.5">
+                        {t('form.egpExchangeHint', {
+                          amount: new Intl.NumberFormat(undefined, {
+                            maximumFractionDigits: 2,
+                          }).format(roundToNearestTen(egpValue)),
+                        })}
+                      </p>
                     )}
                   </div>
                 </div>

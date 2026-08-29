@@ -62,7 +62,7 @@ export default function MultiCurrencyPriceEditor({
   const t = useTranslations('admin.products');
 
   const roundToNearestTen = (value: number) => {
-    return Math.round(value / 10) * 10;
+    return Math.ceil(value / 10) * 10;
   };
 
   useEffect(() => {
@@ -174,10 +174,17 @@ export default function MultiCurrencyPriceEditor({
       yesterdayDate.setDate(now.getDate() - 1);
       const yesterday = formatDate(yesterdayDate);
 
-      // Get all unique currency codes (sorted A→Z)
+      // Get all unique currency codes — sorted by currencyOrder (same as display)
       const targetCurrencies = [
         ...new Set(countries.map((c) => c.currencyCode)),
-      ].sort((a, b) => a.localeCompare(b));
+      ].sort((a, b) => {
+        const aOrder = countries.find((c) => c.currencyCode === a)?.currencyOrder ?? null;
+        const bOrder = countries.find((c) => c.currencyCode === b)?.currencyOrder ?? null;
+        const aSort = aOrder ?? Infinity;
+        const bSort = bOrder ?? Infinity;
+        if (aSort !== bSort) return aSort - bSort;
+        return a.localeCompare(b);
+      });
       const roundingMap = buildCurrencyRoundingMap(countries);
 
       let rates: Record<string, number>;

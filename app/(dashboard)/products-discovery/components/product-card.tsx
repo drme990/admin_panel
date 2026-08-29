@@ -49,11 +49,21 @@ export default function ProductCard({ product, currencyCode, viewAsCurrency = ''
   // The backend already filters by visibility (hide/exchange/real),
   // so resolvedPrices[] contains every currency this viewer is allowed
   // to see — we display all of them with real/exchange badges.
+  // The viewer's own currency is sorted to the top so it's the first
+  // price visible on the card.
   const viewAsPrices = useMemo(() => {
     if (!isViewAsMode || !activeSize) return [];
     const resolved = (activeSize as unknown as { resolvedPrices?: Array<{ currencyCode: string; amount: number; type?: 'real' | 'exchange' }> }).resolvedPrices;
-    return resolved ?? [];
-  }, [activeSize, isViewAsMode]);
+    if (!resolved) return [];
+    // Sort: viewer's currency first, then the rest in original order
+    return [...resolved].sort((a, b) => {
+      const aIsViewer = a.currencyCode.toUpperCase() === viewAsCurrency.toUpperCase();
+      const bIsViewer = b.currencyCode.toUpperCase() === viewAsCurrency.toUpperCase();
+      if (aIsViewer && !bIsViewer) return -1;
+      if (!aIsViewer && bIsViewer) return 1;
+      return 0;
+    });
+  }, [activeSize, isViewAsMode, viewAsCurrency]);
 
   // ── Admin mode: show raw prices[] ──
   const availablePrices = useMemo(() => {
@@ -116,14 +126,14 @@ export default function ProductCard({ product, currencyCode, viewAsCurrency = ''
   return (
     <div
       className={cn(
-        'group overflow-hidden rounded-2xl',
+        'group relative flex flex-col overflow-hidden rounded-2xl',
         'border border-primary/10 bg-card-bg',
         'transition-all duration-200',
         'hover:border-primary/30 hover:shadow-lg',
       )}
     >
       {/* Image */}
-      <div className="relative h-32 overflow-hidden bg-primary/5">
+      <div className="relative h-32 shrink-0 overflow-hidden bg-primary/5">
         {image ? (
           <Image
             src={image}
@@ -138,39 +148,42 @@ export default function ProductCard({ product, currencyCode, viewAsCurrency = ''
           </div>
         )}
 
-        {/* Size Selector */}
+        {/* Size Selector — constrained to card width, no overflow */}
         {product.sizes.length > 1 && (
-          <Tabs
-            value={String(activeSizeIndex)}
-            options={sizeOptions}
-            onChange={(value) => setActiveSizeIndex(Number(value))}
-            size="sm"
-            className="absolute top-2 right-2"
-          />
+          <div className="absolute inset-x-2 top-2 flex justify-end">
+            <div className="max-w-[calc(100%-0.5rem)] overflow-x-auto no-scrollbar">
+              <Tabs
+                value={String(activeSizeIndex)}
+                options={sizeOptions}
+                onChange={(value) => setActiveSizeIndex(Number(value))}
+                size="sm"
+              />
+            </div>
+          </div>
         )}
       </div>
 
       {/* Content */}
-      <div className="space-y-3 p-3">
+      <div className="flex flex-1 flex-col space-y-3 px-2 py-3">
         {/* Header */}
-        <div className="flex items-center justify-between space-y-1">
+        <div className="flex items-start justify-between gap-2">
           <h3 className="line-clamp-1 text-sm font-semibold text-primary">
             {productName}
           </h3>
 
           {product.sizes.length > 1 && (
-            <div className="flex items-center gap-2 text-xs text-primary/60">
+            <div className="flex shrink-0 items-center gap-1.5 text-xs text-primary/60">
               <span className="h-1 w-1 rounded-full bg-primary/30" />
 
-              <span>
+              <span className="line-clamp-1">
                 {locale === 'ar' ? activeSize.name.ar : activeSize.name.en}
               </span>
             </div>
           )}
         </div>
 
-        {/* Prices */}
-        <div className="max-h-52 space-y-2 overflow-y-auto pr-1">
+        {/* Prices — scrolls on Y when there are many currencies */}
+        <div className="max-h-60 space-y-2 overflow-y-auto">
           {/* View As mode — show resolved price with real/exchange badge */}
           {isViewAsMode &&
             viewAsPrices.map((price) => {

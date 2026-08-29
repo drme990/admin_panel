@@ -19,7 +19,7 @@ export default function OurThemeProvider({
       attribute="class"
       themes={[...ADMIN_THEMES]}
       enableSystem={false}
-      defaultTheme="black"
+      defaultTheme="manasik"
       storageKey="admin-panel-theme"
     >
       {children}

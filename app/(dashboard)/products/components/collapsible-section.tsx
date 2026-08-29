@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, ReactNode } from 'react';
-import { LuChevronDown } from 'react-icons/lu';
+import { LuChevronDown, LuLock, LuLockOpen } from 'react-icons/lu';
 import { cn } from '@/lib/utils';
 
 interface CollapsibleSectionProps {
@@ -20,6 +20,11 @@ interface CollapsibleSectionProps {
   children: ReactNode;
   /** Optional id for scroll targeting */
   sectionId?: string;
+  /** When true, the section is locked — its open/closed state is
+   * preserved when other sections are opened (accordion won't close it). */
+  locked?: boolean;
+  /** Called when the user clicks the lock toggle button. */
+  onLockToggle?: () => void;
 }
 
 export default function CollapsibleSection({
@@ -33,6 +38,8 @@ export default function CollapsibleSection({
   onToggle,
   children,
   sectionId,
+  locked = false,
+  onLockToggle,
 }: CollapsibleSectionProps) {
   const [uncontrolledOpen, setUncontrolledOpen] = useState(defaultOpen);
   const isOpen = controlledOpen !== undefined ? controlledOpen : uncontrolledOpen;
@@ -47,6 +54,11 @@ export default function CollapsibleSection({
       setUncontrolledOpen(next);
     }
     onToggle?.(next);
+  };
+
+  const handleLockClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onLockToggle?.();
   };
 
   // Measure content height for smooth animation
@@ -77,51 +89,71 @@ export default function CollapsibleSection({
       className={cn(
         'rounded-xl border bg-card-bg overflow-hidden transition-colors',
         hasError ? 'border-error/40' : 'border-stroke',
+        locked && 'ring-1 ring-primary/30',
       )}
     >
       {/* Header */}
-      <button
-        type="button"
-        onClick={handleToggle}
-        className="w-full flex items-center gap-3 px-4 py-3.5 text-start hover:bg-muted/40 transition-colors"
-      >
-        {icon && (
-          <span
-            className={cn(
-              'flex items-center justify-center w-9 h-9 rounded-lg shrink-0 transition-colors',
-              hasError
-                ? 'bg-error/10 text-error'
-                : 'bg-primary/10 text-primary',
-            )}
-          >
-            {icon}
-          </span>
-        )}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <h3 className="text-sm font-semibold text-foreground truncate">
-              {title}
-            </h3>
-            {hasError && errorCount > 0 && (
-              <span className="shrink-0 inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full bg-error text-white text-xs font-bold">
-                {errorCount}
-              </span>
+      <div className="flex items-center">
+        <button
+          type="button"
+          onClick={handleToggle}
+          className="flex-1 flex items-center gap-3 px-4 py-3.5 text-start hover:bg-muted/40 transition-colors min-w-0"
+        >
+          {icon && (
+            <span
+              className={cn(
+                'flex items-center justify-center w-9 h-9 rounded-lg shrink-0 transition-colors',
+                hasError
+                  ? 'bg-error/10 text-error'
+                  : 'bg-primary/10 text-primary',
+              )}
+            >
+              {icon}
+            </span>
+          )}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-semibold text-foreground truncate">
+                {title}
+              </h3>
+              {hasError && errorCount > 0 && (
+                <span className="shrink-0 inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full bg-error text-white text-xs font-bold">
+                  {errorCount}
+                </span>
+              )}
+            </div>
+            {description && (
+              <p className="text-xs text-secondary mt-0.5 truncate">
+                {description}
+              </p>
             )}
           </div>
-          {description && (
-            <p className="text-xs text-secondary mt-0.5 truncate">
-              {description}
-            </p>
-          )}
-        </div>
-        <LuChevronDown
-          size={18}
-          className={cn(
-            'shrink-0 text-secondary transition-transform duration-200',
-            isOpen && 'rotate-180',
-          )}
-        />
-      </button>
+          <LuChevronDown
+            size={18}
+            className={cn(
+              'shrink-0 text-secondary transition-transform duration-200',
+              isOpen && 'rotate-180',
+            )}
+          />
+        </button>
+        {/* Lock toggle — pins the section's open/closed state so it
+            isn't affected by the accordion auto-close behavior. */}
+        {onLockToggle && (
+          <button
+            type="button"
+            onClick={handleLockClick}
+            title={locked ? 'Unlock section' : 'Lock section (keep state)'}
+            className={cn(
+              'shrink-0 px-3 py-3.5 transition-colors',
+              locked
+                ? 'text-primary hover:text-primary/80'
+                : 'text-secondary hover:text-foreground',
+            )}
+          >
+            {locked ? <LuLock size={15} /> : <LuLockOpen size={15} />}
+          </button>
+        )}
+      </div>
 
       {/* Content */}
       <div

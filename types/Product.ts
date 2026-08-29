@@ -22,7 +22,16 @@ export interface ProductSize {
    * Single string (Arabic). Falls back to `name.ar` if not set.
    */
   designName?: string;
-  /** Single source of truth for all currency prices. The base-currency price is the entry with `currencyCode === product.baseCurrency`. */
+  /**
+   * Base price in the product's base currency. Required — every size must
+   * have one. Used ONLY by the cron job, auto-price, and exchange update
+   * routes for calculating exchange-converted prices. The `prices[]` array
+   * is the source of truth for display/checkout.
+   */
+  basePrice: number;
+  /** The currency code for `basePrice` (e.g. "SAR"). Required. */
+  baseCurrency: string;
+  /** All currency prices (including the base-currency entry). Source of truth for display/checkout. */
   prices: CurrencyPrice[];
   /** Manual order price in EGP (single currency). Null = use regular price. */
   manualPrice?: number | null;

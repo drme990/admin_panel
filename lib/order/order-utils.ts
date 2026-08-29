@@ -291,7 +291,7 @@ export async function restoreDesignVersion(
  * returns from editing a design in the design app's editor, the admin
  * panel syncs the order's URL with the latest version before refetching.
  *
- * The backend checks the `order_design_versions` collection for the
+ * The backend checks the `design_order_versions` collection for the
  * latest version of each (orderNumber, productId) pair and updates the
  * order's `designUrls[].url` if it's out of sync.
  *

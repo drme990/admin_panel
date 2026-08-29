@@ -385,13 +385,7 @@ export default function ProductsPricing() {
           </p>
         </div>
       ) : (
-        <div
-          className="grid gap-4"
-          style={{
-            gridTemplateColumns:
-              'repeat(auto-fill, minmax(min(100%, 220px), 1fr))',
-          }}
-        >
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 md:grid-cols-4 lg:grid-cols-5">
           {filteredProducts.map((product) => (
             <ProductCard
               key={product._id}

@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import {
   LuMinus,
   LuPlus,
   LuX,
+  LuTag,
 } from 'react-icons/lu';
 
 import Modal from '@/components/ui/modal';
@@ -34,6 +35,9 @@ function getBasePriceForSize(
   );
   return entry?.amount ?? 0;
 }
+
+/** Placeholder product ID used for custom/manual order items. */
+const MANUAL_ORDER_PRODUCT_ID = '__manual_order__';
 
 interface Props {
   isOpen: boolean;
@@ -110,7 +114,7 @@ export default function EditOrderModal({
           .filter(Boolean),
       );
       setShortDuaa(getReservationValue(order, 'shortDuaa'));
-      setItems(order.items ? [...order.items] : []);
+      setItems(order.items ? order.items.map((it) => ({ ...it })) : []);
       const genderPreset = RESERVATION_FIELD_PRESETS.find((p) => p.key === 'gender');
       const isAlivePreset = RESERVATION_FIELD_PRESETS.find((p) => p.key === 'isAlive');
       const intentionPreset = RESERVATION_FIELD_PRESETS.find((p) => p.key === 'intention');
@@ -149,6 +153,74 @@ export default function EditOrderModal({
     },
     [],
   );
+
+  // ── Price editing ──────────────────────────────────────────────
+  const handleChangeItemPrice = useCallback((index: number, raw: string) => {
+    const num = parseFloat(raw);
+    setItems((prev) => {
+      const next = [...prev];
+      next[index] = {
+        ...next[index],
+        price: Number.isFinite(num) && num >= 0 ? num : 0,
+      };
+      return next;
+    });
+  }, []);
+
+  // ── Custom product field editing ───────────────────────────────
+  const handleChangeCustomName = useCallback((index: number, value: string) => {
+    setItems((prev) => {
+      const next = [...prev];
+      next[index] = {
+        ...next[index],
+        productName: { ar: value, en: value },
+      };
+      return next;
+    });
+  }, []);
+
+  const handleChangeCustomSize = useCallback((index: number, value: string) => {
+    setItems((prev) => {
+      const next = [...prev];
+      next[index] = { ...next[index], customSize: value };
+      return next;
+    });
+  }, []);
+
+  // ── Toggle an existing item between Existing / Custom ──────────
+  const handleToggleCustom = useCallback((index: number, isCustom: boolean) => {
+    setItems((prev) => {
+      const next = [...prev];
+      if (isCustom) {
+        // Preserve the current name/price/quantity; mark as custom
+        const current = next[index];
+        const currentName = current.productName?.ar || current.productName?.en || '';
+        next[index] = {
+          ...current,
+          productId: MANUAL_ORDER_PRODUCT_ID,
+          productSlug: undefined,
+          isCustom: true,
+          sizeIndex: undefined,
+          sizeName: undefined,
+          productName: { ar: currentName, en: currentName },
+        };
+      } else {
+        // Switching back to existing — clear custom flags; the user must
+        // pick a product from the dropdown which will repopulate fields.
+        next[index] = {
+          ...next[index],
+          isCustom: false,
+          customSize: undefined,
+          productId: '',
+          productSlug: undefined,
+          productName: { ar: '', en: '' },
+          sizeIndex: 0,
+          sizeName: { ar: '', en: '' },
+        };
+      }
+      return next;
+    });
+  }, []);
 
   const handleSave = async () => {
     if (!order || !field) return;
@@ -202,6 +274,8 @@ export default function EditOrderModal({
         currency: product.baseCurrency,
         sizeIndex: keptIndex,
         sizeName: size?.name ?? { ar: '', en: '' },
+        isCustom: false,
+        customSize: undefined,
       };
       return next;
     });
@@ -245,6 +319,64 @@ export default function EditOrderModal({
       },
     ]);
   };
+
+  const handleAddCustomItem = () => {
+    setItems((prev) => [
+      ...prev,
+      {
+        productId: MANUAL_ORDER_PRODUCT_ID,
+        productName: { ar: '', en: '' },
+        price: 0,
+        currency: order?.currency || 'EGP',
+        quantity: 1,
+        isCustom: true,
+        customSize: '',
+      },
+    ]);
+  };
+
+  // ── Live total + status preview ────────────────────────────────
+  const orderCurrency = (order?.currency || 'EGP').toUpperCase();
+  const paidAmount = order?.paidAmount ?? 0;
+
+  const newTotal = useMemo(() => {
+    // Simple sum in the order's currency. The backend does proper
+    // currency conversion; this is just a preview.
+    return items.reduce((sum, item) => {
+      const itemCurrency = (item.currency || orderCurrency).toUpperCase();
+      const subtotal = (item.price || 0) * (item.quantity || 1);
+      // If the item currency differs from the order currency we still
+      // show the raw sum — the backend will convert properly on save.
+      if (itemCurrency !== orderCurrency) {
+        // Best-effort: just add the raw number so the admin sees a
+        // rough total. The authoritative total is computed server-side.
+        return sum + subtotal;
+      }
+      return sum + subtotal;
+    }, 0);
+  }, [items, orderCurrency]);
+
+  const newRemaining = Math.max(0, newTotal - paidAmount);
+  const previewStatus: 'paid' | 'partial-paid' | 'pending' =
+    newTotal > 0 && paidAmount >= newTotal
+      ? 'paid'
+      : paidAmount > 0
+        ? 'partial-paid'
+        : 'pending';
+
+  const statusLabelMap: Record<string, string> = {
+    paid: t('editOrder.statusPaid'),
+    'partial-paid': t('editOrder.statusPartialPaid'),
+    pending: t('editOrder.statusPending'),
+  };
+
+  const itemTypeOptions = useMemo(
+    () => [
+      { label: t('editOrder.existingProduct') || 'Existing', value: 'existing' },
+      { label: t('editOrder.customProduct') || 'Custom', value: 'custom' },
+    ],
+    [t],
+  );
 
   return (
     <Modal
@@ -377,6 +509,7 @@ export default function EditOrderModal({
 
             <div className="space-y-3">
               {items.map((item, index) => {
+                const isCustom = !!item.isCustom || item.productId === MANUAL_ORDER_PRODUCT_ID;
                 const productOptions = products.map((p) => ({
                   label: locale === 'ar' ? p.name?.ar : p.name?.en,
                   value: p._id,
@@ -387,74 +520,138 @@ export default function EditOrderModal({
                   label: locale === 'ar' ? s.name?.ar : s.name?.en,
                   value: String(i),
                 }));
+                const itemSubtotal = (item.price || 0) * (item.quantity || 1);
                 return (
                   <div
                     key={index}
-                    className="flex flex-col sm:flex-row items-start sm:items-center gap-2 p-3 rounded-lg border border-stroke bg-background"
+                    className="flex flex-col gap-3 p-3 rounded-lg border border-stroke bg-background"
                   >
-                    <div className="flex-1 w-full sm:w-auto min-w-0">
-                      <Dropdown
-                        value={String(item.productId || '')}
-                        options={productOptions}
-                        onChange={(value) => handleChangeItemProduct(index, value)}
-                        placeholder={t('editOrder.selectProduct')}
-                        className="w-full"
-                      />
+                    {/* Row 1: type toggle (Existing / Custom) */}
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1">
+                        {itemTypeOptions.map((opt) => {
+                          const active = isCustom ? opt.value === 'custom' : opt.value === 'existing';
+                          return (
+                            <button
+                              key={opt.value}
+                              type="button"
+                              onClick={() => handleToggleCustom(index, opt.value === 'custom')}
+                              className={`px-3 py-1 text-xs rounded-md border transition-colors ${active
+                                  ? 'bg-primary text-primary-foreground border-primary'
+                                  : 'bg-background text-secondary border-stroke hover:border-primary'
+                                }`}
+                            >
+                              {opt.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="custom"
+                        className="h-7 w-7 p-0 text-secondary hover:text-error shrink-0"
+                        onClick={() => handleRemoveItem(index)}
+                      >
+                        <LuX size={14} />
+                      </Button>
                     </div>
-                    {hasMultipleSizes && (
-                      <div className="w-full sm:w-40 shrink-0">
-                        <Dropdown
-                          value={String(item.sizeIndex ?? 0)}
-                          options={sizeOptions}
-                          onChange={(value) => handleChangeItemSize(index, Number(value))}
-                          placeholder={t('editOrder.selectSize')}
+
+                    {/* Row 2: product/name + size */}
+                    {isCustom ? (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <Input
+                          value={item.productName?.ar || item.productName?.en || ''}
+                          onChange={(e) => handleChangeCustomName(index, e.target.value)}
+                          placeholder={t('editOrder.customNamePlaceholder')}
+                          className="w-full"
+                        />
+                        <Input
+                          value={item.customSize || ''}
+                          onChange={(e) => handleChangeCustomSize(index, e.target.value)}
+                          placeholder={t('editOrder.customSizePlaceholder')}
                           className="w-full"
                         />
                       </div>
+                    ) : (
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+                        <div className="flex-1 w-full sm:w-auto min-w-0">
+                          <Dropdown
+                            value={String(item.productId || '')}
+                            options={productOptions}
+                            onChange={(value) => handleChangeItemProduct(index, value)}
+                            placeholder={t('editOrder.selectProduct')}
+                            className="w-full"
+                          />
+                        </div>
+                        {hasMultipleSizes && (
+                          <div className="w-full sm:w-40 shrink-0">
+                            <Dropdown
+                              value={String(item.sizeIndex ?? 0)}
+                              options={sizeOptions}
+                              onChange={(value) => handleChangeItemSize(index, Number(value))}
+                              placeholder={t('editOrder.selectSize')}
+                              className="w-full"
+                            />
+                          </div>
+                        )}
+                      </div>
                     )}
-                    <span className="text-sm text-secondary whitespace-nowrap">
-                      {item.price} {item.currency}
-                    </span>
-                    <div className="flex items-center gap-1">
-                      <Button
-                        variant="ghost"
-                        size="custom"
-                        className="h-7 w-7 p-0"
-                        onClick={() => handleQuantityChange(index, -1)}
-                        disabled={item.quantity <= 1}
-                      >
-                        <LuMinus size={14} />
-                      </Button>
-                      <span className="w-8 text-center text-sm font-semibold">
-                        {item.quantity}
+
+                    {/* Row 3: price + currency + quantity + subtotal */}
+                    <div className="flex flex-wrap items-center gap-2">
+                      <div className="flex items-center gap-1">
+                        <span className="text-xs text-secondary whitespace-nowrap">
+                          {t('editOrder.price')}
+                        </span>
+                        <Input
+                          type="number"
+                          min={0}
+                          step="0.01"
+                          value={String(item.price ?? 0)}
+                          onChange={(e) => handleChangeItemPrice(index, e.target.value)}
+                          className="w-24"
+                        />
+                        <span className="text-xs text-secondary whitespace-nowrap">
+                          {item.currency || orderCurrency}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="custom"
+                          className="h-7 w-7 p-0"
+                          onClick={() => handleQuantityChange(index, -1)}
+                          disabled={item.quantity <= 1}
+                        >
+                          <LuMinus size={14} />
+                        </Button>
+                        <span className="w-8 text-center text-sm font-semibold">
+                          {item.quantity}
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="custom"
+                          className="h-7 w-7 p-0"
+                          onClick={() => handleQuantityChange(index, 1)}
+                        >
+                          <LuPlus size={14} />
+                        </Button>
+                      </div>
+                      <span className="text-sm font-medium text-foreground whitespace-nowrap ml-auto">
+                        = {itemSubtotal.toFixed(2)} {item.currency || orderCurrency}
                       </span>
-                      <Button
-                        variant="ghost"
-                        size="custom"
-                        className="h-7 w-7 p-0"
-                        onClick={() => handleQuantityChange(index, 1)}
-                      >
-                        <LuPlus size={14} />
-                      </Button>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="custom"
-                      className="h-7 w-7 p-0 text-secondary hover:text-error shrink-0"
-                      onClick={() => handleRemoveItem(index)}
-                    >
-                      <LuX size={14} />
-                    </Button>
                   </div>
                 );
               })}
             </div>
 
+            {/* Add existing product */}
             <div className="pt-2 border-t border-stroke">
               <p className="text-sm font-medium text-foreground mb-2">
                 {t('editOrder.addItem')}
               </p>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                 <Dropdown
                   value=""
                   options={products.map((p) => ({
@@ -467,6 +664,43 @@ export default function EditOrderModal({
                   placeholder={t('editOrder.selectProduct')}
                   className="flex-1"
                 />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleAddCustomItem}
+                  className="shrink-0"
+                >
+                  <LuTag size={14} className="mr-1" />
+                  {t('editOrder.addCustomProduct')}
+                </Button>
+              </div>
+            </div>
+
+            {/* Total + status preview */}
+            <div className="pt-3 border-t border-stroke space-y-1">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-secondary">{t('editOrder.newTotal')}</span>
+                <span className="font-semibold text-foreground">
+                  {newTotal.toFixed(2)} {orderCurrency}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-secondary">{t('editOrder.paidAmount')}</span>
+                <span className="font-semibold text-foreground">
+                  {paidAmount.toFixed(2)} {orderCurrency}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-secondary">{t('editOrder.remainingAmount')}</span>
+                <span className="font-semibold text-foreground">
+                  {newRemaining.toFixed(2)} {orderCurrency}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-sm pt-1 border-t border-stroke">
+                <span className="text-secondary">{t('editOrder.previewStatus')}</span>
+                <span className="font-semibold text-foreground">
+                  {statusLabelMap[previewStatus] || previewStatus}
+                </span>
               </div>
             </div>
           </div>

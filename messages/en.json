@@ -2180,9 +2180,10 @@
       "form": {
         "name": "Name",
         "email": "Email",
-        "ref": "Reference",
+        "ref": "Reference Codes",
         "refPlaceholder": "Select a reference",
         "refNone": "None",
+        "refHelp": "Select one or more referral codes for this admin",
         "password": "Password",
         "passwordOptional": "Password (leave blank to keep current)",
         "passwordPlaceholder": "Minimum 6 characters",

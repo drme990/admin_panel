@@ -57,7 +57,7 @@ export interface User {
   password?: string;
   role: 'admin' | 'super_admin';
   allowedPages?: AdminPage[];
-  ref?: string;
+  ref?: string[];
   createdAt: Date;
   updatedAt: Date;
 }

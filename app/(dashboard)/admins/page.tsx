@@ -38,7 +38,7 @@ export default function UsersPage() {
     password: '',
     role: 'admin' as 'admin' | 'super_admin',
     allowedPages: [] as AdminPage[],
-    ref: '',
+    ref: [] as string[],
   });
   const [referrals, setReferrals] = useState<Referral[]>([]);
   const t = useTranslations('admin.users');
@@ -49,12 +49,11 @@ export default function UsersPage() {
   const refOptions = useMemo(() => {
     const options = referrals.map((r) => ({ value: r.referralId, label: `${r.name} (${r.referralId})` }));
     return [
-      { value: '', label: t('form.refNone') },
       { value: 'MNK-D', label: 'MNK-D' },
       { value: 'GHD-D', label: 'GHD-D' },
       ...options,
     ];
-  }, [referrals, t]);
+  }, [referrals]);
 
   const roleOptions = [
     { value: 'admin', label: t('roles.admin') },
@@ -108,7 +107,7 @@ export default function UsersPage() {
       password: '',
       role: 'admin',
       allowedPages: [],
-      ref: '',
+      ref: [],
     });
     setShowModal(true);
   };
@@ -122,7 +121,7 @@ export default function UsersPage() {
       password: '',
       role: user.role,
       allowedPages: user.allowedPages ?? [],
-      ref: user.ref ?? '',
+      ref: Array.isArray(user.ref) ? user.ref : user.ref ? [user.ref] : [],
     });
     setShowModal(true);
   };
@@ -188,9 +187,19 @@ export default function UsersPage() {
       },
       {
         header: t('table.ref'),
-        accessor: (user: User) => (
-          <span className="font-mono text-xs text-secondary">{user.ref || '-'}</span>
-        ),
+        accessor: (user: User) => {
+          const refs = Array.isArray(user.ref) ? user.ref : user.ref ? [user.ref] : [];
+          if (refs.length === 0) return <span className="text-secondary">-</span>;
+          return (
+            <div className="flex flex-wrap gap-1">
+              {refs.map((r) => (
+                <span key={r} className="font-mono text-xs px-1.5 py-0.5 rounded bg-muted text-secondary">
+                  {r}
+                </span>
+              ))}
+            </div>
+          );
+        },
       },
       {
         header: t('table.role'),
@@ -289,7 +298,7 @@ export default function UsersPage() {
         email: formData.email,
         role: formData.role,
         allowedPages: formData.allowedPages,
-        ref: formData.ref.trim() || undefined,
+        ref: formData.ref,
       };
       if (formData.password.trim().length >= 6)
         payload.password = formData.password;
@@ -383,15 +392,38 @@ export default function UsersPage() {
             }
           />
 
-          <Dropdown
-            label={t('form.ref')}
-            value={formData.ref}
-            options={refOptions}
-            onChange={(value) =>
-              setFormData({ ...formData, ref: value as string })
-            }
-            placeholder={t('form.refPlaceholder')}
-          />
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-foreground">
+              {t('form.ref')}
+            </label>
+            <p className="text-xs text-secondary mb-2">
+              {t('form.refHelp')}
+            </p>
+            <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto">
+              {refOptions.map((option) => {
+                const value = option.value as string;
+                if (!value) return null;
+                return (
+                  <div
+                    key={value}
+                    className="flex items-center gap-2 p-2 rounded-lg border border-stroke hover:bg-muted/50 transition-colors"
+                  >
+                    <Checkbox
+                      checked={formData.ref.includes(value)}
+                      onChange={(checked) => {
+                        const refs = checked
+                          ? [...formData.ref, value]
+                          : formData.ref.filter((r) => r !== value);
+                        setFormData({ ...formData, ref: refs });
+                      }}
+                      label={option.label}
+                      size="sm"
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          </div>
 
           <Input
             label={

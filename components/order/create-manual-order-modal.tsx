@@ -19,6 +19,7 @@ import Switch from '@/components/ui/switch';
 import CustomDatePicker from '@/components/ui/custom-date-picker';
 import Textarea from '@/components/ui/textarea';
 import { uploadImageToR2, uploadInvoiceToR2, deleteOldImage } from '../../lib/image-upload-utils';
+import { cn } from '@/lib/utils';
 
 import { LuCopy, LuCheck, LuRefreshCw, LuUpload, LuPlus, LuX, LuAtSign, LuPencil, LuUserCheck, LuImage, LuClock, LuLink, LuFileText } from 'react-icons/lu';
 import { FaWhatsapp } from 'react-icons/fa';
@@ -471,15 +472,20 @@ export default function CreateManualOrderModal({
   const locale = useLocale();
   const { user } = useAuth();
   const [form, setForm] = useState<FormState>(() => {
+    const userRefs = Array.isArray(user?.ref) ? user.ref : user?.ref ? [user.ref] : [];
     const cached = loadCachedForm();
     if (cached) {
       // Ensure the referral ID is correct for the current user
+      // For non-super-admins, use their assigned ref (first one, or
+      // the cached one if it's in their ref list)
       const initialReferralId =
-        user?.role !== 'super_admin' && user?.ref ? user.ref : cached.referralId;
+        user?.role !== 'super_admin' && userRefs.length > 0
+          ? (userRefs.includes(cached.referralId) ? cached.referralId : userRefs[0])
+          : cached.referralId;
       return { ...cached, referralId: initialReferralId };
     }
     const initialReferralId =
-      user?.role !== 'super_admin' && user?.ref ? user.ref : '';
+      user?.role !== 'super_admin' && userRefs.length > 0 ? userRefs[0] : '';
     return { ...DEFAULT_FORM, referralId: initialReferralId };
   });
   const [ui, dispatch] = useReducer(uiReducer, UI_INITIAL_STATE);
@@ -520,8 +526,9 @@ export default function CreateManualOrderModal({
   invoicesRef.current = invoices;
 
   const resetForm = useCallback(() => {
+    const userRefs = Array.isArray(user?.ref) ? user?.ref : user?.ref ? [user.ref] : [];
     const initialReferralId =
-      user?.role !== 'super_admin' && user?.ref ? user.ref : '';
+      user?.role !== 'super_admin' && userRefs.length > 0 ? userRefs[0] : '';
     setForm({ ...DEFAULT_FORM, referralId: initialReferralId });
     // Revoke any invoice preview URLs before resetting
     invoicesRef.current.forEach((inv) => {
@@ -649,6 +656,7 @@ export default function CreateManualOrderModal({
 
   const referralOptions = useMemo(() => {
     const isSuperAdmin = user?.role === 'super_admin';
+    const userRefs = Array.isArray(user?.ref) ? user.ref : user?.ref ? [user.ref] : [];
     const options: Array<{ label: string; value: string }> = [];
 
     if (isSuperAdmin) {
@@ -663,14 +671,16 @@ export default function CreateManualOrderModal({
           value: r.referralId,
         });
       });
-    } else if (user?.ref) {
-      // Regular admins only see their own ref
-      const ownReferral = referrals.find((r) => r.referralId === user.ref);
-      options.push({
-        label: ownReferral
-          ? `${ownReferral.name} (${ownReferral.referralId})`
-          : `${user.ref}`,
-        value: user.ref,
+    } else if (userRefs.length > 0) {
+      // Regular admins see all their assigned ref codes
+      userRefs.forEach((refCode) => {
+        const ownReferral = referrals.find((r) => r.referralId === refCode);
+        options.push({
+          label: ownReferral
+            ? `${ownReferral.name} (${ownReferral.referralId})`
+            : refCode,
+          value: refCode,
+        });
       });
     } else {
       // Fallback: no ref assigned — show source default
@@ -1694,13 +1704,32 @@ export default function CreateManualOrderModal({
       size="xl"
       contentClassName="flex flex-col gap-4 pr-1 px-4"
     >
-      {/* Source */}
-      <Dropdown
-        value={form.source}
-        options={sourceOptions}
-        onChange={(val) => setForm((prev) => ({ ...prev, source: val }))}
-        placeholder={t('createManualOrder.selectSource')}
-      />
+      {/* Source — two side-by-side buttons, default Manasik */}
+      <div className="flex flex-col gap-2">
+        <label className="block text-sm font-medium text-foreground">
+          {t('createManualOrder.selectSource')}
+        </label>
+        <div className="grid grid-cols-2 gap-2">
+          {sourceOptions.map((option) => {
+            const active = form.source === option.value;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => setForm((prev) => ({ ...prev, source: option.value }))}
+                className={cn(
+                  'rounded-lg border px-4 py-2.5 text-sm font-medium transition-all',
+                  active
+                    ? 'border-primary bg-primary/10 text-primary'
+                    : 'border-stroke bg-background text-secondary hover:bg-muted/50 hover:text-foreground',
+                )}
+              >
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
       {/* Referral */}
       <div className="flex flex-col gap-2">

@@ -10,6 +10,12 @@ export interface CurrencyMinimumPayment {
   isManual: boolean;
 }
 
+export interface ResolvedPrice {
+  currencyCode: string;
+  amount: number;
+  type: 'real' | 'exchange';
+}
+
 export interface ProductSize {
   _id?: string;
   name: {
@@ -33,6 +39,12 @@ export interface ProductSize {
   baseCurrency: string;
   /** All currency prices (including the base-currency entry). Source of truth for display/checkout. */
   prices: CurrencyPrice[];
+  /**
+   * Country-resolved prices (only present when products are fetched with
+   * a viewerCountryCode). Each entry has the currency code, amount, and
+   * whether it's a real or exchange-converted price.
+   */
+  resolvedPrices?: ResolvedPrice[];
   /** Manual order price in EGP (single currency). Null = use regular price. */
   manualPrice?: number | null;
   /** How many people / slots this size feeds / covers */

@@ -495,7 +495,16 @@
       "referralCode": "كود الإحالة",
       "noReferral": "بدون إحالة",
       "selectReferral": "اختر كود الإحالة",
-      "loadingReferrals": "جاري تحميل الإحالات..."
+      "loadingReferrals": "جاري تحميل الإحالات...",
+      "debugCountry": "الدولة المكتشفة",
+      "debugViewerCurrency": "عملة العميل",
+      "debugOrderCurrency": "عملة الطلب",
+      "real": "حقيقي",
+      "exchange": "صرف",
+      "base": "أساسي",
+      "priceTypeReal": "سعر حقيقي محدد من المسؤول",
+      "priceTypeExchange": "سعر محوّل بالصرف",
+      "priceTypeBase": "السعر الأساسي (احتياطي)"
     },
     "blockCustomer": "حظر العميل",
     "unblockCustomer": "إلغاء حظر العميل",
@@ -2239,7 +2248,8 @@
         "crm": "إدارة العلاقات",
         "orderDesignLogs": "سجل التصاميم",
         "errorLogs": "سجل الأخطاء",
-        "orderStatsComponent": "إحصائيات الطلبات"
+        "orderStatsComponent": "إحصائيات الطلبات",
+        "export": "زر التصدير"
       },
       "buttons": {
         "cancel": "إلغاء",

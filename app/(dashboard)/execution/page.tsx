@@ -75,6 +75,7 @@ export default function ExecutionPage() {
   const { user: currentUser } = useAuth();
   const isSuperAdmin = currentUser?.role === 'super_admin';
   const canSeeStats = isSuperAdmin || currentUser?.allowedPages?.includes('orderStatsComponent');
+  const canExport = isSuperAdmin || currentUser?.allowedPages?.includes('export');
 
   const tomorrow = getRelativeIsoDate(1);
 
@@ -1671,7 +1672,7 @@ export default function ExecutionPage() {
             <LuPlus size={16} className="me-2" />
             {t('createManualOrder.title')}
           </Button>
-          {isSuperAdmin && (
+          {canExport && (
             <Button
               variant="outline"
               size="sm"

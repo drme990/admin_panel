@@ -23,7 +23,8 @@ export type AdminPage =
   | 'orderDesigns'
   | 'orderDesignLogs'
   | 'errorLogs'
-  | 'orderStatsComponent';
+  | 'orderStatsComponent'
+  | 'export';
 
 export const ALL_ADMIN_PAGES: AdminPage[] = [
   'products',
@@ -48,6 +49,7 @@ export const ALL_ADMIN_PAGES: AdminPage[] = [
   'suppliers',
   'orderDesigns',
   'orderStatsComponent',
+  'export',
 ];
 
 export interface User {

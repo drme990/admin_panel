@@ -495,7 +495,16 @@
       "referralCode": "Referral Code",
       "noReferral": "No referral",
       "selectReferral": "Select referral code",
-      "loadingReferrals": "Loading referrals..."
+      "loadingReferrals": "Loading referrals...",
+      "debugCountry": "Detected Country",
+      "debugViewerCurrency": "Viewer Currency",
+      "debugOrderCurrency": "Order Currency",
+      "real": "Real",
+      "exchange": "Exchange",
+      "base": "Base",
+      "priceTypeReal": "Real price set by admin",
+      "priceTypeExchange": "Exchange-converted price",
+      "priceTypeBase": "Base currency fallback"
     },
     "blockCustomer": "Block Customer",
     "unblockCustomer": "Unblock Customer",
@@ -2239,7 +2248,8 @@
         "crm": "CRM",
         "orderDesignLogs": "Design Logs",
         "errorLogs": "Error Logs",
-        "orderStatsComponent": "Order Stats"
+        "orderStatsComponent": "Order Stats",
+        "export": "Export Button"
       },
       "buttons": {
         "cancel": "Cancel",

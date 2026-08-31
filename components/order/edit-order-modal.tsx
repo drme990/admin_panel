@@ -38,6 +38,42 @@ function getBasePriceForSize(
   return entry?.amount ?? 0;
 }
 
+/**
+ * Get the resolved price for a size in the viewer's currency.
+ * Falls back to the base-currency price if no resolved price matches.
+ * Also returns the price type ('real' | 'exchange') so the UI can
+ * show the admin whether it's a real or exchange-converted price.
+ */
+function getResolvedPriceForSize(
+  size: ProductSize | undefined,
+  targetCurrency: string,
+  baseCurrency: string,
+): { amount: number; currency: string; priceType: 'real' | 'exchange' | 'base' } {
+  if (!size) return { amount: 0, currency: targetCurrency, priceType: 'base' };
+  const target = targetCurrency.toUpperCase();
+  // 1. Try resolvedPrices (country-resolved, may include exchange-converted)
+  const resolved = size.resolvedPrices?.find(
+    (p) => p.currencyCode.toUpperCase() === target,
+  );
+  if (resolved && resolved.amount > 0) {
+    return { amount: resolved.amount, currency: targetCurrency, priceType: resolved.type };
+  }
+  // 2. Try raw prices[] for the target currency (treat as 'real' since
+  //    these are admin-set prices, not exchange-converted)
+  const raw = size.prices?.find(
+    (p) => p.currencyCode.toUpperCase() === target,
+  );
+  if (raw && raw.amount > 0) {
+    return { amount: raw.amount, currency: targetCurrency, priceType: 'real' };
+  }
+  // 3. Fall back to base-currency price
+  return {
+    amount: getBasePriceForSize(size, baseCurrency),
+    currency: baseCurrency,
+    priceType: 'base',
+  };
+}
+
 /** Placeholder product ID used for custom/manual order items. */
 const MANUAL_ORDER_PRODUCT_ID = '__manual_order__';
 
@@ -93,6 +129,7 @@ export default function EditOrderModal({
   const [items, setItems] = useState<OrderItem[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
+  const [viewerCurrencyCode, setViewerCurrencyCode] = useState<string | null>(null);
   const [gender, setGender] = useState('');
   const [isAlive, setIsAlive] = useState('');
   const [intention, setIntention] = useState('');
@@ -140,14 +177,22 @@ export default function EditOrderModal({
 
   useEffect(() => {
     if (!shouldLoadProducts) return;
-    fetch('/api/products')
+    // Fetch products with orderId so the backend can look up the
+    // customer's detectedCountry and resolve prices accordingly.
+    // The Next.js rewrite maps /api/* → /api/admin/* on the backend.
+    const params = new URLSearchParams({ resolvePrices: '1' });
+    if (order?._id) params.set('orderId', order._id);
+    fetch(`/api/products?${params.toString()}`)
       .then((r) => r.json())
       .then((data) => {
-        if (data.success) setProducts(data.data.products || []);
+        if (data.success) {
+          setProducts(data.data.products || []);
+          setViewerCurrencyCode(data.data.viewerCurrencyCode || null);
+        }
       })
       .catch(() => { })
       .finally(() => setLoadingProducts(false));
-  }, [shouldLoadProducts]);
+  }, [shouldLoadProducts, order?._id]);
 
   // Load referral codes when the name editor opens (referral is edited
   // alongside sacrificeFor / gender / status)
@@ -279,6 +324,34 @@ export default function EditOrderModal({
   const handleRemoveItem = (index: number) =>
     setItems((prev) => prev.filter((_, i) => i !== index));
 
+  // The target currency for new/changed items — ALWAYS use the order's
+  // currency so new items match the order. The customer's detected
+  // country (viewerCountryCode) is used by the backend to resolve
+  // prices correctly: for a UAE customer with an EGP order, the backend
+  // resolves EGP as an exchange-converted price (AED → EGP), not a
+  // real price. This matches what the customer saw on the website.
+  const targetCurrency = order?.currency || viewerCurrencyCode || 'SAR';
+
+  const handleAddItem = (productId: string) => {
+    const product = products.find((p) => p._id === productId);
+    if (!product) return;
+    const size = product.sizes[0];
+    const resolved = getResolvedPriceForSize(size, targetCurrency, product.baseCurrency);
+    setItems((prev) => [
+      ...prev,
+      {
+        productId: product._id,
+        productSlug: product.slug,
+        productName: product.name,
+        price: resolved.amount,
+        currency: resolved.currency,
+        quantity: 1,
+        sizeIndex: 0,
+        sizeName: size?.name ?? { ar: '', en: '' },
+      },
+    ]);
+  };
+
   const handleChangeItemProduct = (index: number, productId: string) => {
     const product = products.find((p) => p._id === productId);
     if (!product) return;
@@ -292,6 +365,7 @@ export default function EditOrderModal({
         ? prevItem.sizeIndex
         : 0;
     const size = product.sizes[keptIndex] ?? product.sizes[0];
+    const resolved = getResolvedPriceForSize(size, targetCurrency, product.baseCurrency);
     setItems((prev) => {
       const next = [...prev];
       next[index] = {
@@ -299,8 +373,8 @@ export default function EditOrderModal({
         productId: product._id,
         productSlug: product.slug,
         productName: product.name,
-        price: getBasePriceForSize(size, product.baseCurrency),
-        currency: product.baseCurrency,
+        price: resolved.amount,
+        currency: resolved.currency,
         sizeIndex: keptIndex,
         sizeName: size?.name ?? { ar: '', en: '' },
         isCustom: false,
@@ -317,36 +391,18 @@ export default function EditOrderModal({
     if (!product) return;
     const size = product.sizes[sizeIndex];
     if (!size) return;
+    const resolved = getResolvedPriceForSize(size, targetCurrency, product.baseCurrency);
     setItems((prev) => {
       const next = [...prev];
       next[index] = {
         ...next[index],
-        price: getBasePriceForSize(size, product.baseCurrency),
-        currency: product.baseCurrency,
+        price: resolved.amount,
+        currency: resolved.currency,
         sizeIndex,
         sizeName: size.name ?? { ar: '', en: '' },
       };
       return next;
     });
-  };
-
-  const handleAddItem = (productId: string) => {
-    const product = products.find((p) => p._id === productId);
-    if (!product) return;
-    const size = product.sizes[0];
-    setItems((prev) => [
-      ...prev,
-      {
-        productId: product._id,
-        productSlug: product.slug,
-        productName: product.name,
-        price: getBasePriceForSize(size, product.baseCurrency),
-        currency: product.baseCurrency,
-        quantity: 1,
-        sizeIndex: 0,
-        sizeName: size?.name ?? { ar: '', en: '' },
-      },
-    ]);
   };
 
   const handleAddCustomItem = () => {
@@ -573,6 +629,22 @@ export default function EditOrderModal({
                   value: String(i),
                 }));
                 const itemSubtotal = (item.price || 0) * (item.quantity || 1);
+
+                // Determine the price type (real / exchange / base) for
+                // the current item by looking up the resolved price for
+                // the item's currency on the selected product/size.
+                let itemPriceType: 'real' | 'exchange' | 'base' = 'base';
+                if (!isCustom && selectedProduct) {
+                  const size = selectedProduct.sizes[item.sizeIndex ?? 0];
+                  if (size) {
+                    const resolved = getResolvedPriceForSize(
+                      size,
+                      item.currency || targetCurrency,
+                      selectedProduct.baseCurrency,
+                    );
+                    itemPriceType = resolved.priceType;
+                  }
+                }
                 return (
                   <div
                     key={index}
@@ -654,6 +726,29 @@ export default function EditOrderModal({
                         <span className="text-xs text-secondary whitespace-nowrap">
                           {item.currency || orderCurrency}
                         </span>
+                        {!isCustom && (
+                          <span
+                            className={`px-1.5 py-0.5 rounded text-[10px] font-medium whitespace-nowrap ${itemPriceType === 'real'
+                              ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                              : itemPriceType === 'exchange'
+                                ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                                : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'
+                              }`}
+                            title={
+                              itemPriceType === 'real'
+                                ? (t('editOrder.priceTypeReal') || 'Real price set by admin')
+                                : itemPriceType === 'exchange'
+                                  ? (t('editOrder.priceTypeExchange') || 'Exchange-converted price')
+                                  : (t('editOrder.priceTypeBase') || 'Base currency fallback')
+                            }
+                          >
+                            {itemPriceType === 'real'
+                              ? (t('editOrder.real') || 'Real')
+                              : itemPriceType === 'exchange'
+                                ? (t('editOrder.exchange') || 'Exchange')
+                                : (t('editOrder.base') || 'Base')}
+                          </span>
+                        )}
                       </div>
                       <div className="flex items-center gap-1">
                         <Button

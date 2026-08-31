@@ -144,7 +144,7 @@ export default function OrderStats({
             {/* Product breakdown */}
             {cat.products.length > 0 && (
               <div className="mt-3 space-y-1">
-                {cat.products.map((product) => {
+                {cat.products.map((product, index) => {
                   const displayName = getOrderItemDisplayName(
                     {
                       productName: product.productName,
@@ -156,15 +156,17 @@ export default function OrderStats({
                     },
                     locale,
                   );
-                  const sizeKey = JSON.stringify({
-                    sizeName: product.sizeName,
-                    sizeLabel: product.sizeLabel,
-                    size: product.size,
-                    sizeIndex: product.sizeIndex,
-                  });
+                  const sizeKey =
+                    product.sizeIndex != null
+                      ? String(product.sizeIndex)
+                      : JSON.stringify({
+                        sizeName: product.sizeName,
+                        sizeLabel: product.sizeLabel,
+                        size: product.size,
+                      });
                   return (
                     <div
-                      key={`${product.productId}-${sizeKey}`}
+                      key={`${product.productId}-${sizeKey}-${index}`}
                       className="flex items-center justify-between text-xs sm:text-sm"
                     >
                       <span

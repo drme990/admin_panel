@@ -265,7 +265,10 @@ export default function OrderDetailModal({
               (order.fullAmount
                 ? order.fullAmount - (order.paidAmount ?? 0)
                 : 0);
-            const hasRemaining = order.isPartialPayment && remaining > 0.001;
+            // Show remaining amount whenever there's an actual remaining
+            // balance — don't gate on isPartialPayment, since that flag
+            // may not reflect the latest state after a price edit.
+            const hasRemaining = remaining > 0.001;
 
             return (
               <>

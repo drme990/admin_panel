@@ -14,8 +14,10 @@ import Button from '@/components/ui/button';
 import Input from '@/components/ui/input';
 import Textarea from '@/components/ui/textarea';
 import Dropdown from '@/components/ui/dropdown';
+import Tabs from '@/components/ui/tabs';
 import { Order, OrderItem } from '@/types/Order';
 import { Product, ProductSize } from '@/types/Product';
+import { Referral } from '@/types/Referral';
 import { RESERVATION_FIELD_PRESETS } from '@/lib/reservation-fields';
 
 /**
@@ -51,6 +53,7 @@ interface Props {
     gender?: string;
     isAlive?: string;
     intention?: string;
+    referralId?: string;
   }) => Promise<boolean>;
   updating: boolean;
 }
@@ -93,6 +96,9 @@ export default function EditOrderModal({
   const [gender, setGender] = useState('');
   const [isAlive, setIsAlive] = useState('');
   const [intention, setIntention] = useState('');
+  const [referralId, setReferralId] = useState('');
+  const [referrals, setReferrals] = useState<Referral[]>([]);
+  const [loadingReferrals, setLoadingReferrals] = useState(false);
 
   const [prevOpenOrder, setPrevOpenOrder] = useState<{
     open: boolean;
@@ -121,6 +127,7 @@ export default function EditOrderModal({
       setGender(normalizePresetValue(getReservationValue(order, 'gender'), genderPreset));
       setIsAlive(normalizePresetValue(getReservationValue(order, 'isAlive'), isAlivePreset));
       setIntention(normalizePresetValue(getReservationValue(order, 'intention'), intentionPreset));
+      setReferralId(order.referralId || '');
     }
   }
 
@@ -141,6 +148,27 @@ export default function EditOrderModal({
       .catch(() => { })
       .finally(() => setLoadingProducts(false));
   }, [shouldLoadProducts]);
+
+  // Load referral codes when the name editor opens (referral is edited
+  // alongside sacrificeFor / gender / status)
+  const shouldLoadReferrals = isOpen && field === 'name';
+  const [prevShouldLoadRef, setPrevShouldLoadRef] = useState(shouldLoadReferrals);
+  if (shouldLoadReferrals !== prevShouldLoadRef) {
+    setPrevShouldLoadRef(shouldLoadReferrals);
+    if (shouldLoadReferrals && referrals.length === 0) setLoadingReferrals(true);
+  }
+
+  useEffect(() => {
+    if (!shouldLoadReferrals) return;
+    if (referrals.length > 0) return;
+    fetch('/api/referrals?limit=100', { cache: 'no-store' })
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.success) setReferrals(data.data.referrals || []);
+      })
+      .catch(() => { })
+      .finally(() => setLoadingReferrals(false));
+  }, [shouldLoadReferrals, referrals.length]);
 
   const handleQuantityChange = useCallback(
     (index: number, delta: number) => {
@@ -229,6 +257,7 @@ export default function EditOrderModal({
       fields.sacrificeFor = names.filter(Boolean).join(', ');
       fields.gender = gender;
       fields.isAlive = isAlive;
+      fields.referralId = referralId;
     }
     if (field === 'duaa') fields.shortDuaa = shortDuaa;
     if (field === 'items') {
@@ -403,42 +432,46 @@ export default function EditOrderModal({
           </Button>
         </div>
       }
+      className="overflow-visible"
+      contentClassName='overflow-y-auto'
     >
       <div className="space-y-5">
         {field === 'name' && (
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-foreground">
-              {t('editOrder.sacrificeFor')}
-            </label>
+          <div className="space-y-4">
             <div className="space-y-2">
-              {names.map((name, index) => (
-                <div key={index} className="flex items-center gap-2">
-                  <Input
-                    value={name}
-                    onChange={(e) => handleChangeName(index, e.target.value)}
-                    placeholder={t('editOrder.sacrificeForPlaceholder')}
-                    className="flex-1"
-                  />
-                  <Button
-                    variant="ghost"
-                    size="custom"
-                    className="h-8 w-8 p-0 text-secondary hover:text-error shrink-0"
-                    onClick={() => handleRemoveName(index)}
-                  >
-                    <LuX size={16} />
-                  </Button>
-                </div>
-              ))}
+              <label className="block text-sm font-medium text-foreground">
+                {t('editOrder.sacrificeFor')}
+              </label>
+              <div className="space-y-2">
+                {names.map((name, index) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <Input
+                      value={name}
+                      onChange={(e) => handleChangeName(index, e.target.value)}
+                      placeholder={t('editOrder.sacrificeForPlaceholder')}
+                      className="flex-1"
+                    />
+                    <Button
+                      variant="ghost"
+                      size="custom"
+                      className="h-8 w-8 p-0 text-secondary hover:text-error shrink-0"
+                      onClick={() => handleRemoveName(index)}
+                    >
+                      <LuX size={16} />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleAddName}
+                className="mt-1"
+              >
+                <LuPlus size={14} className="mr-1" />
+                {t('editOrder.addName')}
+              </Button>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleAddName}
-              className="mt-1"
-            >
-              <LuPlus size={14} className="mr-1" />
-              {t('editOrder.addName')}
-            </Button>
 
             {(() => {
               const genderPreset = RESERVATION_FIELD_PRESETS.find((p) => p.key === 'gender');
@@ -452,7 +485,7 @@ export default function EditOrderModal({
                 value: o.ar,
               })) || [];
               return (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 border-t border-stroke">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-4 border-t border-stroke">
                   <Dropdown
                     label={locale === 'ar' ? genderPreset?.label?.ar : genderPreset?.label?.en}
                     value={gender}
@@ -468,6 +501,23 @@ export default function EditOrderModal({
                 </div>
               );
             })()}
+
+            {/* Referral code */}
+            <div className="pt-4 border-t border-stroke">
+              <Dropdown
+                label={t('editOrder.referralCode') || 'Referral Code'}
+                value={referralId}
+                options={[
+                  { label: t('editOrder.noReferral') || 'No referral', value: '' },
+                  ...referrals.map((r) => ({
+                    label: `${r.referralId} — ${r.name}`,
+                    value: r.referralId,
+                  })),
+                ]}
+                onChange={(val) => setReferralId(val)}
+                placeholder={loadingReferrals ? (t('editOrder.loadingReferrals') || 'Loading...') : (t('editOrder.selectReferral') || 'Select referral')}
+              />
+            </div>
           </div>
         )}
 
@@ -482,32 +532,34 @@ export default function EditOrderModal({
         )}
 
         {field === 'items' && (
-          <div className="space-y-4">
-            <label className="block text-sm font-medium text-foreground">
-              {t('editOrder.items')}
-            </label>
+          <div className="space-y-5">
+            <div className="space-y-3">
+              <label className="block text-sm font-medium text-foreground">
+                {t('editOrder.items')}
+              </label>
 
-            {(() => {
-              const intentionPreset = RESERVATION_FIELD_PRESETS.find((p) => p.key === 'intention');
-              const intentionOptions = intentionPreset?.options?.map((o) => ({
-                label: locale === 'ar' ? o.ar : o.en,
-                value: o.ar,
-              })) || [];
-              return (
-                <Dropdown
-                  label={locale === 'ar' ? intentionPreset?.label?.ar : intentionPreset?.label?.en}
-                  value={intention}
-                  options={intentionOptions}
-                  onChange={(val) => setIntention(val)}
-                />
-              );
-            })()}
+              {(() => {
+                const intentionPreset = RESERVATION_FIELD_PRESETS.find((p) => p.key === 'intention');
+                const intentionOptions = intentionPreset?.options?.map((o) => ({
+                  label: locale === 'ar' ? o.ar : o.en,
+                  value: o.ar,
+                })) || [];
+                return (
+                  <Dropdown
+                    label={locale === 'ar' ? intentionPreset?.label?.ar : intentionPreset?.label?.en}
+                    value={intention}
+                    options={intentionOptions}
+                    onChange={(val) => setIntention(val)}
+                  />
+                );
+              })()}
+            </div>
 
             {loadingProducts && (
               <p className="text-sm text-secondary">{t('editOrder.loadingProducts')}</p>
             )}
 
-            <div className="space-y-3">
+            <div className="space-y-4">
               {items.map((item, index) => {
                 const isCustom = !!item.isCustom || item.productId === MANUAL_ORDER_PRODUCT_ID;
                 const productOptions = products.map((p) => ({
@@ -524,28 +576,16 @@ export default function EditOrderModal({
                 return (
                   <div
                     key={index}
-                    className="flex flex-col gap-3 p-3 rounded-lg border border-stroke bg-background"
+                    className="flex flex-col gap-4 p-4 rounded-xl border border-stroke bg-background/50"
                   >
-                    {/* Row 1: type toggle (Existing / Custom) */}
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-1">
-                        {itemTypeOptions.map((opt) => {
-                          const active = isCustom ? opt.value === 'custom' : opt.value === 'existing';
-                          return (
-                            <button
-                              key={opt.value}
-                              type="button"
-                              onClick={() => handleToggleCustom(index, opt.value === 'custom')}
-                              className={`px-3 py-1 text-xs rounded-md border transition-colors ${active
-                                  ? 'bg-primary text-primary-foreground border-primary'
-                                  : 'bg-background text-secondary border-stroke hover:border-primary'
-                                }`}
-                            >
-                              {opt.label}
-                            </button>
-                          );
-                        })}
-                      </div>
+                    {/* Row 1: type toggle (Existing / Custom) + remove */}
+                    <div className="flex items-center justify-between gap-3">
+                      <Tabs
+                        value={isCustom ? 'custom' : 'existing'}
+                        options={itemTypeOptions}
+                        onChange={(val) => handleToggleCustom(index, val === 'custom')}
+                        size="sm"
+                      />
                       <Button
                         variant="ghost"
                         size="custom"
@@ -558,7 +598,7 @@ export default function EditOrderModal({
 
                     {/* Row 2: product/name + size */}
                     {isCustom ? (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <Input
                           value={item.productName?.ar || item.productName?.en || ''}
                           onChange={(e) => handleChangeCustomName(index, e.target.value)}
@@ -573,7 +613,7 @@ export default function EditOrderModal({
                         />
                       </div>
                     ) : (
-                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
                         <div className="flex-1 w-full sm:w-auto min-w-0">
                           <Dropdown
                             value={String(item.productId || '')}
@@ -598,8 +638,8 @@ export default function EditOrderModal({
                     )}
 
                     {/* Row 3: price + currency + quantity + subtotal */}
-                    <div className="flex flex-wrap items-center gap-2">
-                      <div className="flex items-center gap-1">
+                    <div className="flex flex-wrap items-center gap-3 pt-3 border-t border-stroke/60">
+                      <div className="flex items-center gap-2">
                         <span className="text-xs text-secondary whitespace-nowrap">
                           {t('editOrder.price')}
                         </span>
@@ -637,7 +677,7 @@ export default function EditOrderModal({
                           <LuPlus size={14} />
                         </Button>
                       </div>
-                      <span className="text-sm font-medium text-foreground whitespace-nowrap ml-auto">
+                      <span className="text-sm font-medium text-foreground whitespace-nowrap sm:ml-auto">
                         = {itemSubtotal.toFixed(2)} {item.currency || orderCurrency}
                       </span>
                     </div>
@@ -647,11 +687,11 @@ export default function EditOrderModal({
             </div>
 
             {/* Add existing product */}
-            <div className="pt-2 border-t border-stroke">
-              <p className="text-sm font-medium text-foreground mb-2">
+            <div className="pt-4 border-t border-stroke">
+              <p className="text-sm font-medium text-foreground mb-3">
                 {t('editOrder.addItem')}
               </p>
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                 <Dropdown
                   value=""
                   options={products.map((p) => ({
@@ -677,7 +717,7 @@ export default function EditOrderModal({
             </div>
 
             {/* Total + status preview */}
-            <div className="pt-3 border-t border-stroke space-y-1">
+            <div className="pt-4 border-t border-stroke space-y-2">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-secondary">{t('editOrder.newTotal')}</span>
                 <span className="font-semibold text-foreground">
@@ -696,7 +736,7 @@ export default function EditOrderModal({
                   {newRemaining.toFixed(2)} {orderCurrency}
                 </span>
               </div>
-              <div className="flex items-center justify-between text-sm pt-1 border-t border-stroke">
+              <div className="flex items-center justify-between text-sm pt-2 border-t border-stroke">
                 <span className="text-secondary">{t('editOrder.previewStatus')}</span>
                 <span className="font-semibold text-foreground">
                   {statusLabelMap[previewStatus] || previewStatus}

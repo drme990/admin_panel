@@ -591,6 +591,7 @@ export function useOrderPage(options: UseOrderPageOptions) {
         gender?: string;
         isAlive?: string;
         intention?: string;
+        referralId?: string;
         status?: OrderStatus;
         paidAmount?: number;
         remainingAmount?: number;
@@ -614,6 +615,7 @@ export function useOrderPage(options: UseOrderPageOptions) {
         if ('gender' in fields) body.gender = fields.gender;
         if ('isAlive' in fields) body.isAlive = fields.isAlive;
         if ('intention' in fields) body.intention = fields.intention;
+        if ('referralId' in fields) body.referralId = fields.referralId;
         if ('status' in fields) body.status = fields.status;
         if ('paidAmount' in fields) body.paidAmount = fields.paidAmount;
         if ('remainingAmount' in fields) body.remainingAmount = fields.remainingAmount;

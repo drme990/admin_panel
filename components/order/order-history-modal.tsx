@@ -28,7 +28,9 @@ export interface OrderHistoryEntry {
   | 'isAlive'
   | 'intention'
   | 'status'
-  | 'payment';
+  | 'payment'
+  | 'totalAmount'
+  | 'referral';
   previousValue: string | null;
   newValue: string | null;
   changedByUserName: string;
@@ -67,6 +69,8 @@ function formatChangeType(
     intention: 'orderHistory.typeIntention',
     status: 'orderHistory.typeStatus',
     payment: 'orderHistory.typePayment',
+    totalAmount: 'orderHistory.typeTotalAmount',
+    referral: 'orderHistory.typeReferral',
   };
   return t(keyMap[type] || 'orderHistory.typeUnknown');
 }
@@ -289,27 +293,46 @@ function InvoiceValueValue({ value }: { value: string | null }) {
 
 function TextValue({ type, value }: { type: OrderHistoryEntry['changeType']; value: string | null }) {
   if (value === null || value === undefined) return <span className="text-secondary">-</span>;
+
+  // Items are now stored as human-readable multi-line text
+  // (e.g. "1. Product name (size) × qty @ price currency")
   if (type === 'items') {
-    let parsedItems: Array<{ productName?: { ar?: string; en?: string }; quantity?: number }> | null = null;
+    // Try JSON parse first for backward compat with old history entries.
+    // Parse outside the JSX render to avoid constructing JSX in try/catch.
+    let legacyItems: string | null = null;
     try {
-      parsedItems = JSON.parse(value) as Array<{
-        productName?: { ar?: string; en?: string };
-        quantity?: number;
-      }>;
+      const parsed = JSON.parse(value);
+      if (Array.isArray(parsed)) {
+        legacyItems = parsed
+          .map((item: { productName?: { ar?: string; en?: string }; quantity?: number }) =>
+            `${item.quantity || 1}x ${item.productName?.en || item.productName?.ar || '?'}`)
+          .join(', ');
+      }
     } catch {
-      parsedItems = null;
+      // Not JSON — it's the new human-readable format
     }
-    if (Array.isArray(parsedItems)) {
-      return (
-        <span className="text-foreground">
-          {parsedItems
-            .map((item) => `${item.quantity || 1}x ${item.productName?.en || item.productName?.ar || '?'}`)
-            .join(', ')}
-        </span>
-      );
+
+    if (legacyItems !== null) {
+      return <span className="text-foreground">{legacyItems}</span>;
     }
-    return <span className="text-foreground break-all">{value}</span>;
+
+    return (
+      <span className="text-foreground whitespace-pre-line text-xs leading-relaxed">
+        {value}
+      </span>
+    );
   }
+
+  // Total amount is stored as a plain number string
+  if (type === 'totalAmount') {
+    return <span className="text-foreground font-medium">{value}</span>;
+  }
+
+  // Referral code is a plain string
+  if (type === 'referral') {
+    return <span className="text-foreground">{value || '-'}</span>;
+  }
+
   return <span className="text-foreground break-all">{value}</span>;
 }
 

@@ -155,7 +155,7 @@ export default function Modal({
         </div>
 
         {/* Content - Scrollable */}
-        <div className={cn('flex-1 overflow-y-auto px-6 py-6', contentClassName)}>
+        <div className={cn('flex-1 overflow-y-auto px-6 py-6 rounded-site', contentClassName)}>
           {children}
         </div>
 

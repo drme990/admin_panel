@@ -217,7 +217,60 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
       header: t('table.sacrificeFor'),
       accessor: (order: Order) => {
         const names = getNameLines(getReservationValue(order, 'sacrificeFor'));
-        if (names.length === 0) return <span className={order.status === 'partial-paid' ? 'text-orange-600 dark:text-orange-400' : 'text-secondary'}>-</span>;
+        if (names.length === 0) {
+          return (
+            <div className='flex flex-col gap-1 min-w-48'>
+              <div className="flex items-center gap-1.5">
+                <span className={order.status === 'partial-paid' ? 'text-orange-600 dark:text-orange-400' : 'text-secondary'}>-</span>
+                <Tooltip position={tooltipPos} content={t('table.editName')}>
+                  <Button
+                    variant="ghost"
+                    size="custom"
+                    className="h-5 w-5 p-0 text-secondary hover:text-foreground"
+                    onClick={(e) => { e.stopPropagation(); onEditField(order, 'name'); }}
+                    aria-label={t('table.editName')}
+                  >
+                    <LuPencil size={12} />
+                  </Button>
+                </Tooltip>
+              </div>
+              <div className="flex flex-col items-start gap-0.5">
+                <div className="flex items-center gap-1.5">
+                  <span
+                    className={`h-2.5 w-2.5 rounded-full shrink-0 ${WHATSAPP_STATE_CLASSES[order.isWhatsappButtonClicked || 'no-need-to-click']}`}
+                    title={
+                      order.isWhatsappButtonClicked === 'clicked'
+                        ? t('filters.whatsappStateClicked')
+                        : order.isWhatsappButtonClicked === 'not-clicked'
+                          ? t('filters.whatsappStateNotClicked')
+                          : t('filters.whatsappStateNoNeedToClick')
+                    }
+                  />
+                  <span className={`font-semibold whitespace-nowrap text-sm ${order.status === 'partial-paid' ? 'text-orange-600 dark:text-orange-400' : 'text-foreground'}`}>
+                    {order.orderNumber}
+                  </span>
+                  <Tooltip position={tooltipPos} content={t('table.copyOrderNumber')}>
+                    <Button
+                      variant="ghost"
+                      size="custom"
+                      className="h-5 w-5 p-0 text-secondary hover:text-foreground"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        void copyToClipboard(order.orderNumber).then(() => toast.success(t('table.copied'))).catch(() => toast.error('Copy failed'));
+                      }}
+                      aria-label={t('table.copyOrderNumber')}
+                    >
+                      <LuCopy size={12} />
+                    </Button>
+                  </Tooltip>
+                </div>
+                <span className="text-xs text-secondary whitespace-nowrap">
+                  {formatDateTime(order.statusUpdateTime, locale)}
+                </span>
+              </div>
+            </div>
+          );
+        }
         return (
           <div className='flex flex-col gap-1 min-w-48'>
             <div className="flex items-center gap-1.5">

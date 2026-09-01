@@ -22,7 +22,6 @@ export type AdminPage =
   | 'suppliers'
   | 'orderDesigns'
   | 'orderDesignLogs'
-  | 'errorLogs'
   | 'orderStatsComponent'
   | 'export';
 

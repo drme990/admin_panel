@@ -44,7 +44,6 @@ import {
   LuClipboardCheck,
   LuReceipt,
   LuImages,
-  LuCircleAlert,
 } from 'react-icons/lu';
 
 const navItems = [
@@ -223,13 +222,6 @@ const navItems = [
     superAdminOnly: true,
     permissionKey: 'orderDesignLogs',
   },
-  {
-    key: 'errorLogs',
-    href: '/error-logs',
-    icon: LuCircleAlert,
-    superAdminOnly: true,
-    permissionKey: 'errorLogs',
-  },
 ];
 
 function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
@@ -277,7 +269,6 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
       payments: 'payments',
       suppliers: 'suppliers',
       'order-design-logs': 'orderDesignLogs',
-      'error-logs': 'errorLogs',
     };
     return pageMap[page] ?? null;
   })();

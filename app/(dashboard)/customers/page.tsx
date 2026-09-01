@@ -46,6 +46,7 @@ type Referral = {
   name: string;
   referralId: string;
   phone: string;
+  appId: 'manasik' | 'ghadaq';
 };
 
 type AppFilter = 'all' | 'ghadaq' | 'manasik';
@@ -789,7 +790,10 @@ export default function CustomersPage() {
                 label: getDefaultRefForApp(customer.appId),
                 value: getDefaultRefForApp(customer.appId),
               },
-              ...refActionOptions,
+              ...refActionOptions.filter((opt) => {
+                const referral = referrals.find((r) => r.referralId === opt.value);
+                return !referral || referral.appId === customer.appId;
+              }),
             ]}
             onChange={(value) => handleRefDropdownChange(customer, value)}
             placeholder={tCommon('selectReferral')}
@@ -903,6 +907,7 @@ export default function CustomersPage() {
       tCommon,
       tOrders,
       refActionOptions,
+      referrals,
       selectedCustomerKeys,
       t,
       ToolTipPositions,

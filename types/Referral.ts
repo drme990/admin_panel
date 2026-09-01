@@ -3,6 +3,7 @@ export interface Referral {
   name: string;
   referralId: string;
   phone: string;
+  appId: 'manasik' | 'ghadaq';
   createdAt: string;
   updatedAt: string;
 }

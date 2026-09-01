@@ -659,29 +659,44 @@ export default function CreateManualOrderModal({
     const userRefs = Array.isArray(user?.ref) ? user.ref : user?.ref ? [user.ref] : [];
     const options: Array<{ label: string; value: string }> = [];
 
+    // Filter referrals by the selected app source
+    const appReferrals = referrals.filter((r) => r.appId === form.source);
+
     if (isSuperAdmin) {
-      // Super admins can pick any referral + source default
+      // Super admins can pick any referral for this app + source default
       options.push({
         label: `${t('createManualOrder.noReferral') || 'Default'} (${defaultRef})`,
         value: '',
       });
-      referrals.forEach((r) => {
+      appReferrals.forEach((r) => {
         options.push({
           label: `${r.name} (${r.referralId})`,
           value: r.referralId,
         });
       });
     } else if (userRefs.length > 0) {
-      // Regular admins see all their assigned ref codes
+      // Regular admins see all their assigned ref codes that match this app
       userRefs.forEach((refCode) => {
-        const ownReferral = referrals.find((r) => r.referralId === refCode);
-        options.push({
-          label: ownReferral
-            ? `${ownReferral.name} (${ownReferral.referralId})`
-            : refCode,
-          value: refCode,
-        });
+        const ownReferral = appReferrals.find((r) => r.referralId === refCode);
+        if (ownReferral) {
+          options.push({
+            label: `${ownReferral.name} (${ownReferral.referralId})`,
+            value: refCode,
+          });
+        } else if (refCode === defaultRef) {
+          // Admin has the default ref for this app
+          options.push({
+            label: `${t('createManualOrder.noReferral') || 'Default'} (${defaultRef})`,
+            value: '',
+          });
+        }
       });
+      if (options.length === 0) {
+        options.push({
+          label: `${t('createManualOrder.noReferral') || 'Default'} (${defaultRef})`,
+          value: '',
+        });
+      }
     } else {
       // Fallback: no ref assigned — show source default
       options.push({
@@ -691,7 +706,7 @@ export default function CreateManualOrderModal({
     }
 
     return options;
-  }, [referrals, user, t, defaultRef]);
+  }, [referrals, user, t, defaultRef, form.source]);
 
   const paymentMethodOptions = useMemo(
     () => [

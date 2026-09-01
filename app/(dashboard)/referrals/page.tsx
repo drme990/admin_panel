@@ -21,6 +21,26 @@ import {
   LuPhone,
 } from 'react-icons/lu';
 
+/**
+ * Extract a human-readable error message from an API response.
+ * The backend returns either a plain string (`{ error: "..." }`)
+ * or a structured error (`{ error: { code, message, details } }`).
+ */
+function extractApiError(data: unknown, fallback: string): string {
+  if (!data || typeof data !== 'object') return fallback;
+  const error = (data as Record<string, unknown>).error;
+  if (typeof error === 'string') return error;
+  if (error && typeof error === 'object') {
+    const errObj = error as Record<string, unknown>;
+    const details = typeof errObj.details === 'string' ? errObj.details : null;
+    const message = typeof errObj.message === 'string' ? errObj.message : null;
+    // details has the field-specific message (e.g. "phone: Invalid phone number format")
+    if (details) return details;
+    if (message) return message;
+  }
+  return fallback;
+}
+
 export default function ReferralsPage() {
   const [referrals, setReferrals] = useState<Referral[]>([]);
   const [loading, setLoading] = useState(true);
@@ -33,7 +53,9 @@ export default function ReferralsPage() {
     name: '',
     referralId: '',
     phone: '',
+    appId: 'manasik' as 'manasik' | 'ghadaq',
   });
+  const [appFilter, setAppFilter] = useState<'all' | 'manasik' | 'ghadaq'>('all');
   const [showDefaultPhonesModal, setShowDefaultPhonesModal] = useState(false);
   const t = useTranslations('admin.referrals');
   const { confirm, modalProps } = useConfirmModal();
@@ -44,9 +66,10 @@ export default function ReferralsPage() {
     try {
       const params = new URLSearchParams({
         page: String(page),
-        limit: '20',
+        limit: '100',
       });
       if (searchQuery) params.set('search', searchQuery);
+      if (appFilter !== 'all') params.set('appId', appFilter);
 
       const response = await fetch(`/api/referrals?${params.toString()}`);
       const data = await response.json();
@@ -59,7 +82,7 @@ export default function ReferralsPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, searchQuery]);
+  }, [page, searchQuery, appFilter]);
 
   useEffect(() => {
     fetchReferrals();
@@ -72,6 +95,7 @@ export default function ReferralsPage() {
       name: formData.name,
       referralId: formData.referralId,
       phone: formData.phone,
+      appId: formData.appId,
     };
 
     try {
@@ -97,7 +121,7 @@ export default function ReferralsPage() {
         await fetchReferrals();
         handleCloseModal();
       } else {
-        toast.error(data.error || t('messages.saveFailed'));
+        toast.error(extractApiError(data, t('messages.saveFailed')));
       }
     } catch (error) {
       console.error('Error saving referral:', error);
@@ -127,7 +151,7 @@ export default function ReferralsPage() {
         toast.success(t('messages.deleteSuccess'));
         await fetchReferrals();
       } else {
-        toast.error(data.error || t('messages.deleteFailed'));
+        toast.error(extractApiError(data, t('messages.deleteFailed')));
       }
     } catch (error) {
       console.error('Error deleting referral:', error);
@@ -141,6 +165,7 @@ export default function ReferralsPage() {
       name: referral.name,
       referralId: referral.referralId,
       phone: referral.phone,
+      appId: referral.appId || 'manasik',
     });
     setShowModal(true);
   };
@@ -152,6 +177,7 @@ export default function ReferralsPage() {
       name: '',
       referralId: '',
       phone: '',
+      appId: 'manasik',
     });
   };
 
@@ -175,6 +201,14 @@ export default function ReferralsPage() {
       accessor: (row: Referral) => (
         <span className="text-sm" dir="ltr">
           {row.phone}
+        </span>
+      ),
+    },
+    {
+      header: t('table.app'),
+      accessor: (row: Referral) => (
+        <span className="text-xs font-semibold px-2 py-1 rounded-full bg-primary/10 text-primary">
+          {row.appId === 'manasik' ? 'Manasik' : 'Ghadaq'}
         </span>
       ),
     },
@@ -232,11 +266,11 @@ export default function ReferralsPage() {
           <p className="text-secondary">{t('description')}</p>
         </div>
         <div className="flex items-center gap-3">
-          <Button variant="outline" onClick={() => setShowDefaultPhonesModal(true)}>
+          <Button variant="outline" className="flex gap-2" onClick={() => setShowDefaultPhonesModal(true)}>
             <LuPhone size={18} />
             {t('defaultPhones.button')}
           </Button>
-          <Button onClick={() => setShowModal(true)}>
+          <Button className="flex gap-2" onClick={() => setShowModal(true)}>
             <Plus size={20} />
             {t('addReferral')}
           </Button>
@@ -259,6 +293,27 @@ export default function ReferralsPage() {
             }}
             className="w-full ps-9 pe-4 py-2 rounded-lg border border-stroke bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors text-sm"
           />
+        </div>
+        <div className="flex gap-2">
+          {(['all', 'manasik', 'ghadaq'] as const).map((app) => (
+            <button
+              key={app}
+              onClick={() => {
+                setAppFilter(app);
+                setPage(1);
+              }}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${appFilter === app
+                ? 'bg-primary text-primary-text'
+                : 'bg-background border border-stroke text-secondary hover:bg-stroke'
+                }`}
+            >
+              {app === 'all'
+                ? (t('filterAll') || 'All')
+                : app === 'manasik'
+                  ? 'Manasik'
+                  : 'Ghadaq'}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -326,6 +381,27 @@ export default function ReferralsPage() {
             required
             dir="ltr"
           />
+
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-2">
+              {t('form.app') || 'App'}
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              {(['manasik', 'ghadaq'] as const).map((app) => (
+                <button
+                  key={app}
+                  type="button"
+                  onClick={() => setFormData({ ...formData, appId: app })}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${formData.appId === app
+                    ? 'bg-primary text-primary-text'
+                    : 'bg-background border border-stroke text-secondary hover:bg-stroke'
+                    }`}
+                >
+                  {app === 'manasik' ? 'Manasik' : 'Ghadaq'}
+                </button>
+              ))}
+            </div>
+          </div>
         </form>
       </Modal>
 

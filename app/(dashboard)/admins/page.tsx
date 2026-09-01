@@ -47,10 +47,13 @@ export default function UsersPage() {
   const ToolTipPositions = useLocale() === 'ar' ? 'right' : 'left';
 
   const refOptions = useMemo(() => {
-    const options = referrals.map((r) => ({ value: r.referralId, label: `${r.name} (${r.referralId})` }));
+    const options = referrals.map((r) => ({
+      value: r.referralId,
+      label: `${r.name} (${r.referralId}) [${r.appId}]`,
+    }));
     return [
-      { value: 'MNK-D', label: 'MNK-D' },
-      { value: 'GHD-D', label: 'GHD-D' },
+      { value: 'MNK-D', label: 'MNK-D [manasik]' },
+      { value: 'GHD-D', label: 'GHD-D [ghadaq]' },
       ...options,
     ];
   }, [referrals]);

@@ -565,10 +565,12 @@ export default function EditOrderModal({
                 value={referralId}
                 options={[
                   { label: t('editOrder.noReferral') || 'No referral', value: '' },
-                  ...referrals.map((r) => ({
-                    label: `${r.referralId} — ${r.name}`,
-                    value: r.referralId,
-                  })),
+                  ...referrals
+                    .filter((r) => !order?.source || r.appId === order.source)
+                    .map((r) => ({
+                      label: `${r.referralId} — ${r.name}`,
+                      value: r.referralId,
+                    })),
                 ]}
                 onChange={(val) => setReferralId(val)}
                 placeholder={loadingReferrals ? (t('editOrder.loadingReferrals') || 'Loading...') : (t('editOrder.selectReferral') || 'Select referral')}

@@ -2436,10 +2436,12 @@
       "cancelButton": "Cancel",
       "searchPlaceholder": "Search by name, ID, or phone...",
       "emptyMessage": "No referrals found. Create your first referral!",
+      "filterAll": "All",
       "table": {
         "name": "Name",
         "referralId": "Referral ID",
         "phone": "Phone",
+        "app": "App",
         "createdAt": "Created At",
         "actions": "Actions"
       },
@@ -2449,7 +2451,8 @@
         "referralId": "Referral ID",
         "referralIdPlaceholder": "Enter unique referral ID",
         "phone": "Phone Number",
-        "phonePlaceholder": "+966XXXXXXXXX"
+        "phonePlaceholder": "+966XXXXXXXXX",
+        "app": "App"
       },
       "buttons": {
         "cancel": "Cancel",

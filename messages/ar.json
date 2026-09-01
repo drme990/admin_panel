@@ -2436,10 +2436,12 @@
       "cancelButton": "إلغاء",
       "searchPlaceholder": "بحث بالاسم أو المعرف أو الهاتف...",
       "emptyMessage": "لا توجد إحالات. أنشئ أول إحالة!",
+      "filterAll": "الكل",
       "table": {
         "name": "الاسم",
         "referralId": "معرف الإحالة",
         "phone": "الهاتف",
+        "app": "التطبيق",
         "createdAt": "تاريخ الإنشاء",
         "actions": "الإجراءات"
       },
@@ -2449,7 +2451,8 @@
         "referralId": "معرف الإحالة",
         "referralIdPlaceholder": "أدخل معرف إحالة فريد",
         "phone": "رقم الهاتف",
-        "phonePlaceholder": "+966XXXXXXXXX"
+        "phonePlaceholder": "+966XXXXXXXXX",
+        "app": "التطبيق"
       },
       "buttons": {
         "cancel": "إلغاء",

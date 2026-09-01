@@ -228,7 +228,7 @@ export default function PaymentToleranceModal({
                             type="button"
                             onClick={() => updateType(method, 'percentage')}
                             className={`flex h-6 w-9 items-center justify-center rounded text-xs font-bold transition-colors ${draft.type === 'percentage' && hasValue
-                              ? 'bg-primary text-primary-foreground'
+                              ? 'bg-primary text-primary-text'
                               : draft.type === 'percentage'
                                 ? 'bg-primary/20 text-primary'
                                 : 'bg-muted text-secondary hover:bg-muted/80'
@@ -245,7 +245,7 @@ export default function PaymentToleranceModal({
                             type="button"
                             onClick={() => updateType(method, 'fixnumber')}
                             className={`flex h-6 w-9 items-center justify-center rounded text-xs font-bold transition-colors ${draft.type === 'fixnumber' && hasValue
-                              ? 'bg-primary text-primary-foreground'
+                              ? 'bg-primary text-primary-text'
                               : draft.type === 'fixnumber'
                                 ? 'bg-primary/20 text-primary'
                                 : 'bg-muted text-secondary hover:bg-muted/80'

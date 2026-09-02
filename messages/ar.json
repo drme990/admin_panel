@@ -324,6 +324,7 @@
         "paidAmountRequired": "المبلغ المدفوع يجب أن يكون أكبر من 0",
         "paidAmountInvalid": "المبلغ المدفوع يجب أن يكون أقل من إجمالي الطلب",
         "paidAmountExceedsRemaining": "المبلغ المدفوع ({paid}) يتجاوز المبلغ المتبقي ({remaining}).",
+        "reservationFieldRequired": "هذا الحقل مطلوب للمنتج المحدد",
         "fixForm": "يرجى تصحيح الأخطاء أعلاه"
       }
     },
@@ -1144,6 +1145,7 @@
         "paidAmountRequired": "المبلغ المدفوع يجب أن يكون أكبر من 0",
         "paidAmountInvalid": "المبلغ المدفوع يجب أن يكون أقل من إجمالي الطلب",
         "paidAmountExceedsRemaining": "المبلغ المدفوع ({paid}) يتجاوز المبلغ المتبقي ({remaining}).",
+        "reservationFieldRequired": "هذا الحقل مطلوب للمنتج المحدد",
         "fixForm": "يرجى تصحيح الأخطاء أعلاه"
       }
     },

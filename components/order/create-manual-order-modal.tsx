@@ -614,6 +614,24 @@ export default function CreateManualOrderModal({
     [products],
   );
 
+  // Compute the union of REQUIRED reservation field keys across all selected
+  // existing products. Custom products contribute nothing. executionDate is
+  // excluded because the backend always assigns it (defaults to next day).
+  const requiredReservationFieldKeys = useMemo<Set<string>>(() => {
+    const keys = new Set<string>();
+    for (const item of form.items) {
+      if (item.type !== 'existing' || !item.productId) continue;
+      const product = getProduct(item.productId);
+      if (!product?.reservationFields) continue;
+      for (const field of product.reservationFields) {
+        if (field.required && field.key !== 'executionDate') {
+          keys.add(field.key);
+        }
+      }
+    }
+    return keys;
+  }, [form.items, getProduct]);
+
   const getSizeOptions = useCallback(
     (productId: string) => {
       const product = getProduct(productId);
@@ -968,6 +986,16 @@ export default function CreateManualOrderModal({
     if (!form.currency) {
       errors.currency = t('createManualOrder.errors.currencyRequired');
     }
+    // Enforce per-product required reservation fields (union across selected
+    // existing products). Custom products contribute no required fields.
+    requiredReservationFieldKeys.forEach((fieldKey) => {
+      const value = (form.reservationData as Record<string, string>)[fieldKey];
+      if (!value || !value.trim()) {
+        errors[`reservation_${fieldKey}`] =
+          t('createManualOrder.errors.reservationFieldRequired') ||
+          'This reservation field is required for the selected product';
+      }
+    });
     if (!form.billingData.fullName.trim()) {
       const firstSacrificeName = form.reservationData.sacrificeFor
         .split('\n')
@@ -1015,7 +1043,7 @@ export default function CreateManualOrderModal({
       errors.paidAmount = t('createManualOrder.errors.paidAmountInvalid') || 'Paid amount must not exceed the order total';
     }
     return errors;
-  }, [form, isEasykash, invoices, paidAmountNum, fullOrderTotal, phoneWhatsappClicked, t]);
+  }, [form, isEasykash, invoices, paidAmountNum, fullOrderTotal, phoneWhatsappClicked, requiredReservationFieldKeys, t]);
 
   const updateItem = (index: number, patch: Partial<OrderItemForm>) => {
     setForm((prev) => {
@@ -2310,6 +2338,12 @@ export default function CreateManualOrderModal({
         </h4>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
+            <label className="text-xs font-medium text-secondary mb-1.5 block">
+              {t('createManualOrder.sacrificeFor')}
+              {requiredReservationFieldKeys.has('sacrificeFor') && (
+                <span className="text-error ms-0.5">*</span>
+              )}
+            </label>
             <MultiNameInput
               value={form.reservationData.sacrificeFor}
               onChange={(value) =>
@@ -2321,19 +2355,39 @@ export default function CreateManualOrderModal({
               placeholder={t('createManualOrder.sacrificeForPlaceholder')}
               isRTL={locale === 'ar'}
             />
+            {formErrors[`reservation_sacrificeFor`] && (
+              <p className="text-xs text-error mt-1">{formErrors[`reservation_sacrificeFor`]}</p>
+            )}
           </div>
-          <Dropdown
-            value={form.reservationData.intention}
-            options={intentionOptions}
-            onChange={(val) =>
-              setForm((prev) => ({
-                ...prev,
-                reservationData: { ...prev.reservationData, intention: val },
-              }))
-            }
-            placeholder={t('createManualOrder.selectIntention')}
-          />
           <div>
+            <label className="text-xs font-medium text-secondary mb-1.5 block">
+              {t('createManualOrder.intention')}
+              {requiredReservationFieldKeys.has('intention') && (
+                <span className="text-error ms-0.5">*</span>
+              )}
+            </label>
+            <Dropdown
+              value={form.reservationData.intention}
+              options={intentionOptions}
+              onChange={(val) =>
+                setForm((prev) => ({
+                  ...prev,
+                  reservationData: { ...prev.reservationData, intention: val },
+                }))
+              }
+              placeholder={t('createManualOrder.selectIntention')}
+            />
+            {formErrors[`reservation_intention`] && (
+              <p className="text-xs text-error mt-1">{formErrors[`reservation_intention`]}</p>
+            )}
+          </div>
+          <div>
+            <label className="text-xs font-medium text-secondary mb-1.5 block">
+              {t('createManualOrder.gender')}
+              {requiredReservationFieldKeys.has('gender') && (
+                <span className="text-error ms-0.5">*</span>
+              )}
+            </label>
             <div className="flex flex-wrap gap-4">
               {genderOptions.map((option) => (
                 <RadioButton
@@ -2352,8 +2406,17 @@ export default function CreateManualOrderModal({
                 />
               ))}
             </div>
+            {formErrors[`reservation_gender`] && (
+              <p className="text-xs text-error mt-1">{formErrors[`reservation_gender`]}</p>
+            )}
           </div>
           <div>
+            <label className="text-xs font-medium text-secondary mb-1.5 block">
+              {t('createManualOrder.isAlive')}
+              {requiredReservationFieldKeys.has('isAlive') && (
+                <span className="text-error ms-0.5">*</span>
+              )}
+            </label>
             <div className="flex flex-wrap gap-4">
               {isAliveOptions.map((option) => (
                 <RadioButton
@@ -2372,8 +2435,17 @@ export default function CreateManualOrderModal({
                 />
               ))}
             </div>
+            {formErrors[`reservation_isAlive`] && (
+              <p className="text-xs text-error mt-1">{formErrors[`reservation_isAlive`]}</p>
+            )}
           </div>
           <div className="sm:col-span-2">
+            <label className="text-xs font-medium text-secondary mb-1.5 block">
+              {t('createManualOrder.shortDuaa')}
+              {requiredReservationFieldKeys.has('shortDuaa') && (
+                <span className="text-error ms-0.5">*</span>
+              )}
+            </label>
             <Textarea
               value={form.reservationData.shortDuaa}
               onChange={(value) =>
@@ -2387,9 +2459,18 @@ export default function CreateManualOrderModal({
               maxLength={250}
               showCount
             />
+            {formErrors[`reservation_shortDuaa`] && (
+              <p className="text-xs text-error mt-1">{formErrors[`reservation_shortDuaa`]}</p>
+            )}
           </div>
 
           <div className="sm:col-span-2 mb-3">
+            <label className="text-xs font-medium text-secondary mb-1.5 block">
+              {t('createManualOrder.photo')}
+              {requiredReservationFieldKeys.has('photo') && (
+                <span className="text-error ms-0.5">*</span>
+              )}
+            </label>
             <div className="flex items-center gap-3 flex-wrap">
               <Button
                 variant="outline"
@@ -2419,6 +2500,10 @@ export default function CreateManualOrderModal({
                 </button>
               )}
             </div>
+
+            {formErrors[`reservation_photo`] && (
+              <p className="text-xs text-error mt-1">{formErrors[`reservation_photo`]}</p>
+            )}
 
             {form.reservationData.photo && (
               <div className="mt-3">

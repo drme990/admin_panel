@@ -324,6 +324,7 @@
         "paidAmountRequired": "Paid amount must be greater than 0",
         "paidAmountInvalid": "Paid amount must be less than the order total",
         "paidAmountExceedsRemaining": "Paid amount ({paid}) exceeds the remaining amount ({remaining}).",
+        "reservationFieldRequired": "This field is required for the selected product",
         "fixForm": "Please fix the errors above"
       }
     },
@@ -1136,6 +1137,7 @@
         "paidAmountRequired": "Paid amount must be greater than 0",
         "paidAmountInvalid": "Paid amount must be less than the order total",
         "paidAmountExceedsRemaining": "Paid amount ({paid}) exceeds the remaining amount ({remaining}).",
+        "reservationFieldRequired": "This field is required for the selected product",
         "fixForm": "Please fix the errors above"
       },
       "table": {

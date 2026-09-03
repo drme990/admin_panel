@@ -11,7 +11,7 @@ import Tabs from '@/components/ui/tabs';
 import ConfirmModal, { useConfirmModal } from '@/components/ui/confirm-modal';
 import { LuList, LuLayoutGrid } from 'react-icons/lu';
 
-import { Order, OrderStatus, PaymentMethod, InvoiceStatus } from '@/types/Order';
+import { Order, OrderStatus, PaymentMethod, InvoiceStatus, InvoiceDeletionReason } from '@/types/Order';
 import { Category } from '@/types/Category';
 import { Referral } from '@/types/Referral';
 
@@ -21,6 +21,7 @@ import InvoicePreviewModal from './components/invoice-preview-modal';
 import InvoicePaymentMethodModal from './components/invoice-payment-method-modal';
 import InvoiceRejectionModal from './components/invoice-rejection-modal';
 import InvoiceRejectionFollowupModal from './components/invoice-rejection-followup-modal';
+import InvoiceDeleteModal from './components/invoice-delete-modal';
 import InvoiceTitle from './components/invoice-title';
 import { useInvoiceColumns } from './components/invoice-table-columns';
 import InvoiceCardView from './components/invoice-card-view';
@@ -99,6 +100,10 @@ export default function InvoicesPage() {
     // Rejection followup modal state
     const [rejectionFollowupInvoice, setRejectionFollowupInvoice] = useState<InvoiceRow | null>(null);
     const [rejectionFollowupReason, setRejectionFollowupReason] = useState('');
+
+    // Invoice delete modal state
+    const [deleteInvoice, setDeleteInvoice] = useState<InvoiceRow | null>(null);
+    const [deletingInvoice, setDeletingInvoice] = useState(false);
 
     // Invoice upload
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -238,7 +243,8 @@ export default function InvoicesPage() {
             const rows: InvoiceRow[] = [];
 
             for (const order of data.data.orders as Order[]) {
-                const invoiceUrls = (order.invoiceUrls || []) as InvoiceEntry[];
+                const invoiceUrls = ((order.invoiceUrls || []) as InvoiceEntry[])
+                    .filter((inv) => !inv.deleted);
                 // Derive payment method from the latest paid payment
                 const payments = order.payments || [];
                 const paidPayment = [...payments]
@@ -694,6 +700,46 @@ export default function InvoicesPage() {
         }
     };
 
+    // ---------- Invoice delete ----------
+
+    const handleDeleteInvoiceClick = (invoice: InvoiceRow) => {
+        setDeleteInvoice(invoice);
+    };
+
+    const handleCloseDeleteInvoice = () => {
+        setDeleteInvoice(null);
+    };
+
+    const handleConfirmDeleteInvoice = async (
+        invoice: InvoiceRow,
+        reason: InvoiceDeletionReason,
+        customReason: string,
+    ) => {
+        setDeletingInvoice(true);
+        try {
+            const res = await fetch(`/api/orders/${invoice.orderId}/invoices`, {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ url: invoice.url, reason, customReason }),
+            });
+            const data = await res.json();
+            if (!data.success) {
+                toast.error(data.error || t('deleteFailed'));
+                return;
+            }
+            // Remove the deleted invoice from the local list
+            setInvoices((prev) => prev.filter((inv) => inv._id !== invoice._id));
+            toast.success(t('deleteSuccess'));
+            handleCloseDeleteInvoice();
+        } catch (error) {
+            console.error('Error deleting invoice:', error);
+            toast.error(t('deleteFailed'));
+        } finally {
+            setDeletingInvoice(false);
+        }
+    };
+
     // ---------- Order actions (matching orders/execution page) ----------
 
     const [creatingPaymentLinkOrderId, setCreatingPaymentLinkOrderId] = useState<string | null>(null);
@@ -1055,6 +1101,7 @@ export default function InvoicesPage() {
         onStatusChange: handleStatusChange,
         onDownloadInvoice: handleDownloadInvoice,
         onUploadInvoice: handleUploadInvoiceClick,
+        onDelete: handleDeleteInvoiceClick,
         uploadingInvoiceId,
         tooltipPos: isAr ? 'right' : 'left',
         formatDate,
@@ -1255,6 +1302,7 @@ export default function InvoicesPage() {
                     onStatusChange={handleStatusChange}
                     onDownloadInvoice={handleDownloadInvoice}
                     onUploadInvoice={handleUploadInvoiceClick}
+                    onDelete={handleDeleteInvoiceClick}
                     uploadingInvoiceId={uploadingInvoiceId}
                     tooltipPos={isAr ? 'right' : 'left'}
                     whatsappOrderId={whatsappOrderId}
@@ -1333,6 +1381,15 @@ export default function InvoicesPage() {
                 referrals={referrals}
                 isOpen={!!rejectionFollowupInvoice}
                 onClose={handleCloseRejectionFollowup}
+            />
+
+            {/* Invoice Delete Modal */}
+            <InvoiceDeleteModal
+                invoice={deleteInvoice}
+                isOpen={!!deleteInvoice}
+                onClose={handleCloseDeleteInvoice}
+                onConfirm={handleConfirmDeleteInvoice}
+                loading={deletingInvoice}
             />
 
             {/* Order Detail Modal */}

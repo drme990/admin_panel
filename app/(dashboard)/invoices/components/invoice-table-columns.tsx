@@ -27,6 +27,7 @@ import {
   LuHistory,
   LuFileText,
   LuDownload,
+  LuTrash2,
 } from 'react-icons/lu';
 import { FaWhatsapp } from 'react-icons/fa6';
 
@@ -49,6 +50,7 @@ interface ColumnCallbacks {
   onStatusChange: (invoice: InvoiceRow, status: InvoiceStatus) => void;
   onDownloadInvoice: (invoice: InvoiceRow) => void;
   onUploadInvoice: (invoice: InvoiceRow, type: UploadFileType) => void;
+  onDelete: (invoice: InvoiceRow) => void;
   uploadingInvoiceId: string | null;
   tooltipPos: 'left' | 'right';
   formatDate: (dateStr: string) => string;
@@ -80,6 +82,7 @@ export function useInvoiceColumns(callbacks: ColumnCallbacks) {
     onStatusChange,
     onDownloadInvoice,
     onUploadInvoice,
+    onDelete,
     uploadingInvoiceId,
     tooltipPos,
     whatsappOrderId,
@@ -194,6 +197,20 @@ export function useInvoiceColumns(callbacks: ColumnCallbacks) {
                   }}
                 />
               )}
+              <Tooltip position={tooltipPos} content={t('delete')}>
+                <Button
+                  variant="ghost"
+                  size="custom"
+                  className="h-6 w-6 p-0 text-secondary hover:text-error"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete(row);
+                  }}
+                  aria-label={t('delete')}
+                >
+                  <LuTrash2 size={14} />
+                </Button>
+              </Tooltip>
             </div>
           </div>
         );

@@ -10,6 +10,25 @@ export type OrderStatus =
 
 export type InvoiceStatus = 'confirmed' | 'waiting' | 'pending' | 'rejected';
 
+export type InvoiceDeletionReason =
+  | 'returned'
+  | 'duplicate'
+  | 'fake'
+  | 'test'
+  | 'uploaded_by_mistake'
+  | 'other';
+
+export interface DeletedInvoice {
+  url: string;
+  reason: InvoiceDeletionReason;
+  customReason?: string;
+  value: number;
+  currency?: string;
+  invoiceStatus?: InvoiceStatus;
+  deletedAt: string;
+  deletedBy?: string;
+}
+
 /**
  * A generated design image for an order, one per product that had a
  * matching template. Populated by the design-app callback flow.
@@ -208,7 +227,10 @@ export interface Order {
     value: number;
     currency?: string;
     whileCreating?: boolean;
+    deleted?: boolean;
+    deletedAt?: string;
   }>;
+  deletedInvoices?: DeletedInvoice[];
   /** Generated design images — one entry per product with a template */
   designUrls?: OrderDesignUrl[];
   /** Daily execution sequence number, reset to 1 for each execution date */

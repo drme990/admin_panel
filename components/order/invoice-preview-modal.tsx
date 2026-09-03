@@ -12,14 +12,19 @@ import {
   LuChevronLeft,
   LuChevronRight,
   LuX,
+  LuPencil,
 } from 'react-icons/lu';
 import { useTranslations, useLocale } from 'next-intl';
 import { toast } from 'react-toastify';
 import Modal from '@/components/ui/modal';
 import Button from '@/components/ui/button';
+import Input from '@/components/ui/input';
+import Dropdown from '@/components/ui/dropdown';
 import { downloadFile } from '@/lib/download-utils';
 import { isImageUrl } from '@/lib/order/order-utils';
 import { cn } from '@/lib/utils';
+import { CURRENCY_OPTIONS } from '@/app/(dashboard)/invoices/lib/invoice-utils';
+import ExchangeRateDisplay from '@/components/order/exchange-rate-display';
 import type { Order, InvoiceStatus } from '@/types/Order';
 
 interface InvoicePreviewModalProps {
@@ -29,12 +34,15 @@ interface InvoicePreviewModalProps {
   onClose: () => void;
   /** Called when an invoice status is changed. Receives the updated invoiceUrls array. */
   onStatusChange?: (orderId: string, invoiceUrls: Order['invoiceUrls']) => Promise<void>;
+  /** Called when an invoice value/currency is edited. Receives the updated invoiceUrls array. */
+  onEditValue?: (orderId: string, invoiceUrls: Order['invoiceUrls']) => Promise<void>;
 }
 
 export default function InvoicePreviewModal({
   order,
   onClose,
   onStatusChange,
+  onEditValue,
 }: InvoicePreviewModalProps) {
   const t = useTranslations('execution.table');
   const locale = useLocale();
@@ -52,6 +60,11 @@ export default function InvoicePreviewModal({
     statusWaiting: isRtl ? 'تم وضع الفاتورة بانتظار التأكيد' : 'Invoice marked as waiting',
     statusUpdated: isRtl ? 'تم تحديث حالة الفاتورة' : 'Invoice status updated',
     statusUpdateFailed: isRtl ? 'فشل تحديث حالة الفاتورة' : 'Failed to update invoice status',
+    editValue: isRtl ? 'تعديل القيمة' : 'Edit Value',
+    save: isRtl ? 'حفظ' : 'Save',
+    cancel: isRtl ? 'إلغاء' : 'Cancel',
+    valueUpdated: isRtl ? 'تم تحديث قيمة الفاتورة' : 'Invoice value updated',
+    valueUpdateFailed: isRtl ? 'فشل تحديث قيمة الفاتورة' : 'Failed to update invoice value',
   } as const;
 
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -60,13 +73,23 @@ export default function InvoicePreviewModal({
   // Local override so the UI updates instantly after a status change
   const [statusOverrides, setStatusOverrides] = useState<Record<number, InvoiceStatus>>({});
 
+  // Inline edit state
+  const [isEditingValue, setIsEditingValue] = useState(false);
+  const [editValue, setEditValue] = useState('');
+  const [editCurrency, setEditCurrency] = useState('EGP');
+  const [isSavingValue, setIsSavingValue] = useState(false);
+  // Local value overrides so the UI updates instantly after an edit
+  const [valueOverrides, setValueOverrides] = useState<Record<number, { value: number; currency?: string }>>({});
+
   const invoices = useMemo(() => order?.invoiceUrls || [], [order]);
   const isOpen = invoices.length > 0;
 
   // Reset state when a different order is opened
   useEffect(() => {
     setStatusOverrides({});
+    setValueOverrides({});
     setSelectedIndex(0);
+    setIsEditingValue(false);
   }, [order?._id]);
 
   // Clamp selectedIndex when invoices shrink
@@ -79,6 +102,10 @@ export default function InvoicePreviewModal({
   const currentInvoice = invoices[selectedIndex] || null;
   const currentStatus: InvoiceStatus =
     statusOverrides[selectedIndex] ?? currentInvoice?.invoiceStatus ?? 'waiting';
+  // Apply value overrides for instant UI update after edit
+  const valueOverride = valueOverrides[selectedIndex];
+  const displayValue = valueOverride?.value ?? currentInvoice?.value ?? 0;
+  const displayCurrency = valueOverride?.currency ?? currentInvoice?.currency;
   const isImage = currentInvoice ? isImageUrl(currentInvoice.url) : false;
   const displayUrl = currentInvoice?.url || null;
 
@@ -153,6 +180,52 @@ export default function InvoicePreviewModal({
       toast.error(L.statusUpdateFailed);
     } finally {
       setIsUpdatingStatus(false);
+    }
+  };
+
+  const handleStartEdit = () => {
+    if (!currentInvoice) return;
+    setEditValue(String(currentInvoice.value || ''));
+    setEditCurrency(currentInvoice.currency || 'EGP');
+    setIsEditingValue(true);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditingValue(false);
+  };
+
+  const handleSaveValue = async () => {
+    if (!order || !currentInvoice || isSavingValue || !onEditValue) return;
+    const newValue = parseFloat(editValue) || 0;
+    const newCurrency = editCurrency || 'EGP';
+
+    const updatedInvoiceUrls = invoices.map((inv, idx) =>
+      idx === selectedIndex
+        ? { ...inv, value: newValue, currency: newCurrency }
+        : inv,
+    );
+
+    // Optimistic UI update
+    setValueOverrides((prev) => ({
+      ...prev,
+      [selectedIndex]: { value: newValue, currency: newCurrency },
+    }));
+    setIsSavingValue(true);
+
+    try {
+      await onEditValue(order._id, updatedInvoiceUrls);
+      toast.success(L.valueUpdated);
+      setIsEditingValue(false);
+    } catch {
+      // Revert on failure
+      setValueOverrides((prev) => {
+        const next = { ...prev };
+        delete next[selectedIndex];
+        return next;
+      });
+      toast.error(L.valueUpdateFailed);
+    } finally {
+      setIsSavingValue(false);
     }
   };
 
@@ -263,15 +336,84 @@ export default function InvoicePreviewModal({
       {/* Invoice info bar — value, status, currency */}
       <div className="shrink-0 flex items-center justify-between gap-4 px-4 py-3 border-b border-stroke bg-muted/20">
         <div className="flex items-center gap-4">
-          {/* Value */}
-          <div className="flex flex-col">
-            <span className="text-xs text-secondary">
-              {L.value}
-            </span>
-            <span className="text-sm font-bold text-foreground">
-              {formatValue(currentInvoice.value, currentInvoice.currency)}
-            </span>
-          </div>
+          {/* Value (inline-editable) */}
+          {isEditingValue ? (
+            <div className="flex flex-col gap-1.5">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-secondary">{L.value}</span>
+                <Input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={editValue}
+                  onChange={(e) => setEditValue(e.target.value)}
+                  placeholder="0.00"
+                  className="w-28"
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleSaveValue();
+                    if (e.key === 'Escape') handleCancelEdit();
+                  }}
+                />
+                <Dropdown
+                  value={editCurrency}
+                  options={CURRENCY_OPTIONS}
+                  onChange={(val) => setEditCurrency(val)}
+                />
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={handleSaveValue}
+                  disabled={isSavingValue}
+                  className="px-2"
+                >
+                  {isSavingValue ? (
+                    <LuRefreshCw size={14} className="animate-spin" />
+                  ) : (
+                    <LuCheck size={14} />
+                  )}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleCancelEdit}
+                  disabled={isSavingValue}
+                  className="px-2"
+                >
+                  <LuX size={14} />
+                </Button>
+              </div>
+              {/* Exchange rate preview — shown when currency differs from order currency */}
+              <ExchangeRateDisplay
+                fromCurrency={editCurrency}
+                toCurrency={order?.currency || 'EGP'}
+                amount={parseFloat(editValue) || 0}
+                namespace="execution"
+              />
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <div className="flex flex-col">
+                <span className="text-xs text-secondary">
+                  {L.value}
+                </span>
+                <span className="text-sm font-bold text-foreground">
+                  {formatValue(displayValue, displayCurrency)}
+                </span>
+              </div>
+              {onEditValue && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleStartEdit}
+                  className="p-1 text-secondary hover:text-primary"
+                  aria-label={L.editValue}
+                >
+                  <LuPencil size={14} />
+                </Button>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Status badge */}

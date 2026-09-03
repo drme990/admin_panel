@@ -9,7 +9,7 @@ import { Order, OrderPayment } from '@/types/Order';
 import { STATUS_COLORS, PAYMENT_STATUS_COLORS } from '../../lib/order/order-status';
 import { isImageUrl, updateDesignReviewStatus } from '../../lib/order/order-utils';
 import { getPaymentMethodLabel } from '@/lib/order';
-import { downloadFile } from '@/lib/download-utils';
+import InvoicePreviewModal from './invoice-preview-modal';
 import {
   LuCreditCard,
   LuCalendar,
@@ -28,7 +28,6 @@ import {
   LuClock,
   LuRotateCw,
   LuDownload,
-  LuRefreshCw,
   LuPercent,
 } from 'react-icons/lu';
 import Image from 'next/image';
@@ -46,6 +45,9 @@ interface Props {
   /** Called after a design's reviewed status is successfully updated, so
    * the parent page can sync its order list/cards without refetching. */
   onDesignReviewChange?: (orderId: string, productId: string, reviewed: boolean) => void;
+  /** Called when an invoice status is changed from the invoice preview modal. */
+  onInvoiceStatusChange?: (orderId: string, invoiceUrls: Order['invoiceUrls']) => Promise<void>;
+  onInvoiceEditValue?: (orderId: string, invoiceUrls: Order['invoiceUrls']) => Promise<void>;
 }
 
 function isOrderGuest(order: Pick<Order, 'userId' | 'isGuest'>): boolean {
@@ -152,6 +154,8 @@ export default function OrderDetailModal({
   onCreatePaymentLink,
   isCreatingPaymentLink,
   onDesignReviewChange,
+  onInvoiceStatusChange,
+  onInvoiceEditValue,
 }: Props) {
   const t = useTranslations(namespace);
   const [copiedPaymentId, setCopiedPaymentId] = useState<string | null>(null);
@@ -165,9 +169,9 @@ export default function OrderDetailModal({
     : order?._id
       ? String(order._id).length
       : Date.now();
-  const [downloadingInvoiceUrl, setDownloadingInvoiceUrl] = useState<string | null>(null);
   const [reviewOverrides, setReviewOverrides] = useState<Record<string, boolean>>({});
   const [reviewingProductId, setReviewingProductId] = useState<string | null>(null);
+  const [invoicePreviewOpen, setInvoicePreviewOpen] = useState(false);
 
   // Reset local review overrides whenever the modal shows a different order
   useEffect(() => {
@@ -234,855 +238,845 @@ export default function OrderDetailModal({
       .filter(Boolean);
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title={
-        order
-          ? `${t('orderDetails')} - ${order.orderNumber}`
-          : t('orderDetails')
-      }
-      size="lg"
-    >
-      {order && loadingDetails ? (
-        <div className="py-8 text-center text-sm text-secondary">
-          {t('loadingOrderDetails')}
-        </div>
-      ) : order ? (
-        <div className="flex flex-col gap-6">
-          {(() => {
-            const paymentTimeline = getPaymentTimeline(order);
-            const latestPaidPayment = [...paymentTimeline]
-              .reverse()
-              .find((p) => p.status === 'paid');
-            const currentTransactionAmount =
-              latestPaidPayment?.orderAmount ??
-              latestPaidPayment?.amount ??
-              order.totalAmount;
+    <>
+      <Modal
+        isOpen={isOpen}
+        onClose={onClose}
+        title={
+          order
+            ? `${t('orderDetails')} - ${order.orderNumber}`
+            : t('orderDetails')
+        }
+        size="lg"
+      >
+        {order && loadingDetails ? (
+          <div className="py-8 text-center text-sm text-secondary">
+            {t('loadingOrderDetails')}
+          </div>
+        ) : order ? (
+          <div className="flex flex-col gap-6">
+            {(() => {
+              const paymentTimeline = getPaymentTimeline(order);
+              const latestPaidPayment = [...paymentTimeline]
+                .reverse()
+                .find((p) => p.status === 'paid');
+              const currentTransactionAmount =
+                latestPaidPayment?.orderAmount ??
+                latestPaidPayment?.amount ??
+                order.totalAmount;
 
-            const remaining =
-              order.remainingAmount ??
-              (order.fullAmount
-                ? order.fullAmount - (order.paidAmount ?? 0)
-                : 0);
-            // Show remaining amount whenever there's an actual remaining
-            // balance — don't gate on isPartialPayment, since that flag
-            // may not reflect the latest state after a price edit.
-            const hasRemaining = remaining > 0.001;
+              const remaining =
+                order.remainingAmount ??
+                (order.fullAmount
+                  ? order.fullAmount - (order.paidAmount ?? 0)
+                  : 0);
+              // Show remaining amount whenever there's an actual remaining
+              // balance — don't gate on isPartialPayment, since that flag
+              // may not reflect the latest state after a price edit.
+              const hasRemaining = remaining > 0.001;
 
-            return (
-              <>
-                {/* Status + dates */}
-                <div className="flex items-center justify-between flex-wrap gap-2">
-                  <div className="flex items-center gap-3">
-                    <span
-                      className={`px-3 py-1 text-sm font-medium rounded-full ${STATUS_COLORS[order.status] || ''}`}
-                    >
-                      {t(`status.${order.status}`)}
-                    </span>
-                    {order.cancellationReason &&
-                      order.status === 'cancelled' && (
-                        <span className="text-xs text-secondary truncate max-w-50">
-                          {order.cancellationReason}
-                        </span>
-                      )}
-                  </div>
-                  <div className="flex items-center gap-3 text-xs text-secondary">
-                    <span>
-                      {t('createdAt')}: <span className="font-medium text-foreground">{formatDate(order.createdAt)}</span>
-                    </span>
-                    <span className="text-stroke">|</span>
-                    <span>
-                      {t('lastUpdated')}: <span className="font-medium text-foreground">{formatDate(order.statusUpdateTime)}</span>
-                    </span>
-                  </div>
-                </div>
-
-                {/* Total paid hero */}
-                <div className="bg-background rounded-site p-4 border border-stroke text-center">
-                  <p className="text-xs text-secondary mb-1">
-                    {t('totals.paidAmount')}
-                  </p>
-                  <p className="text-3xl font-bold text-success">
-                    {(order.paidAmount ?? 0).toFixed(2)} {order.currency}
-                  </p>
-                  {hasRemaining && (
-                    <p className="mt-1 text-sm font-medium text-orange-600 dark:text-orange-400">
-                      {t('totals.remainingAmount')}: {remaining.toFixed(2)}{' '}
-                      {order.currency}
-                    </p>
-                  )}
-                </div>
-
-                {/* Amount details */}
-                <div>
-                  <h3 className="font-semibold mb-3">{t('amountDetails')}</h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <InfoRow
-                      icon={<LuCreditCard size={14} />}
-                      label={t('totals.totalPaidNow')}
-                      value={formatMoney(
-                        currentTransactionAmount,
-                        order.currency,
-                      )}
-                    />
-                    <InfoRow
-                      icon={<LuCreditCard size={14} />}
-                      label={t('totals.fullAmount')}
-                      value={formatMoney(
-                        order.fullAmount ?? order.totalAmount,
-                        order.currency,
-                      )}
-                    />
-                    <InfoRow
-                      icon={<LuCreditCard size={14} />}
-                      label={t('totals.paidAmount')}
-                      value={formatMoney(
-                        order.paidAmount ?? order.totalAmount,
-                        order.currency,
-                      )}
-                    />
-                    <InfoRow
-                      icon={<LuCreditCard size={14} />}
-                      label={t('totals.remainingAmount')}
-                      value={
-                        hasRemaining ? (
-                          formatMoney(remaining, order.currency)
-                        ) : (
-                          <span className="inline-block px-2 py-0.5 text-xs font-medium rounded-full bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
-                            {t('status.paid')}
+              return (
+                <>
+                  {/* Status + dates */}
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <div className="flex items-center gap-3">
+                      <span
+                        className={`px-3 py-1 text-sm font-medium rounded-full ${STATUS_COLORS[order.status] || ''}`}
+                      >
+                        {t(`status.${order.status}`)}
+                      </span>
+                      {order.cancellationReason &&
+                        order.status === 'cancelled' && (
+                          <span className="text-xs text-secondary truncate max-w-50">
+                            {order.cancellationReason}
                           </span>
-                        )
-                      }
-                    />
-                    <InfoRow
-                      icon={<LuTag size={14} />}
-                      label={t('totals.couponCode')}
-                      value={order.couponCode || 'N/A'}
-                    />
-                    <InfoRow
-                      icon={<LuTag size={14} />}
-                      label={t('totals.couponDiscount')}
-                      value={`${(order.couponDiscount ?? 0).toFixed(2)} ${order.currency}`}
-                    />
-                    {order.isUpgrade && (
-                      <>
-                        <InfoRow
-                          icon={<LuTag size={14} />}
-                          label={t('totals.isUpgrade')}
-                          value={t('yes')}
-                        />
-                        <InfoRow
-                          icon={<LuTag size={14} />}
-                          label={t('totals.upgradeDiscount')}
-                          value={`${(order.upgradeDiscount ?? 0).toFixed(0)}%`}
-                        />
-                        {order.fromProductId && (
-                          <InfoRow
-                            icon={<LuPackage size={14} />}
-                            label={t('totals.originalProduct')}
-                            value={order.fromProductId}
-                          />
                         )}
-                      </>
+                    </div>
+                    <div className="flex items-center gap-3 text-xs text-secondary">
+                      <span>
+                        {t('createdAt')}: <span className="font-medium text-foreground">{formatDate(order.createdAt)}</span>
+                      </span>
+                      <span className="text-stroke">|</span>
+                      <span>
+                        {t('lastUpdated')}: <span className="font-medium text-foreground">{formatDate(order.statusUpdateTime)}</span>
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Total paid hero */}
+                  <div className="bg-background rounded-site p-4 border border-stroke text-center">
+                    <p className="text-xs text-secondary mb-1">
+                      {t('totals.paidAmount')}
+                    </p>
+                    <p className="text-3xl font-bold text-success">
+                      {(order.paidAmount ?? 0).toFixed(2)} {order.currency}
+                    </p>
+                    {hasRemaining && (
+                      <p className="mt-1 text-sm font-medium text-orange-600 dark:text-orange-400">
+                        {t('totals.remainingAmount')}: {remaining.toFixed(2)}{' '}
+                        {order.currency}
+                      </p>
                     )}
                   </div>
-                </div>
 
-                {/* Payment timeline */}
-                <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="font-semibold">
-                      {t('paymentTimeline.title')}
-                    </h3>
-                    {canCreatePaymentLink && (
-                      <Tooltip
-                        position={locale === 'ar' ? 'right' : 'left'}
-                        content={
-                          t('paymentTimeline.createLink') ||
-                          'Create payment link'
+                  {/* Amount details */}
+                  <div>
+                    <h3 className="font-semibold mb-3">{t('amountDetails')}</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <InfoRow
+                        icon={<LuCreditCard size={14} />}
+                        label={t('totals.totalPaidNow')}
+                        value={formatMoney(
+                          currentTransactionAmount,
+                          order.currency,
+                        )}
+                      />
+                      <InfoRow
+                        icon={<LuCreditCard size={14} />}
+                        label={t('totals.fullAmount')}
+                        value={formatMoney(
+                          order.fullAmount ?? order.totalAmount,
+                          order.currency,
+                        )}
+                      />
+                      <InfoRow
+                        icon={<LuCreditCard size={14} />}
+                        label={t('totals.paidAmount')}
+                        value={formatMoney(
+                          order.paidAmount ?? order.totalAmount,
+                          order.currency,
+                        )}
+                      />
+                      <InfoRow
+                        icon={<LuCreditCard size={14} />}
+                        label={t('totals.remainingAmount')}
+                        value={
+                          hasRemaining ? (
+                            formatMoney(remaining, order.currency)
+                          ) : (
+                            <span className="inline-block px-2 py-0.5 text-xs font-medium rounded-full bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                              {t('status.paid')}
+                            </span>
+                          )
                         }
-                      >
-                        <Button
-                          variant="icon-primary"
-                          size="custom"
-                          onClick={() => onCreatePaymentLink?.(order)}
-                          disabled={isCreatingPaymentLink}
-                          aria-label={
+                      />
+                      <InfoRow
+                        icon={<LuTag size={14} />}
+                        label={t('totals.couponCode')}
+                        value={order.couponCode || 'N/A'}
+                      />
+                      <InfoRow
+                        icon={<LuTag size={14} />}
+                        label={t('totals.couponDiscount')}
+                        value={`${(order.couponDiscount ?? 0).toFixed(2)} ${order.currency}`}
+                      />
+                      {order.isUpgrade && (
+                        <>
+                          <InfoRow
+                            icon={<LuTag size={14} />}
+                            label={t('totals.isUpgrade')}
+                            value={t('yes')}
+                          />
+                          <InfoRow
+                            icon={<LuTag size={14} />}
+                            label={t('totals.upgradeDiscount')}
+                            value={`${(order.upgradeDiscount ?? 0).toFixed(0)}%`}
+                          />
+                          {order.fromProductId && (
+                            <InfoRow
+                              icon={<LuPackage size={14} />}
+                              label={t('totals.originalProduct')}
+                              value={order.fromProductId}
+                            />
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Payment timeline */}
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="font-semibold">
+                        {t('paymentTimeline.title')}
+                      </h3>
+                      {canCreatePaymentLink && (
+                        <Tooltip
+                          position={locale === 'ar' ? 'right' : 'left'}
+                          content={
                             t('paymentTimeline.createLink') ||
                             'Create payment link'
                           }
                         >
-                          {isCreatingPaymentLink ? (
-                            <LuRotateCw size={18} className="animate-spin" />
-                          ) : (
-                            <LuLink size={18} />
-                          )}
-                        </Button>
-                      </Tooltip>
-                    )}
-                  </div>
-                  {paymentTimeline.length > 0 ? (
-                    <div className="flex flex-col gap-2">
-                      {paymentTimeline.map((payment, index) => {
-                        const paymentStatus = payment.status || 'pending';
-                        const customerReference =
-                          typeof payment.easykashResponse?.customerReference ===
-                            'string'
-                            ? payment.easykashResponse.customerReference
-                            : undefined;
-
-                        return (
-                          <div
-                            key={`${payment.paymentId || 'payment'}-${index}`}
-                            className="rounded-lg bg-background border border-stroke p-3"
+                          <Button
+                            variant="icon-primary"
+                            size="custom"
+                            onClick={() => onCreatePaymentLink?.(order)}
+                            disabled={isCreatingPaymentLink}
+                            aria-label={
+                              t('paymentTimeline.createLink') ||
+                              'Create payment link'
+                            }
                           >
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="text-sm font-semibold text-foreground flex items-center gap-2">
-                                {t('paymentTimeline.paymentLabel', {
-                                  index: index + 1,
-                                })}
-                                {payment.paymentId?.startsWith('manual_invoice_') && (
-                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-xs font-medium rounded-full bg-primary/10 text-primary">
-                                    <LuFileText size={12} />
-                                    {t('paymentTimeline.invoicePayment') || 'Invoice'}
-                                  </span>
-                                )}
-                              </span>
-                              <div className="flex items-center gap-2">
-                                {hasPaymentLink(payment) && (
-                                  <Tooltip
-                                    position={
-                                      locale === 'ar' ? 'right' : 'left'
-                                    }
-                                    content={
-                                      t('paymentTimeline.copyLink') ||
-                                      'Copy payment link'
-                                    }
-                                  >
-                                    <Button
-                                      variant="icon-primary"
-                                      size="custom"
-                                      onClick={() =>
-                                        handleCopyPaymentLink(payment)
+                            {isCreatingPaymentLink ? (
+                              <LuRotateCw size={18} className="animate-spin" />
+                            ) : (
+                              <LuLink size={18} />
+                            )}
+                          </Button>
+                        </Tooltip>
+                      )}
+                    </div>
+                    {paymentTimeline.length > 0 ? (
+                      <div className="flex flex-col gap-2">
+                        {paymentTimeline.map((payment, index) => {
+                          const paymentStatus = payment.status || 'pending';
+                          const customerReference =
+                            typeof payment.easykashResponse?.customerReference ===
+                              'string'
+                              ? payment.easykashResponse.customerReference
+                              : undefined;
+
+                          return (
+                            <div
+                              key={`${payment.paymentId || 'payment'}-${index}`}
+                              className="rounded-lg bg-background border border-stroke p-3"
+                            >
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="text-sm font-semibold text-foreground flex items-center gap-2">
+                                  {t('paymentTimeline.paymentLabel', {
+                                    index: index + 1,
+                                  })}
+                                  {payment.paymentId?.startsWith('manual_invoice_') && (
+                                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-xs font-medium rounded-full bg-primary/10 text-primary">
+                                      <LuFileText size={12} />
+                                      {t('paymentTimeline.invoicePayment') || 'Invoice'}
+                                    </span>
+                                  )}
+                                </span>
+                                <div className="flex items-center gap-2">
+                                  {hasPaymentLink(payment) && (
+                                    <Tooltip
+                                      position={
+                                        locale === 'ar' ? 'right' : 'left'
                                       }
-                                      aria-label={
+                                      content={
                                         t('paymentTimeline.copyLink') ||
                                         'Copy payment link'
                                       }
                                     >
-                                      {copiedPaymentId === payment.paymentId ? (
-                                        <LuCheck
-                                          size={16}
-                                          className="text-success"
-                                        />
-                                      ) : (
-                                        <LuCopy size={16} />
-                                      )}
-                                    </Button>
-                                  </Tooltip>
-                                )}
-                                <span
-                                  className={`inline-block px-2 py-0.5 text-xs font-medium rounded-full ${PAYMENT_STATUS_COLORS[paymentStatus] || ''}`}
-                                >
-                                  {t(
-                                    `paymentTimeline.statuses.${paymentStatus}`,
+                                      <Button
+                                        variant="icon-primary"
+                                        size="custom"
+                                        onClick={() =>
+                                          handleCopyPaymentLink(payment)
+                                        }
+                                        aria-label={
+                                          t('paymentTimeline.copyLink') ||
+                                          'Copy payment link'
+                                        }
+                                      >
+                                        {copiedPaymentId === payment.paymentId ? (
+                                          <LuCheck
+                                            size={16}
+                                            className="text-success"
+                                          />
+                                        ) : (
+                                          <LuCopy size={16} />
+                                        )}
+                                      </Button>
+                                    </Tooltip>
                                   )}
-                                </span>
+                                  <span
+                                    className={`inline-block px-2 py-0.5 text-xs font-medium rounded-full ${PAYMENT_STATUS_COLORS[paymentStatus] || ''}`}
+                                  >
+                                    {t(
+                                      `paymentTimeline.statuses.${paymentStatus}`,
+                                    )}
+                                  </span>
+                                </div>
                               </div>
-                            </div>
 
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                              <InfoRow
-                                icon={<LuCreditCard size={14} />}
-                                label={t('paymentTimeline.orderAmount')}
-                                value={formatMoney(
-                                  payment.orderAmount ?? payment.amount,
-                                  order.currency,
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                <InfoRow
+                                  icon={<LuCreditCard size={14} />}
+                                  label={t('paymentTimeline.orderAmount')}
+                                  value={formatMoney(
+                                    payment.orderAmount ?? payment.amount,
+                                    order.currency,
+                                  )}
+                                />
+                                {typeof payment.gatewayAmount === 'number' && (
+                                  <InfoRow
+                                    icon={<LuCreditCard size={14} />}
+                                    label={t('paymentTimeline.gatewayAmount')}
+                                    value={formatMoney(
+                                      payment.gatewayAmount,
+                                      payment.gatewayCurrency || order.currency,
+                                    )}
+                                  />
                                 )}
-                              />
-                              {typeof payment.gatewayAmount === 'number' && (
+                                {/* Show the raw invoice amount when it differs from the order currency */}
+                                {payment.currency && payment.currency.toUpperCase() !== order.currency.toUpperCase() && (
+                                  <InfoRow
+                                    icon={<LuCreditCard size={14} />}
+                                    label={t('paymentTimeline.invoiceAmount') || 'Invoice Amount'}
+                                    value={formatMoney(
+                                      payment.amount,
+                                      payment.currency,
+                                    )}
+                                  />
+                                )}
                                 <InfoRow
                                   icon={<LuCreditCard size={14} />}
-                                  label={t('paymentTimeline.gatewayAmount')}
-                                  value={formatMoney(
-                                    payment.gatewayAmount,
-                                    payment.gatewayCurrency || order.currency,
-                                  )}
+                                  label={t('paymentTimeline.method')}
+                                  value={
+                                    getPaymentMethodLabel(
+                                      payment.paymentMethod,
+                                      locale as 'ar' | 'en',
+                                    ) || 'N/A'
+                                  }
                                 />
-                              )}
-                              {/* Show the raw invoice amount when it differs from the order currency */}
-                              {payment.currency && payment.currency.toUpperCase() !== order.currency.toUpperCase() && (
-                                <InfoRow
-                                  icon={<LuCreditCard size={14} />}
-                                  label={t('paymentTimeline.invoiceAmount') || 'Invoice Amount'}
-                                  value={formatMoney(
-                                    payment.amount,
-                                    payment.currency,
-                                  )}
-                                />
-                              )}
-                              <InfoRow
-                                icon={<LuCreditCard size={14} />}
-                                label={t('paymentTimeline.method')}
-                                value={
-                                  getPaymentMethodLabel(
-                                    payment.paymentMethod,
-                                    locale as 'ar' | 'en',
-                                  ) || 'N/A'
-                                }
-                              />
-                              <InfoRow
-                                icon={<LuCalendar size={14} />}
-                                label={t('paymentTimeline.createdAt')}
-                                value={formatDate(payment.createdAt)}
-                              />
-                              {payment.paidAt && (
                                 <InfoRow
                                   icon={<LuCalendar size={14} />}
-                                  label={t('paymentTimeline.paidAt')}
-                                  value={formatDate(payment.paidAt)}
+                                  label={t('paymentTimeline.createdAt')}
+                                  value={formatDate(payment.createdAt)}
                                 />
-                              )}
-                              {payment.easykashRef && (
-                                <InfoRow
-                                  icon={<LuHash size={14} />}
-                                  label={t('paymentTimeline.reference')}
-                                  value={payment.easykashRef}
-                                />
-                              )}
-                              {payment.easykashProductCode && (
-                                <InfoRow
-                                  icon={<LuHash size={14} />}
-                                  label={t('paymentTimeline.productCode')}
-                                  value={payment.easykashProductCode}
-                                />
-                              )}
-                              {customerReference && (
-                                <InfoRow
-                                  icon={<LuHash size={14} />}
-                                  label={t('paymentTimeline.customerReference')}
-                                  value={customerReference}
-                                />
-                              )}
-                            </div>
+                                {payment.paidAt && (
+                                  <InfoRow
+                                    icon={<LuCalendar size={14} />}
+                                    label={t('paymentTimeline.paidAt')}
+                                    value={formatDate(payment.paidAt)}
+                                  />
+                                )}
+                                {payment.easykashRef && (
+                                  <InfoRow
+                                    icon={<LuHash size={14} />}
+                                    label={t('paymentTimeline.reference')}
+                                    value={payment.easykashRef}
+                                  />
+                                )}
+                                {payment.easykashProductCode && (
+                                  <InfoRow
+                                    icon={<LuHash size={14} />}
+                                    label={t('paymentTimeline.productCode')}
+                                    value={payment.easykashProductCode}
+                                  />
+                                )}
+                                {customerReference && (
+                                  <InfoRow
+                                    icon={<LuHash size={14} />}
+                                    label={t('paymentTimeline.customerReference')}
+                                    value={customerReference}
+                                  />
+                                )}
+                              </div>
 
-                            {/* Allow Rate tolerance info */}
-                            {payment.allowRateApplied && (
-                              <div className="mt-2 rounded-lg border border-info/30 bg-info/5 px-3 py-2">
-                                <div className="flex items-center gap-1.5 mb-1.5">
-                                  <LuPercent size={14} className="text-info" />
-                                  <span className="text-xs font-semibold text-info">
-                                    {t('paymentTimeline.allowRateApplied') || 'Payment Tolerance Applied'}
-                                  </span>
-                                </div>
-                                <p className="text-xs text-secondary mb-1.5">
-                                  {t('paymentTimeline.allowRateSummary', {
-                                    invoice: payment.allowRateApplied.invoiceValue.toFixed(2),
-                                    difference: payment.allowRateApplied.difference.toFixed(2),
-                                    remaining: payment.allowRateApplied.remainingBefore.toFixed(2),
-                                    currency: order.currency,
-                                  }) || `Invoice ${payment.allowRateApplied.invoiceValue.toFixed(2)} + tolerance ${payment.allowRateApplied.difference.toFixed(2)} = ${payment.allowRateApplied.remainingBefore.toFixed(2)} (remaining)`}
-                                </p>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-xs">
-                                  <div className="flex items-center justify-between">
-                                    <span className="text-secondary">
-                                      {t('paymentTimeline.allowRateType') || 'Tolerance type'}
-                                    </span>
-                                    <span className="font-medium text-foreground">
-                                      {payment.allowRateApplied.type === 'percentage'
-                                        ? `${payment.allowRateApplied.value}%`
-                                        : `${payment.allowRateApplied.value.toFixed(2)}`}
+                              {/* Allow Rate tolerance info */}
+                              {payment.allowRateApplied && (
+                                <div className="mt-2 rounded-lg border border-info/30 bg-info/5 px-3 py-2">
+                                  <div className="flex items-center gap-1.5 mb-1.5">
+                                    <LuPercent size={14} className="text-info" />
+                                    <span className="text-xs font-semibold text-info">
+                                      {t('paymentTimeline.allowRateApplied') || 'Payment Tolerance Applied'}
                                     </span>
                                   </div>
-                                  {payment.allowRateApplied.paymentMethod && (
+                                  <p className="text-xs text-secondary mb-1.5">
+                                    {t('paymentTimeline.allowRateSummary', {
+                                      invoice: payment.allowRateApplied.invoiceValue.toFixed(2),
+                                      difference: payment.allowRateApplied.difference.toFixed(2),
+                                      remaining: payment.allowRateApplied.remainingBefore.toFixed(2),
+                                      currency: order.currency,
+                                    }) || `Invoice ${payment.allowRateApplied.invoiceValue.toFixed(2)} + tolerance ${payment.allowRateApplied.difference.toFixed(2)} = ${payment.allowRateApplied.remainingBefore.toFixed(2)} (remaining)`}
+                                  </p>
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-xs">
                                     <div className="flex items-center justify-between">
                                       <span className="text-secondary">
-                                        {t('paymentTimeline.allowRatePaymentMethod') || 'Payment method'}
+                                        {t('paymentTimeline.allowRateType') || 'Tolerance type'}
                                       </span>
                                       <span className="font-medium text-foreground">
-                                        {payment.allowRateApplied.paymentMethod}
+                                        {payment.allowRateApplied.type === 'percentage'
+                                          ? `${payment.allowRateApplied.value}%`
+                                          : `${payment.allowRateApplied.value.toFixed(2)}`}
                                       </span>
                                     </div>
-                                  )}
-                                  <div className="flex items-center justify-between">
-                                    <span className="text-secondary">
-                                      {t('paymentTimeline.allowRateInvoiceValue') || 'Invoice value'}
-                                    </span>
-                                    <span className="font-medium text-foreground">
-                                      {payment.allowRateApplied.invoiceValue.toFixed(2)} {order.currency}
-                                    </span>
-                                  </div>
-                                  <div className="flex items-center justify-between">
-                                    <span className="text-secondary">
-                                      {t('paymentTimeline.allowRateRemainingBefore') || 'Remaining before'}
-                                    </span>
-                                    <span className="font-medium text-foreground">
-                                      {payment.allowRateApplied.remainingBefore.toFixed(2)} {order.currency}
-                                    </span>
-                                  </div>
-                                  <div className="flex items-center justify-between">
-                                    <span className="text-secondary">
-                                      {t('paymentTimeline.allowRateDifference') || 'Difference covered by tolerance'}
-                                    </span>
-                                    <span className="font-bold text-info">
-                                      {payment.allowRateApplied.difference.toFixed(2)} {order.currency}
-                                    </span>
+                                    {payment.allowRateApplied.paymentMethod && (
+                                      <div className="flex items-center justify-between">
+                                        <span className="text-secondary">
+                                          {t('paymentTimeline.allowRatePaymentMethod') || 'Payment method'}
+                                        </span>
+                                        <span className="font-medium text-foreground">
+                                          {payment.allowRateApplied.paymentMethod}
+                                        </span>
+                                      </div>
+                                    )}
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-secondary">
+                                        {t('paymentTimeline.allowRateInvoiceValue') || 'Invoice value'}
+                                      </span>
+                                      <span className="font-medium text-foreground">
+                                        {payment.allowRateApplied.invoiceValue.toFixed(2)} {order.currency}
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-secondary">
+                                        {t('paymentTimeline.allowRateRemainingBefore') || 'Remaining before'}
+                                      </span>
+                                      <span className="font-medium text-foreground">
+                                        {payment.allowRateApplied.remainingBefore.toFixed(2)} {order.currency}
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-secondary">
+                                        {t('paymentTimeline.allowRateDifference') || 'Difference covered by tolerance'}
+                                      </span>
+                                      <span className="font-bold text-info">
+                                        {payment.allowRateApplied.difference.toFixed(2)} {order.currency}
+                                      </span>
+                                    </div>
                                   </div>
                                 </div>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div className="rounded-lg bg-background border border-stroke p-3 text-sm text-secondary">
-                      {t('paymentTimeline.empty')}
-                    </div>
-                  )}
-                </div>
-
-                {/* Order items */}
-                <div>
-                  <h3 className="font-semibold mb-3 flex items-center gap-2">
-                    <LuPackage size={16} /> {t('items')}
-                  </h3>
-                  <div className="mb-3 text-xs text-secondary">
-                    {t('table.itemCount', { count: order.items.length })} •{' '}
-                    {t('table.quantityTotal', {
-                      count: order.items.reduce(
-                        (sum, item) => sum + Number(item.quantity || 0),
-                        0,
-                      ),
-                    })}
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    {order.items.map((item, i) => (
-                      <div
-                        key={i}
-                        className="flex items-start justify-between gap-3 py-3 px-3 rounded-lg bg-background border border-stroke"
-                      >
-                        <div className="space-y-1 min-w-0">
-                          <p className="font-medium text-sm truncate">
-                            {getOrderItemDisplayName(item, locale)}
-                          </p>
-                          <div className="flex items-center gap-2 text-xs text-secondary">
-                            <span>
-                              {t('table.quantityTotal', {
-                                count: item.quantity,
-                              })}
-                            </span>
-                            <span>
-                              {(item.price ?? 0).toFixed(2)} {item.currency}
-                            </span>
-                          </div>
-                          {!item.isCustom && (
-                            <div className="text-[11px] text-secondary font-mono">
-                              <span>
-                                {t('productId')}: {item.productId}
-                              </span>
-                              {item.productSlug && (
-                                <span className="ms-2">
-                                  {t('productSlug')}: {item.productSlug}
-                                </span>
                               )}
                             </div>
-                          )}
-                        </div>
-                        <div className="text-end shrink-0">
-                          <p className="font-bold text-sm text-success">
-                            {((item.price ?? 0) * (item.quantity ?? 0)).toFixed(
-                              2,
-                            )}{' '}
-                            {item.currency}
-                          </p>
-                          <p className="text-[11px] text-secondary">
-                            {item.quantity ?? 0} x{' '}
-                            {(item.price ?? 0).toFixed(2)}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Customer info */}
-                <div>
-                  <h3 className="font-semibold mb-3">{t('customerInfo')}</h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <InfoRow
-                      icon={<LuHash size={14} />}
-                      label={t('table.orderNumber')}
-                      value={order.orderNumber}
-                    />
-                    <InfoRow
-                      icon={<LuPackage size={14} />}
-                      label={t('source')}
-                      value={order.source || 'manasik'}
-                    />
-                    <InfoRow
-                      icon={<LuHash size={14} />}
-                      label={t('customerType.label')}
-                      value={
-                        isOrderGuest(order)
-                          ? t('customerType.guest')
-                          : t('customerType.registered')
-                      }
-                    />
-                    <InfoRow
-                      icon={<LuMail size={14} />}
-                      label={t('email')}
-                      value={order.billingData.email}
-                    />
-                    <InfoRow
-                      icon={<LuPhone size={14} />}
-                      label={t('phone')}
-                      value={order.billingData.phone}
-                    />
-                    <InfoRow
-                      icon={<LuGlobe size={14} />}
-                      label={t('country')}
-                      value={order.billingData.country}
-                    />
-                    <InfoRow
-                      icon={<LuCalendar size={14} />}
-                      label={t('createdAt')}
-                      value={formatDate(order.createdAt)}
-                    />
-                    <InfoRow
-                      icon={<LuCalendar size={14} />}
-                      label={t('lastUpdated')}
-                      value={formatDate(order.statusUpdateTime)}
-                    />
-                    <InfoRow
-                      icon={<LuHash size={14} />}
-                      label={t('locale')}
-                      value={order.locale || 'N/A'}
-                    />
-                    <InfoRow
-                      icon={<LuHash size={14} />}
-                      label={t('termsAgreedAt')}
-                      value={
-                        order.termsAgreedAt
-                          ? formatDate(order.termsAgreedAt)
-                          : 'N/A'
-                      }
-                    />
-                    {order.referralId && (
-                      <InfoRow
-                        icon={<LuUserRoundPlus size={14} />}
-                        label={t('referral')}
-                        value={order.referralId}
-                      />
-                    )}
-                  </div>
-                </div>
-
-                {/* Invoice */}
-                {(() => {
-                  const invoices = order.invoiceUrls || [];
-                  if (invoices.length === 0) return null;
-                  return (
-                    <div>
-                      <h3 className="font-semibold mb-3">
-                        {invoices.length > 1
-                          ? t('table.invoices') || t('table.invoice')
-                          : t('table.invoice')}
-                      </h3>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                        {invoices.map((invoice) => {
-                          const invoiceStatus =
-                            invoice.invoiceStatus ?? 'waiting';
-                          const statusConfig = {
-                            confirmed: {
-                              bg: 'bg-success',
-                              icon: <LuCheck size={16} />,
-                              label: t('table.confirmedInvoice') || 'Confirmed',
-                            },
-                            rejected: {
-                              bg: 'bg-error',
-                              icon: <LuX size={16} />,
-                              label: t('table.rejectedInvoice') || 'Rejected',
-                            },
-                            waiting: {
-                              bg: 'bg-warning',
-                              icon: <LuClock size={16} />,
-                              label: t('table.waitingInvoice') || 'Waiting',
-                            },
-                            pending: {
-                              bg: 'bg-info',
-                              icon: <LuClock size={16} />,
-                              label: t('table.pendingInvoice') || 'Pending',
-                            },
-                          } as const;
-                          const config =
-                            statusConfig[
-                            invoiceStatus as keyof typeof statusConfig
-                            ] || statusConfig.waiting;
-
-                          return (
-                            <button
-                              key={invoice.url}
-                              type="button"
-                              disabled={downloadingInvoiceUrl === invoice.url}
-                              onClick={async () => {
-                                if (downloadingInvoiceUrl) return;
-                                setDownloadingInvoiceUrl(invoice.url);
-                                try {
-                                  await downloadFile(
-                                    invoice.url,
-                                    `invoice-${order.orderNumber}`,
-                                  );
-                                } catch {
-                                  toast.error(
-                                    t('messages.downloadFailed') ||
-                                    'Failed to download invoice',
-                                  );
-                                } finally {
-                                  setDownloadingInvoiceUrl(null);
-                                }
-                              }}
-                              className="relative flex flex-col items-center gap-2 p-3 rounded-lg bg-background border border-stroke hover:border-primary transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                              <span
-                                className={`absolute top-2 left-2 inline-flex items-center justify-center w-7 h-7 rounded-full ${config.bg}`}
-                                title={config.label}
-                              >
-                                {config.icon}
-                              </span>
-                              {isImageUrl(invoice.url) ? (
-                                <Image
-                                  src={invoice.url}
-                                  alt="Invoice"
-                                  className="w-full h-24 object-cover rounded-md"
-                                  loading="lazy"
-                                  width={200}
-                                  height={96}
-                                />
-                              ) : (
-                                <span className="inline-flex items-center justify-center p-2 text-primary h-24">
-                                  {downloadingInvoiceUrl === invoice.url ? (
-                                    <LuRefreshCw size={32} className="animate-spin" />
-                                  ) : (
-                                    <LuFileText size={32} />
-                                  )}
-                                </span>
-                              )}
-                              <span className="text-xs text-primary font-medium truncate max-w-full inline-flex items-center gap-1">
-                                {downloadingInvoiceUrl === invoice.url ? (
-                                  <LuRefreshCw size={12} className="animate-spin" />
-                                ) : (
-                                  <LuDownload size={12} />
-                                )}
-                                {t('table.downloadInvoice')}
-                              </span>
-                              {invoiceStatus === 'rejected' &&
-                                invoice.rejectionReason && (
-                                  <span className="text-xs text-error text-center line-clamp-2">
-                                    {invoice.rejectionReason}
-                                  </span>
-                                )}
-                            </button>
                           );
                         })}
                       </div>
-                    </div>
-                  );
-                })()}
+                    ) : (
+                      <div className="rounded-lg bg-background border border-stroke p-3 text-sm text-secondary">
+                        {t('paymentTimeline.empty')}
+                      </div>
+                    )}
+                  </div>
 
-                {/* Reservation data */}
-                {order.reservationData?.length ? (
+                  {/* Order items */}
                   <div>
-                    <h3 className="font-semibold mb-3">
-                      {t('reservationData.title')}
+                    <h3 className="font-semibold mb-3 flex items-center gap-2">
+                      <LuPackage size={16} /> {t('items')}
                     </h3>
+                    <div className="mb-3 text-xs text-secondary">
+                      {t('table.itemCount', { count: order.items.length })} •{' '}
+                      {t('table.quantityTotal', {
+                        count: order.items.reduce(
+                          (sum, item) => sum + Number(item.quantity || 0),
+                          0,
+                        ),
+                      })}
+                    </div>
                     <div className="flex flex-col gap-2">
-                      {order.reservationData.map((field, index) => {
-                        const values = getReservationValues(field.value);
+                      {order.items.map((item, i) => (
+                        <div
+                          key={i}
+                          className="flex items-start justify-between gap-3 py-3 px-3 rounded-lg bg-background border border-stroke"
+                        >
+                          <div className="space-y-1 min-w-0">
+                            <p className="font-medium text-sm truncate">
+                              {getOrderItemDisplayName(item, locale)}
+                            </p>
+                            <div className="flex items-center gap-2 text-xs text-secondary">
+                              <span>
+                                {t('table.quantityTotal', {
+                                  count: item.quantity,
+                                })}
+                              </span>
+                              <span>
+                                {(item.price ?? 0).toFixed(2)} {item.currency}
+                              </span>
+                            </div>
+                            {!item.isCustom && (
+                              <div className="text-[11px] text-secondary font-mono">
+                                <span>
+                                  {t('productId')}: {item.productId}
+                                </span>
+                                {item.productSlug && (
+                                  <span className="ms-2">
+                                    {t('productSlug')}: {item.productSlug}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                          <div className="text-end shrink-0">
+                            <p className="font-bold text-sm text-success">
+                              {((item.price ?? 0) * (item.quantity ?? 0)).toFixed(
+                                2,
+                              )}{' '}
+                              {item.currency}
+                            </p>
+                            <p className="text-[11px] text-secondary">
+                              {item.quantity ?? 0} x{' '}
+                              {(item.price ?? 0).toFixed(2)}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
 
-                        if (field.key === 'photo') {
-                          const photoUrls = (() => {
-                            try {
-                              const parsed = JSON.parse(field.value);
-                              if (Array.isArray(parsed)) {
-                                return parsed.filter(
-                                  (v): v is string =>
-                                    typeof v === 'string' && v.length > 0,
-                                );
+                  {/* Customer info */}
+                  <div>
+                    <h3 className="font-semibold mb-3">{t('customerInfo')}</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <InfoRow
+                        icon={<LuHash size={14} />}
+                        label={t('table.orderNumber')}
+                        value={order.orderNumber}
+                      />
+                      <InfoRow
+                        icon={<LuPackage size={14} />}
+                        label={t('source')}
+                        value={order.source || 'manasik'}
+                      />
+                      <InfoRow
+                        icon={<LuHash size={14} />}
+                        label={t('customerType.label')}
+                        value={
+                          isOrderGuest(order)
+                            ? t('customerType.guest')
+                            : t('customerType.registered')
+                        }
+                      />
+                      <InfoRow
+                        icon={<LuMail size={14} />}
+                        label={t('email')}
+                        value={order.billingData.email}
+                      />
+                      <InfoRow
+                        icon={<LuPhone size={14} />}
+                        label={t('phone')}
+                        value={order.billingData.phone}
+                      />
+                      <InfoRow
+                        icon={<LuGlobe size={14} />}
+                        label={t('country')}
+                        value={order.billingData.country}
+                      />
+                      <InfoRow
+                        icon={<LuCalendar size={14} />}
+                        label={t('createdAt')}
+                        value={formatDate(order.createdAt)}
+                      />
+                      <InfoRow
+                        icon={<LuCalendar size={14} />}
+                        label={t('lastUpdated')}
+                        value={formatDate(order.statusUpdateTime)}
+                      />
+                      <InfoRow
+                        icon={<LuHash size={14} />}
+                        label={t('locale')}
+                        value={order.locale || 'N/A'}
+                      />
+                      <InfoRow
+                        icon={<LuHash size={14} />}
+                        label={t('termsAgreedAt')}
+                        value={
+                          order.termsAgreedAt
+                            ? formatDate(order.termsAgreedAt)
+                            : 'N/A'
+                        }
+                      />
+                      {order.referralId && (
+                        <InfoRow
+                          icon={<LuUserRoundPlus size={14} />}
+                          label={t('referral')}
+                          value={order.referralId}
+                        />
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Invoice */}
+                  {(() => {
+                    const invoices = order.invoiceUrls || [];
+                    if (invoices.length === 0) return null;
+                    return (
+                      <div>
+                        <h3 className="font-semibold mb-3">
+                          {invoices.length > 1
+                            ? t('table.invoices') || t('table.invoice')
+                            : t('table.invoice')}
+                        </h3>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                          {invoices.map((invoice) => {
+                            const invoiceStatus =
+                              invoice.invoiceStatus ?? 'waiting';
+                            const statusConfig = {
+                              confirmed: {
+                                bg: 'bg-success',
+                                icon: <LuCheck size={16} />,
+                                label: t('table.confirmedInvoice') || 'Confirmed',
+                              },
+                              rejected: {
+                                bg: 'bg-error',
+                                icon: <LuX size={16} />,
+                                label: t('table.rejectedInvoice') || 'Rejected',
+                              },
+                              waiting: {
+                                bg: 'bg-warning',
+                                icon: <LuClock size={16} />,
+                                label: t('table.waitingInvoice') || 'Waiting',
+                              },
+                              pending: {
+                                bg: 'bg-info',
+                                icon: <LuClock size={16} />,
+                                label: t('table.pendingInvoice') || 'Pending',
+                              },
+                            } as const;
+                            const config =
+                              statusConfig[
+                              invoiceStatus as keyof typeof statusConfig
+                              ] || statusConfig.waiting;
+
+                            return (
+                              <button
+                                key={invoice.url}
+                                type="button"
+                                onClick={() => setInvoicePreviewOpen(true)}
+                                className="relative flex flex-col items-center gap-2 p-3 rounded-lg bg-background border border-stroke hover:border-primary transition-colors text-left"
+                              >
+                                <span
+                                  className={`absolute top-2 left-2 inline-flex items-center justify-center w-7 h-7 rounded-full ${config.bg}`}
+                                  title={config.label}
+                                >
+                                  {config.icon}
+                                </span>
+                                {isImageUrl(invoice.url) ? (
+                                  <Image
+                                    src={invoice.url}
+                                    alt="Invoice"
+                                    className="w-full h-24 object-cover rounded-md"
+                                    loading="lazy"
+                                    width={200}
+                                    height={96}
+                                  />
+                                ) : (
+                                  <span className="inline-flex items-center justify-center p-2 text-primary h-24">
+                                    <LuFileText size={32} />
+                                  </span>
+                                )}
+                                <span className="text-xs text-primary font-medium truncate max-w-full inline-flex items-center gap-1">
+                                  <LuDownload size={12} />
+                                  {t('table.downloadInvoice')}
+                                </span>
+                                {invoiceStatus === 'rejected' &&
+                                  invoice.rejectionReason && (
+                                    <span className="text-xs text-error text-center line-clamp-2">
+                                      {invoice.rejectionReason}
+                                    </span>
+                                  )}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Reservation data */}
+                  {order.reservationData?.length ? (
+                    <div>
+                      <h3 className="font-semibold mb-3">
+                        {t('reservationData.title')}
+                      </h3>
+                      <div className="flex flex-col gap-2">
+                        {order.reservationData.map((field, index) => {
+                          const values = getReservationValues(field.value);
+
+                          if (field.key === 'photo') {
+                            const photoUrls = (() => {
+                              try {
+                                const parsed = JSON.parse(field.value);
+                                if (Array.isArray(parsed)) {
+                                  return parsed.filter(
+                                    (v): v is string =>
+                                      typeof v === 'string' && v.length > 0,
+                                  );
+                                }
+                              } catch {
+                                // Not JSON — treat as a single URL (legacy)
                               }
-                            } catch {
-                              // Not JSON — treat as a single URL (legacy)
-                            }
-                            return field.value ? [field.value] : [];
-                          })();
+                              return field.value ? [field.value] : [];
+                            })();
 
-                          if (photoUrls.length === 0) return null;
+                            if (photoUrls.length === 0) return null;
+
+                            return (
+                              <div
+                                key={`${field.key}-${index}`}
+                                className="flex flex-col gap-3 p-4 rounded-lg bg-background border border-stroke"
+                              >
+                                <div className="flex flex-wrap gap-3">
+                                  {photoUrls.map((url, photoIndex) => (
+                                    <div
+                                      key={`${field.key}-${index}-${photoIndex}`}
+                                      className="flex flex-col items-center gap-2"
+                                    >
+                                      <div className="overflow-hidden">
+                                        <Image
+                                          src={url}
+                                          alt={`${getReservationLabel(field.label)} ${photoIndex + 1}`}
+                                          className="w-full max-w-50 h-auto object-cover rounded"
+                                          width={200}
+                                          height={96}
+                                        />
+                                      </div>
+                                      <a
+                                        href={url}
+                                        download
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="inline-flex items-center px-3 py-1 rounded-md text-sm font-medium bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                                      >
+                                        Download Image
+                                      </a>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            );
+                          }
 
                           return (
                             <div
                               key={`${field.key}-${index}`}
-                              className="flex flex-col gap-3 p-4 rounded-lg bg-background border border-stroke"
+                              className="py-2 px-3 rounded-lg bg-background border border-stroke"
                             >
-                              <div className="flex flex-wrap gap-3">
-                                {photoUrls.map((url, photoIndex) => (
-                                  <div
-                                    key={`${field.key}-${index}-${photoIndex}`}
-                                    className="flex flex-col items-center gap-2"
-                                  >
-                                    <div className="overflow-hidden">
-                                      <Image
-                                        src={url}
-                                        alt={`${getReservationLabel(field.label)} ${photoIndex + 1}`}
-                                        className="w-full max-w-50 h-auto object-cover rounded"
-                                        width={200}
-                                        height={96}
-                                      />
-                                    </div>
-                                    <a
-                                      href={url}
-                                      download
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="inline-flex items-center px-3 py-1 rounded-md text-sm font-medium bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                              <p className="text-xs text-secondary mb-1">
+                                {getReservationLabel(field.label)}
+                              </p>
+                              <div className="flex flex-wrap gap-1">
+                                {values.length > 0 ? (
+                                  values.map((entry, valueIndex) => (
+                                    <span
+                                      key={`${field.key}-${index}-${valueIndex}`}
+                                      className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-primary/10 text-primary"
                                     >
-                                      Download Image
-                                    </a>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          );
-                        }
-
-                        return (
-                          <div
-                            key={`${field.key}-${index}`}
-                            className="py-2 px-3 rounded-lg bg-background border border-stroke"
-                          >
-                            <p className="text-xs text-secondary mb-1">
-                              {getReservationLabel(field.label)}
-                            </p>
-                            <div className="flex flex-wrap gap-1">
-                              {values.length > 0 ? (
-                                values.map((entry, valueIndex) => (
-                                  <span
-                                    key={`${field.key}-${index}-${valueIndex}`}
-                                    className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-primary/10 text-primary"
-                                  >
-                                    {entry}
-                                  </span>
-                                ))
-                              ) : (
-                                <span className="text-sm text-secondary">
-                                  -
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ) : null}
-
-                {/* Design images */}
-                {order.designUrls && order.designUrls.length > 0 ? (
-                  <div>
-                    <h3 className="font-semibold mb-3">
-                      {t('reservationData.designs') || 'Designs'}
-                    </h3>
-                    <div className="flex flex-col gap-3 p-4 rounded-lg bg-background border border-stroke">
-                      <div className="flex flex-wrap gap-3">
-                        {order.designUrls.map((design, designIndex) => {
-                          const variantLabel =
-                            design.templateType === 'image'
-                              ? t('reservationData.designImageVariant') || 'Image'
-                              : t('reservationData.designTextVariant') || 'Text';
-                          const isReviewed = reviewOverrides[design.productId] ?? !!design.reviewed;
-                          const isTogglingReview = reviewingProductId === design.productId;
-                          return (
-                            <div
-                              key={`design-${designIndex}`}
-                              className="flex flex-col items-center gap-2"
-                            >
-                              <div className="relative overflow-hidden">
-                                <Image
-                                  src={`${design.url}${design.url.includes('?') ? '&' : '?'}v=${designCacheBust}`}
-                                  alt={`Design ${designIndex + 1} (${variantLabel})`}
-                                  className="w-full max-w-50 h-auto object-cover rounded"
-                                  width={200}
-                                  height={96}
-                                  unoptimized
-                                />
-                              </div>
-                              <span className="text-xs text-secondary">
-                                {variantLabel}
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() => handleToggleDesignReview(design.productId, isReviewed)}
-                                disabled={isTogglingReview}
-                                className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold transition-colors disabled:opacity-60 ${isReviewed
-                                  ? 'bg-success/10 text-success hover:bg-success/20'
-                                  : 'bg-warning/10 text-warning hover:bg-warning/20'
-                                  }`}
-                              >
-                                {isReviewed ? (
-                                  <LuCheck className="h-3.5 w-3.5" />
+                                      {entry}
+                                    </span>
+                                  ))
                                 ) : (
-                                  <LuClock className="h-3.5 w-3.5" />
+                                  <span className="text-sm text-secondary">
+                                    -
+                                  </span>
                                 )}
-                                {isReviewed
-                                  ? t('reservationData.reviewed')
-                                  : t('reservationData.waitingForReview')}
-                              </button>
-                              <a
-                                href={`${design.url}${design.url.includes('?') ? '&' : '?'}v=${designCacheBust}`}
-                                download
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center px-3 py-1 rounded-md text-sm font-medium bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
-                              >
-                                Download Design
-                              </a>
+                              </div>
                             </div>
                           );
                         })}
                       </div>
                     </div>
-                  </div>
-                ) : null}
-              </>
-            );
-          })()}
+                  ) : null}
 
-          {/* Internal Notes — only show if there are notes */}
-          {order.internalNotes && order.internalNotes.length > 0 && (
-            <div className="flex flex-col gap-2 border-t border-stroke pt-4">
-              <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                <LuFileText size={16} className="text-secondary" />
-                {t('internalNotes') || 'Internal Notes'}
-              </h3>
-              <div className="flex flex-col gap-2">
-                {order.internalNotes.map((note, idx) => (
-                  <div
-                    key={note._id || idx}
-                    className="flex flex-col gap-1 rounded-lg border border-stroke bg-muted/20 px-3 py-2"
-                  >
-                    <p className="text-sm text-foreground">{note.text}</p>
-                    <div className="flex items-center gap-2 text-xs text-secondary">
-                      <span className="font-medium">{note.author}</span>
-                      <span>·</span>
-                      <span>{formatDate(note.createdAt)}</span>
+                  {/* Design images */}
+                  {order.designUrls && order.designUrls.length > 0 ? (
+                    <div>
+                      <h3 className="font-semibold mb-3">
+                        {t('reservationData.designs') || 'Designs'}
+                      </h3>
+                      <div className="flex flex-col gap-3 p-4 rounded-lg bg-background border border-stroke">
+                        <div className="flex flex-wrap gap-3">
+                          {order.designUrls.map((design, designIndex) => {
+                            const variantLabel =
+                              design.templateType === 'image'
+                                ? t('reservationData.designImageVariant') || 'Image'
+                                : t('reservationData.designTextVariant') || 'Text';
+                            const isReviewed = reviewOverrides[design.productId] ?? !!design.reviewed;
+                            const isTogglingReview = reviewingProductId === design.productId;
+                            return (
+                              <div
+                                key={`design-${designIndex}`}
+                                className="flex flex-col items-center gap-2"
+                              >
+                                <div className="relative overflow-hidden">
+                                  <Image
+                                    src={`${design.url}${design.url.includes('?') ? '&' : '?'}v=${designCacheBust}`}
+                                    alt={`Design ${designIndex + 1} (${variantLabel})`}
+                                    className="w-full max-w-50 h-auto object-cover rounded"
+                                    width={200}
+                                    height={96}
+                                    unoptimized
+                                  />
+                                </div>
+                                <span className="text-xs text-secondary">
+                                  {variantLabel}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleDesignReview(design.productId, isReviewed)}
+                                  disabled={isTogglingReview}
+                                  className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold transition-colors disabled:opacity-60 ${isReviewed
+                                    ? 'bg-success/10 text-success hover:bg-success/20'
+                                    : 'bg-warning/10 text-warning hover:bg-warning/20'
+                                    }`}
+                                >
+                                  {isReviewed ? (
+                                    <LuCheck className="h-3.5 w-3.5" />
+                                  ) : (
+                                    <LuClock className="h-3.5 w-3.5" />
+                                  )}
+                                  {isReviewed
+                                    ? t('reservationData.reviewed')
+                                    : t('reservationData.waitingForReview')}
+                                </button>
+                                <a
+                                  href={`${design.url}${design.url.includes('?') ? '&' : '?'}v=${designCacheBust}`}
+                                  download
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center px-3 py-1 rounded-md text-sm font-medium bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                                >
+                                  Download Design
+                                </a>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ) : null}
+                </>
+              );
+            })()}
+
+            {/* Internal Notes — only show if there are notes */}
+            {order.internalNotes && order.internalNotes.length > 0 && (
+              <div className="flex flex-col gap-2 border-t border-stroke pt-4">
+                <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                  <LuFileText size={16} className="text-secondary" />
+                  {t('internalNotes') || 'Internal Notes'}
+                </h3>
+                <div className="flex flex-col gap-2">
+                  {order.internalNotes.map((note, idx) => (
+                    <div
+                      key={note._id || idx}
+                      className="flex flex-col gap-1 rounded-lg border border-stroke bg-muted/20 px-3 py-2"
+                    >
+                      <p className="text-sm text-foreground">{note.text}</p>
+                      <div className="flex items-center gap-2 text-xs text-secondary">
+                        <span className="font-medium">{note.author}</span>
+                        <span>·</span>
+                        <span>{formatDate(note.createdAt)}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
-        </div>
-      ) : null}
-    </Modal>
+            )}
+          </div>
+        ) : null}
+      </Modal>
+
+      {/* Invoice preview modal — opened when clicking an invoice card.
+          Provides download and status toggle. */}
+      {
+        invoicePreviewOpen && order && (order.invoiceUrls?.length ?? 0) > 0 && (
+          <InvoicePreviewModal
+            order={order}
+            onClose={() => setInvoicePreviewOpen(false)}
+            onStatusChange={onInvoiceStatusChange}
+            onEditValue={onInvoiceEditValue}
+          />
+        )
+      }
+    </>
   );
 }

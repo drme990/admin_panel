@@ -1208,6 +1208,16 @@ export default function ExecutionPage() {
     void fetchExecutionStats();
   };
 
+  // Handle invoice value/currency edit from the InvoicePreviewModal
+  const handleInvoiceEdit = async (
+    orderId: string,
+    invoiceUrls: Order['invoiceUrls'],
+  ) => {
+    await updateOrder(orderId, { invoiceUrls }, { silent: true });
+    void fetchExecution();
+    void fetchExecutionStats();
+  };
+
   // ── Design generation ──────────────────────────────────────────────
   // Calls the backend, which calls the design app callback to render
   // the template + upload the JPG to R2. The backend stores the URL on
@@ -2135,6 +2145,7 @@ export default function ExecutionPage() {
         onCreatePaymentLink={selectedOrder ? handleCreatePaymentLink : undefined}
         isCreatingPaymentLink={selectedOrder ? creatingPaymentLinkOrderId === selectedOrder._id : false}
         onDesignReviewChange={handleDesignReviewChange}
+        onInvoiceStatusChange={handleInvoiceStatusChange}
       />
 
       <ChangeExecutionDateModal
@@ -2268,6 +2279,7 @@ export default function ExecutionPage() {
           setInvoicePreviewOrder(null);
         }}
         onStatusChange={handleInvoiceStatusChange}
+        onEditValue={handleInvoiceEdit}
       />
     </div>
   );

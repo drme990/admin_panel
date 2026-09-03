@@ -6,6 +6,7 @@ export interface InvoiceEntry {
   rejectionReason?: string;
   value: number;
   currency?: string;
+  deleted?: boolean;
 }
 
 export interface InvoiceRow {

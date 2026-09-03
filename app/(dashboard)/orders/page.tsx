@@ -398,6 +398,27 @@ export default function OrderHistoryPage() {
     [updateOrderStatus, fetchOrders, fetchStats],
   );
 
+  // ── Invoice handlers ──
+  // Passed to OrderDetailModal → InvoicePreviewModal so the admin can
+  // toggle invoice status (confirmed/waiting) and edit invoice values.
+  const handleInvoiceStatusChange = useCallback(
+    async (orderId: string, invoiceUrls: Order['invoiceUrls']) => {
+      await updateOrder(orderId, { invoiceUrls }, { silent: true });
+      void fetchOrders();
+      void fetchStats();
+    },
+    [updateOrder, fetchOrders, fetchStats],
+  );
+
+  const handleInvoiceEditValue = useCallback(
+    async (orderId: string, invoiceUrls: Order['invoiceUrls']) => {
+      await updateOrder(orderId, { invoiceUrls }, { silent: true });
+      void fetchOrders();
+      void fetchStats();
+    },
+    [updateOrder, fetchOrders, fetchStats],
+  );
+
   const applyBulkStatus = async () => {
     if (selectedOrderIds.length === 0 || !bulkValue) return;
 
@@ -903,6 +924,8 @@ export default function OrderHistoryPage() {
         namespace="orders"
         onCreatePaymentLink={selectedOrder ? handleCreatePaymentLink : undefined}
         isCreatingPaymentLink={selectedOrder ? creatingPaymentLinkOrderId === selectedOrder._id : false}
+        onInvoiceStatusChange={handleInvoiceStatusChange}
+        onInvoiceEditValue={handleInvoiceEditValue}
       />
 
       <ChangeStatusModal

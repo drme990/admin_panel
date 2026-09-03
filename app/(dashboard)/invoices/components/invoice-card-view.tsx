@@ -13,6 +13,7 @@ import {
   LuHistory,
   LuFileText,
   LuDownload,
+  LuTrash2,
 } from 'react-icons/lu';
 import { FaWhatsapp } from 'react-icons/fa6';
 
@@ -53,6 +54,7 @@ interface InvoiceCardViewProps {
   onStatusChange: (invoice: InvoiceRow, status: InvoiceStatus) => void;
   onDownloadInvoice: (invoice: InvoiceRow) => void;
   onUploadInvoice: (invoice: InvoiceRow, type: UploadFileType) => void;
+  onDelete: (invoice: InvoiceRow) => void;
   uploadingInvoiceId: string | null;
   tooltipPos: 'left' | 'right';
   whatsappOrderId: string | null;
@@ -104,6 +106,7 @@ export default function InvoiceCardView({
   onStatusChange,
   onDownloadInvoice,
   onUploadInvoice,
+  onDelete,
   uploadingInvoiceId,
   tooltipPos,
   whatsappOrderId,
@@ -250,6 +253,20 @@ export default function InvoiceCardView({
                       className="h-5 w-5 sm:h-6 sm:w-6 rounded-md bg-background/80 backdrop-blur-sm border border-stroke"
                     />
                   )}
+                  <Tooltip position={tooltipPos} content={t('delete')}>
+                    <Button
+                      variant="ghost"
+                      size="custom"
+                      className="h-5 w-5 sm:h-6 sm:w-6 p-0 rounded-md bg-background/80 backdrop-blur-sm text-secondary hover:text-error border border-stroke"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDelete(row);
+                      }}
+                      aria-label={t('delete')}
+                    >
+                      <LuTrash2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                    </Button>
+                  </Tooltip>
                 </div>
 
                 {/* Checkbox on the trailing side of the image */}

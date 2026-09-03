@@ -30,7 +30,7 @@ import {
 } from '@/types/OrderDesignLog';
 
 const STATUS_OPTIONS: DesignGenStatus[] = ['success', 'partial', 'failed', 'skipped'];
-const TRIGGER_OPTIONS: DesignGenTrigger[] = ['auto_webhook', 'auto_admin', 'manual_admin'];
+const TRIGGER_OPTIONS: DesignGenTrigger[] = ['auto_webhook', 'auto_admin', 'auto_cron', 'manual_admin'];
 
 function getStatusIcon(status: DesignGenStatus) {
     switch (status) {
@@ -64,6 +64,8 @@ function getTriggerColor(trigger: DesignGenTrigger) {
             return 'bg-blue-500/10 text-blue-500';
         case 'auto_admin':
             return 'bg-purple-500/10 text-purple-500';
+        case 'auto_cron':
+            return 'bg-amber-500/10 text-amber-600';
         case 'manual_admin':
             return 'bg-teal-500/10 text-teal-600';
     }
@@ -345,7 +347,7 @@ function LogRow({
                         <span className="text-secondary text-sm whitespace-nowrap">
                             {formatDate(log.createdAt)}
                         </span>
-                        {log.trigger !== 'auto_webhook' && log.triggeredByUserName && (
+                        {log.trigger !== 'auto_webhook' && log.trigger !== 'auto_cron' && log.triggeredByUserName && (
                             <span className="text-xs text-secondary flex items-center gap-1">
                                 <LuUser size={10} />
                                 {log.triggeredByUserName}

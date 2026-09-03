@@ -722,6 +722,7 @@
     "trigger": {
       "auto_webhook": "تلقائي (ويب هوك)",
       "auto_admin": "تلقائي (مشرف)",
+      "auto_cron": "تلقائي (مجدول)",
       "manual_admin": "يدوي"
     },
     "table": {

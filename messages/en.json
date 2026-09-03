@@ -722,6 +722,7 @@
     "trigger": {
       "auto_webhook": "Auto (Webhook)",
       "auto_admin": "Auto (Admin)",
+      "auto_cron": "Auto (Cron)",
       "manual_admin": "Manual"
     },
     "table": {

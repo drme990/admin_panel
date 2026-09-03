@@ -9,7 +9,7 @@ export interface OrderDesignLogResult {
   errorMessage?: string;
 }
 
-export type DesignGenTrigger = 'auto_webhook' | 'auto_admin' | 'manual_admin';
+export type DesignGenTrigger = 'auto_webhook' | 'auto_admin' | 'auto_cron' | 'manual_admin';
 export type DesignGenStatus = 'success' | 'partial' | 'failed' | 'skipped';
 
 export interface OrderDesignLog {

@@ -574,14 +574,14 @@ export function useOrderPage(options: UseOrderPageOptions) {
         shortDuaa?: string;
         photo?: string;
         invoiceUrl?: string;
-        invoiceStatus?: 'confirmed' | 'waiting' | 'pending' | 'rejected';
+        invoiceStatus?: 'confirmed' | 'waiting' | 'pending' | 'rejected' | 'deleted';
         invoiceValue?: number;
         invoicePaidAmount?: number;
         invoicePaymentMethod?: string;
         invoiceCurrency?: string;
         invoiceUrls?: Array<{
           url: string;
-          invoiceStatus?: 'confirmed' | 'waiting' | 'pending' | 'rejected';
+          invoiceStatus?: 'confirmed' | 'waiting' | 'pending' | 'rejected' | 'deleted';
           rejectionReason?: string;
           value: number;
           currency?: string;

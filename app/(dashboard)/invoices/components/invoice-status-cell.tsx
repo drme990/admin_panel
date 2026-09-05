@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
-import { LuCheck, LuClock, LuX, LuChevronDown, LuHand } from 'react-icons/lu';
+import { LuCheck, LuClock, LuX, LuChevronDown, LuHand, LuTrash2 } from 'react-icons/lu';
 import { cn } from '@/lib/utils';
 import type { InvoiceStatus } from '@/types/Order';
 import type { InvoiceRow } from '../lib/invoice-utils';
@@ -10,6 +10,8 @@ import type { InvoiceRow } from '../lib/invoice-utils';
 interface Props {
   invoice: InvoiceRow;
   onStatusChange: (invoice: InvoiceRow, status: InvoiceStatus) => void;
+  /** Which side the dropdown aligns to. Defaults to 'right'. */
+  dropdownAlign?: 'right' | 'left';
 }
 
 const STATUS_LIST: InvoiceStatus[] = [
@@ -25,6 +27,7 @@ function statusIcon(status: InvoiceStatus, size: number = 24): React.ReactNode {
     waiting: 'text-warning',
     pending: 'text-info',
     rejected: 'text-error',
+    deleted: 'text-secondary',
   }[status];
 
   const iconClass = `shrink-0 ${colorClass}`;
@@ -38,6 +41,8 @@ function statusIcon(status: InvoiceStatus, size: number = 24): React.ReactNode {
       return <LuHand size={size} className={iconClass} />;
     case 'rejected':
       return <LuX size={size} className={iconClass} />;
+    case 'deleted':
+      return <LuTrash2 size={size} className={iconClass} />;
   }
 }
 
@@ -46,9 +51,10 @@ export const STATUS_TEXT_COLORS: Record<InvoiceStatus, string> = {
   waiting: 'text-warning',
   pending: 'text-info',
   rejected: 'text-error',
+  deleted: 'text-secondary',
 };
 
-export default function InvoiceStatusCell({ invoice, onStatusChange }: Props) {
+export default function InvoiceStatusCell({ invoice, onStatusChange, dropdownAlign = 'right' }: Props) {
   const t = useTranslations('admin.invoices');
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -71,6 +77,7 @@ export default function InvoiceStatusCell({ invoice, onStatusChange }: Props) {
 
   const status = invoice.invoiceStatus as InvoiceStatus;
   const label = t(`status.${status}`);
+  const isDeleted = status === 'deleted';
 
   return (
     <div
@@ -81,23 +88,27 @@ export default function InvoiceStatusCell({ invoice, onStatusChange }: Props) {
         type="button"
         onClick={(e) => {
           e.stopPropagation();
-          setIsOpen((prev) => !prev);
+          if (!isDeleted) setIsOpen((prev) => !prev);
         }}
         aria-label={label}
         className={cn(
           'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full',
-          'border border-stroke bg-background hover:bg-foreground/5 transition-colors',
+          'border border-stroke bg-background transition-colors',
           'text-xs font-medium',
           STATUS_TEXT_COLORS[status],
+          !isDeleted && 'hover:bg-foreground/5',
         )}
       >
         {statusIcon(status, 16)}
         <span>{label}</span>
-        <LuChevronDown className="w-3 h-3 text-secondary" />
+        {!isDeleted && <LuChevronDown className="w-3 h-3 text-secondary" />}
       </button>
 
       {isOpen && (
-        <div className="absolute top-full right-0 mt-1.5 z-30 flex flex-row gap-1 rounded-lg border border-stroke bg-card-bg shadow-lg p-1">
+        <div className={cn(
+          'absolute top-full mt-1.5 z-30 flex flex-row gap-1 rounded-lg border border-stroke bg-card-bg shadow-lg p-1',
+          dropdownAlign === 'left' ? 'left-0' : 'right-0',
+        )}>
           {STATUS_LIST.map((s) => (
             <button
               key={s}

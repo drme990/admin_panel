@@ -135,6 +135,12 @@ export default function InvoiceFilters({
       className: 'border border-red-200 bg-red-50 text-red-800 dark:border-red-800/60 dark:bg-red-900/20 dark:text-red-300',
       activeClassName: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
     },
+    {
+      label: t('status.deleted'),
+      value: 'deleted' as ReviewFilter,
+      className: 'border border-gray-300 bg-gray-50 text-gray-800 dark:border-gray-700/60 dark:bg-gray-900/20 dark:text-gray-300',
+      activeClassName: 'bg-gray-200 text-gray-800 dark:bg-gray-800/40 dark:text-gray-400',
+    },
   ];
 
   const intentionPreset = RESERVATION_FIELD_PRESETS.find((p) => p.key === 'intention');

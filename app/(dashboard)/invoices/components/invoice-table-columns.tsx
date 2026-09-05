@@ -132,7 +132,7 @@ export function useInvoiceColumns(callbacks: ColumnCallbacks) {
     {
       header: t('colStatus'),
       accessor: (row: InvoiceRow) => (
-        <InvoiceStatusCell invoice={row} onStatusChange={onStatusChange} />
+        <InvoiceStatusCell invoice={row} onStatusChange={onStatusChange} dropdownAlign={locale === 'en' ? 'left' : 'right'} />
       ),
       className: 'w-24',
     },
@@ -143,29 +143,31 @@ export function useInvoiceColumns(callbacks: ColumnCallbacks) {
         const isUploading = uploadingInvoiceId === row._id;
         return (
           <div className="flex flex-col items-center gap-1.5">
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onPreview(row);
-              }}
-              className="flex items-center justify-center w-10 h-10 rounded-lg border border-stroke bg-background cursor-pointer hover:border-primary transition-colors"
-              aria-label={t('preview')}
-            >
-              {isImageUrl(row.url) ? (
-                // eslint-disable-next-line @next/next/no-img-element -- dynamic URL with onError hide fallback
-                <img
-                  src={row.url}
-                  alt="Invoice"
-                  className="w-8 h-8 object-cover rounded"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).style.display = 'none';
-                  }}
-                />
-              ) : (
-                <LuFileText size={18} className="text-secondary" />
-              )}
-            </button>
+            <Tooltip position={tooltipPos} content={t('preview')}>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onPreview(row);
+                }}
+                className="flex items-center justify-center w-10 h-10 rounded-lg border border-stroke bg-background cursor-pointer hover:border-primary transition-colors"
+                aria-label={t('preview')}
+              >
+                {isImageUrl(row.url) ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- dynamic URL with onError hide fallback
+                  <img
+                    src={row.url}
+                    alt="Invoice"
+                    className="w-8 h-8 object-cover rounded"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = 'none';
+                    }}
+                  />
+                ) : (
+                  <LuFileText size={18} className="text-secondary" />
+                )}
+              </button>
+            </Tooltip>
             <div className="flex items-center gap-1">
               <Tooltip position={tooltipPos} content={t('download')}>
                 <Button
@@ -197,20 +199,22 @@ export function useInvoiceColumns(callbacks: ColumnCallbacks) {
                   }}
                 />
               )}
-              <Tooltip position={tooltipPos} content={t('delete')}>
-                <Button
-                  variant="ghost"
-                  size="custom"
-                  className="h-6 w-6 p-0 text-secondary hover:text-error"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDelete(row);
-                  }}
-                  aria-label={t('delete')}
-                >
-                  <LuTrash2 size={14} />
-                </Button>
-              </Tooltip>
+              {row.invoiceStatus !== 'deleted' && (
+                <Tooltip position={tooltipPos} content={t('delete')}>
+                  <Button
+                    variant="ghost"
+                    size="custom"
+                    className="h-6 w-6 p-0 text-secondary hover:text-error"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDelete(row);
+                    }}
+                    aria-label={t('delete')}
+                  >
+                    <LuTrash2 size={14} />
+                  </Button>
+                </Tooltip>
+              )}
             </div>
           </div>
         );

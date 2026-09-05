@@ -13,6 +13,7 @@ import {
   LuChevronRight,
   LuX,
   LuPencil,
+  LuTrash2,
 } from 'react-icons/lu';
 import { useTranslations, useLocale } from 'next-intl';
 import { toast } from 'react-toastify';
@@ -36,6 +37,8 @@ interface InvoicePreviewModalProps {
   onStatusChange?: (orderId: string, invoiceUrls: Order['invoiceUrls']) => Promise<void>;
   /** Called when an invoice value/currency is edited. Receives the updated invoiceUrls array. */
   onEditValue?: (orderId: string, invoiceUrls: Order['invoiceUrls']) => Promise<void>;
+  /** Index of the invoice to show first (defaults to 0). */
+  initialIndex?: number;
 }
 
 export default function InvoicePreviewModal({
@@ -43,6 +46,7 @@ export default function InvoicePreviewModal({
   onClose,
   onStatusChange,
   onEditValue,
+  initialIndex = 0,
 }: InvoicePreviewModalProps) {
   const t = useTranslations('execution.table');
   const locale = useLocale();
@@ -88,9 +92,9 @@ export default function InvoicePreviewModal({
   useEffect(() => {
     setStatusOverrides({});
     setValueOverrides({});
-    setSelectedIndex(0);
+    setSelectedIndex(initialIndex);
     setIsEditingValue(false);
-  }, [order?._id]);
+  }, [order?._id, initialIndex]);
 
   // Clamp selectedIndex when invoices shrink
   useEffect(() => {
@@ -265,6 +269,13 @@ export default function InvoicePreviewModal({
       border: 'border-error/30',
       icon: LuX,
     },
+    deleted: {
+      label: t('deletedInvoice'),
+      color: 'text-secondary',
+      bg: 'bg-muted/30',
+      border: 'border-stroke',
+      icon: LuTrash2,
+    },
   };
 
   const currentStatusConfig = statusConfig[currentStatus];
@@ -306,30 +317,33 @@ export default function InvoicePreviewModal({
             </Button>
           )}
 
-          {/* Single toggle button — swaps between confirmed and waiting */}
-          <div className="flex items-center gap-1.5 ms-2 ps-2 border-s border-stroke">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleStatusChange(currentStatus === 'confirmed' ? 'waiting' : 'confirmed')}
-              disabled={isUpdatingStatus}
-              className={cn(
-                'transition-colors',
-                currentStatus === 'confirmed'
-                  ? 'text-success border-success/40 bg-success/10 hover:bg-success/20'
-                  : 'text-warning border-warning/40 bg-warning/10 hover:bg-warning/20',
-              )}
-            >
-              {isUpdatingStatus ? (
-                <LuRefreshCw size={16} className="mr-1 animate-spin" />
-              ) : currentStatus === 'confirmed' ? (
-                <LuCheck size={16} className="mr-1" />
-              ) : (
-                <LuClock size={16} className="mr-1" />
-              )}
-              {currentStatus === 'confirmed' ? t('confirmedInvoice') : t('waitingInvoice')}
-            </Button>
-          </div>
+          {/* Single toggle button — swaps between confirmed and waiting.
+              Hidden for deleted invoices (status cannot be changed). */}
+          {currentStatus !== 'deleted' && (
+            <div className="flex items-center gap-1.5 ms-2 ps-2 border-s border-stroke">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleStatusChange(currentStatus === 'confirmed' ? 'waiting' : 'confirmed')}
+                disabled={isUpdatingStatus}
+                className={cn(
+                  'transition-colors',
+                  currentStatus === 'confirmed'
+                    ? 'text-success border-success/40 bg-success/10 hover:bg-success/20'
+                    : 'text-warning border-warning/40 bg-warning/10 hover:bg-warning/20',
+                )}
+              >
+                {isUpdatingStatus ? (
+                  <LuRefreshCw size={16} className="mr-1 animate-spin" />
+                ) : currentStatus === 'confirmed' ? (
+                  <LuCheck size={16} className="mr-1" />
+                ) : (
+                  <LuClock size={16} className="mr-1" />
+                )}
+                {currentStatus === 'confirmed' ? t('confirmedInvoice') : t('waitingInvoice')}
+              </Button>
+            </div>
+          )}
         </div>
       }
     >
@@ -401,7 +415,7 @@ export default function InvoicePreviewModal({
                   {formatValue(displayValue, displayCurrency)}
                 </span>
               </div>
-              {onEditValue && (
+              {onEditValue && currentStatus !== 'deleted' && (
                 <Button
                   variant="ghost"
                   size="sm"
@@ -529,7 +543,8 @@ export default function InvoicePreviewModal({
                     invStatus === 'confirmed' ? 'bg-success' :
                       invStatus === 'waiting' ? 'bg-warning' :
                         invStatus === 'rejected' ? 'bg-error' :
-                          'bg-secondary',
+                          invStatus === 'deleted' ? 'bg-muted-foreground' :
+                            'bg-secondary',
                   )}
                 />
               </button>

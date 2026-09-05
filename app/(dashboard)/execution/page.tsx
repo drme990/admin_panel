@@ -3,7 +3,7 @@
 import { useEffect, useCallback, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { toast } from 'react-toastify';
-import { LuDownload, LuPhone, LuEye, LuPalette, LuPencil, LuFileText, LuRefreshCw, LuPlus, LuSparkles, LuCalendar, LuUpload } from 'react-icons/lu';
+import { LuDownload, LuPhone, LuEye, LuPalette, LuPencil, LuFileText, LuRefreshCw, LuPlus, LuSparkles, LuCalendar, LuUpload, LuBan } from 'react-icons/lu';
 import { FaWhatsapp } from 'react-icons/fa6';
 
 import Table from '@/components/ui/table';
@@ -1877,6 +1877,18 @@ export default function ExecutionPage() {
                       {
                         header: t('table.invoice'),
                         accessor: (order: Order) => {
+                          // Free orders don't have invoices
+                          if (order.isFreeOrder) {
+                            return (
+                              <div className="flex flex-col items-center gap-1 justify-center min-h-12">
+                                <Tooltip position={ToolTipPositions as 'left' | 'right'} content={t('table.freeOrderNoInvoice') || 'Free order — no invoice'}>
+                                  <span className="inline-flex items-center justify-center p-2 text-secondary/50">
+                                    <LuBan size={20} />
+                                  </span>
+                                </Tooltip>
+                              </div>
+                            );
+                          }
                           const invoices = order.invoiceUrls || [];
                           const hasInvoice = invoices.length > 0;
                           const partialPaid = order.status === 'partial-paid';

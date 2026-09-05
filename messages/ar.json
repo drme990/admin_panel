@@ -148,6 +148,7 @@
       "waitingInvoice": "بانتظار التأكيد",
       "rejectedInvoice": "مرفوض",
       "pendingInvoice": "فاتورة معلقة",
+      "deletedInvoice": "فاتورة محذوفة",
       "openUrl": "فتح",
       "copyPaymentLink": "نسخ رابط الدفع",
       "regeneratePaymentLink": "إعادة إنشاء الرابط",
@@ -159,7 +160,8 @@
       "remainingAmount": "باقي",
       "orderHistory": "تاريخ التغييرات",
       "copied": "تم النسخ!",
-      "downloaded": "تم التحميل بنجاح"
+      "downloaded": "تم التحميل بنجاح",
+      "freeOrderNoInvoice": "طلب مجاني — لا توجد فاتورة"
     },
     "createManualOrder": {
       "title": "إنشاء طلب يدوي",
@@ -213,6 +215,12 @@
       "customExecutionDate": "تاريخ تنفيذ مخصص",
       "defaultExecutionDateHint": "سيتم تحديد تاريخ التنفيذ تلقائياً لليوم التالي.",
       "payment": "الدفع",
+      "freeOrder": "طلب مجاني",
+      "freeOrderHint": "حدد هذا الطلب كطلب مجاني — لا حاجة لطريقة دفع أو فاتورة. السبب مطلوب.",
+      "freeOrderReason": "سبب الطلب المجاني",
+      "freeOrderReasonPlaceholder": "أدخل سبب جعل هذا الطلب مجانياً...",
+      "freeOrderConfirmed": "سيتم إنشاء هذا الطلب كطلب مجاني مدفوع",
+      "freeOrderAmountNote": "مبلغ الدفع مضبوط على 0. لا حاجة لطريقة دفع أو فاتورة.",
       "paymentMethod": "طريقة الدفع",
       "invoiceUpload": "الفاتورة / الإيصال",
       "uploadInvoice": "رفع الفاتورة",
@@ -325,7 +333,8 @@
         "paidAmountInvalid": "المبلغ المدفوع يجب أن يكون أقل من إجمالي الطلب",
         "paidAmountExceedsRemaining": "المبلغ المدفوع ({paid}) يتجاوز المبلغ المتبقي ({remaining}).",
         "reservationFieldRequired": "هذا الحقل مطلوب للمنتج المحدد",
-        "fixForm": "يرجى تصحيح الأخطاء أعلاه"
+        "fixForm": "يرجى تصحيح الأخطاء أعلاه",
+        "freeOrderReasonRequired": "السبب مطلوب للطلبات المجانية"
       }
     },
     "createManualPayment": {
@@ -390,6 +399,10 @@
     "productId": "معرف المنتج",
     "productSlug": "رابط المنتج",
     "referral": "الإحالة",
+    "freeOrderReason": "سبب الطلب المجاني",
+    "createdByAdmin": "أنشئ بواسطة (مسؤول)",
+    "createdByAdminEmail": "بريد المسؤول",
+    "adminInfo": "معلومات المسؤول",
     "yes": "نعم",
     "customerType": {
       "label": "نوع العميل",
@@ -779,6 +792,10 @@
     "yes": "نعم",
     "no": "لا",
     "referral": "الإحالة",
+    "freeOrderReason": "سبب الطلب المجاني",
+    "createdByAdmin": "أنشئ بواسطة (مسؤول)",
+    "createdByAdminEmail": "بريد المسؤول",
+    "adminInfo": "معلومات المسؤول",
     "amountDetails": "تفاصيل المبالغ",
     "totals": {
       "totalPaidNow": "قيمة هذه العملية",
@@ -1035,6 +1052,12 @@
       "customExecutionDate": "تاريخ تنفيذ مخصص",
       "defaultExecutionDateHint": "سيتم تحديد تاريخ التنفيذ تلقائياً لليوم التالي.",
       "payment": "الدفع",
+      "freeOrder": "طلب مجاني",
+      "freeOrderHint": "حدد هذا الطلب كطلب مجاني — لا حاجة لطريقة دفع أو فاتورة. السبب مطلوب.",
+      "freeOrderReason": "سبب الطلب المجاني",
+      "freeOrderReasonPlaceholder": "أدخل سبب جعل هذا الطلب مجانياً...",
+      "freeOrderConfirmed": "سيتم إنشاء هذا الطلب كطلب مجاني مدفوع",
+      "freeOrderAmountNote": "مبلغ الدفع مضبوط على 0. لا حاجة لطريقة دفع أو فاتورة.",
       "paymentMethod": "طريقة الدفع",
       "invoiceUpload": "الفاتورة / الإيصال",
       "uploadInvoice": "رفع الفاتورة",
@@ -1147,7 +1170,8 @@
         "paidAmountInvalid": "المبلغ المدفوع يجب أن يكون أقل من إجمالي الطلب",
         "paidAmountExceedsRemaining": "المبلغ المدفوع ({paid}) يتجاوز المبلغ المتبقي ({remaining}).",
         "reservationFieldRequired": "هذا الحقل مطلوب للمنتج المحدد",
-        "fixForm": "يرجى تصحيح الأخطاء أعلاه"
+        "fixForm": "يرجى تصحيح الأخطاء أعلاه",
+        "freeOrderReasonRequired": "السبب مطلوب للطلبات المجانية"
       }
     },
     "createManualPayment": {
@@ -1198,6 +1222,7 @@
       "waitingInvoice": "فاتورة بانتظار التأكيد",
       "rejectedInvoice": "مرفوض",
       "pendingInvoice": "فاتورة معلقة",
+      "deletedInvoice": "فاتورة محذوفة",
       "uploadConfirmedInvoice": "رفع مؤكدة",
       "uploadWaitingInvoice": "رفع بانتظار التأكيد",
       "uploadAsImage": "صورة",
@@ -1356,6 +1381,7 @@
         "waiting": "بانتظار التأكيد",
         "pending": "معلق",
         "rejected": "مرفوض",
+        "deleted": "محذوف",
         "paid": "خالص",
         "partial-paid": "باقي حساب"
       },

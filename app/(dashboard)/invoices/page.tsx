@@ -11,13 +11,13 @@ import Tabs from '@/components/ui/tabs';
 import ConfirmModal, { useConfirmModal } from '@/components/ui/confirm-modal';
 import { LuList, LuLayoutGrid } from 'react-icons/lu';
 
-import { Order, OrderStatus, PaymentMethod, InvoiceStatus, InvoiceDeletionReason } from '@/types/Order';
+import { Order, OrderStatus, PaymentMethod, InvoiceStatus } from '@/types/Order';
 import { Category } from '@/types/Category';
 import { Referral } from '@/types/Referral';
 
 import InvoiceFilters from './components/invoice-filters';
 import InvoiceEditModal from './components/invoice-edit-modal';
-import InvoicePreviewModal from './components/invoice-preview-modal';
+import InvoicePreviewModal from '@/components/order/invoice-preview-modal';
 import InvoicePaymentMethodModal from './components/invoice-payment-method-modal';
 import InvoiceRejectionModal from './components/invoice-rejection-modal';
 import InvoiceRejectionFollowupModal from './components/invoice-rejection-followup-modal';
@@ -85,8 +85,10 @@ export default function InvoicesPage() {
     const [editingInvoice, setEditingInvoice] = useState<InvoiceRow | null>(null);
     const [saving, setSaving] = useState(false);
 
-    // Preview modal state
-    const [previewInvoice, setPreviewInvoice] = useState<InvoiceRow | null>(null);
+    // Preview modal state — stores the full order + the index of the
+    // clicked invoice so the shared InvoicePreviewModal can open at it.
+    const [previewOrder, setPreviewOrder] = useState<Order | null>(null);
+    const [previewInitialIndex, setPreviewInitialIndex] = useState(0);
 
     // Payment method edit modal state
     const [editingPaymentMethodInvoice, setEditingPaymentMethodInvoice] = useState<InvoiceRow | null>(null);
@@ -243,8 +245,7 @@ export default function InvoicesPage() {
             const rows: InvoiceRow[] = [];
 
             for (const order of data.data.orders as Order[]) {
-                const invoiceUrls = ((order.invoiceUrls || []) as InvoiceEntry[])
-                    .filter((inv) => !inv.deleted);
+                const invoiceUrls = ((order.invoiceUrls || []) as InvoiceEntry[]);
                 // Derive payment method from the latest paid payment
                 const payments = order.payments || [];
                 const paidPayment = [...payments]
@@ -533,6 +534,8 @@ export default function InvoicesPage() {
     // ---------- Invoice status change ----------
 
     const handleStatusChange = (invoice: InvoiceRow, status: InvoiceStatus) => {
+        // Deleted invoices can't have their status changed
+        if (invoice.invoiceStatus === 'deleted') return;
         if (status === 'rejected') {
             setStatusChangeInvoice(invoice);
             setStatusChangeTarget(status);
@@ -618,6 +621,98 @@ export default function InvoicesPage() {
     };
 
     // ---------- Invoice preview actions ----------
+
+    // Fetch the full order for an invoice row, then open the shared
+    // InvoicePreviewModal at the clicked invoice's index.
+    const handlePreviewInvoice = async (invoice: InvoiceRow) => {
+        try {
+            const res = await fetch(`/api/orders/${invoice.orderId}`, { cache: 'no-store' });
+            const data = await res.json();
+            if (!data.success) {
+                toast.error(t('updateFailed'));
+                return;
+            }
+            const order = data.data as Order;
+            const index = (order.invoiceUrls || []).findIndex(
+                (inv) => inv.url === invoice.url,
+            );
+            setPreviewInitialIndex(index >= 0 ? index : 0);
+            setPreviewOrder(order);
+        } catch (error) {
+            console.error('Error fetching order for preview:', error);
+            toast.error(t('updateFailed'));
+        }
+    };
+
+    // Status change from the shared InvoicePreviewModal
+    const handlePreviewStatusChange = async (
+        orderId: string,
+        invoiceUrls: Order['invoiceUrls'],
+    ) => {
+        const res = await fetch(`/api/orders/${orderId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ invoiceUrls }),
+        });
+        const data = await res.json();
+        if (!data.success) {
+            throw new Error(data.error || t('updateFailed'));
+        }
+        // Update local invoices state to reflect the change
+        setInvoices((prev) =>
+            prev.map((inv) => {
+                if (inv.orderId !== orderId) return inv;
+                const updated = (invoiceUrls || []).find((i) => i.url === inv.url);
+                if (!updated) return inv;
+                return {
+                    ...inv,
+                    invoiceStatus: (updated.invoiceStatus as string) || inv.invoiceStatus,
+                    rejectionReason: updated.rejectionReason || inv.rejectionReason,
+                    value: updated.value ?? inv.value,
+                    currency: updated.currency || inv.currency,
+                };
+            }),
+        );
+        // Update the preview order so the modal stays in sync
+        setPreviewOrder((prev) =>
+            prev && prev._id === orderId
+                ? { ...prev, invoiceUrls }
+                : prev,
+        );
+    };
+
+    // Value/currency edit from the shared InvoicePreviewModal
+    const handlePreviewEditValue = async (
+        orderId: string,
+        invoiceUrls: Order['invoiceUrls'],
+    ) => {
+        const res = await fetch(`/api/orders/${orderId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ invoiceUrls }),
+        });
+        const data = await res.json();
+        if (!data.success) {
+            throw new Error(data.error || t('updateFailed'));
+        }
+        setInvoices((prev) =>
+            prev.map((inv) => {
+                if (inv.orderId !== orderId) return inv;
+                const updated = (invoiceUrls || []).find((i) => i.url === inv.url);
+                if (!updated) return inv;
+                return {
+                    ...inv,
+                    value: updated.value ?? inv.value,
+                    currency: updated.currency || inv.currency,
+                };
+            }),
+        );
+        setPreviewOrder((prev) =>
+            prev && prev._id === orderId
+                ? { ...prev, invoiceUrls }
+                : prev,
+        );
+    };
 
     const handleDownloadInvoice = async (invoice: InvoiceRow) => {
         try {
@@ -712,24 +807,47 @@ export default function InvoicesPage() {
 
     const handleConfirmDeleteInvoice = async (
         invoice: InvoiceRow,
-        reason: InvoiceDeletionReason,
-        customReason: string,
     ) => {
         setDeletingInvoice(true);
         try {
-            const res = await fetch(`/api/orders/${invoice.orderId}/invoices`, {
-                method: 'DELETE',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify({ url: invoice.url, reason, customReason }),
+            // Use the standard PATCH endpoint to set invoiceStatus to 'deleted'.
+            // Fetch the current order, update the target invoice's status, and PATCH.
+            const fetchRes = await fetch(`/api/orders/${invoice.orderId}`, {
+                cache: 'no-store',
             });
-            const data = await res.json();
-            if (!data.success) {
-                toast.error(data.error || t('deleteFailed'));
+            const fetchData = await fetchRes.json();
+            if (!fetchData.success) {
+                toast.error(fetchData.error || t('deleteFailed'));
                 return;
             }
-            // Remove the deleted invoice from the local list
-            setInvoices((prev) => prev.filter((inv) => inv._id !== invoice._id));
+
+            const order = fetchData.data as Order;
+            const currentInvoices = (order.invoiceUrls || []) as InvoiceEntry[];
+            const updatedInvoices = currentInvoices.map((inv) =>
+                inv.url === invoice.url
+                    ? { ...inv, invoiceStatus: 'deleted' as const }
+                    : inv,
+            );
+
+            const patchRes = await fetch(`/api/orders/${invoice.orderId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ invoiceUrls: updatedInvoices }),
+            });
+            const patchData = await patchRes.json();
+            if (!patchData.success) {
+                toast.error(patchData.error || t('deleteFailed'));
+                return;
+            }
+            // Update the invoice status to 'deleted' locally
+            setInvoices((prev) =>
+                prev.map((inv) =>
+                    inv._id === invoice._id
+                        ? { ...inv, invoiceStatus: 'deleted' }
+                        : inv,
+                ),
+            );
             toast.success(t('deleteSuccess'));
             handleCloseDeleteInvoice();
         } catch (error) {
@@ -1021,7 +1139,10 @@ export default function InvoicesPage() {
 
     const applyBulkInvoiceStatus = async () => {
         if (selectedInvoiceIds.length === 0 || !bulkStatusValue) return;
-        const selected = invoices.filter((inv) => selectedInvoiceIds.includes(inv._id));
+        // Skip deleted invoices — their status can't be changed.
+        const selected = invoices.filter(
+            (inv) => selectedInvoiceIds.includes(inv._id) && inv.invoiceStatus !== 'deleted',
+        );
         if (selected.length === 0) return;
 
         setBulkUpdating(true);
@@ -1056,9 +1177,11 @@ export default function InvoicesPage() {
                 }),
             );
 
+            // Only update non-deleted invoices in the local state
+            const selectedNonDeletedIds = new Set(selected.map((inv) => inv._id));
             setInvoices((prev) =>
                 prev.map((inv) =>
-                    selectedInvoiceIds.includes(inv._id)
+                    selectedNonDeletedIds.has(inv._id)
                         ? { ...inv, invoiceStatus: bulkStatusValue, rejectionReason: '' }
                         : inv,
                 ),
@@ -1085,7 +1208,7 @@ export default function InvoicesPage() {
 
     const columns = useInvoiceColumns({
         onEdit: (invoice) => setEditingInvoice(invoice),
-        onPreview: (invoice) => setPreviewInvoice(invoice),
+        onPreview: (invoice) => void handlePreviewInvoice(invoice),
         onViewOrder: handleViewOrder,
         onWhatsapp: startOrderWhatsappMessage,
         onCopyPhone: copyOrderWhatsappNumber,
@@ -1227,8 +1350,8 @@ export default function InvoicesPage() {
                 <Tabs<'list' | 'card'>
                     value={viewMode}
                     options={[
-                        { value: 'list', label: <LuList size={16} />, ariaLabel: t('view.list') },
-                        { value: 'card', label: <LuLayoutGrid size={16} />, ariaLabel: t('view.card') },
+                        { value: 'list', label: <LuList size={16} />, ariaLabel: t('view.list'), tooltip: t('view.list'), tooltipPosition: isAr ? 'right' : 'left' },
+                        { value: 'card', label: <LuLayoutGrid size={16} />, ariaLabel: t('view.card'), tooltip: t('view.card'), tooltipPosition: isAr ? 'right' : 'left' },
                     ]}
                     onChange={setViewMode}
                     size="sm"
@@ -1288,7 +1411,7 @@ export default function InvoicesPage() {
                     loading={loading}
                     emptyMessage={t('empty')}
                     onEdit={(invoice) => setEditingInvoice(invoice)}
-                    onPreview={(invoice) => setPreviewInvoice(invoice)}
+                    onPreview={(invoice) => void handlePreviewInvoice(invoice)}
                     onViewOrder={handleViewOrder}
                     onWhatsapp={startOrderWhatsappMessage}
                     onCopyPhone={copyOrderWhatsappNumber}
@@ -1348,10 +1471,14 @@ export default function InvoicesPage() {
                 onSave={handleSaveEdit}
             />
 
-            {/* Preview lightbox */}
+            {/* Preview modal — shared with execution page */}
             <InvoicePreviewModal
-                url={previewInvoice?.url || null}
-                onClose={() => setPreviewInvoice(null)}
+                key={`invoice-${previewOrder?._id ?? 'closed'}`}
+                order={previewOrder}
+                initialIndex={previewInitialIndex}
+                onClose={() => setPreviewOrder(null)}
+                onStatusChange={handlePreviewStatusChange}
+                onEditValue={handlePreviewEditValue}
             />
 
             {/* Payment Method Modal */}

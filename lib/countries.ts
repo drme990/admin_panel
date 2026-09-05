@@ -88,7 +88,6 @@ export const COUNTRIES: Country[] = [
   { code: 'IR', en: 'Iran', ar: 'إيران', value: 'Iran', phoneCode: '98' },
   { code: 'IQ', en: 'Iraq', ar: 'العراق', value: 'Iraq', phoneCode: '964' },
   { code: 'IE', en: 'Ireland', ar: 'أيرلندا', value: 'Ireland', phoneCode: '353' },
-  { code: 'IL', en: 'Israel', ar: 'إسرائيل', value: 'Israel', phoneCode: '972' },
   { code: 'IT', en: 'Italy', ar: 'إيطاليا', value: 'Italy', phoneCode: '39' },
   { code: 'JM', en: 'Jamaica', ar: 'جامايكا', value: 'Jamaica', phoneCode: '1' },
   { code: 'JP', en: 'Japan', ar: 'اليابان', value: 'Japan', phoneCode: '81' },

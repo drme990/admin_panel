@@ -50,7 +50,9 @@ function detectCountryFromPhone(phone: string): string | null {
   try {
     const parsed = parsePhoneNumberFromString(normalized);
     if (parsed?.country) {
-      const country = COUNTRIES.find((c) => c.code === parsed.country);
+      // Map Israel → Palestine
+      const countryCode = parsed.country === 'IL' ? 'PS' : parsed.country;
+      const country = COUNTRIES.find((c) => c.code === countryCode);
       if (country) return country.value;
     }
   } catch {
@@ -169,6 +171,8 @@ interface FormState {
   paymentMethod: ManualPaymentMethod;
   paidAmount: string;
   remainingAmount: string;
+  isFreeOrder: boolean;
+  freeOrderReason: string;
 }
 
 const emptyItem = (): OrderItemForm => ({
@@ -205,6 +209,8 @@ const DEFAULT_FORM: FormState = {
   paymentMethod: '',
   paidAmount: '',
   remainingAmount: '',
+  isFreeOrder: false,
+  freeOrderReason: '',
 };
 
 // ── Form caching ────────────────────────────────────────────────────────
@@ -218,12 +224,14 @@ function loadCachedForm(): FormState | null {
   try {
     const raw = window.sessionStorage.getItem(FORM_CACHE_KEY);
     if (!raw) return null;
-    const parsed = JSON.parse(raw) as FormState;
+    const parsed = JSON.parse(raw) as Partial<FormState>;
     // Basic validation — ensure it has the expected shape
     if (!parsed || typeof parsed !== 'object' || !Array.isArray(parsed.items)) {
       return null;
     }
-    return parsed;
+    // Merge with defaults so new fields (added after the cache was saved)
+    // always have a valid value instead of undefined.
+    return { ...DEFAULT_FORM, ...parsed };
   } catch {
     return null;
   }
@@ -1018,29 +1026,36 @@ export default function CreateManualOrderModal({
     if (!form.billingData.country.trim()) {
       errors.country = t('createManualOrder.errors.countryRequired');
     }
-    if (!form.paymentMethod) {
-      errors.paymentMethod = t('createManualOrder.errors.paymentMethodRequired') || 'Payment method is required';
-    }
-    if (!isEasykash && invoices.length === 0) {
-      errors.invoice = t('createManualOrder.errors.invoiceRequired');
-    }
-    if (!isEasykash) {
-      invoices.forEach((invoice, index) => {
-        if (invoice.value.trim() === '') {
-          errors[`invoice_${index}_value`] = t('createManualOrder.errors.invoiceValueRequired') || 'Invoice value is required';
-        } else if (!Number.isFinite(parseFloat(invoice.value))) {
-          errors[`invoice_${index}_value`] = t('createManualOrder.errors.invoiceValueInvalid') || 'Invoice value must be a number';
-        } else if (parseFloat(invoice.value) <= 0) {
-          errors[`invoice_${index}_value`] = t('createManualOrder.errors.invoiceValueInvalid') || 'Invoice value must be greater than 0';
-        }
-      });
-    }
-    if (form.paidAmount.trim() === '' || !Number.isFinite(parseFloat(form.paidAmount))) {
-      errors.paidAmount = t('createManualOrder.errors.paidAmountRequired');
-    } else if (paidAmountNum <= 0) {
-      errors.paidAmount = t('createManualOrder.errors.paidAmountRequired');
-    } else if (paidAmountNum > fullOrderTotal) {
-      errors.paidAmount = t('createManualOrder.errors.paidAmountInvalid') || 'Paid amount must not exceed the order total';
+    // Free order: skip payment method, invoice, and paid amount validation
+    if (form.isFreeOrder) {
+      if (!(form.freeOrderReason || '').trim()) {
+        errors.freeOrderReason = t('createManualOrder.errors.freeOrderReasonRequired') || 'Reason is required for free orders';
+      }
+    } else {
+      if (!form.paymentMethod) {
+        errors.paymentMethod = t('createManualOrder.errors.paymentMethodRequired') || 'Payment method is required';
+      }
+      if (!isEasykash && invoices.length === 0) {
+        errors.invoice = t('createManualOrder.errors.invoiceRequired');
+      }
+      if (!isEasykash) {
+        invoices.forEach((invoice, index) => {
+          if (invoice.value.trim() === '') {
+            errors[`invoice_${index}_value`] = t('createManualOrder.errors.invoiceValueRequired') || 'Invoice value is required';
+          } else if (!Number.isFinite(parseFloat(invoice.value))) {
+            errors[`invoice_${index}_value`] = t('createManualOrder.errors.invoiceValueInvalid') || 'Invoice value must be a number';
+          } else if (parseFloat(invoice.value) <= 0) {
+            errors[`invoice_${index}_value`] = t('createManualOrder.errors.invoiceValueInvalid') || 'Invoice value must be greater than 0';
+          }
+        });
+      }
+      if (form.paidAmount.trim() === '' || !Number.isFinite(parseFloat(form.paidAmount))) {
+        errors.paidAmount = t('createManualOrder.errors.paidAmountRequired');
+      } else if (paidAmountNum <= 0) {
+        errors.paidAmount = t('createManualOrder.errors.paidAmountRequired');
+      } else if (paidAmountNum > fullOrderTotal) {
+        errors.paidAmount = t('createManualOrder.errors.paidAmountInvalid') || 'Paid amount must not exceed the order total';
+      }
     }
     return errors;
   }, [form, isEasykash, invoices, paidAmountNum, fullOrderTotal, phoneWhatsappClicked, requiredReservationFieldKeys, t]);
@@ -1320,13 +1335,34 @@ export default function CreateManualOrderModal({
     if (Object.keys(errors).length > 0) {
       dispatch({ type: 'SET_FORM_ERRORS', errors });
       toast.error(t('createManualOrder.errors.fixForm') || 'Please fix the errors above');
+      // Focus + scroll to the first field with an error
+      const errorKeys = Object.keys(errors);
+      if (errorKeys.length > 0) {
+        // Defer to next tick so the error borders are rendered first
+        requestAnimationFrame(() => {
+          for (const key of errorKeys) {
+            const el = document.querySelector<HTMLElement>(`[data-error-key="${CSS.escape(key)}"]`);
+            if (el) {
+              // Try to focus the inner input/textarea/select first; fall back to the wrapper
+              const focusable = el.querySelector<HTMLElement>('input, textarea, select, button');
+              const target = focusable || el;
+              if (target === el && !el.hasAttribute('tabindex')) {
+                el.setAttribute('tabindex', '-1');
+              }
+              target.focus({ preventScroll: false });
+              el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              break;
+            }
+          }
+        });
+      }
       return;
     }
     dispatch({ type: 'CLEAR_FORM_ERRORS' });
     dispatch({ type: 'SET_CREATING', creating: true });
     try {
       let invoiceUrls: { url: string; invoiceStatus: string; value: number; currency: string }[] = [];
-      if (!isEasykash && invoices.length > 0) {
+      if (!isEasykash && !form.isFreeOrder && invoices.length > 0) {
         dispatch({ type: 'SET_UPLOADING_INVOICE', uploading: true });
         try {
           const uploaded = await Promise.all(
@@ -1410,11 +1446,13 @@ export default function CreateManualOrderModal({
             referralId: form.referralId || undefined,
             billingData: form.billingData,
             reservationData,
-            paymentMethod: form.paymentMethod,
+            paymentMethod: form.isFreeOrder ? undefined : form.paymentMethod,
             invoiceUrls: invoiceUrls.length > 0 ? invoiceUrls : undefined,
             locale: 'ar',
             userId: linkedUserId || undefined,
-            paidAmount: paidAmountNum,
+            paidAmount: form.isFreeOrder ? 0 : paidAmountNum,
+            isFreeOrder: form.isFreeOrder,
+            freeOrderReason: form.isFreeOrder ? (form.freeOrderReason || '').trim() : undefined,
           }),
           signal: controller.signal,
         });
@@ -1804,10 +1842,14 @@ export default function CreateManualOrderModal({
         <div className="flex flex-col gap-3">
           {form.items.map((item, index) => {
             const sizeOpts = getSizeOptions(item.productId);
+            const itemErrorKey = item.type === 'custom'
+              ? `item_${index}_name`
+              : `item_${index}_product`;
             return (
               <div
                 key={index}
                 className="flex flex-col gap-3 p-3 rounded-lg border border-stroke bg-background/50"
+                data-error-key={itemErrorKey}
               >
                 <div className="flex items-center justify-between">
                   <Tabs
@@ -1934,7 +1976,7 @@ export default function CreateManualOrderModal({
                           }
                         />
                       </div>
-                      <div className="shrink-0 w-24 sm:w-28">
+                      <div className="shrink-0 w-24 sm:w-28" data-error-key="currency">
                         <CurrencySelector
                           value={form.currency}
                           onChange={handleCurrencyChange}
@@ -2036,297 +2078,373 @@ export default function CreateManualOrderModal({
           {t('createManualOrder.payment')}
         </h4>
         <div className="flex flex-col gap-4">
-          {/* Order total summary */}
-          {fullOrderTotal > 0 && (
-            <div className="p-3 rounded-lg bg-primary/5 border border-primary/10 flex flex-col gap-3">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-secondary">
-                  {t('createManualOrder.fullAmount') || 'Full Order Total'}
-                </span>
-                <span className="font-bold text-orange-500 dark:text-orange-400">
-                  {fullOrderTotal.toFixed(2)} {form.currency}
-                </span>
-              </div>
+          {/* Free order toggle */}
+          <div className="flex items-center justify-between gap-3 p-3 rounded-lg border border-stroke bg-muted/20">
+            <div className="flex flex-col">
+              <span className="text-sm font-medium text-foreground">
+                {t('createManualOrder.freeOrder') || 'Free Order'}
+              </span>
+              <span className="text-xs text-secondary">
+                {t('createManualOrder.freeOrderHint') || 'Mark this order as free — no payment method or invoice needed. A reason is required.'}
+              </span>
+            </div>
+            <Switch
+              checked={form.isFreeOrder}
+              onChange={(checked) =>
+                setForm((prev) =>
+                  checked
+                    ? {
+                      ...prev,
+                      isFreeOrder: true,
+                      paymentMethod: '' as ManualPaymentMethod,
+                      paidAmount: '',
+                      remainingAmount: '',
+                    }
+                    : { ...prev, isFreeOrder: false },
+                )
+              }
+            />
+          </div>
 
-              {/* Paid + Remaining side by side */}
-              <div className="grid grid-cols-2 gap-3">
-                {/* Paid — green */}
-                <div className="flex flex-col gap-1">
-                  <Input
-                    type="number"
-                    min={0}
-                    step="0.01"
-                    fullWidth={false}
-                    value={form.paidAmount}
-                    placeholder={fullOrderTotal > 0 ? `${t('createManualOrder.paid') || 'Paid'}: ${fullOrderTotal.toFixed(2)}` : '0.00'}
-                    readOnly={paymentEditField === 'remaining'}
-                    onChange={(e) => {
-                      const paid = e.target.value;
-                      const paidNum = parseFloat(paid);
-                      const rem = Number.isFinite(paidNum) && paidNum >= 0
-                        ? Math.max(0, fullOrderTotal - paidNum)
-                        : 0;
-                      setForm((prev) => ({
-                        ...prev,
-                        paidAmount: paid,
-                        remainingAmount: rem > 0 ? rem.toFixed(2) : '',
-                      }));
-                      dispatch({ type: 'SET_PAYMENT_EDIT_FIELD', field: 'paid' });
-                    }}
-                    onFocus={() => {
-                      // Swapping from remaining → paid: reset both fields
-                      if (paymentEditField === 'remaining') {
-                        setForm((prev) => ({ ...prev, paidAmount: '', remainingAmount: '' }));
-                      }
-                      dispatch({ type: 'SET_PAYMENT_EDIT_FIELD', field: 'paid' });
-                    }}
-                    className={`px-3 py-2 text-sm font-bold ${paymentEditField === 'remaining'
-                      ? 'border-success/30 bg-success/5 text-success cursor-not-allowed'
-                      : 'border-success/40 bg-success/5 text-success focus:ring-success/20 focus:border-success'
-                      }`}
-                  />
-                  {formErrors.paidAmount && (
-                    <span className="text-xs text-red-500">{formErrors.paidAmount}</span>
-                  )}
-                </div>
-                {/* Remaining — red */}
-                <div className="flex flex-col gap-1">
-                  <Input
-                    type="number"
-                    min={0}
-                    step="0.01"
-                    fullWidth={false}
-                    value={form.remainingAmount}
-                    placeholder={fullOrderTotal > 0 ? `${t('createManualOrder.remaining') || 'Remaining'}: ${(fullOrderTotal - paidAmountNum).toFixed(2)}` : `0.00 ${form.currency}`}
-                    readOnly={paymentEditField === 'paid'}
-                    onChange={(e) => {
-                      const rem = e.target.value;
-                      const remNum = parseFloat(rem);
-                      const paid = Number.isFinite(remNum) && remNum >= 0
-                        ? Math.max(0, fullOrderTotal - remNum)
-                        : 0;
-                      setForm((prev) => ({
-                        ...prev,
-                        remainingAmount: rem,
-                        paidAmount: paid > 0 ? paid.toFixed(2) : '',
-                      }));
-                      dispatch({ type: 'SET_PAYMENT_EDIT_FIELD', field: 'remaining' });
-                    }}
-                    onFocus={() => {
-                      // Swapping from paid → remaining: reset both fields
-                      if (paymentEditField === 'paid') {
-                        setForm((prev) => ({ ...prev, paidAmount: '', remainingAmount: '' }));
-                      }
-                      dispatch({ type: 'SET_PAYMENT_EDIT_FIELD', field: 'remaining' });
-                    }}
-                    className={`px-3 py-2 text-sm font-bold ${paymentEditField === 'paid'
-                      ? 'border-error/30 bg-error/5 text-error cursor-not-allowed'
-                      : 'border-error/40 bg-error/5 text-error focus:ring-error/20 focus:border-error'
-                      }`}
-                  />
-                  {formErrors.remainingAmount && (
-                    <span className="text-xs text-red-500">{formErrors.remainingAmount}</span>
-                  )}
-                </div>
-              </div>
-
-              {isPartialPayment && (
-                <p className="text-xs text-orange-600 dark:text-orange-400">
-                  {t('createManualOrder.partialPaymentHint') || 'Order will be created as partial-paid. The remaining amount can be collected later via a payment link or another invoice.'}
-                </p>
+          {/* Free order reason input */}
+          {form.isFreeOrder && (
+            <div className="flex flex-col gap-1.5" data-error-key="freeOrderReason">
+              <label className="text-xs font-medium text-secondary">
+                {t('createManualOrder.freeOrderReason') || 'Reason for free order'}
+              </label>
+              <textarea
+                value={form.freeOrderReason || ''}
+                onChange={(e) =>
+                  setForm((prev) => ({ ...prev, freeOrderReason: e.target.value }))
+                }
+                placeholder={t('createManualOrder.freeOrderReasonPlaceholder') || 'Enter the reason for making this a free order...'}
+                rows={2}
+                className={`w-full px-3 py-2 text-sm border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 resize-none ${formErrors.freeOrderReason
+                  ? 'border-error focus:ring-error/20'
+                  : 'border-stroke focus:ring-success'
+                  }`}
+              />
+              {formErrors.freeOrderReason && (
+                <span className="text-xs text-error">{formErrors.freeOrderReason}</span>
               )}
             </div>
           )}
 
-          <Dropdown
-            value={form.paymentMethod}
-            options={paymentMethodOptions}
-            onChange={(val) =>
-              setForm((prev) => ({ ...prev, paymentMethod: val }))
-            }
-            placeholder={t('createManualOrder.paymentMethod')}
-            error={formErrors.paymentMethod}
-          />
+          {/* Free order banner — replaces the normal payment UI */}
+          {form.isFreeOrder && (
+            <div className="p-4 rounded-lg bg-success/5 border border-success/20 flex items-center gap-3">
+              <span className="text-2xl font-bold text-success">FREE</span>
+              <div className="flex flex-col">
+                <span className="text-sm font-medium text-foreground">
+                  {t('createManualOrder.freeOrderConfirmed') || 'This order will be created as a free paid order'}
+                </span>
+                <span className="text-xs text-secondary">
+                  {t('createManualOrder.freeOrderAmountNote') || 'Payment amount is set to 0. No payment method or invoice required.'}
+                </span>
+              </div>
+            </div>
+          )}
 
-          {!isEasykash && (
-            <div className="flex flex-col gap-3">
-              {/* Upload buttons — two-step flow: first pick status, then pick file type */}
-              <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full">
-                {uploadingInvoice ? (
-                  <span className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-stroke text-secondary">
-                    <LuRefreshCw size={16} className="animate-spin" />
-                    {t('createManualOrder.uploadingInvoice') || 'Uploading...'}
-                  </span>
-                ) : pendingInvoiceStatus !== null ? (
-                  <div className="flex flex-wrap items-center gap-2 w-full">
-                    <button
-                      type="button"
-                      onClick={() => invoiceImageInputRef.current?.click()}
-                      className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-stroke hover:border-primary hover:text-primary transition-colors text-sm"
-                    >
-                      <LuImage size={16} />
-                      {t('createManualOrder.uploadAsImage') || 'Image'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => invoiceInputRef.current?.click()}
-                      className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-stroke hover:border-primary hover:text-primary transition-colors text-sm"
-                    >
-                      <LuFileText size={16} />
-                      {t('createManualOrder.uploadAsFile') || 'File'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        pendingInvoiceStatusRef.current = null;
-                        setPendingInvoiceStatus(null);
-                      }}
-                      className="inline-flex items-center gap-1 px-2 py-2 rounded-lg text-secondary hover:text-foreground transition-colors text-sm"
-                    >
-                      <LuX size={16} />
-                    </button>
+          {/* Normal payment UI — hidden when free order is enabled */}
+          {!form.isFreeOrder && (
+            <>
+              {/* Order total summary */}
+              {fullOrderTotal > 0 && (
+                <div className="p-3 rounded-lg bg-primary/5 border border-primary/10 flex flex-col gap-3">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-secondary">
+                      {t('createManualOrder.fullAmount') || 'Full Order Total'}
+                    </span>
+                    <span className="font-bold text-orange-500 dark:text-orange-400">
+                      {fullOrderTotal.toFixed(2)} {form.currency}
+                    </span>
                   </div>
-                ) : (
-                  <>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className={`flex-1 min-w-35 text-xs sm:text-sm ${formErrors.invoice ? 'border-error text-error hover:text-error hover:border-error' : ''}`}
-                      onClick={() => {
-                        pendingInvoiceStatusRef.current = 'confirmed';
-                        setPendingInvoiceStatus('confirmed');
-                      }}
-                    >
-                      <LuUpload size={14} className="me-1.5 shrink-0" />
-                      {t('createManualOrder.uploadConfirmedInvoice') || 'Confirmed Invoice'}
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className={`flex-1 min-w-35 text-xs sm:text-sm ${formErrors.invoice ? 'border-error text-error hover:text-error hover:border-error' : ''}`}
-                      onClick={() => {
-                        pendingInvoiceStatusRef.current = 'waiting';
-                        setPendingInvoiceStatus('waiting');
-                      }}
-                    >
-                      <LuUpload size={14} className="me-1.5 shrink-0" />
-                      {t('createManualOrder.uploadWaitingInvoice') || 'Waiting Invoice'}
-                    </Button>
-                  </>
-                )}
+
+                  {/* Paid + Remaining side by side */}
+                  <div className="grid grid-cols-2 gap-3">
+                    {/* Paid — green */}
+                    <div className="flex flex-col gap-1" data-error-key="paidAmount">
+                      <Input
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        fullWidth={false}
+                        value={form.paidAmount}
+                        placeholder={fullOrderTotal > 0 ? `${t('createManualOrder.paid') || 'Paid'}: ${fullOrderTotal.toFixed(2)}` : '0.00'}
+                        readOnly={paymentEditField === 'remaining'}
+                        onChange={(e) => {
+                          const paid = e.target.value;
+                          const paidNum = parseFloat(paid);
+                          const rem = Number.isFinite(paidNum) && paidNum >= 0
+                            ? Math.max(0, fullOrderTotal - paidNum)
+                            : 0;
+                          setForm((prev) => ({
+                            ...prev,
+                            paidAmount: paid,
+                            remainingAmount: rem > 0 ? rem.toFixed(2) : '',
+                          }));
+                          dispatch({ type: 'SET_PAYMENT_EDIT_FIELD', field: 'paid' });
+                        }}
+                        onFocus={() => {
+                          // Swapping from remaining → paid: reset both fields
+                          if (paymentEditField === 'remaining') {
+                            setForm((prev) => ({ ...prev, paidAmount: '', remainingAmount: '' }));
+                          }
+                          dispatch({ type: 'SET_PAYMENT_EDIT_FIELD', field: 'paid' });
+                        }}
+                        className={`px-3 py-2 text-sm font-bold ${formErrors.paidAmount
+                          ? 'border-error bg-error/5 text-error focus:ring-error/20 focus:border-error'
+                          : paymentEditField === 'remaining'
+                            ? 'border-success/30 bg-success/5 text-success cursor-not-allowed'
+                            : 'border-success/40 bg-success/5 text-success focus:ring-success/20 focus:border-success'
+                          }`}
+                      />
+                      {formErrors.paidAmount && (
+                        <span className="text-xs text-error">{formErrors.paidAmount}</span>
+                      )}
+                    </div>
+                    {/* Remaining — red */}
+                    <div className="flex flex-col gap-1">
+                      <Input
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        fullWidth={false}
+                        value={form.remainingAmount}
+                        placeholder={fullOrderTotal > 0 ? `${t('createManualOrder.remaining') || 'Remaining'}: ${(fullOrderTotal - paidAmountNum).toFixed(2)}` : `0.00 ${form.currency}`}
+                        readOnly={paymentEditField === 'paid'}
+                        onChange={(e) => {
+                          const rem = e.target.value;
+                          const remNum = parseFloat(rem);
+                          const paid = Number.isFinite(remNum) && remNum >= 0
+                            ? Math.max(0, fullOrderTotal - remNum)
+                            : 0;
+                          setForm((prev) => ({
+                            ...prev,
+                            remainingAmount: rem,
+                            paidAmount: paid > 0 ? paid.toFixed(2) : '',
+                          }));
+                          dispatch({ type: 'SET_PAYMENT_EDIT_FIELD', field: 'remaining' });
+                        }}
+                        onFocus={() => {
+                          // Swapping from paid → remaining: reset both fields
+                          if (paymentEditField === 'paid') {
+                            setForm((prev) => ({ ...prev, paidAmount: '', remainingAmount: '' }));
+                          }
+                          dispatch({ type: 'SET_PAYMENT_EDIT_FIELD', field: 'remaining' });
+                        }}
+                        className={`px-3 py-2 text-sm font-bold ${paymentEditField === 'paid'
+                          ? 'border-error/30 bg-error/5 text-error cursor-not-allowed'
+                          : 'border-error/40 bg-error/5 text-error focus:ring-error/20 focus:border-error'
+                          }`}
+                      />
+                      {formErrors.remainingAmount && (
+                        <span className="text-xs text-error">{formErrors.remainingAmount}</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {isPartialPayment && (
+                    <p className="text-xs text-orange-600 dark:text-orange-400">
+                      {t('createManualOrder.partialPaymentHint') || 'Order will be created as partial-paid. The remaining amount can be collected later via a payment link or another invoice.'}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              <div data-error-key="paymentMethod">
+                <Dropdown
+                  value={form.paymentMethod}
+                  options={paymentMethodOptions}
+                  onChange={(val) =>
+                    setForm((prev) => ({ ...prev, paymentMethod: val }))
+                  }
+                  placeholder={t('createManualOrder.paymentMethod')}
+                  error={formErrors.paymentMethod}
+                />
               </div>
 
-              {/* Hidden file inputs for invoice selection */}
-              <input
-                ref={invoiceInputRef}
-                type="file"
-                multiple
-                accept="application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
-                className="hidden"
-                onChange={handleInvoiceFileChange}
-              />
-              <input
-                ref={invoiceImageInputRef}
-                type="file"
-                multiple
-                accept="image/*"
-                className="hidden"
-                onChange={handleInvoiceFileChange}
-              />
-
-              {/* Invoice list */}
-              {invoices.length > 0 && (
-                <div className="flex flex-col gap-3">
-                  {invoices.map((invoice, index) => (
-                    <div key={index} className="rounded-lg border border-stroke p-3 flex flex-col gap-2 bg-background">
-                      {/* File info + remove */}
-                      <div className="flex items-center gap-2">
+              {!isEasykash && (
+                <div className="flex flex-col gap-3" data-error-key="invoice">
+                  {/* Upload buttons — two-step flow: first pick status, then pick file type */}
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full">
+                    {uploadingInvoice ? (
+                      <span className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-stroke text-secondary">
+                        <LuRefreshCw size={16} className="animate-spin" />
+                        {t('createManualOrder.uploadingInvoice') || 'Uploading...'}
+                      </span>
+                    ) : pendingInvoiceStatus !== null ? (
+                      <div className="flex flex-wrap items-center gap-2 w-full">
                         <button
                           type="button"
-                          onClick={() => handleToggleInvoiceStatus(index)}
-                          className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full transition-colors cursor-pointer ${invoice.invoiceStatus === 'confirmed' ? 'text-success bg-success/10 hover:bg-success/20' : 'text-warning bg-warning/10 hover:bg-warning/20'}`}
-                          title={t('createManualOrder.toggleInvoiceStatus') || 'Click to toggle status'}
+                          onClick={() => invoiceImageInputRef.current?.click()}
+                          className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-stroke hover:border-primary hover:text-primary transition-colors text-sm"
                         >
-                          {invoice.invoiceStatus === 'confirmed'
-                            ? (<><LuCheck size={10} /> {t('createManualOrder.uploadConfirmedInvoice') || 'Confirmed'}</>)
-                            : (<><LuClock size={10} /> {t('createManualOrder.uploadWaitingInvoice') || 'Waiting'}</>)}
+                          <LuImage size={16} />
+                          {t('createManualOrder.uploadAsImage') || 'Image'}
                         </button>
-                        <span className="text-sm text-foreground truncate flex-1 min-w-0">{invoice.file.name}</span>
-                        <span className="text-sm font-semibold text-foreground shrink-0">
-                          {invoice.value ? `${parseFloat(invoice.value).toFixed(2)} ${invoice.currency}` : '—'}
-                        </span>
                         <button
                           type="button"
-                          onClick={() => handleRemoveInvoice(index)}
-                          className="shrink-0 w-7 h-7 flex items-center justify-center rounded-lg text-error hover:bg-error/10 transition-colors"
-                          aria-label="Remove invoice"
+                          onClick={() => invoiceInputRef.current?.click()}
+                          className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-stroke hover:border-primary hover:text-primary transition-colors text-sm"
+                        >
+                          <LuFileText size={16} />
+                          {t('createManualOrder.uploadAsFile') || 'File'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            pendingInvoiceStatusRef.current = null;
+                            setPendingInvoiceStatus(null);
+                          }}
+                          className="inline-flex items-center gap-1 px-2 py-2 rounded-lg text-secondary hover:text-foreground transition-colors text-sm"
                         >
                           <LuX size={16} />
                         </button>
                       </div>
-                      {/* Preview */}
-                      {invoice.previewUrl ? (
-                        <div className="w-fit">
-                          {/* eslint-disable-next-line @next/next/no-img-element -- previewUrl is a blob URL from File, not optimizable by next/image */}
-                          <img
-                            src={invoice.previewUrl}
-                            alt="Invoice preview"
-                            className="h-24 rounded-lg border border-stroke object-contain bg-background"
+                    ) : (
+                      <>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className={`flex-1 min-w-35 text-xs sm:text-sm ${formErrors.invoice ? 'border-error text-error hover:text-error hover:border-error' : ''}`}
+                          onClick={() => {
+                            pendingInvoiceStatusRef.current = 'confirmed';
+                            setPendingInvoiceStatus('confirmed');
+                          }}
+                        >
+                          <LuUpload size={14} className="me-1.5 shrink-0" />
+                          {t('createManualOrder.uploadConfirmedInvoice') || 'Confirmed Invoice'}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className={`flex-1 min-w-35 text-xs sm:text-sm ${formErrors.invoice ? 'border-error text-error hover:text-error hover:border-error' : ''}`}
+                          onClick={() => {
+                            pendingInvoiceStatusRef.current = 'waiting';
+                            setPendingInvoiceStatus('waiting');
+                          }}
+                        >
+                          <LuUpload size={14} className="me-1.5 shrink-0" />
+                          {t('createManualOrder.uploadWaitingInvoice') || 'Waiting Invoice'}
+                        </Button>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Hidden file inputs for invoice selection */}
+                  <input
+                    ref={invoiceInputRef}
+                    type="file"
+                    multiple
+                    accept="application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
+                    className="hidden"
+                    onChange={handleInvoiceFileChange}
+                  />
+                  <input
+                    ref={invoiceImageInputRef}
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleInvoiceFileChange}
+                  />
+
+                  {/* Invoice list */}
+                  {invoices.length > 0 && (
+                    <div className="flex flex-col gap-3">
+                      {invoices.map((invoice, index) => (
+                        <div key={index} className="rounded-lg border border-stroke p-3 flex flex-col gap-2 bg-background">
+                          {/* File info + remove */}
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleToggleInvoiceStatus(index)}
+                              className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full transition-colors cursor-pointer ${invoice.invoiceStatus === 'confirmed' ? 'text-success bg-success/10 hover:bg-success/20' : 'text-warning bg-warning/10 hover:bg-warning/20'}`}
+                              title={t('createManualOrder.toggleInvoiceStatus') || 'Click to toggle status'}
+                            >
+                              {invoice.invoiceStatus === 'confirmed'
+                                ? (<><LuCheck size={10} /> {t('createManualOrder.uploadConfirmedInvoice') || 'Confirmed'}</>)
+                                : (<><LuClock size={10} /> {t('createManualOrder.uploadWaitingInvoice') || 'Waiting'}</>)}
+                            </button>
+                            <span className="text-sm text-foreground truncate flex-1 min-w-0">{invoice.file.name}</span>
+                            <span className="text-sm font-semibold text-foreground shrink-0">
+                              {invoice.value ? `${parseFloat(invoice.value).toFixed(2)} ${invoice.currency}` : '—'}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveInvoice(index)}
+                              className="shrink-0 w-7 h-7 flex items-center justify-center rounded-lg text-error hover:bg-error/10 transition-colors"
+                              aria-label="Remove invoice"
+                            >
+                              <LuX size={16} />
+                            </button>
+                          </div>
+                          {/* Preview */}
+                          {invoice.previewUrl ? (
+                            <div className="w-fit">
+                              {/* eslint-disable-next-line @next/next/no-img-element -- previewUrl is a blob URL from File, not optimizable by next/image */}
+                              <img
+                                src={invoice.previewUrl}
+                                alt="Invoice preview"
+                                className="h-24 rounded-lg border border-stroke object-contain bg-background"
+                              />
+                            </div>
+                          ) : (
+                            <div className="w-fit h-24 px-4 flex items-center justify-center rounded-lg border border-stroke bg-background">
+                              <LuFileText size={32} className="text-secondary" />
+                            </div>
+                          )}
+                          {/* Value + currency (editable inline) */}
+                          <div className="flex flex-row gap-2 items-start">
+                            <div className="flex-1 min-w-0">
+                              <Input
+                                type="number"
+                                min={0}
+                                step="0.01"
+                                value={invoice.value}
+                                placeholder={t('createManualOrder.invoiceValue') || 'Invoice Value'}
+                                onChange={(e) =>
+                                  handleUpdateInvoice(index, { value: e.target.value })
+                                }
+                                error={formErrors[`invoice_${index}_value`]}
+                              />
+                            </div>
+                            <div className="shrink-0 w-28 pt-px">
+                              <CurrencySelector
+                                value={invoice.currency}
+                                onChange={(val) =>
+                                  handleUpdateInvoice(index, { currency: val })
+                                }
+                              />
+                            </div>
+                          </div>
+                          {/* Exchange rate display when invoice currency differs from order currency */}
+                          <ExchangeRateDisplay
+                            fromCurrency={invoice.currency}
+                            toCurrency={form.currency || 'EGP'}
+                            amount={parseFloat(invoice.value) || 0}
+                            namespace="orders"
                           />
                         </div>
-                      ) : (
-                        <div className="w-fit h-24 px-4 flex items-center justify-center rounded-lg border border-stroke bg-background">
-                          <LuFileText size={32} className="text-secondary" />
-                        </div>
-                      )}
-                      {/* Value + currency (editable inline) */}
-                      <div className="flex flex-row gap-2 items-start">
-                        <div className="flex-1 min-w-0">
-                          <Input
-                            type="number"
-                            min={0}
-                            step="0.01"
-                            value={invoice.value}
-                            placeholder={t('createManualOrder.invoiceValue') || 'Invoice Value'}
-                            onChange={(e) =>
-                              handleUpdateInvoice(index, { value: e.target.value })
-                            }
-                            error={formErrors[`invoice_${index}_value`]}
-                          />
-                        </div>
-                        <div className="shrink-0 w-28 pt-px">
-                          <CurrencySelector
-                            value={invoice.currency}
-                            onChange={(val) =>
-                              handleUpdateInvoice(index, { currency: val })
-                            }
-                          />
-                        </div>
-                      </div>
-                      {/* Exchange rate display when invoice currency differs from order currency */}
-                      <ExchangeRateDisplay
-                        fromCurrency={invoice.currency}
-                        toCurrency={form.currency || 'EGP'}
-                        amount={parseFloat(invoice.value) || 0}
-                        namespace="orders"
-                      />
+                      ))}
                     </div>
-                  ))}
+                  )}
+
+                  {formErrors.invoice && (
+                    <p className="text-xs text-error">{formErrors.invoice}</p>
+                  )}
                 </div>
               )}
 
-              {formErrors.invoice && (
-                <p className="text-xs text-error">{formErrors.invoice}</p>
+              {isEasykash && isPartialPayment && (
+                <p className="text-xs text-secondary">
+                  {t('createManualOrder.easykashPartialHint') || 'An EasyKash payment link will be generated for the remaining amount. The paid portion will be recorded as a manual payment.'}
+                </p>
               )}
-            </div>
-          )}
-
-          {isEasykash && isPartialPayment && (
-            <p className="text-xs text-secondary">
-              {t('createManualOrder.easykashPartialHint') || 'An EasyKash payment link will be generated for the remaining amount. The paid portion will be recorded as a manual payment.'}
-            </p>
+            </>
           )}
         </div>
       </div>
@@ -2337,7 +2455,7 @@ export default function CreateManualOrderModal({
           {t('createManualOrder.reservationData')}
         </h4>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
+          <div data-error-key="reservation_sacrificeFor">
             <label className="text-xs font-medium text-secondary mb-1.5 block">
               {t('createManualOrder.sacrificeFor')}
               {requiredReservationFieldKeys.has('sacrificeFor') && (
@@ -2359,7 +2477,7 @@ export default function CreateManualOrderModal({
               <p className="text-xs text-error mt-1">{formErrors[`reservation_sacrificeFor`]}</p>
             )}
           </div>
-          <div>
+          <div data-error-key="reservation_intention">
             <label className="text-xs font-medium text-secondary mb-1.5 block">
               {t('createManualOrder.intention')}
               {requiredReservationFieldKeys.has('intention') && (
@@ -2381,7 +2499,7 @@ export default function CreateManualOrderModal({
               <p className="text-xs text-error mt-1">{formErrors[`reservation_intention`]}</p>
             )}
           </div>
-          <div>
+          <div data-error-key="reservation_gender">
             <label className="text-xs font-medium text-secondary mb-1.5 block">
               {t('createManualOrder.gender')}
               {requiredReservationFieldKeys.has('gender') && (
@@ -2410,7 +2528,7 @@ export default function CreateManualOrderModal({
               <p className="text-xs text-error mt-1">{formErrors[`reservation_gender`]}</p>
             )}
           </div>
-          <div>
+          <div data-error-key="reservation_isAlive">
             <label className="text-xs font-medium text-secondary mb-1.5 block">
               {t('createManualOrder.isAlive')}
               {requiredReservationFieldKeys.has('isAlive') && (
@@ -2439,7 +2557,7 @@ export default function CreateManualOrderModal({
               <p className="text-xs text-error mt-1">{formErrors[`reservation_isAlive`]}</p>
             )}
           </div>
-          <div className="sm:col-span-2">
+          <div className="sm:col-span-2" data-error-key="reservation_shortDuaa">
             <label className="text-xs font-medium text-secondary mb-1.5 block">
               {t('createManualOrder.shortDuaa')}
               {requiredReservationFieldKeys.has('shortDuaa') && (
@@ -2464,7 +2582,7 @@ export default function CreateManualOrderModal({
             )}
           </div>
 
-          <div className="sm:col-span-2 mb-3">
+          <div className="sm:col-span-2 mb-3" data-error-key="reservation_photo">
             <label className="text-xs font-medium text-secondary mb-1.5 block">
               {t('createManualOrder.photo')}
               {requiredReservationFieldKeys.has('photo') && (
@@ -2610,6 +2728,7 @@ export default function CreateManualOrderModal({
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Input
+            data-error-key="fullName"
             placeholder={t('createManualOrder.fullNamePlaceholder')}
             value={form.billingData.fullName}
             onChange={(e) =>
@@ -2621,7 +2740,7 @@ export default function CreateManualOrderModal({
             error={formErrors.fullName}
           />
 
-          <div className="relative">
+          <div className="relative" data-error-key="phone">
             <div className="flex items-start gap-2">
               <Input
                 placeholder={t('createManualOrder.phonePlaceholder')}
@@ -2738,7 +2857,7 @@ export default function CreateManualOrderModal({
               </div>
             )}
           </div>
-          <div className="relative">
+          <div className="relative" data-error-key="email">
             <div className="flex items-start gap-2">
               <Input
                 placeholder={t('createManualOrder.emailPlaceholder')}
@@ -2802,17 +2921,19 @@ export default function CreateManualOrderModal({
               </div>
             )}
           </div>
-          <CountrySelector
-            value={form.billingData.country}
-            onChange={(val) =>
-              setForm((prev) => ({
-                ...prev,
-                billingData: { ...prev.billingData, country: val },
-              }))
-            }
-            placeholder={t('createManualOrder.countryPlaceholder')}
-            error={formErrors.country}
-          />
+          <div data-error-key="country">
+            <CountrySelector
+              value={form.billingData.country}
+              onChange={(val) =>
+                setForm((prev) => ({
+                  ...prev,
+                  billingData: { ...prev.billingData, country: val },
+                }))
+              }
+              placeholder={t('createManualOrder.countryPlaceholder')}
+              error={formErrors.country}
+            />
+          </div>
         </div>
       </div>
 

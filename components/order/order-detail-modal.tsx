@@ -26,9 +26,12 @@ import {
   LuCheck,
   LuX,
   LuClock,
+  LuTrash2,
   LuRotateCw,
   LuDownload,
   LuPercent,
+  LuGift,
+  LuUserCog,
 } from 'react-icons/lu';
 import Image from 'next/image';
 
@@ -820,6 +823,11 @@ export default function OrderDetailModal({
                                 icon: <LuClock size={16} />,
                                 label: t('table.pendingInvoice') || 'Pending',
                               },
+                              deleted: {
+                                bg: 'bg-secondary',
+                                icon: <LuTrash2 size={16} />,
+                                label: t('table.deletedInvoice') || 'Deleted',
+                              },
                             } as const;
                             const config =
                               statusConfig[
@@ -1058,6 +1066,51 @@ export default function OrderDetailModal({
                       </div>
                     </div>
                   ))}
+                </div>
+              </div>
+            )}
+
+            {/* Admin & Free Order Info — shown only for manual orders or free orders */}
+            {(order.isFreeOrder || order.createdByAdminId) && (
+              <div className="border-t border-stroke pt-4">
+                <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+                  <LuUserCog size={16} className="text-secondary" />
+                  {t('adminInfo') || 'Admin Information'}
+                </h3>
+                <div className="flex flex-col gap-3">
+                  {/* Free order reason — full width row */}
+                  {order.isFreeOrder && (
+                    <div className="flex items-start gap-2 py-2 px-3 rounded-lg bg-success/5 border border-success/20">
+                      <span className="text-secondary shrink-0 mt-0.5">
+                        <LuGift size={14} />
+                      </span>
+                      <div className="flex flex-col min-w-0 flex-1">
+                        <span className="text-xs text-secondary">
+                          {t('freeOrderReason') || 'Free Order Reason'}
+                        </span>
+                        <span className="text-sm font-medium text-foreground">
+                          {order.freeOrderReason || 'N/A'}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                  {/* Created by admin — grid layout */}
+                  {order.createdByAdminId && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <InfoRow
+                        icon={<LuUserCog size={14} />}
+                        label={t('createdByAdmin') || 'Created By (Admin)'}
+                        value={order.createdByAdminName || order.createdByAdminEmail || order.createdByAdminId}
+                      />
+                      {order.createdByAdminEmail && (
+                        <InfoRow
+                          icon={<LuMail size={14} />}
+                          label={t('createdByAdminEmail') || 'Admin Email'}
+                          value={order.createdByAdminEmail}
+                        />
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             )}

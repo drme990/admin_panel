@@ -148,6 +148,7 @@
       "waitingInvoice": "Waiting Invoice",
       "rejectedInvoice": "Rejected Invoice",
       "pendingInvoice": "Pending Invoice",
+      "deletedInvoice": "Deleted Invoice",
       "openUrl": "Open",
       "copyPaymentLink": "Copy Payment Link",
       "regeneratePaymentLink": "Regenerate Link",
@@ -159,7 +160,8 @@
       "remainingAmount": "Remaining",
       "orderHistory": "Order History",
       "copied": "Copied!",
-      "downloaded": "Downloaded successfully"
+      "downloaded": "Downloaded successfully",
+      "freeOrderNoInvoice": "Free order — no invoice"
     },
     "createManualOrder": {
       "title": "Create Manual Order",
@@ -213,6 +215,12 @@
       "customExecutionDate": "Custom Execution Date",
       "defaultExecutionDateHint": "The execution date will be set automatically for the next day.",
       "payment": "Payment",
+      "freeOrder": "Free Order",
+      "freeOrderHint": "Mark this order as free — no payment method or invoice needed. A reason is required.",
+      "freeOrderReason": "Reason for free order",
+      "freeOrderReasonPlaceholder": "Enter the reason for making this a free order...",
+      "freeOrderConfirmed": "This order will be created as a free paid order",
+      "freeOrderAmountNote": "Payment amount is set to 0. No payment method or invoice required.",
       "paymentMethod": "Payment Method",
       "invoiceUpload": "Invoice / Receipt",
       "uploadInvoice": "Upload Invoice",
@@ -325,7 +333,8 @@
         "paidAmountInvalid": "Paid amount must be less than the order total",
         "paidAmountExceedsRemaining": "Paid amount ({paid}) exceeds the remaining amount ({remaining}).",
         "reservationFieldRequired": "This field is required for the selected product",
-        "fixForm": "Please fix the errors above"
+        "fixForm": "Please fix the errors above",
+        "freeOrderReasonRequired": "Reason is required for free orders"
       }
     },
     "createManualPayment": {
@@ -390,6 +399,10 @@
     "productId": "Product ID",
     "productSlug": "Product Slug",
     "referral": "Referral",
+    "freeOrderReason": "Free Order Reason",
+    "createdByAdmin": "Created By (Admin)",
+    "createdByAdminEmail": "Admin Email",
+    "adminInfo": "Admin Information",
     "yes": "Yes",
     "customerType": {
       "label": "Customer Type",
@@ -779,6 +792,10 @@
     "yes": "Yes",
     "no": "No",
     "referral": "Referral",
+    "freeOrderReason": "Free Order Reason",
+    "createdByAdmin": "Created By (Admin)",
+    "createdByAdminEmail": "Admin Email",
+    "adminInfo": "Admin Information",
     "amountDetails": "Amount Details",
     "totals": {
       "totalPaidNow": "Current Transaction",
@@ -1027,6 +1044,12 @@
       "customExecutionDate": "Custom Execution Date",
       "defaultExecutionDateHint": "The execution date will be set automatically for the next day.",
       "payment": "Payment",
+      "freeOrder": "Free Order",
+      "freeOrderHint": "Mark this order as free — no payment method or invoice needed. A reason is required.",
+      "freeOrderReason": "Reason for free order",
+      "freeOrderReasonPlaceholder": "Enter the reason for making this a free order...",
+      "freeOrderConfirmed": "This order will be created as a free paid order",
+      "freeOrderAmountNote": "Payment amount is set to 0. No payment method or invoice required.",
       "paymentMethod": "Payment Method",
       "invoiceUpload": "Invoice / Receipt",
       "uploadInvoice": "Upload Invoice",
@@ -1139,13 +1162,15 @@
         "paidAmountInvalid": "Paid amount must be less than the order total",
         "paidAmountExceedsRemaining": "Paid amount ({paid}) exceeds the remaining amount ({remaining}).",
         "reservationFieldRequired": "This field is required for the selected product",
-        "fixForm": "Please fix the errors above"
+        "fixForm": "Please fix the errors above",
+        "freeOrderReasonRequired": "Reason is required for free orders"
       },
       "table": {
         "confirmedInvoice": "Confirmed Invoice",
         "waitingInvoice": "Waiting Invoice",
         "rejectedInvoice": "Rejected Invoice",
         "pendingInvoice": "Pending Invoice",
+        "deletedInvoice": "Deleted Invoice",
         "uploadConfirmedInvoice": "Upload Confirmed",
         "uploadWaitingInvoice": "Upload Waiting"
       }
@@ -1198,6 +1223,7 @@
       "waitingInvoice": "Waiting Invoice",
       "rejectedInvoice": "Rejected Invoice",
       "pendingInvoice": "Pending Invoice",
+      "deletedInvoice": "Deleted Invoice",
       "uploadConfirmedInvoice": "Upload Confirmed",
       "uploadWaitingInvoice": "Upload Waiting",
       "uploadAsImage": "Image",
@@ -1356,6 +1382,7 @@
         "waiting": "Waiting",
         "pending": "Pending",
         "rejected": "Rejected",
+        "deleted": "Deleted",
         "paid": "Paid",
         "partial-paid": "Partial Paid"
       },

@@ -8,7 +8,7 @@ export type OrderStatus =
   | 'refunded'
   | 'cancelled';
 
-export type InvoiceStatus = 'confirmed' | 'waiting' | 'pending' | 'rejected';
+export type InvoiceStatus = 'confirmed' | 'waiting' | 'pending' | 'rejected' | 'deleted';
 
 export type InvoiceDeletionReason =
   | 'returned'
@@ -227,8 +227,6 @@ export interface Order {
     value: number;
     currency?: string;
     whileCreating?: boolean;
-    deleted?: boolean;
-    deletedAt?: string;
   }>;
   deletedInvoices?: DeletedInvoice[];
   /** Generated design images — one entry per product with a template */
@@ -246,6 +244,13 @@ export interface Order {
   location?: string;
   locale?: string;
   internalNotes?: InternalNote[];
+  // Free order tracking
+  isFreeOrder?: boolean;
+  freeOrderReason?: string;
+  // Admin who created this manual order
+  createdByAdminId?: string;
+  createdByAdminEmail?: string;
+  createdByAdminName?: string;
   createdAt: string;
   updatedAt: string;
 }

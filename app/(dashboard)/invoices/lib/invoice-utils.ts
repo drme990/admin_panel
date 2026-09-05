@@ -6,7 +6,6 @@ export interface InvoiceEntry {
   rejectionReason?: string;
   value: number;
   currency?: string;
-  deleted?: boolean;
 }
 
 export interface InvoiceRow {
@@ -35,7 +34,7 @@ export interface InvoiceRow {
   updatedAt: string;
 }
 
-export type ReviewFilter = 'all' | 'confirmed' | 'waiting' | 'pending' | 'rejected';
+export type ReviewFilter = 'all' | 'confirmed' | 'waiting' | 'pending' | 'rejected' | 'deleted';
 
 export function isImageUrl(url: string): boolean {
   return /\.(jpg|jpeg|png|webp|gif)(\?.*)?$/i.test(url);

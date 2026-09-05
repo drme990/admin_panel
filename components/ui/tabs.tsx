@@ -1,6 +1,7 @@
 'use client';
 
 import { cn } from '@/lib/utils';
+import Tooltip from './tooltip';
 
 import type { ReactNode } from 'react';
 
@@ -12,6 +13,8 @@ interface TabsOption<T extends TabValue> {
   ariaLabel?: string;
   className?: string;
   activeClassName?: string;
+  tooltip?: string;
+  tooltipPosition?: 'top' | 'bottom' | 'left' | 'right';
 }
 
 interface TabsProps<T extends TabValue> {
@@ -47,7 +50,7 @@ export default function Tabs<T extends TabValue>({
       {options.map((option) => {
         const active = option.value === value;
 
-        return (
+        const button = (
           <button
             key={option.value}
             type="button"
@@ -66,6 +69,20 @@ export default function Tabs<T extends TabValue>({
             {option.label}
           </button>
         );
+
+        if (option.tooltip) {
+          return (
+            <Tooltip
+              key={option.value}
+              position={option.tooltipPosition || 'top'}
+              content={option.tooltip}
+            >
+              {button}
+            </Tooltip>
+          );
+        }
+
+        return button;
       })}
     </div>
   );

@@ -662,6 +662,18 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
     {
       header: t('table.invoice'),
       accessor: (order: Order) => {
+        // Free orders don't have invoices
+        if (order.isFreeOrder) {
+          return (
+            <div className="flex flex-col items-center gap-1 justify-center min-h-12">
+              <Tooltip position={tooltipPos} content={t('table.freeOrderNoInvoice') || 'Free order — no invoice'}>
+                <span className="inline-flex items-center justify-center p-2 text-secondary/50">
+                  <LuBan size={20} />
+                </span>
+              </Tooltip>
+            </div>
+          );
+        }
         const invoices = order.invoiceUrls || [];
         const hasInvoice = invoices.length > 0;
         const hasUnreviewedInvoice = invoices.some((inv) => {

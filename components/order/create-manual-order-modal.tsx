@@ -16,6 +16,7 @@ import CountrySelector from '@/components/shared/country-selector';
 import RadioButton from '@/components/ui/radio-button';
 import Tabs from '@/components/ui/tabs';
 import Switch from '@/components/ui/switch';
+import Tooltip from '@/components/ui/tooltip';
 import CustomDatePicker from '@/components/ui/custom-date-picker';
 import Textarea from '@/components/ui/textarea';
 import { uploadImageToR2, uploadInvoiceToR2, deleteOldImage } from '../../lib/image-upload-utils';
@@ -2130,17 +2131,18 @@ export default function CreateManualOrderModal({
                   {t('createManualOrder.freeOrderAmountNote') || 'Payment amount is set to 0. No payment method or invoice required.'}
                 </span>
               </div>
-              <button
-                type="button"
-                onClick={() =>
-                  setForm((prev) => ({ ...prev, isFreeOrder: false }))
-                }
-                className="shrink-0 inline-flex items-center justify-center h-8 w-8 rounded-lg text-secondary hover:text-error hover:bg-error/10 transition-colors"
-                aria-label={t('createManualOrder.cancelFreeOrder') || 'Cancel free order'}
-                title={t('createManualOrder.cancelFreeOrder') || 'Cancel free order'}
-              >
-                <LuX size={18} />
-              </button>
+              <Tooltip position={locale === 'ar' ? 'right' : 'left'} content={t('createManualOrder.cancelFreeOrder') || 'Cancel free order'}>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setForm((prev) => ({ ...prev, isFreeOrder: false }))
+                  }
+                  className="shrink-0 inline-flex items-center justify-center h-8 w-8 rounded-lg text-error hover:bg-error/10 transition-colors"
+                  aria-label={t('createManualOrder.cancelFreeOrder') || 'Cancel free order'}
+                >
+                  <LuX size={18} />
+                </button>
+              </Tooltip>
             </div>
           )}
 
@@ -2265,15 +2267,16 @@ export default function CreateManualOrderModal({
                 </div>
                 {canCreateFreeOrder && (
                   <div className="relative shrink-0" ref={freeOrderMenuRef}>
-                    <button
-                      type="button"
-                      onClick={() => setFreeOrderMenuOpen((prev) => !prev)}
-                      className="inline-flex items-center justify-center h-10 w-10 rounded-lg border border-stroke text-secondary hover:text-foreground hover:border-foreground/30 transition-colors"
-                      aria-label={t('createManualOrder.freeOrder') || 'Free Order'}
-                      title={t('createManualOrder.freeOrder') || 'Free Order'}
-                    >
-                      <LuEllipsisVertical size={18} />
-                    </button>
+                    <Tooltip position={locale === 'ar' ? 'right' : 'left'} content={t('createManualOrder.freeOrder') || 'Free Order'}>
+                      <button
+                        type="button"
+                        onClick={() => setFreeOrderMenuOpen((prev) => !prev)}
+                        className="inline-flex items-center justify-center h-10 w-10 rounded-lg border border-stroke text-secondary hover:text-foreground hover:border-foreground/30 transition-colors"
+                        aria-label={t('createManualOrder.freeOrder') || 'Free Order'}
+                      >
+                        <LuEllipsisVertical size={18} />
+                      </button>
+                    </Tooltip>
                     {freeOrderMenuOpen && (
                       <div className={`absolute top-full mt-1 z-50 min-w-48 rounded-lg border border-stroke bg-card-bg shadow-lg overflow-hidden ${locale === 'ar' ? 'left-0' : 'right-0'}`}>
                         <button

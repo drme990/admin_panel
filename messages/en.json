@@ -221,6 +221,7 @@
       "freeOrderReasonPlaceholder": "Enter the reason for making this a free order...",
       "freeOrderConfirmed": "This order will be created as a free paid order",
       "freeOrderAmountNote": "Payment amount is set to 0. No payment method or invoice required.",
+      "cancelFreeOrder": "Cancel free order",
       "paymentMethod": "Payment Method",
       "invoiceUpload": "Invoice / Receipt",
       "uploadInvoice": "Upload Invoice",
@@ -1050,6 +1051,7 @@
       "freeOrderReasonPlaceholder": "Enter the reason for making this a free order...",
       "freeOrderConfirmed": "This order will be created as a free paid order",
       "freeOrderAmountNote": "Payment amount is set to 0. No payment method or invoice required.",
+      "cancelFreeOrder": "Cancel free order",
       "paymentMethod": "Payment Method",
       "invoiceUpload": "Invoice / Receipt",
       "uploadInvoice": "Upload Invoice",
@@ -2265,7 +2267,8 @@
         "crm": "CRM",
         "orderDesignLogs": "Design Logs",
         "orderStatsComponent": "Order Stats",
-        "export": "Export Button"
+        "export": "Export Button",
+        "freeOrders": "Create Free Orders"
       },
       "buttons": {
         "cancel": "Cancel",

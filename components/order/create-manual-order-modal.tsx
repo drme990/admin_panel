@@ -21,7 +21,7 @@ import Textarea from '@/components/ui/textarea';
 import { uploadImageToR2, uploadInvoiceToR2, deleteOldImage } from '../../lib/image-upload-utils';
 import { cn } from '@/lib/utils';
 
-import { LuCopy, LuCheck, LuRefreshCw, LuUpload, LuPlus, LuX, LuAtSign, LuPencil, LuUserCheck, LuImage, LuClock, LuLink, LuFileText } from 'react-icons/lu';
+import { LuCopy, LuCheck, LuRefreshCw, LuUpload, LuPlus, LuX, LuAtSign, LuPencil, LuUserCheck, LuImage, LuClock, LuLink, LuFileText, LuEllipsisVertical, LuGift } from 'react-icons/lu';
 import { FaWhatsapp } from 'react-icons/fa';
 import { isValidPhoneNumber, parsePhoneNumberFromString } from 'libphonenumber-js';
 import { COUNTRIES } from '@/lib/countries';
@@ -525,6 +525,10 @@ export default function CreateManualOrderModal({
   const skipBlurValidationRef = useRef(false);
   const pendingInvoiceStatusRef = useRef<'confirmed' | 'waiting' | null>(null);
   const [pendingInvoiceStatus, setPendingInvoiceStatus] = useState<'confirmed' | 'waiting' | null>(null);
+  const [freeOrderMenuOpen, setFreeOrderMenuOpen] = useState(false);
+  const freeOrderMenuRef = useRef<HTMLDivElement>(null);
+  // Permission check: super_admin always allowed; admin needs 'freeOrders' in allowedPages
+  const canCreateFreeOrder = user?.role === 'super_admin' || (user?.allowedPages?.includes('freeOrders') ?? false);
   // invoiceInputRef → for files (PDF, DOC, TXT)
   // invoiceImageInputRef → for images (JPG, PNG, WebP)
   const invoiceInputRef = useRef<HTMLInputElement | null>(null);
@@ -553,6 +557,18 @@ export default function CreateManualOrderModal({
   useEffect(() => {
     saveCachedForm(form);
   }, [form]);
+
+  // Close free order menu when clicking outside
+  useEffect(() => {
+    if (!freeOrderMenuOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (freeOrderMenuRef.current && !freeOrderMenuRef.current.contains(e.target as Node)) {
+        setFreeOrderMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [freeOrderMenuOpen]);
 
   // Load recently used product IDs from localStorage on mount
   useEffect(() => {
@@ -2078,34 +2094,6 @@ export default function CreateManualOrderModal({
           {t('createManualOrder.payment')}
         </h4>
         <div className="flex flex-col gap-4">
-          {/* Free order toggle */}
-          <div className="flex items-center justify-between gap-3 p-3 rounded-lg border border-stroke bg-muted/20">
-            <div className="flex flex-col">
-              <span className="text-sm font-medium text-foreground">
-                {t('createManualOrder.freeOrder') || 'Free Order'}
-              </span>
-              <span className="text-xs text-secondary">
-                {t('createManualOrder.freeOrderHint') || 'Mark this order as free — no payment method or invoice needed. A reason is required.'}
-              </span>
-            </div>
-            <Switch
-              checked={form.isFreeOrder}
-              onChange={(checked) =>
-                setForm((prev) =>
-                  checked
-                    ? {
-                      ...prev,
-                      isFreeOrder: true,
-                      paymentMethod: '' as ManualPaymentMethod,
-                      paidAmount: '',
-                      remainingAmount: '',
-                    }
-                    : { ...prev, isFreeOrder: false },
-                )
-              }
-            />
-          </div>
-
           {/* Free order reason input */}
           {form.isFreeOrder && (
             <div className="flex flex-col gap-1.5" data-error-key="freeOrderReason">
@@ -2133,8 +2121,8 @@ export default function CreateManualOrderModal({
           {/* Free order banner — replaces the normal payment UI */}
           {form.isFreeOrder && (
             <div className="p-4 rounded-lg bg-success/5 border border-success/20 flex items-center gap-3">
-              <span className="text-2xl font-bold text-success">FREE</span>
-              <div className="flex flex-col">
+              <LuGift size={24} className="text-success shrink-0" />
+              <div className="flex flex-col flex-1">
                 <span className="text-sm font-medium text-foreground">
                   {t('createManualOrder.freeOrderConfirmed') || 'This order will be created as a free paid order'}
                 </span>
@@ -2142,6 +2130,17 @@ export default function CreateManualOrderModal({
                   {t('createManualOrder.freeOrderAmountNote') || 'Payment amount is set to 0. No payment method or invoice required.'}
                 </span>
               </div>
+              <button
+                type="button"
+                onClick={() =>
+                  setForm((prev) => ({ ...prev, isFreeOrder: false }))
+                }
+                className="shrink-0 inline-flex items-center justify-center h-8 w-8 rounded-lg text-secondary hover:text-error hover:bg-error/10 transition-colors"
+                aria-label={t('createManualOrder.cancelFreeOrder') || 'Cancel free order'}
+                title={t('createManualOrder.cancelFreeOrder') || 'Cancel free order'}
+              >
+                <LuX size={18} />
+              </button>
             </div>
           )}
 
@@ -2252,16 +2251,52 @@ export default function CreateManualOrderModal({
                 </div>
               )}
 
-              <div data-error-key="paymentMethod">
-                <Dropdown
-                  value={form.paymentMethod}
-                  options={paymentMethodOptions}
-                  onChange={(val) =>
-                    setForm((prev) => ({ ...prev, paymentMethod: val }))
-                  }
-                  placeholder={t('createManualOrder.paymentMethod')}
-                  error={formErrors.paymentMethod}
-                />
+              <div className="flex items-start gap-2">
+                <div data-error-key="paymentMethod" className="flex-1">
+                  <Dropdown
+                    value={form.paymentMethod}
+                    options={paymentMethodOptions}
+                    onChange={(val) =>
+                      setForm((prev) => ({ ...prev, paymentMethod: val }))
+                    }
+                    placeholder={t('createManualOrder.paymentMethod')}
+                    error={formErrors.paymentMethod}
+                  />
+                </div>
+                {canCreateFreeOrder && (
+                  <div className="relative shrink-0" ref={freeOrderMenuRef}>
+                    <button
+                      type="button"
+                      onClick={() => setFreeOrderMenuOpen((prev) => !prev)}
+                      className="inline-flex items-center justify-center h-10 w-10 rounded-lg border border-stroke text-secondary hover:text-foreground hover:border-foreground/30 transition-colors"
+                      aria-label={t('createManualOrder.freeOrder') || 'Free Order'}
+                      title={t('createManualOrder.freeOrder') || 'Free Order'}
+                    >
+                      <LuEllipsisVertical size={18} />
+                    </button>
+                    {freeOrderMenuOpen && (
+                      <div className={`absolute top-full mt-1 z-50 min-w-48 rounded-lg border border-stroke bg-card-bg shadow-lg overflow-hidden ${locale === 'ar' ? 'left-0' : 'right-0'}`}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setForm((prev) => ({
+                              ...prev,
+                              isFreeOrder: true,
+                              paymentMethod: '' as ManualPaymentMethod,
+                              paidAmount: '',
+                              remainingAmount: '',
+                            }));
+                            setFreeOrderMenuOpen(false);
+                          }}
+                          className="flex items-center gap-2 w-full px-3 py-2.5 text-sm text-foreground hover:bg-muted/50 transition-colors text-left"
+                        >
+                          <LuGift size={16} className="text-success" />
+                          <span>{t('createManualOrder.freeOrder') || 'Free Order'}</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {!isEasykash && (

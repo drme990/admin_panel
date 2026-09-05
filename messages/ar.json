@@ -221,6 +221,7 @@
       "freeOrderReasonPlaceholder": "أدخل سبب جعل هذا الطلب مجانياً...",
       "freeOrderConfirmed": "سيتم إنشاء هذا الطلب كطلب مجاني مدفوع",
       "freeOrderAmountNote": "مبلغ الدفع مضبوط على 0. لا حاجة لطريقة دفع أو فاتورة.",
+      "cancelFreeOrder": "إلغاء الطلب المجاني",
       "paymentMethod": "طريقة الدفع",
       "invoiceUpload": "الفاتورة / الإيصال",
       "uploadInvoice": "رفع الفاتورة",
@@ -1058,6 +1059,7 @@
       "freeOrderReasonPlaceholder": "أدخل سبب جعل هذا الطلب مجانياً...",
       "freeOrderConfirmed": "سيتم إنشاء هذا الطلب كطلب مجاني مدفوع",
       "freeOrderAmountNote": "مبلغ الدفع مضبوط على 0. لا حاجة لطريقة دفع أو فاتورة.",
+      "cancelFreeOrder": "إلغاء الطلب المجاني",
       "paymentMethod": "طريقة الدفع",
       "invoiceUpload": "الفاتورة / الإيصال",
       "uploadInvoice": "رفع الفاتورة",
@@ -2264,7 +2266,8 @@
         "crm": "إدارة العلاقات",
         "orderDesignLogs": "سجل التصاميم",
         "orderStatsComponent": "إحصائيات الطلبات",
-        "export": "زر التصدير"
+        "export": "زر التصدير",
+        "freeOrders": "إنشاء طبات مجانية"
       },
       "buttons": {
         "cancel": "إلغاء",

@@ -996,7 +996,7 @@ export default function CreateManualOrderModal({
           errors[`item_${index}_name`] = t('createManualOrder.errors.customNameRequired') || 'Custom product name is required';
         }
         const customPrice = parseFloat(item.customPrice);
-        if (!Number.isFinite(customPrice) || customPrice <= 0) {
+        if (!Number.isFinite(customPrice) || (customPrice <= 0 && !form.isFreeOrder)) {
           errors[`item_${index}_price`] = t('createManualOrder.errors.customPriceRequired') || 'Custom price is required';
         }
       } else {
@@ -1086,7 +1086,15 @@ export default function CreateManualOrderModal({
   };
 
   const addItem = () => {
-    setForm((prev) => ({ ...prev, items: [...prev.items, emptyItem()] }));
+    setForm((prev) => {
+      const newItem = emptyItem();
+      // If free order is active, default price to 0
+      if (prev.isFreeOrder) {
+        newItem.customPrice = '0';
+        newItem.overridePrice = '0';
+      }
+      return { ...prev, items: [...prev.items, newItem] };
+    });
   };
 
   const removeItem = (index: number) => {
@@ -1914,7 +1922,9 @@ export default function CreateManualOrderModal({
                             updateItem(index, {
                               productId: val,
                               sizeIndex: 0,
-                              overridePrice: loadedPrice > 0 ? loadedPrice.toFixed(2) : '',
+                              overridePrice: form.isFreeOrder
+                                ? '0'
+                                : loadedPrice > 0 ? loadedPrice.toFixed(2) : '',
                             });
                             if (val) dispatch({ type: 'ADD_RECENT_PRODUCT', productId: val });
                             if (priceEditIndices.includes(index)) {
@@ -1939,7 +1949,9 @@ export default function CreateManualOrderModal({
                             const loadedPrice = getLoadedUnitPrice(nextItem);
                             updateItem(index, {
                               sizeIndex: val,
-                              overridePrice: loadedPrice > 0 ? loadedPrice.toFixed(2) : '',
+                              overridePrice: form.isFreeOrder
+                                ? '0'
+                                : loadedPrice > 0 ? loadedPrice.toFixed(2) : '',
                             });
                             if (priceEditIndices.includes(index)) {
                               dispatch({ type: 'TOGGLE_PRICE_EDIT', index });
@@ -1958,38 +1970,42 @@ export default function CreateManualOrderModal({
                           type="number"
                           min={0}
                           step="0.01"
-                          value={item.overridePrice}
-                          placeholder={getLoadedUnitPrice(item).toFixed(2)}
+                          value={form.isFreeOrder ? '0' : item.overridePrice}
+                          placeholder={form.isFreeOrder ? '0.00' : getLoadedUnitPrice(item).toFixed(2)}
                           onChange={(e) =>
                             updateItem(index, { overridePrice: e.target.value })
                           }
                           onBlur={() =>
                             dispatch({ type: 'BLUR_CUSTOM_PRICE', index })
                           }
-                          readOnly={!priceEditIndices.includes(index)}
-                          tabIndex={priceEditIndices.includes(index) ? 0 : -1}
-                          className={priceEditIndices.includes(index)
-                            ? ''
-                            : 'focus:ring-0 focus:border-stroke cursor-default'
+                          readOnly={form.isFreeOrder || !priceEditIndices.includes(index)}
+                          tabIndex={form.isFreeOrder || !priceEditIndices.includes(index) ? -1 : 0}
+                          className={form.isFreeOrder
+                            ? 'focus:ring-0 focus:border-stroke cursor-not-allowed opacity-60'
+                            : priceEditIndices.includes(index)
+                              ? ''
+                              : 'focus:ring-0 focus:border-stroke cursor-default'
                           }
                           suffix={
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const willEdit = !priceEditIndices.includes(index);
-                                dispatch({ type: 'TOGGLE_PRICE_EDIT', index });
-                                if (willEdit) {
-                                  setTimeout(() => priceInputRefs.current.get(index)?.focus(), 0);
-                                }
-                              }}
-                              className={`transition-colors ${priceEditIndices.includes(index)
-                                ? 'text-success hover:text-success/80'
-                                : 'text-secondary hover:text-foreground'
-                                }`}
-                              aria-label={priceEditIndices.includes(index) ? 'Lock price' : 'Edit price'}
-                            >
-                              <LuPencil size={16} />
-                            </button>
+                            !form.isFreeOrder && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const willEdit = !priceEditIndices.includes(index);
+                                  dispatch({ type: 'TOGGLE_PRICE_EDIT', index });
+                                  if (willEdit) {
+                                    setTimeout(() => priceInputRefs.current.get(index)?.focus(), 0);
+                                  }
+                                }}
+                                className={`transition-colors ${priceEditIndices.includes(index)
+                                  ? 'text-success hover:text-success/80'
+                                  : 'text-secondary hover:text-foreground'
+                                  }`}
+                                aria-label={priceEditIndices.includes(index) ? 'Lock price' : 'Edit price'}
+                              >
+                                <LuPencil size={16} />
+                              </button>
+                            )
                           }
                         />
                       </div>
@@ -2050,11 +2066,14 @@ export default function CreateManualOrderModal({
                           type="number"
                           min={0}
                           step="0.01"
-                          value={item.customPrice}
+                          value={form.isFreeOrder ? '0' : item.customPrice}
                           placeholder="0.00"
                           onChange={(e) =>
                             updateItem(index, { customPrice: e.target.value })
                           }
+                          readOnly={form.isFreeOrder}
+                          tabIndex={form.isFreeOrder ? -1 : 0}
+                          className={form.isFreeOrder ? 'opacity-60 cursor-not-allowed' : ''}
                           error={formErrors[`item_${index}_price`]}
                         />
                       </div>
@@ -2288,7 +2307,15 @@ export default function CreateManualOrderModal({
                               paymentMethod: '' as ManualPaymentMethod,
                               paidAmount: '',
                               remainingAmount: '',
+                              // Zero out all item prices for free orders
+                              items: prev.items.map((item) => ({
+                                ...item,
+                                customPrice: '0',
+                                overridePrice: '0',
+                              })),
                             }));
+                            // Clear any price edit mode
+                            dispatch({ type: 'SET_PRICE_EDIT_INDICES', indices: [] });
                             setFreeOrderMenuOpen(false);
                           }}
                           className="flex items-center gap-2 w-full px-3 py-2.5 text-sm text-foreground hover:bg-muted/50 transition-colors text-left"

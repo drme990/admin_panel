@@ -367,24 +367,36 @@ export default function InvoiceCardView({
                     </Tooltip>
                   )}
                 </div>
-                <div className="flex items-center gap-1">
-                  <span className="font-semibold whitespace-nowrap text-[8px] xs:text-[10px] sm:text-sm text-foreground">
-                    {row.orderNumber}
-                  </span>
-                  <Tooltip position={tooltipPos} content={t('copyOrderNumber')}>
-                    <Button
-                      variant="ghost"
-                      size="custom"
-                      className="h-4 w-4 sm:h-5 sm:w-5 p-0 text-secondary hover:text-foreground shrink-0"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleCopy(row.orderNumber, t('copied'));
-                      }}
-                      aria-label={t('copyOrderNumber')}
-                    >
-                      <LuCopy className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
-                    </Button>
-                  </Tooltip>
+                <div className="flex flex-col gap-0.5">
+                  {(() => {
+                    const parentNumber = row.isSubOrder ? row.linkedOrderNumber : row.orderNumber;
+                    const subNumber = row.isSubOrder ? row.orderNumber : row.linkedOrderNumber;
+                    const numbers = [
+                      parentNumber,
+                      ...(subNumber ? [subNumber] : []),
+                    ];
+                    return numbers.map((num) => num && (
+                      <div key={num} className="flex items-center gap-1">
+                        <span className="font-semibold whitespace-nowrap text-[8px] xs:text-[10px] sm:text-sm text-foreground">
+                          {num}
+                        </span>
+                        <Tooltip position={tooltipPos} content={t('copyOrderNumber')}>
+                          <Button
+                            variant="ghost"
+                            size="custom"
+                            className="h-4 w-4 sm:h-5 sm:w-5 p-0 text-secondary hover:text-foreground shrink-0"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleCopy(num, t('copied'));
+                            }}
+                            aria-label={t('copyOrderNumber')}
+                          >
+                            <LuCopy className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                          </Button>
+                        </Tooltip>
+                      </div>
+                    ));
+                  })()}
                 </div>
               </div>
             </div>

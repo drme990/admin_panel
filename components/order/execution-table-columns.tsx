@@ -21,6 +21,7 @@ import {
   LuFileText,
   LuCircleAlert,
   LuSparkles,
+  LuSplit,
 } from 'react-icons/lu';
 import { FaWhatsapp } from 'react-icons/fa6';
 
@@ -99,6 +100,7 @@ interface ColumnCallbacks {
   onChangeStatus: (order: Order) => void;
   onViewHistory: (order: Order) => void;
   onBlock: (order: Order) => void;
+  onCreateSubOrder: (order: Order) => void;
   onToggleSelect: (orderId: string) => void;
   onToggleSelectAll: () => void;
   selectedOrderIds: string[];
@@ -146,6 +148,7 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
     onChangeStatus,
     onViewHistory,
     onBlock,
+    onCreateSubOrder,
     onToggleSelect,
     onToggleSelectAll,
     selectedOrderIds,
@@ -249,6 +252,16 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
                   <span className={`font-semibold whitespace-nowrap text-sm ${order.status === 'partial-paid' ? 'text-orange-600 dark:text-orange-400' : 'text-foreground'}`}>
                     {order.orderNumber}
                   </span>
+                  {order.isSubOrder && (
+                    <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-primary/10 text-primary shrink-0">
+                      {t('subOrder.subOrderBadge') || 'Sub'}
+                    </span>
+                  )}
+                  {order.hasSubOrder && (
+                    <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 shrink-0">
+                      {t('subOrder.hasSubOrderBadge') || 'Has Sub'}
+                    </span>
+                  )}
                   <Tooltip position={tooltipPos} content={t('table.copyOrderNumber')}>
                     <Button
                       variant="ghost"
@@ -757,6 +770,13 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
     {
       header: t('table.paidAmount'),
       accessor: (order: Order) => {
+        if (order.isFreeOrder) {
+          return (
+            <span className="font-bold text-success">
+              {t('freeOrderLabel') || 'Free'}
+            </span>
+          );
+        }
         const displayedAmount =
           typeof order.paidAmount === 'number' ? order.paidAmount : order.totalAmount;
         const remaining = order.remainingAmount ?? 0;
@@ -922,6 +942,19 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
                 <LuHistory size={16} />
               </Button>
             </Tooltip>
+
+            {!order.isSubOrder && !order.hasSubOrder && !order.isFreeOrder && (
+              <Tooltip position={tooltipPos} content={t('subOrder.title') || 'Create Sub Order'}>
+                <Button
+                  variant="icon-primary"
+                  size="custom"
+                  onClick={(e) => { e.stopPropagation(); onCreateSubOrder(order); }}
+                  aria-label={t('subOrder.title') || 'Create Sub Order'}
+                >
+                  <LuSplit size={16} />
+                </Button>
+              </Tooltip>
+            )}
           </div>
         </div>
       ),

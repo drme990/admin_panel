@@ -300,24 +300,36 @@ export function useInvoiceColumns(callbacks: ColumnCallbacks) {
                 </Tooltip>
               )}
             </div>
-            <div className="flex items-center gap-1.5">
-              <span className="font-semibold whitespace-nowrap text-sm text-foreground">
-                {row.orderNumber}
-              </span>
-              <Tooltip position={tooltipPos} content={t('copyOrderNumber')}>
-                <Button
-                  variant="ghost"
-                  size="custom"
-                  className="h-5 w-5 p-0 text-secondary hover:text-foreground"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleCopy(row.orderNumber, t('copied'));
-                  }}
-                  aria-label={t('copyOrderNumber')}
-                >
-                  <LuCopy size={12} />
-                </Button>
-              </Tooltip>
+            <div className="flex flex-col gap-0.5">
+              {(() => {
+                const parentNumber = row.isSubOrder ? row.linkedOrderNumber : row.orderNumber;
+                const subNumber = row.isSubOrder ? row.orderNumber : row.linkedOrderNumber;
+                const numbers = [
+                  parentNumber,
+                  ...(subNumber ? [subNumber] : []),
+                ];
+                return numbers.map((num) => num && (
+                  <div key={num} className="flex items-center gap-1.5">
+                    <span className="font-semibold whitespace-nowrap text-sm text-foreground">
+                      {num}
+                    </span>
+                    <Tooltip position={tooltipPos} content={t('copyOrderNumber')}>
+                      <Button
+                        variant="ghost"
+                        size="custom"
+                        className="h-5 w-5 p-0 text-secondary hover:text-foreground"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleCopy(num, t('copied'));
+                        }}
+                        aria-label={t('copyOrderNumber')}
+                      >
+                        <LuCopy size={12} />
+                      </Button>
+                    </Tooltip>
+                  </div>
+                ));
+              })()}
             </div>
           </div>
         );

@@ -14,6 +14,7 @@ import {
   LuPenLine,
   LuBan,
   LuHistory,
+  LuSplit,
 } from 'react-icons/lu';
 
 import {
@@ -30,6 +31,7 @@ interface ColumnCallbacks {
   onChangeStatus: (order: Order) => void;
   onViewHistory: (order: Order) => void;
   onBlock: (order: Order) => void;
+  onCreateSubOrder: (order: Order) => void;
   onToggleSelect: (orderId: string) => void;
   onToggleSelectAll: () => void;
   selectedOrderIds: string[];
@@ -47,6 +49,7 @@ export function useOrderColumns(callbacks: ColumnCallbacks) {
   const t = useTranslations('orders');
   const {
     onView, onWhatsapp, onCopyPhone, onCopyMessage, onChangeStatus, onViewHistory, onBlock,
+    onCreateSubOrder,
     onToggleSelect, onToggleSelectAll,
     selectedOrderIds, allVisibleSelected,
     whatsappOrderId, copyingPhoneOrderId, copyingMessageOrderId, blockingOrderId, blockedUserIds,
@@ -91,6 +94,16 @@ export function useOrderColumns(callbacks: ColumnCallbacks) {
           >
             {row.orderNumber}
           </span>
+          {row.isSubOrder && (
+            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-primary/10 text-primary shrink-0">
+              {t('subOrder.subOrderBadge') || 'Sub'}
+            </span>
+          )}
+          {row.hasSubOrder && (
+            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 shrink-0">
+              {t('subOrder.hasSubOrderBadge') || 'Has Sub'}
+            </span>
+          )}
         </div>
       ),
     },
@@ -108,8 +121,15 @@ export function useOrderColumns(callbacks: ColumnCallbacks) {
       ),
     },
     {
-      header: t('table.amount'),
+      header: t('table.paidAmount'),
       accessor: (row: Order) => {
+        if (row.isFreeOrder) {
+          return (
+            <span className="font-bold text-success">
+              {t('freeOrderLabel') || 'Free'}
+            </span>
+          );
+        }
         const displayedAmount =
           typeof row.paidAmount === 'number' ? row.paidAmount : row.totalAmount;
         return (
@@ -214,6 +234,36 @@ export function useOrderColumns(callbacks: ColumnCallbacks) {
                   : <FaWhatsapp size={16} />}
               </Button>
             </Tooltip>
+
+            {row.userId && blockedUserIds.has(row.userId) ? (
+              <Tooltip position={tooltipPos} content={t('unblockCustomer')}>
+                <Button
+                  variant="icon-danger"
+                  size="custom"
+                  onClick={(e) => { e.stopPropagation(); onBlock(row); }}
+                  disabled={blockingOrderId === row._id}
+                  aria-label={t('unblockCustomer')}
+                >
+                  {blockingOrderId === row._id
+                    ? <LuRefreshCw size={16} className="animate-spin" />
+                    : <LuBan size={16} />}
+                </Button>
+              </Tooltip>
+            ) : (
+              <Tooltip position={tooltipPos} content={t('blockCustomer')}>
+                <Button
+                  variant="icon-primary"
+                  size="custom"
+                  onClick={(e) => { e.stopPropagation(); onBlock(row); }}
+                  disabled={blockingOrderId === row._id || row.isGuest || !row.userId}
+                  aria-label={t('blockCustomer')}
+                >
+                  {blockingOrderId === row._id
+                    ? <LuRefreshCw size={16} className="animate-spin" />
+                    : <LuBan size={16} />}
+                </Button>
+              </Tooltip>
+            )}
           </div>
 
           <div className="flex flex-row gap-2">
@@ -250,32 +300,15 @@ export function useOrderColumns(callbacks: ColumnCallbacks) {
               </Button>
             </Tooltip>
 
-            {row.userId && blockedUserIds.has(row.userId) ? (
-              <Tooltip position={tooltipPos} content={t('unblockCustomer')}>
-                <Button
-                  variant="icon-danger"
-                  size="custom"
-                  onClick={(e) => { e.stopPropagation(); onBlock(row); }}
-                  disabled={blockingOrderId === row._id}
-                  aria-label={t('unblockCustomer')}
-                >
-                  {blockingOrderId === row._id
-                    ? <LuRefreshCw size={16} className="animate-spin" />
-                    : <LuBan size={16} />}
-                </Button>
-              </Tooltip>
-            ) : (
-              <Tooltip position={tooltipPos} content={t('blockCustomer')}>
+            {!row.isSubOrder && !row.hasSubOrder && !row.isFreeOrder && (
+              <Tooltip position={tooltipPos} content={t('subOrder.title') || 'Create Sub Order'}>
                 <Button
                   variant="icon-primary"
                   size="custom"
-                  onClick={(e) => { e.stopPropagation(); onBlock(row); }}
-                  disabled={blockingOrderId === row._id || row.isGuest || !row.userId}
-                  aria-label={t('blockCustomer')}
+                  onClick={(e) => { e.stopPropagation(); onCreateSubOrder(row); }}
+                  aria-label={t('subOrder.title') || 'Create Sub Order'}
                 >
-                  {blockingOrderId === row._id
-                    ? <LuRefreshCw size={16} className="animate-spin" />
-                    : <LuBan size={16} />}
+                  <LuSplit size={16} />
                 </Button>
               </Tooltip>
             )}

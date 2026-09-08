@@ -14,6 +14,7 @@ export type Customer = {
   ref: string | null;
   tier?: string | null;
   createdAt: string;
+  termsAgreedAt?: string;
 };
 
 export type UserTier = {

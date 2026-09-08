@@ -17,6 +17,7 @@ interface CustomerInfoModalProps {
     lastLoginAt?: string;
     detectedCountry?: string | null;
     isAdminCreated?: boolean;
+    termsAgreedAt?: string;
   } | null;
 }
 
@@ -99,6 +100,16 @@ export default function CustomerInfoModal({
             </p>
             <p className="text-sm font-medium text-foreground">
               {customer.detectedCountry || t('notAvailable')}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs uppercase text-secondary">
+              {t('termsAgreedAt')}
+            </p>
+            <p className="text-sm font-medium text-foreground">
+              {customer.termsAgreedAt
+                ? new Date(customer.termsAgreedAt).toLocaleString()
+                : t('notAvailable')}
             </p>
           </div>
         </div>

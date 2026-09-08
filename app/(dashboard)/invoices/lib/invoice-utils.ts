@@ -12,6 +12,8 @@ export interface InvoiceRow {
   _id: string;
   orderId: string;
   orderNumber: string;
+  linkedOrderNumber?: string;
+  isSubOrder?: boolean;
   invoiceIndex: number;
   url: string;
   invoiceStatus: string;

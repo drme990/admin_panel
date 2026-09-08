@@ -635,7 +635,19 @@
     "noPaymentLink": "No payment link available",
     "paymentLinkCopied": "Payment link copied",
     "paymentLinkRegenerated": "Payment link regenerated",
-    "regenerateFailed": "Failed to regenerate link"
+    "regenerateFailed": "Failed to regenerate link",
+    "freeOrderLabel": "Free",
+    "subOrder": {
+      "title": "Create Sub Order",
+      "create": "Create Sub Order",
+      "parentOrder": "Parent Order",
+      "inheritedFromParent": "Customer info, invoices, and payment timeline are inherited from the parent order.",
+      "subOrderBadge": "Sub",
+      "hasSubOrderBadge": "Has Sub",
+      "viewParent": "View parent order",
+      "viewSub": "View sub order",
+      "successTitle": "Sub order created successfully"
+    }
   },
   "orderDesigns": {
     "title": "Order Designs",
@@ -990,6 +1002,7 @@
     "paymentLinkCopied": "Payment link copied",
     "paymentLinkRegenerated": "Payment link regenerated",
     "regenerateFailed": "Failed to regenerate link",
+    "freeOrderLabel": "Free",
     "messages": {
       "downloadFailed": "Failed to download file"
     },
@@ -1209,7 +1222,7 @@
       "customerType": "Customer Type",
       "itemCount": "{count} item(s)",
       "quantityTotal": "Qty {count}",
-      "amount": "Amount",
+      "paidAmount": "Paid",
       "remainingAmount": "Remaining Amount",
       "paidOfFull": "Paid {paid} / {full} {currency}",
       "remaining": "Remaining {remaining} {currency}",
@@ -1239,6 +1252,17 @@
       "invoiceStatusWaiting": "Invoice marked as waiting",
       "invoiceStatusUpdated": "Invoice status updated",
       "invoiceStatusUpdateFailed": "Failed to update invoice status"
+    },
+    "subOrder": {
+      "title": "Create Sub Order",
+      "create": "Create Sub Order",
+      "parentOrder": "Parent Order",
+      "inheritedFromParent": "Customer info, invoices, and payment timeline are inherited from the parent order.",
+      "subOrderBadge": "Sub",
+      "hasSubOrderBadge": "Has Sub",
+      "viewParent": "View parent order",
+      "viewSub": "View sub order",
+      "successTitle": "Sub order created successfully"
     }
   },
   "admin": {
@@ -2414,6 +2438,7 @@
         "lastLoginIp": "Last Login IP",
         "lastLoginTime": "Last Login Time",
         "detectedCountry": "Detected Country",
+        "termsAgreedAt": "Terms Agreed At",
         "notAvailable": "N/A"
       },
       "countrySetterModal": {

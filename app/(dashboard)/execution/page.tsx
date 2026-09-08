@@ -34,6 +34,7 @@ import {
 import OrderDetailModal from '@/components/order/order-detail-modal';
 import ChangeStatusModal from '@/components/order/change-status-modal';
 import CreateManualOrderModal from '@/components/order/create-manual-order-modal';
+import CreateSubOrderModal from '@/components/order/create-sub-order-modal';
 import OrderStats from '@/components/order/order-stats';
 import OrderGalleryModal from '@/components/order/order-gallery-modal';
 import InvoicePreviewModal from '@/components/order/invoice-preview-modal';
@@ -92,6 +93,8 @@ export default function ExecutionPage() {
   const [invoicePreviewOrder, setInvoicePreviewOrder] = useState<Order | null>(null);
   const [bulkExecutionDateTargetIds, setBulkExecutionDateTargetIds] = useState<string[] | null>(null);
   const [isCreateManualOrderModalOpen, setIsCreateManualOrderModalOpen] = useState(false);
+  const [subOrderParent, setSubOrderParent] = useState<Order | null>(null);
+  const [isSubOrderModalOpen, setIsSubOrderModalOpen] = useState(false);
   const { confirm, modalProps } = useConfirmModal();
 
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
@@ -667,6 +670,23 @@ export default function ExecutionPage() {
       toast.error(t('orderHistory.loadFailed'));
     } finally {
       setLoadingOrderHistory(false);
+    }
+  };
+
+  const handleCreateSubOrder = (order: Order) => {
+    setSubOrderParent(order);
+    setIsSubOrderModalOpen(true);
+  };
+
+  const handleSwapOrder = async (orderId: string) => {
+    try {
+      const res = await fetch(`/api/orders/${orderId}`);
+      const data = await res.json();
+      if (data.success) {
+        viewOrder(data.data);
+      }
+    } catch {
+      toast.error('Failed to load order');
     }
   };
 
@@ -1627,6 +1647,7 @@ export default function ExecutionPage() {
     onChangeStatus: handleChangeStatus,
     onViewHistory: handleViewHistory,
     onBlock: handleBlockCustomer,
+    onCreateSubOrder: handleCreateSubOrder,
     onToggleSelect: toggleOrderSelection,
     onToggleSelectAll: toggleSelectAll,
     selectedOrderIds,
@@ -2158,6 +2179,7 @@ export default function ExecutionPage() {
         isCreatingPaymentLink={selectedOrder ? creatingPaymentLinkOrderId === selectedOrder._id : false}
         onDesignReviewChange={handleDesignReviewChange}
         onInvoiceStatusChange={handleInvoiceStatusChange}
+        onSwapOrder={handleSwapOrder}
       />
 
       <ChangeExecutionDateModal
@@ -2223,6 +2245,20 @@ export default function ExecutionPage() {
           void fetchExecution();
           void fetchExecutionStats();
         }}
+        namespace="execution"
+      />
+
+      <CreateSubOrderModal
+        isOpen={isSubOrderModalOpen}
+        onClose={() => {
+          setIsSubOrderModalOpen(false);
+          setSubOrderParent(null);
+        }}
+        onSuccess={() => {
+          void fetchExecution();
+          void fetchExecutionStats();
+        }}
+        parentOrder={subOrderParent}
         namespace="execution"
       />
 

@@ -244,7 +244,21 @@ export default function InvoicesPage() {
 
             const rows: InvoiceRow[] = [];
 
+            // Build a set of order IDs present in the current page so we can
+            // skip sub-order invoice rows when the parent is also present
+            // (invoices are live-shared, so both would produce duplicates).
+            const pageOrderIds = new Set(
+                (data.data.orders as Order[]).map((o) => String(o._id)),
+            );
+
             for (const order of data.data.orders as Order[]) {
+                // Skip sub-order rows if the parent is also in this page —
+                // the parent's rows already carry the shared invoices and
+                // will display the sub-order's number as a linked order.
+                if (order.isSubOrder && order.parentOrderId && pageOrderIds.has(String(order.parentOrderId))) {
+                    continue;
+                }
+
                 const invoiceUrls = ((order.invoiceUrls || []) as InvoiceEntry[]);
                 // Derive payment method from the latest paid payment
                 const payments = order.payments || [];
@@ -252,6 +266,11 @@ export default function InvoicesPage() {
                     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
                     .find((p) => p.status === 'paid');
                 const paymentMethod = paidPayment?.paymentMethod || order.paymentMethod;
+
+                // The backend includes linkedOrderNumber on orders that have
+                // a parent or sub-order, even when the linked order is not in
+                // the current page (e.g. during search).
+                const linkedOrderNumber = (order as unknown as Record<string, unknown>).linkedOrderNumber as string | undefined;
 
                 invoiceUrls.forEach((inv, idx) => {
                     const invoiceStatus: string = inv.invoiceStatus ?? 'waiting';
@@ -263,6 +282,8 @@ export default function InvoicesPage() {
                         _id: `${order._id}_${idx}`,
                         orderId: order._id,
                         orderNumber: order.orderNumber,
+                        linkedOrderNumber,
+                        isSubOrder: order.isSubOrder,
                         invoiceIndex: idx,
                         url: inv.url,
                         invoiceStatus,

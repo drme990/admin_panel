@@ -32,6 +32,8 @@ import {
   LuPercent,
   LuGift,
   LuUserCog,
+  LuArrowLeft,
+  LuArrowRight,
 } from 'react-icons/lu';
 import Image from 'next/image';
 
@@ -51,6 +53,9 @@ interface Props {
   /** Called when an invoice status is changed from the invoice preview modal. */
   onInvoiceStatusChange?: (orderId: string, invoiceUrls: Order['invoiceUrls']) => Promise<void>;
   onInvoiceEditValue?: (orderId: string, invoiceUrls: Order['invoiceUrls']) => Promise<void>;
+  /** Called when the user clicks a parent/sub-order navigation arrow.
+   * The parent page should fetch the linked order and replace `order` in place. */
+  onSwapOrder?: (orderId: string) => void;
 }
 
 function isOrderGuest(order: Pick<Order, 'userId' | 'isGuest'>): boolean {
@@ -159,6 +164,7 @@ export default function OrderDetailModal({
   onDesignReviewChange,
   onInvoiceStatusChange,
   onInvoiceEditValue,
+  onSwapOrder,
 }: Props) {
   const t = useTranslations(namespace);
   const [copiedPaymentId, setCopiedPaymentId] = useState<string | null>(null);
@@ -246,9 +252,54 @@ export default function OrderDetailModal({
         isOpen={isOpen}
         onClose={onClose}
         title={
-          order
-            ? `${t('orderDetails')} - ${order.orderNumber}`
-            : t('orderDetails')
+          order ? (
+            <div className="flex items-center gap-2">
+              {/* Parent / Sub-order navigation arrows (locale-aware) */}
+              {onSwapOrder && (order.isSubOrder || order.hasSubOrder) && (
+                <>
+                  {order.isSubOrder && order.parentOrderId && (
+                    <Tooltip position={locale === 'ar' ? 'left' : 'right'} content={t('subOrder.viewParent') || 'View parent order'}>
+                      <button
+                        type="button"
+                        onClick={() => onSwapOrder(order.parentOrderId!)}
+                        className="p-1.5 rounded-lg hover:bg-muted/50 transition-colors text-secondary hover:text-foreground"
+                        aria-label={t('subOrder.viewParent') || 'View parent order'}
+                      >
+                        {locale === 'ar' ? <LuArrowRight size={20} /> : <LuArrowLeft size={20} />}
+                      </button>
+                    </Tooltip>
+                  )}
+                  {order.hasSubOrder && order.subOrderId && (
+                    <Tooltip position={locale === 'ar' ? 'left' : 'right'} content={t('subOrder.viewSub') || 'View sub order'}>
+                      <button
+                        type="button"
+                        onClick={() => onSwapOrder(order.subOrderId!)}
+                        className="p-1.5 rounded-lg hover:bg-muted/50 transition-colors text-secondary hover:text-foreground"
+                        aria-label={t('subOrder.viewSub') || 'View sub order'}
+                      >
+                        {locale === 'ar' ? <LuArrowLeft size={20} /> : <LuArrowRight size={20} />}
+                      </button>
+                    </Tooltip>
+                  )}
+                </>
+              )}
+              <span>
+                {t('orderDetails')} - {order.orderNumber}
+              </span>
+              {order.isSubOrder && (
+                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-primary/10 text-primary">
+                  {t('subOrder.subOrderBadge') || 'Sub'}
+                </span>
+              )}
+              {order.hasSubOrder && (
+                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                  {t('subOrder.hasSubOrderBadge') || 'Has Sub'}
+                </span>
+              )}
+            </div>
+          ) : (
+            t('orderDetails')
+          )
         }
         size="lg"
       >
@@ -767,15 +818,6 @@ export default function OrderDetailModal({
                         icon={<LuHash size={14} />}
                         label={t('locale')}
                         value={order.locale || 'N/A'}
-                      />
-                      <InfoRow
-                        icon={<LuHash size={14} />}
-                        label={t('termsAgreedAt')}
-                        value={
-                          order.termsAgreedAt
-                            ? formatDate(order.termsAgreedAt)
-                            : 'N/A'
-                        }
                       />
                       {order.referralId && (
                         <InfoRow

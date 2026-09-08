@@ -635,7 +635,19 @@
     "noPaymentLink": "لا يوجد رابط دفع متاح",
     "paymentLinkCopied": "تم نسخ رابط الدفع",
     "paymentLinkRegenerated": "تم إعادة إنشاء رابط الدفع",
-    "regenerateFailed": "فشل إعادة إنشاء الرابط"
+    "regenerateFailed": "فشل إعادة إنشاء الرابط",
+    "freeOrderLabel": "مجاني",
+    "subOrder": {
+      "title": "إنشاء طلب فرعي",
+      "create": "إنشاء طلب فرعي",
+      "parentOrder": "الطلب الأصلي",
+      "inheritedFromParent": "معلومات العميل والفواتير وسجل المدفوعات موروثة من الطلب الأصلي.",
+      "subOrderBadge": "فرعي",
+      "hasSubOrderBadge": "له فرعي",
+      "viewParent": "عرض الطلب الأصلي",
+      "viewSub": "عرض الطلب الفرعي",
+      "successTitle": "تم إنشاء الطلب الفرعي بنجاح"
+    }
   },
   "orderDesigns": {
     "title": "تصاميم الطلبات",
@@ -990,6 +1002,7 @@
     "paymentLinkCopied": "تم نسخ رابط الدفع",
     "paymentLinkRegenerated": "تم إعادة إنشاء رابط الدفع",
     "regenerateFailed": "فشل إعادة إنشاء الرابط",
+    "freeOrderLabel": "مجاني",
     "messages": {
       "downloadFailed": "فشل تحميل الملف"
     },
@@ -1208,7 +1221,7 @@
       "customerType": "نوع العميل",
       "itemCount": "{count} منتج",
       "quantityTotal": "الكمية {count}",
-      "amount": "المبلغ",
+      "paidAmount": "مدفوع",
       "remainingAmount": "المتبقي",
       "paidOfFull": "المدفوع {paid} / {full} {currency}",
       "remaining": "المتبقي {remaining} {currency}",
@@ -1238,6 +1251,17 @@
       "invoiceStatusWaiting": "تم وضع الفاتورة بانتظار التأكيد",
       "invoiceStatusUpdated": "تم تحديث حالة الفاتورة",
       "invoiceStatusUpdateFailed": "فشل تحديث حالة الفاتورة"
+    },
+    "subOrder": {
+      "title": "إنشاء طلب فرعي",
+      "create": "إنشاء طلب فرعي",
+      "parentOrder": "الطلب الأصلي",
+      "inheritedFromParent": "معلومات العميل والفواتير وسجل المدفوعات موروثة من الطلب الأصلي.",
+      "subOrderBadge": "فرعي",
+      "hasSubOrderBadge": "له فرعي",
+      "viewParent": "عرض الطلب الأصلي",
+      "viewSub": "عرض الطلب الفرعي",
+      "successTitle": "تم إنشاء الطلب الفرعي بنجاح"
     }
   },
   "admin": {
@@ -2413,6 +2437,7 @@
         "lastLoginIp": "آخر IP لتسجيل الدخول",
         "lastLoginTime": "آخر وقت لتسجيل الدخول",
         "detectedCountry": "الدولة المكتشفة",
+        "termsAgreedAt": "موافقة على الشروط",
         "notAvailable": "غير متوفر"
       },
       "countrySetterModal": {

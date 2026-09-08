@@ -20,6 +20,7 @@ import { useOrderColumns } from '@/components/order/order-table-columns';
 import OrderDetailModal from '@/components/order/order-detail-modal';
 import ChangeStatusModal from '@/components/order/change-status-modal';
 import CreateManualOrderModal from '@/components/order/create-manual-order-modal';
+import CreateSubOrderModal from '@/components/order/create-sub-order-modal';
 import OrderHistoryModal, { OrderHistoryEntry } from '@/components/order/order-history-modal';
 import OrderStats from '@/components/order/order-stats';
 import useOrderPage from '@/lib/order/use-order-page';
@@ -129,6 +130,8 @@ export default function OrderHistoryPage() {
   });
 
   const [isCreateManualOrderModalOpen, setIsCreateManualOrderModalOpen] = useState(false);
+  const [subOrderParent, setSubOrderParent] = useState<Order | null>(null);
+  const [isSubOrderModalOpen, setIsSubOrderModalOpen] = useState(false);
 
   const {
     orders,
@@ -495,6 +498,23 @@ export default function OrderHistoryPage() {
     }
   };
 
+  const handleCreateSubOrder = (order: Order) => {
+    setSubOrderParent(order);
+    setIsSubOrderModalOpen(true);
+  };
+
+  const handleSwapOrder = async (orderId: string) => {
+    try {
+      const res = await fetch(`/api/orders/${orderId}`);
+      const data = await res.json();
+      if (data.success) {
+        viewOrder(data.data);
+      }
+    } catch {
+      toast.error('Failed to load order');
+    }
+  };
+
   const handleBlockCustomer = async (order: Order) => {
     if (order.isGuest || !order.userId || !order.source) {
       toast.error(t('blockCustomerGuest'));
@@ -826,6 +846,7 @@ export default function OrderHistoryPage() {
     onChangeStatus: handleChangeStatus,
     onViewHistory: handleViewHistory,
     onBlock: handleBlockCustomer,
+    onCreateSubOrder: handleCreateSubOrder,
     onToggleSelect: toggleOrderSelection,
     onToggleSelectAll: toggleSelectAll,
     selectedOrderIds,
@@ -926,6 +947,7 @@ export default function OrderHistoryPage() {
         isCreatingPaymentLink={selectedOrder ? creatingPaymentLinkOrderId === selectedOrder._id : false}
         onInvoiceStatusChange={handleInvoiceStatusChange}
         onInvoiceEditValue={handleInvoiceEditValue}
+        onSwapOrder={handleSwapOrder}
       />
 
       <ChangeStatusModal
@@ -944,6 +966,20 @@ export default function OrderHistoryPage() {
           void fetchOrders();
           void fetchStats();
         }}
+        namespace="orders"
+      />
+
+      <CreateSubOrderModal
+        isOpen={isSubOrderModalOpen}
+        onClose={() => {
+          setIsSubOrderModalOpen(false);
+          setSubOrderParent(null);
+        }}
+        onSuccess={() => {
+          void fetchOrders();
+          void fetchStats();
+        }}
+        parentOrder={subOrderParent}
         namespace="orders"
       />
 

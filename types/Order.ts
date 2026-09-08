@@ -234,8 +234,6 @@ export interface Order {
   /** Daily execution sequence number, reset to 1 for each execution date */
   executionNumber?: number;
   statusUpdateTime: string;
-  // Terms
-  termsAgreedAt?: string;
   reservationData?: ReservationOrderField[];
   paymentMethod?: PaymentMethod;
   payments?: OrderPayment[];
@@ -251,6 +249,12 @@ export interface Order {
   createdByAdminId?: string;
   createdByAdminEmail?: string;
   createdByAdminName?: string;
+  // Sub-order linking
+  parentOrderId?: string;
+  isSubOrder?: boolean;
+  hasSubOrder?: boolean;
+  subOrderId?: string;
+  subOrder?: { _id: string; orderNumber: string; totalAmount: number; status: string };
   createdAt: string;
   updatedAt: string;
 }

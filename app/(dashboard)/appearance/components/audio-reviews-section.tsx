@@ -93,7 +93,7 @@ function MiniAudioPlayer({
   const progress = duration ? (currentTime / duration) * 100 : 0;
 
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex items-center gap-2 xs:gap-3">
       <audio
         ref={audioRef}
         src={src}
@@ -109,7 +109,7 @@ function MiniAudioPlayer({
         aria-label={isPlaying ? t('audio.pause') : t('audio.play')}
         variant="icon"
         size="custom"
-        className="text-primary bg-background border border-stroke hover:bg-primary/10 transition-colors h-10 w-10 shrink-0"
+        className="text-primary bg-background border border-stroke hover:bg-primary/10 transition-colors h-9 w-9 xs:h-10 xs:w-10 shrink-0"
       >
         {isPlaying ? (
           <LuPause className="w-4 h-4" />
@@ -118,7 +118,7 @@ function MiniAudioPlayer({
         )}
       </Button>
 
-      <div className="flex-1 flex flex-col gap-1">
+      <div className="flex-1 flex flex-col gap-1 min-w-0">
         <div
           ref={progressRef}
           onClick={seek}
@@ -204,18 +204,19 @@ export default function AudioReviewsSection(props: AudioReviewsSectionProps) {
   );
 
   return (
-    <section className="space-y-6 border border-stroke/60 rounded-2xl p-6 bg-card-bg shadow-sm">
-      <div className="flex items-start justify-between gap-4">
-        <div className="space-y-1">
-          <h2 className="text-xl font-semibold tracking-tight">
+    <section className="space-y-4 xs:space-y-6 border border-stroke/60 rounded-xl xs:rounded-2xl p-4 xs:p-6 bg-card-bg shadow-sm overflow-x-hidden">
+      {/* Header: stacks on xs, inline on sm+ */}
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
+        <div className="space-y-1 min-w-0">
+          <h2 className="text-lg xs:text-xl font-semibold tracking-tight">
             {t('audio.title')}
           </h2>
 
-          <p className="text-sm text-secondary/80 leading-relaxed">
+          <p className="text-xs xs:text-sm text-secondary/80 leading-relaxed">
             {t('audio.description')}
           </p>
 
-          <span className="text-xs font-medium bg-primary/10 text-primary px-3 py-1.5 rounded-full whitespace-nowrap">
+          <span className="inline-block text-xs font-medium bg-primary/10 text-primary px-3 py-1.5 rounded-full whitespace-nowrap mt-1">
             {total}{' '}
             {total === 1 ? t('audio.count_single') : t('audio.count_multiple')}
           </span>
@@ -225,9 +226,9 @@ export default function AudioReviewsSection(props: AudioReviewsSectionProps) {
           variant="primary"
           onClick={() => inputRef.current?.click()}
           disabled={uploading}
-          className="flex items-center gap-2 px-5 py-2.5"
+          className="flex items-center gap-2 px-4 xs:px-5 py-2 xs:py-2.5 w-full sm:w-auto justify-center shrink-0"
         >
-          <LuUpload className="w-4 h-4" />
+          <LuUpload className="w-4 h-4 shrink-0" />
 
           {uploading ? t('audio.uploading') : t('audio.addAudio')}
         </Button>
@@ -242,65 +243,68 @@ export default function AudioReviewsSection(props: AudioReviewsSectionProps) {
           </p>
         </div>
       ) : (
-        <div className="grid gap-4 max-h-150 overflow-y-auto">
+        <div className="grid gap-3 xs:gap-4 max-h-150 overflow-y-auto">
           {audioReviews.map((audio) => (
             <div
               key={audio.id}
-              className="group border border-stroke/50 rounded-xl p-5 bg-background hover:shadow-sm transition-shadow"
+              className="group border border-stroke/50 rounded-xl p-3 xs:p-5 bg-background hover:shadow-sm transition-shadow"
             >
-              {/* Row 1: Controls */}
-              <div className="flex items-center justify-between gap-3 mb-4 pb-3 border-b border-stroke/30">
-                <div className="flex items-center gap-2">
+              {/* Row 1: Controls — stacks on xs, inline on sm+ */}
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3 xs:mb-4 pb-3 border-b border-stroke/30">
+                <div className="flex items-center gap-2 min-w-0">
                   <Button
                     variant={audio.isMain ? 'primary' : 'outline'}
                     size="sm"
                     onClick={() => onSetMain(audio.id)}
-                    className="flex items-center gap-1.5 text-xs"
+                    className="flex items-center gap-1.5 text-xs w-full sm:w-auto justify-center"
                     title={
                       audio.isMain
                         ? t('audio.mainTooltip')
                         : t('audio.setMainTooltip')
                     }
                   >
-                    <LuStar className="w-3.5 h-3.5" />
+                    <LuStar className="w-3.5 h-3.5 shrink-0" />
 
                     {audio.isMain ? t('audio.main') : t('audio.setMain')}
                   </Button>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <Dropdown
-                    options={PLATFORM_OPTIONS.map((p) => ({
-                      label: p.label,
-                      value: p.key,
-                    }))}
-                    value={audio.platform}
-                    onChange={(value) =>
-                      onUpdate(audio.id, {
-                        platform: value as ProjectName,
-                      })
-                    }
-                  />
+                {/* Dropdowns + delete: stack on xs, inline on sm+ */}
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 min-w-0">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 min-w-0">
+                    <Dropdown
+                      options={PLATFORM_OPTIONS.map((p) => ({
+                        label: p.label,
+                        value: p.key,
+                      }))}
+                      value={audio.platform}
+                      onChange={(value) =>
+                        onUpdate(audio.id, {
+                          platform: value as ProjectName,
+                        })
+                      }
+                    />
 
-                  <Dropdown
-                    options={LANGUAGE_OPTIONS.map((l) => ({
-                      label: l.label,
-                      value: l.key,
-                    }))}
-                    value={audio.language}
-                    onChange={(value) =>
-                      onUpdate(audio.id, {
-                        language: value as AudioLanguage,
-                      })
-                    }
-                  />
+                    <Dropdown
+                      options={LANGUAGE_OPTIONS.map((l) => ({
+                        label: l.label,
+                        value: l.key,
+                      }))}
+                      value={audio.language}
+                      onChange={(value) =>
+                        onUpdate(audio.id, {
+                          language: value as AudioLanguage,
+                        })
+                      }
+                    />
+                  </div>
 
                   <Button
                     variant="icon-danger"
                     size="custom"
                     onClick={() => onDelete(audio.id)}
                     aria-label={t('audio.delete')}
-                    className="h-8 w-8"
+                    className="h-8 w-8 self-end sm:self-auto shrink-0"
                   >
                     <LuTrash2 className="w-4 h-4" />
                   </Button>
@@ -308,7 +312,7 @@ export default function AudioReviewsSection(props: AudioReviewsSectionProps) {
               </div>
 
               {/* Row 2: User Image & Names */}
-              <div className="flex items-start gap-4 mb-4">
+              <div className="flex items-start gap-3 xs:gap-4 mb-3 xs:mb-4">
                 <div className="shrink-0 relative">
                   <button
                     type="button"
@@ -326,30 +330,30 @@ export default function AudioReviewsSection(props: AudioReviewsSectionProps) {
                         height={56}
                         src={audio.userImage}
                         alt={audio.nameEn}
-                        className="w-14 h-14 rounded-full object-cover border border-stroke group-hover:opacity-80 transition-opacity"
+                        className="w-12 h-12 xs:w-14 xs:h-14 rounded-full object-cover border border-stroke group-hover:opacity-80 transition-opacity"
                       />
                     ) : (
-                      <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center border border-stroke group-hover:bg-muted/80 transition-colors">
+                      <div className="w-12 h-12 xs:w-14 xs:h-14 rounded-full bg-muted flex items-center justify-center border border-stroke group-hover:bg-muted/80 transition-colors">
                         {uploadingImageId === audio.id ? (
-                          <LuLoader className="w-6 h-6 text-secondary animate-spin" />
+                          <LuLoader className="w-5 h-5 xs:w-6 xs:h-6 text-secondary animate-spin" />
                         ) : (
-                          <LuUser className="w-6 h-6 text-secondary" />
+                          <LuUser className="w-5 h-5 xs:w-6 xs:h-6 text-secondary" />
                         )}
                       </div>
                     )}
 
                     {uploadingImageId !== audio.id && (
                       <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-full overflow-hidden">
-                        <div className="w-14 h-14 rounded-full bg-black/30 flex items-center justify-center">
-                          <LuImage className="w-5 h-5 text-white" />
+                        <div className="w-12 h-12 xs:w-14 xs:h-14 rounded-full bg-black/30 flex items-center justify-center">
+                          <LuImage className="w-4 h-4 xs:w-5 xs:h-5 text-white" />
                         </div>
                       </div>
                     )}
 
                     {uploadingImageId === audio.id && audio.userImage && (
                       <div className="absolute inset-0 flex items-center justify-center rounded-full overflow-hidden">
-                        <div className="w-14 h-14 rounded-full bg-black/30 flex items-center justify-center">
-                          <LuLoader className="w-5 h-5 text-white animate-spin" />
+                        <div className="w-12 h-12 xs:w-14 xs:h-14 rounded-full bg-black/30 flex items-center justify-center">
+                          <LuLoader className="w-4 h-4 xs:w-5 xs:h-5 text-white animate-spin" />
                         </div>
                       </div>
                     )}
@@ -370,8 +374,8 @@ export default function AudioReviewsSection(props: AudioReviewsSectionProps) {
                   )}
                 </div>
 
-                <div className="flex-1 space-y-3">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="flex-1 space-y-3 min-w-0">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="text-xs text-secondary mb-1 block">
                         {t('audio.nameAr')}

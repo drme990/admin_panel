@@ -71,14 +71,15 @@ export default function ProductsBannerSection({
   const tooltipPosition = isRtl ? 'left' : 'right';
 
   return (
-    <section className="space-y-5 border border-stroke rounded-xl p-5 bg-card-bg">
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-lg font-semibold text-foreground">{title}</h2>
-          <p className="text-sm text-secondary mt-0.5">{description}</p>
+    <section className="space-y-5 border border-stroke rounded-xl p-4 xs:p-5 bg-card-bg overflow-x-hidden">
+      {/* Header: stacks on xs, inline on sm+ */}
+      <div className="flex flex-col xs:flex-row gap-3 xs:gap-4 xs:justify-between xs:items-center">
+        <div className="min-w-0">
+          <h2 className="text-base xs:text-lg font-semibold text-foreground">{title}</h2>
+          <p className="text-xs xs:text-sm text-secondary mt-0.5">{description}</p>
         </div>
 
-        <div>
+        <div className="shrink-0">
           <input
             ref={inputRef}
             type="file"
@@ -98,9 +99,9 @@ export default function ProductsBannerSection({
             onClick={() => inputRef.current?.click()}
             disabled={uploading}
             size="sm"
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 w-full xs:w-auto justify-center"
           >
-            <LuUpload className="w-4 h-4" />
+            <LuUpload className="w-4 h-4 shrink-0" />
             {uploading ? uploadingLabel : addLabel}
           </Button>
         </div>
@@ -115,21 +116,23 @@ export default function ProductsBannerSection({
           {banners.map((banner, index) => (
             <div
               key={banner.id}
-              className="border border-stroke rounded-xl p-4 bg-background"
+              className="border border-stroke rounded-xl p-3 xs:p-4 bg-background"
             >
-              <div className="flex flex-row gap-4">
-                <div className="relative w-5/12 aspect-15/7 rounded-site overflow-hidden border border-stroke bg-card-bg">
+              {/* Banner row: stacks on xs, side-by-side on sm+ */}
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+                {/* Image preview */}
+                <div className="relative w-full sm:w-5/12 aspect-15/7 rounded-site overflow-hidden border border-stroke bg-card-bg shrink-0">
                   <Image
                     src={banner.imageUrl}
                     alt={`Products banner ${index + 1}`}
                     fill
                     className="object-cover"
-                    sizes="(max-width: 1024px) 100vw, 800px"
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 400px"
                   />
 
-                  <div className="absolute inset-x-0 top-0 p-2 bg-linear-to-b from-black/60 to-transparent">
+                  <div className="absolute inset-x-0 top-0 p-1.5 xs:p-2 bg-linear-to-b from-black/60 to-transparent">
                     <div
-                      className={`flex items-center gap-2 ${isRtl ? 'justify-start' : 'justify-end'}`}
+                      className={`flex items-center gap-1.5 xs:gap-2 ${isRtl ? 'justify-start' : 'justify-end'}`}
                     >
                       <Tooltip
                         content={moveEarlierLabel}
@@ -142,10 +145,10 @@ export default function ProductsBannerSection({
                           onClick={() => onMove(banner.id, 'up')}
                           disabled={index === 0}
                           aria-label={moveEarlierLabel}
-                          className="w-8 h-8 bg-white/90 text-gray-900 rounded-md flex items-center justify-center hover:bg-white disabled:opacity-40"
+                          className="w-7 h-7 xs:w-8 xs:h-8 bg-white/90 text-gray-900 rounded-md flex items-center justify-center hover:bg-white disabled:opacity-40"
                         >
                           <LuArrowLeft
-                            className={`w-4 h-4 ${isRtl ? 'rotate-180' : ''}`}
+                            className={`w-3.5 h-3.5 xs:w-4 xs:h-4 ${isRtl ? 'rotate-180' : ''}`}
                           />
                         </Button>
                       </Tooltip>
@@ -161,10 +164,10 @@ export default function ProductsBannerSection({
                           onClick={() => onMove(banner.id, 'down')}
                           disabled={index === banners.length - 1}
                           aria-label={moveLaterLabel}
-                          className="w-8 h-8 bg-white/90 text-gray-900 rounded-md flex items-center justify-center hover:bg-white disabled:opacity-40"
+                          className="w-7 h-7 xs:w-8 xs:h-8 bg-white/90 text-gray-900 rounded-md flex items-center justify-center hover:bg-white disabled:opacity-40"
                         >
                           <LuArrowRight
-                            className={`w-4 h-4 ${isRtl ? 'rotate-180' : ''}`}
+                            className={`w-3.5 h-3.5 xs:w-4 xs:h-4 ${isRtl ? 'rotate-180' : ''}`}
                           />
                         </Button>
                       </Tooltip>
@@ -175,20 +178,23 @@ export default function ProductsBannerSection({
                           size="custom"
                           onClick={() => onDelete(banner.id)}
                           aria-label={deleteLabel}
+                          className="w-7 h-7 xs:w-8 xs:h-8"
                         >
-                          <LuTrash2 className="w-4 h-4" />
+                          <LuTrash2 className="w-3.5 h-3.5 xs:w-4 xs:h-4" />
                         </Button>
                       </Tooltip>
                     </div>
                   </div>
 
-                  <span className="absolute top-2 left-2 text-base bg-black/70 text-white px-1.5 py-0.5 rounded font-mono">
+                  <span className="absolute top-1.5 xs:top-2 left-1.5 xs:left-2 text-sm xs:text-base bg-black/70 text-white px-1.5 py-0.5 rounded font-mono">
                     #{index + 1}
                   </span>
                 </div>
 
-                <div className="flex flex-col gap-4 w-7/12">
-                  <div className="grid grid-cols-2">
+                {/* Controls */}
+                <div className="flex flex-col gap-3 xs:gap-4 w-full sm:w-7/12 min-w-0">
+                  {/* Dropdowns: stack on xs, 2 cols on sm+ */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 xs:gap-4">
                     <Dropdown
                       label={targetLabel}
                       options={targetOptions}

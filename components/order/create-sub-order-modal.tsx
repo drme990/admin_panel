@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { toast } from 'react-toastify';
 import {
@@ -8,6 +8,8 @@ import {
   LuPlus,
   LuSplit,
   LuRefreshCw,
+  LuUpload,
+  LuImage,
 } from 'react-icons/lu';
 
 import Modal from '@/components/ui/modal';
@@ -16,6 +18,12 @@ import Input from '@/components/ui/input';
 import Dropdown from '@/components/ui/dropdown';
 import QuantityInput from '@/components/ui/quantity-input';
 import Tabs from '@/components/ui/tabs';
+import Textarea from '@/components/ui/textarea';
+import RadioButton from '@/components/ui/radio-button';
+import Switch from '@/components/ui/switch';
+import CustomDatePicker from '@/components/ui/custom-date-picker';
+import MultiNameInput from '@/components/ui/multi-name-input';
+import { uploadImageToR2, deleteOldImage } from '../../lib/image-upload-utils';
 
 import { Order } from '@/types/Order';
 
@@ -31,6 +39,13 @@ interface Product {
     isAvailable?: boolean;
     designName?: string;
   }>;
+  reservationFields?: Array<{
+    key: string;
+    type: string;
+    label: { ar: string; en: string };
+    required?: boolean;
+    options?: Array<{ ar: string; en: string }>;
+  }>;
 }
 
 interface OrderItemForm {
@@ -44,8 +59,20 @@ interface OrderItemForm {
   customPrice: string;
 }
 
+interface ReservationData {
+  sacrificeFor: string;
+  gender: string;
+  isAlive: string;
+  intention: string;
+  shortDuaa: string;
+  executionDate: string;
+  photo: string;
+}
+
 interface SubOrderFormState {
   items: OrderItemForm[];
+  reservationData: ReservationData;
+  useCustomExecutionDate: boolean;
 }
 
 interface Props {
@@ -69,8 +96,20 @@ function emptyItem(): OrderItemForm {
   };
 }
 
+const DEFAULT_RESERVATION: ReservationData = {
+  sacrificeFor: '',
+  gender: '',
+  isAlive: '',
+  intention: '',
+  shortDuaa: '',
+  executionDate: '',
+  photo: '',
+};
+
 const DEFAULT_FORM: SubOrderFormState = {
   items: [emptyItem()],
+  reservationData: { ...DEFAULT_RESERVATION },
+  useCustomExecutionDate: false,
 };
 
 export default function CreateSubOrderModal({
@@ -87,6 +126,8 @@ export default function CreateSubOrderModal({
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [creating, setCreating] = useState(false);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const photoInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch products on open
   useEffect(() => {
@@ -109,7 +150,11 @@ export default function CreateSubOrderModal({
   // Reset form when modal opens
   useEffect(() => {
     if (isOpen) {
-      setForm({ ...DEFAULT_FORM, items: [emptyItem()] });
+      setForm({
+        items: [emptyItem()],
+        reservationData: { ...DEFAULT_RESERVATION },
+        useCustomExecutionDate: false,
+      });
       setFormErrors({});
     }
   }, [isOpen]);
@@ -147,6 +192,24 @@ export default function CreateSubOrderModal({
     const priceEntry = size.prices?.find((p) => p.currencyCode === currency);
     return priceEntry?.amount || 0;
   }, [products, currency]);
+
+  // Compute the union of REQUIRED reservation field keys across all selected
+  // existing products. Custom products contribute nothing. executionDate is
+  // excluded because the backend always assigns it (defaults to next day).
+  const requiredReservationFieldKeys = useMemo<Set<string>>(() => {
+    const keys = new Set<string>();
+    for (const item of form.items) {
+      if (item.type !== 'existing' || !item.productId) continue;
+      const product = products.find((p) => p._id === item.productId);
+      if (!product?.reservationFields) continue;
+      for (const field of product.reservationFields) {
+        if (field.required && field.key !== 'executionDate') {
+          keys.add(field.key);
+        }
+      }
+    }
+    return keys;
+  }, [form.items, products]);
 
   const addItem = () => {
     setForm((prev) => ({
@@ -189,6 +252,75 @@ export default function CreateSubOrderModal({
     [t],
   );
 
+  const intentionOptions = useMemo(
+    () => [
+      { label: t('createManualOrder.intentionAqeeqah') || 'Aqeeqah', value: 'عقيقة' },
+      { label: t('createManualOrder.intentionSacrifice') || 'Sacrifice', value: 'أُضحيــَــة' },
+      { label: t('createManualOrder.intentionCharity') || 'Charity', value: 'صدقة' },
+      { label: t('createManualOrder.intentionVow') || 'Vow', value: 'نذر' },
+      { label: t('createManualOrder.intentionProtective') || 'Protective', value: 'فدو' },
+    ],
+    [t],
+  );
+
+  const genderOptions = useMemo(
+    () => [
+      { label: t('createManualOrder.genderMale') || 'Male', value: 'ذكر' },
+      { label: t('createManualOrder.genderFemale') || 'Female', value: 'انثى' },
+      { label: t('createManualOrder.genderBoth') || 'Both', value: 'ذكور و اناث' },
+    ],
+    [t],
+  );
+
+  const isAliveOptions = useMemo(
+    () => [
+      { label: t('createManualOrder.statusAlive') || 'Alive', value: 'حي' },
+      { label: t('createManualOrder.statusDead') || 'Dead', value: 'متوفي' },
+      { label: t('createManualOrder.statusBoth') || 'Both', value: 'احياء و متوفين' },
+    ],
+    [t],
+  );
+
+  const handlePhotoFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = '';
+
+    try {
+      setUploadingPhoto(true);
+      const oldPhotoUrl = form.reservationData.photo;
+      const url = await uploadImageToR2(file);
+      setForm((prev) => ({
+        ...prev,
+        reservationData: { ...prev.reservationData, photo: url },
+      }));
+
+      if (oldPhotoUrl) {
+        await deleteOldImage(oldPhotoUrl);
+      }
+    } catch {
+      toast.error(t('createManualOrder.photoUploadFailed') || 'Failed to upload photo');
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
+  const handleRemovePhoto = async () => {
+    const photoUrl = form.reservationData.photo;
+    if (!photoUrl) return;
+
+    setForm((prev) => ({
+      ...prev,
+      reservationData: { ...prev.reservationData, photo: '' },
+    }));
+
+    try {
+      await deleteOldImage(photoUrl);
+    } catch {
+      // ignore
+    }
+  };
+
   const validateForm = (): Record<string, string> => {
     const errors: Record<string, string> = {};
     if (form.items.length === 0) {
@@ -207,6 +339,16 @@ export default function CreateSubOrderModal({
         if (!Number.isFinite(customPrice) || customPrice <= 0) {
           errors[`item_${index}_price`] = t('createManualOrder.errors.priceRequired') || 'Price must be greater than zero';
         }
+      }
+    });
+    // Enforce per-product required reservation fields (union across selected
+    // existing products). Custom products contribute no required fields.
+    requiredReservationFieldKeys.forEach((fieldKey) => {
+      const value = (form.reservationData as unknown as Record<string, string>)[fieldKey];
+      if (!value || !value.trim()) {
+        errors[`reservation_${fieldKey}`] =
+          t('createManualOrder.errors.reservationFieldRequired') ||
+          'This reservation field is required for the selected product';
       }
     });
     return errors;
@@ -229,6 +371,29 @@ export default function CreateSubOrderModal({
     setFormErrors({});
     setCreating(true);
     try {
+      const reservationData: Array<{ key: string; value: string }> = [];
+      if (form.reservationData.sacrificeFor.trim()) {
+        reservationData.push({ key: 'sacrificeFor', value: form.reservationData.sacrificeFor.trim() });
+      }
+      if (form.reservationData.gender) {
+        reservationData.push({ key: 'gender', value: form.reservationData.gender });
+      }
+      if (form.reservationData.isAlive) {
+        reservationData.push({ key: 'isAlive', value: form.reservationData.isAlive });
+      }
+      if (form.reservationData.intention) {
+        reservationData.push({ key: 'intention', value: form.reservationData.intention });
+      }
+      if (form.reservationData.shortDuaa.trim()) {
+        reservationData.push({ key: 'shortDuaa', value: form.reservationData.shortDuaa.trim() });
+      }
+      if (form.useCustomExecutionDate && form.reservationData.executionDate.trim()) {
+        reservationData.push({ key: 'executionDate', value: form.reservationData.executionDate.trim() });
+      }
+      if (form.reservationData.photo.trim()) {
+        reservationData.push({ key: 'photo', value: form.reservationData.photo.trim() });
+      }
+
       const res = await fetch(`/api/orders/${parentOrder?._id}/sub-order`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -238,6 +403,7 @@ export default function CreateSubOrderModal({
               ? { type: 'custom', name: item.customName.trim(), size: item.customSize.trim() || undefined, quantity: item.quantity, price: parseFloat(item.customPrice) }
               : { type: 'existing', productId: item.productId, quantity: item.quantity, sizeIndex: item.sizeIndex, customPrice: item.overridePrice ? parseFloat(item.overridePrice) : undefined }
           ),
+          reservationData,
         }),
       });
 
@@ -255,7 +421,11 @@ export default function CreateSubOrderModal({
   };
 
   const handleClose = () => {
-    setForm({ ...DEFAULT_FORM, items: [emptyItem()] });
+    setForm({
+      items: [emptyItem()],
+      reservationData: { ...DEFAULT_RESERVATION },
+      useCustomExecutionDate: false,
+    });
     setFormErrors({});
     onClose();
   };
@@ -459,6 +629,250 @@ export default function CreateSubOrderModal({
             </div>
           );
         })}
+      </div>
+
+      {/* Reservation Data */}
+      <div className="border-t border-stroke pt-4">
+        <h4 className="text-sm font-semibold text-foreground mb-3">
+          {t('createManualOrder.reservationData') || 'Reservation Data'}
+        </h4>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div data-error-key="reservation_sacrificeFor">
+            <label className="text-xs font-medium text-secondary mb-1.5 block">
+              {t('createManualOrder.sacrificeFor') || 'Sacrifice For'}
+              {requiredReservationFieldKeys.has('sacrificeFor') && (
+                <span className="text-error ms-0.5">*</span>
+              )}
+            </label>
+            <MultiNameInput
+              value={form.reservationData.sacrificeFor}
+              onChange={(value) =>
+                setForm((prev) => ({
+                  ...prev,
+                  reservationData: { ...prev.reservationData, sacrificeFor: value },
+                }))
+              }
+              placeholder={t('createManualOrder.sacrificeForPlaceholder') || 'Enter name(s)'}
+              isRTL={locale === 'ar'}
+            />
+            {formErrors[`reservation_sacrificeFor`] && (
+              <p className="text-xs text-error mt-1">{formErrors[`reservation_sacrificeFor`]}</p>
+            )}
+          </div>
+          <div data-error-key="reservation_intention">
+            <label className="text-xs font-medium text-secondary mb-1.5 block">
+              {t('createManualOrder.intention') || 'Intention'}
+              {requiredReservationFieldKeys.has('intention') && (
+                <span className="text-error ms-0.5">*</span>
+              )}
+            </label>
+            <Dropdown
+              value={form.reservationData.intention}
+              options={intentionOptions}
+              onChange={(val) =>
+                setForm((prev) => ({
+                  ...prev,
+                  reservationData: { ...prev.reservationData, intention: val },
+                }))
+              }
+              placeholder={t('createManualOrder.selectIntention') || 'Select intention'}
+            />
+            {formErrors[`reservation_intention`] && (
+              <p className="text-xs text-error mt-1">{formErrors[`reservation_intention`]}</p>
+            )}
+          </div>
+          <div data-error-key="reservation_gender">
+            <label className="text-xs font-medium text-secondary mb-1.5 block">
+              {t('createManualOrder.gender') || 'Gender'}
+              {requiredReservationFieldKeys.has('gender') && (
+                <span className="text-error ms-0.5">*</span>
+              )}
+            </label>
+            <div className="flex flex-wrap gap-4">
+              {genderOptions.map((option) => (
+                <RadioButton
+                  key={`gender-${option.value}`}
+                  id={`gender-${option.value}`}
+                  name="sub-order-gender"
+                  value={option.value}
+                  label={option.label}
+                  checked={form.reservationData.gender === option.value}
+                  onChange={(val) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      reservationData: { ...prev.reservationData, gender: val },
+                    }))
+                  }
+                />
+              ))}
+            </div>
+            {formErrors[`reservation_gender`] && (
+              <p className="text-xs text-error mt-1">{formErrors[`reservation_gender`]}</p>
+            )}
+          </div>
+          <div data-error-key="reservation_isAlive">
+            <label className="text-xs font-medium text-secondary mb-1.5 block">
+              {t('createManualOrder.isAlive') || 'Status'}
+              {requiredReservationFieldKeys.has('isAlive') && (
+                <span className="text-error ms-0.5">*</span>
+              )}
+            </label>
+            <div className="flex flex-wrap gap-4">
+              {isAliveOptions.map((option) => (
+                <RadioButton
+                  key={`status-${option.value}`}
+                  id={`status-${option.value}`}
+                  name="sub-order-status"
+                  value={option.value}
+                  label={option.label}
+                  checked={form.reservationData.isAlive === option.value}
+                  onChange={(val) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      reservationData: { ...prev.reservationData, isAlive: val },
+                    }))
+                  }
+                />
+              ))}
+            </div>
+            {formErrors[`reservation_isAlive`] && (
+              <p className="text-xs text-error mt-1">{formErrors[`reservation_isAlive`]}</p>
+            )}
+          </div>
+          <div className="sm:col-span-2" data-error-key="reservation_shortDuaa">
+            <label className="text-xs font-medium text-secondary mb-1.5 block">
+              {t('createManualOrder.shortDuaa') || 'Short Duaa'}
+              {requiredReservationFieldKeys.has('shortDuaa') && (
+                <span className="text-error ms-0.5">*</span>
+              )}
+            </label>
+            <Textarea
+              value={form.reservationData.shortDuaa}
+              onChange={(value) =>
+                setForm((prev) => ({
+                  ...prev,
+                  reservationData: { ...prev.reservationData, shortDuaa: value },
+                }))
+              }
+              placeholder={t('createManualOrder.shortDuaa') || 'Short Duaa'}
+              rows={2}
+              maxLength={250}
+              showCount
+            />
+            {formErrors[`reservation_shortDuaa`] && (
+              <p className="text-xs text-error mt-1">{formErrors[`reservation_shortDuaa`]}</p>
+            )}
+          </div>
+
+          <div className="sm:col-span-2 mb-3" data-error-key="reservation_photo">
+            <label className="text-xs font-medium text-secondary mb-1.5 block">
+              {t('createManualOrder.photo') || 'Photo'}
+              {requiredReservationFieldKeys.has('photo') && (
+                <span className="text-error ms-0.5">*</span>
+              )}
+            </label>
+            <div className="flex items-center gap-3 flex-wrap">
+              <Button
+                variant="outline"
+                size="custom"
+                className="px-3 py-2"
+                onClick={() => photoInputRef.current?.click()}
+                disabled={uploadingPhoto}
+              >
+                {uploadingPhoto ? (
+                  <LuRefreshCw size={16} className="animate-spin me-2" />
+                ) : (
+                  <LuUpload size={16} className="me-2" />
+                )}
+                {form.reservationData.photo
+                  ? t('createManualOrder.changePhoto') || 'Change Photo'
+                  : t('createManualOrder.uploadPhoto') || 'Upload Photo'}
+              </Button>
+
+              {form.reservationData.photo && (
+                <button
+                  type="button"
+                  onClick={handleRemovePhoto}
+                  className="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-error/30 text-error hover:bg-error/10 transition-colors shrink-0"
+                  title={t('createManualOrder.removePhoto') || 'Remove Photo'}
+                >
+                  <LuX size={16} />
+                </button>
+              )}
+            </div>
+
+            {form.reservationData.photo && (
+              <div className="mt-3">
+                <div className="relative w-64 h-64 rounded-lg overflow-hidden border border-stroke shrink-0 group">
+                  {/* eslint-disable-next-line @next/next/no-img-element -- dynamic user-provided URL */}
+                  <img
+                    src={form.reservationData.photo}
+                    alt="User photo"
+                    className="w-full h-full object-cover"
+                  />
+                  <a
+                    href={form.reservationData.photo}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="absolute inset-0 bg-black/0 group-hover:bg-black/30 flex items-center justify-center transition-colors"
+                    title={t('createManualOrder.viewPhoto') || 'View Photo'}
+                  >
+                    <LuImage size={32} className="text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </a>
+                </div>
+              </div>
+            )}
+            {formErrors[`reservation_photo`] && (
+              <p className="text-xs text-error mt-1">{formErrors[`reservation_photo`]}</p>
+            )}
+          </div>
+
+          <input
+            ref={photoInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handlePhotoFileChange}
+          />
+        </div>
+
+        <div className="flex flex-col gap-3 mt-4">
+          <Switch
+            checked={form.useCustomExecutionDate}
+            onChange={(checked) => {
+              setForm((prev) => ({
+                ...prev,
+                useCustomExecutionDate: checked,
+                reservationData: checked
+                  ? prev.reservationData
+                  : { ...prev.reservationData, executionDate: '' },
+              }));
+            }}
+            label={t('createManualOrder.customExecutionDate') || 'Custom Execution Date'}
+          />
+          {form.useCustomExecutionDate && (
+            <CustomDatePicker
+              value={form.reservationData.executionDate}
+              onChange={(val) =>
+                setForm((prev) => ({
+                  ...prev,
+                  reservationData: { ...prev.reservationData, executionDate: val },
+                }))
+              }
+              locale={locale}
+              placeholder={t('createManualOrder.executionDate') || 'Execution Date'}
+              minDate={(() => {
+                const today = new Date();
+                return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+              })()}
+            />
+          )}
+          {!form.useCustomExecutionDate && (
+            <p className="text-sm text-secondary">
+              {t('createManualOrder.defaultExecutionDateHint') || 'Default execution date will be assigned automatically.'}
+            </p>
+          )}
+        </div>
       </div>
 
       {/* Total */}

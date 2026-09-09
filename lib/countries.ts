@@ -134,6 +134,7 @@ export const COUNTRIES: Country[] = [
   { code: 'OM', en: 'Oman', ar: 'عمان', value: 'Oman', phoneCode: '968' },
   { code: 'PK', en: 'Pakistan', ar: 'باكستان', value: 'Pakistan', phoneCode: '92' },
   { code: 'PS', en: 'Palestine', ar: 'فلسطين', value: 'Palestine', phoneCode: '970' },
+  { code: 'PS', en: 'Palestine', ar: 'فلسطين', value: 'Palestine', phoneCode: '972' },
   { code: 'PA', en: 'Panama', ar: 'بنما', value: 'Panama', phoneCode: '507' },
   { code: 'PY', en: 'Paraguay', ar: 'باراغواي', value: 'Paraguay', phoneCode: '595' },
   { code: 'PE', en: 'Peru', ar: 'بيرو', value: 'Peru', phoneCode: '51' },

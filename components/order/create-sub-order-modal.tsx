@@ -24,6 +24,7 @@ import Switch from '@/components/ui/switch';
 import CustomDatePicker from '@/components/ui/custom-date-picker';
 import MultiNameInput from '@/components/ui/multi-name-input';
 import { uploadImageToR2, deleteOldImage } from '../../lib/image-upload-utils';
+import { getOrderItemDisplayName } from '../../lib/order/order-utils';
 
 import { Order } from '@/types/Order';
 
@@ -127,7 +128,35 @@ export default function CreateSubOrderModal({
   const [creating, setCreating] = useState(false);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [loadingParentDetails, setLoadingParentDetails] = useState(false);
+  const [fullParentOrder, setFullParentOrder] = useState<Order | null>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
+
+  // Fetch full parent order details on open so items include price, currency, size info
+  useEffect(() => {
+    if (isOpen && parentOrder) {
+      setLoadingParentDetails(true);
+      setFullParentOrder(null);
+      fetch(`/api/orders/${parentOrder._id}`, { cache: 'no-store' })
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.success && data.data) {
+            setFullParentOrder(data.data);
+          } else {
+            setFullParentOrder(parentOrder);
+          }
+        })
+        .catch(() => {
+          setFullParentOrder(parentOrder);
+        })
+        .finally(() => setLoadingParentDetails(false));
+    } else {
+      setFullParentOrder(null);
+    }
+  }, [isOpen, parentOrder]);
+
+  // Use full parent order if loaded, otherwise fall back to the table row data
+  const displayParentOrder = fullParentOrder || parentOrder;
 
   // Fetch products on open
   useEffect(() => {
@@ -159,7 +188,7 @@ export default function CreateSubOrderModal({
     }
   }, [isOpen]);
 
-  const currency = parentOrder?.currency || 'SAR';
+  const currency = displayParentOrder?.currency || 'SAR';
 
   const productOptions = useMemo(
     () => [
@@ -432,6 +461,40 @@ export default function CreateSubOrderModal({
 
   if (!parentOrder) return null;
 
+  // Skeleton component for parent order summary
+  const ParentOrderSkeleton = () => (
+    <div className="p-4 rounded-lg bg-muted/30 border border-stroke animate-pulse">
+      <div className="flex items-center gap-2 mb-3">
+        <div className="w-5 h-5 rounded bg-stroke" />
+        <div className="h-4 w-40 rounded bg-stroke" />
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i}>
+            <div className="h-3 w-16 rounded bg-stroke mb-1.5" />
+            <div className="h-4 w-24 rounded bg-stroke" />
+          </div>
+        ))}
+      </div>
+      <div className="grid grid-cols-3 gap-3 mt-3 pt-3 border-t border-stroke">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={i}>
+            <div className="h-3 w-12 rounded bg-stroke mb-1.5" />
+            <div className="h-4 w-20 rounded bg-stroke" />
+          </div>
+        ))}
+      </div>
+      <div className="mt-3 pt-3 border-t border-stroke space-y-2">
+        {Array.from({ length: 2 }).map((_, i) => (
+          <div key={i} className="flex items-center justify-between">
+            <div className="h-4 w-32 rounded bg-stroke" />
+            <div className="h-4 w-16 rounded bg-stroke" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
   return (
     <Modal
       isOpen={isOpen}
@@ -441,43 +504,121 @@ export default function CreateSubOrderModal({
       contentClassName="flex flex-col gap-4 pr-1 px-4"
     >
       {/* Parent order summary */}
-      <div className="p-4 rounded-lg bg-muted/30 border border-stroke">
-        <div className="flex items-center gap-2 mb-3">
-          <LuSplit size={18} className="text-primary" />
-          <span className="font-semibold text-sm">
-            {t('subOrder.parentOrder') || 'Parent Order'}: {parentOrder.orderNumber}
-          </span>
+      {loadingParentDetails ? (
+        <ParentOrderSkeleton />
+      ) : displayParentOrder ? (
+        <div className="p-4 rounded-lg bg-muted/30 border border-stroke">
+          <div className="flex items-center gap-2 mb-3">
+            <LuSplit size={18} className="text-primary" />
+            <span className="font-semibold text-sm">
+              {t('subOrder.parentOrder') || 'Parent Order'}: {displayParentOrder.orderNumber}
+            </span>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
+            <div>
+              <span className="text-secondary text-xs">{t('createManualOrder.customerInfo') || 'Customer'}</span>
+              <p className="font-medium">{displayParentOrder.billingData?.fullName || 'N/A'}</p>
+            </div>
+            <div>
+              <span className="text-secondary text-xs">{t('createManualOrder.email') || 'Email'}</span>
+              <p className="font-medium truncate">{displayParentOrder.billingData?.email || 'N/A'}</p>
+            </div>
+            <div>
+              <span className="text-secondary text-xs">{t('createManualOrder.phone') || 'Phone'}</span>
+              <p className="font-medium">{displayParentOrder.billingData?.phone || 'N/A'}</p>
+            </div>
+            <div>
+              <span className="text-secondary text-xs">{t('createManualOrder.country') || 'Country'}</span>
+              <p className="font-medium">{displayParentOrder.billingData?.country || 'N/A'}</p>
+            </div>
+            <div>
+              <span className="text-secondary text-xs">{t('createManualOrder.currency') || 'Currency'}</span>
+              <p className="font-medium">{currency}</p>
+            </div>
+            <div>
+              <span className="text-secondary text-xs">{t('createManualOrder.referral') || 'Referral'}</span>
+              <p className="font-medium">{displayParentOrder.referralId || 'N/A'}</p>
+            </div>
+          </div>
+
+          {/* Parent order financials */}
+          <div className="grid grid-cols-3 gap-3 mt-3 pt-3 border-t border-stroke">
+            <div>
+              <span className="text-secondary text-xs">
+                {t('createManualOrder.fullAmount') || 'Total'}
+              </span>
+              <p className="font-bold text-sm">
+                {(displayParentOrder.fullAmount ?? displayParentOrder.totalAmount ?? 0).toFixed(2)} {currency}
+              </p>
+            </div>
+            <div>
+              <span className="text-secondary text-xs">
+                {t('createManualOrder.paidAmount') || 'Paid'}
+              </span>
+              <p className="font-bold text-sm text-success">
+                {(displayParentOrder.paidAmount ?? 0).toFixed(2)} {currency}
+              </p>
+            </div>
+            <div>
+              <span className="text-secondary text-xs">
+                {t('createManualOrder.remaining') || 'Remaining'}
+              </span>
+              <p className="font-bold text-sm text-error">
+                {(displayParentOrder.remainingAmount ?? (displayParentOrder.fullAmount ?? displayParentOrder.totalAmount ?? 0) - (displayParentOrder.paidAmount ?? 0)).toFixed(2)} {currency}
+              </p>
+            </div>
+          </div>
+
+          {/* Parent order items */}
+          {displayParentOrder.items && displayParentOrder.items.length > 0 && (
+            <div className="mt-3 pt-3 border-t border-stroke">
+              <span className="text-secondary text-xs block mb-2">
+                {t('createManualOrder.items') || 'Items'}
+              </span>
+              <div className="flex flex-col gap-2">
+                {displayParentOrder.items.map((item, i) => {
+                  const price = item.price ?? 0;
+                  const qty = item.quantity ?? 0;
+                  const itemCurrency = item.currency || currency;
+                  const displayName = getOrderItemDisplayName(item, locale);
+                  return (
+                    <div
+                      key={i}
+                      className="flex items-start justify-between gap-3 py-2 px-3 rounded-lg bg-background border border-stroke"
+                    >
+                      <div className="space-y-1 min-w-0">
+                        <p className="font-medium text-sm truncate">
+                          {displayName}
+                        </p>
+                        <div className="flex items-center gap-2 text-xs text-secondary">
+                          <span>
+                            {t('createManualOrder.quantity') || 'Qty'}: {qty}
+                          </span>
+                          <span>
+                            {price.toFixed(2)} {itemCurrency}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="text-end shrink-0">
+                        <p className="font-bold text-sm text-success">
+                          {(price * qty).toFixed(2)} {itemCurrency}
+                        </p>
+                        <p className="text-[11px] text-secondary">
+                          {qty} x {price.toFixed(2)}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          <p className="text-xs text-secondary mt-3 italic">
+            {t('subOrder.inheritedFromParent') || 'Customer info, invoices, and payment timeline are inherited from the parent order.'}
+          </p>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
-          <div>
-            <span className="text-secondary text-xs">{t('createManualOrder.customerInfo') || 'Customer'}</span>
-            <p className="font-medium">{parentOrder.billingData?.fullName || 'N/A'}</p>
-          </div>
-          <div>
-            <span className="text-secondary text-xs">{t('createManualOrder.email') || 'Email'}</span>
-            <p className="font-medium truncate">{parentOrder.billingData?.email || 'N/A'}</p>
-          </div>
-          <div>
-            <span className="text-secondary text-xs">{t('createManualOrder.phone') || 'Phone'}</span>
-            <p className="font-medium">{parentOrder.billingData?.phone || 'N/A'}</p>
-          </div>
-          <div>
-            <span className="text-secondary text-xs">{t('createManualOrder.country') || 'Country'}</span>
-            <p className="font-medium">{parentOrder.billingData?.country || 'N/A'}</p>
-          </div>
-          <div>
-            <span className="text-secondary text-xs">{t('createManualOrder.currency') || 'Currency'}</span>
-            <p className="font-medium">{currency}</p>
-          </div>
-          <div>
-            <span className="text-secondary text-xs">{t('createManualOrder.referral') || 'Referral'}</span>
-            <p className="font-medium">{parentOrder.referralId || 'N/A'}</p>
-          </div>
-        </div>
-        <p className="text-xs text-secondary mt-3 italic">
-          {t('subOrder.inheritedFromParent') || 'Customer info, invoices, and payment timeline are inherited from the parent order.'}
-        </p>
-      </div>
+      ) : null}
 
       {/* Items section */}
       <div className="flex flex-col gap-3">

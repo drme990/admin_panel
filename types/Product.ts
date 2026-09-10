@@ -16,6 +16,25 @@ export interface ResolvedPrice {
   type: 'real' | 'exchange';
 }
 
+export interface ProductAddOn {
+  _id?: string;
+  name: {
+    ar: string;
+    en: string;
+  };
+  /** Base price in the product's base currency. */
+  basePrice: number;
+  /** Currency code for basePrice (same as product.baseCurrency). */
+  baseCurrency: string;
+  /** All currency prices (including base-currency entry). Source of truth for display/checkout. */
+  prices: CurrencyPrice[];
+  /** Whether this add-on is available to customers. */
+  isAvailable?: boolean;
+}
+
+/** How the customer selects add-ons on the product page. */
+export type AddOnSelectionMode = 'single' | 'multi';
+
 export interface ProductSize {
   _id?: string;
   name: {
@@ -166,6 +185,8 @@ export interface Product {
   sacrificeCount?: number;
   reservationFields?: ReservationField[];
   displayOrder?: number;
+  addOns?: ProductAddOn[];
+  addOnSelectionMode?: AddOnSelectionMode;
   categoryId?: string | null;
   categoryName?: string | null;
   createdAt?: string;

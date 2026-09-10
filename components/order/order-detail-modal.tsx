@@ -723,9 +723,16 @@ export default function OrderDetailModal({
                           className="flex items-start justify-between gap-3 py-3 px-3 rounded-lg bg-background border border-stroke"
                         >
                           <div className="space-y-1 min-w-0">
-                            <p className="font-medium text-sm truncate">
-                              {getOrderItemDisplayName(item, locale)}
-                            </p>
+                            <div className="flex items-center gap-2">
+                              <p className="font-medium text-sm truncate">
+                                {getOrderItemDisplayName(item, locale)}
+                              </p>
+                              {item.isAddOn && (
+                                <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-primary/10 text-primary whitespace-nowrap">
+                                  {t('addOnBadge') || 'Add-on'}
+                                </span>
+                              )}
+                            </div>
                             <div className="flex items-center gap-2 text-xs text-secondary">
                               <span>
                                 {t('table.quantityTotal', {

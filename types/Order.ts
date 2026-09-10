@@ -121,6 +121,10 @@ export interface OrderItem {
   sizes?: OrderItemSizeOption[];
   isCustom?: boolean;
   customSize?: string;
+  /** True when this item is an add-on for another item in the same order. */
+  isAddOn?: boolean;
+  /** Index of the parent item in the items array (the main product this add-on belongs to). */
+  parentItemIndex?: number;
 }
 
 export interface BillingData {

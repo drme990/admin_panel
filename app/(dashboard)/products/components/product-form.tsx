@@ -159,6 +159,14 @@ export default function ProductForm({
     recommendProduct: false,
     recommendProductId: '' as string,
     reservationFields: [] as ReservationField[],
+    addOns: [] as {
+      name: { ar: string; en: string };
+      basePrice: number;
+      baseCurrency: string;
+      prices: CurrencyPrice[];
+      isAvailable: boolean;
+    }[],
+    addOnSelectionMode: 'single' as 'single' | 'multi',
   });
   const [addedPricePercentage, setAddedPricePercentage] = useState<number>(0);
   const [allProducts, setAllProducts] = useState<Product[]>([]);
@@ -344,6 +352,9 @@ export default function ProductForm({
         if (key.startsWith('size_') && !sectionMap[key]) {
           sectionMap[key] = 'section-sizes';
         }
+        if (key.startsWith('addon_') && !sectionMap[key]) {
+          sectionMap[key] = 'section-add-ons';
+        }
       });
 
       // Find the first section that has an error
@@ -353,6 +364,7 @@ export default function ProductForm({
         'section-display',
         'section-pricing',
         'section-sizes',
+        'section-add-ons',
         'section-sacrifice',
         'section-upgrade',
         'section-reservation',
@@ -469,6 +481,14 @@ export default function ProductForm({
         reservationFields: normalizeReservationFields(
           product.reservationFields,
         ),
+        addOns: (product.addOns || []).map((a) => ({
+          name: { ar: a.name.ar || '', en: a.name.en || '' },
+          basePrice: a.basePrice ?? getBasePrice(a.prices || [], product.baseCurrency || 'SAR'),
+          baseCurrency: a.baseCurrency || product.baseCurrency || 'SAR',
+          prices: a.prices || [],
+          isAvailable: a.isAvailable !== false,
+        })),
+        addOnSelectionMode: product.addOnSelectionMode || 'single',
       });
 
       setTimeout(() => {
@@ -622,6 +642,55 @@ export default function ProductForm({
 
     updatedSizes[index] = size;
     setFormData({ ...formData, sizes: updatedSizes });
+  };
+
+  // ─── Add-on operations ───────────────────────────────────────────────
+  const defaultAddOn = {
+    name: { ar: '', en: '' },
+    basePrice: 0 as number,
+    baseCurrency: '' as string,
+    prices: [] as CurrencyPrice[],
+    isAvailable: true,
+  };
+
+  const addAddOn = () => {
+    setFormData({
+      ...formData,
+      addOns: [...formData.addOns, { ...defaultAddOn, baseCurrency: formData.baseCurrency }],
+    });
+  };
+
+  const removeAddOn = (index: number) => {
+    setFormData({
+      ...formData,
+      addOns: formData.addOns.filter((_, i) => i !== index),
+    });
+  };
+
+  const updateAddOn = (
+    index: number,
+    field: string,
+    value: string | number | boolean | CurrencyPrice[],
+  ) => {
+    const updatedAddOns = [...formData.addOns];
+    const addOn = { ...updatedAddOns[index] };
+
+    if (field === 'name.ar') {
+      addOn.name = { ...addOn.name, ar: value as string };
+    } else if (field === 'name.en') {
+      addOn.name = { ...addOn.name, en: value as string };
+    } else if (field === 'price') {
+      addOn.basePrice = value as number;
+      addOn.baseCurrency = formData.baseCurrency;
+      addOn.prices = setBasePrice(addOn.prices, formData.baseCurrency, value as number);
+    } else if (field === 'prices') {
+      addOn.prices = value as CurrencyPrice[];
+    } else if (field === 'isAvailable') {
+      addOn.isAvailable = value as boolean;
+    }
+
+    updatedAddOns[index] = addOn;
+    setFormData({ ...formData, addOns: updatedAddOns });
   };
 
   // ─── Reservation field operations ──────────────────────────────────
@@ -804,6 +873,16 @@ export default function ProductForm({
         }
         : null,
       reservationFields: formData.reservationFields,
+      addOns: formData.addOns
+        .filter((a) => a.name.ar.trim() || a.name.en.trim())
+        .map((a) => ({
+          name: a.name,
+          basePrice: a.basePrice,
+          baseCurrency: a.baseCurrency || formData.baseCurrency,
+          prices: a.prices,
+          isAvailable: a.isAvailable,
+        })),
+      addOnSelectionMode: formData.addOnSelectionMode,
     };
 
     try {
@@ -1332,6 +1411,139 @@ export default function ProductForm({
                   />
                 </div>
               )}
+            </div>
+          );
+        })}
+      </CollapsibleSection>
+
+      {/* ═══ Add-ons ═══ */}
+      <CollapsibleSection
+        sectionId="section-add-ons"
+        title={t('form.sectionAddOns') || 'Add-ons'}
+        description={t('form.sectionAddOnsDesc') || 'Optional extras customers can add to their order'}
+        icon={<ListChecksIcon size={18} />}
+        open={openSections.has('section-add-ons')}
+        onToggle={(open) => handleSectionToggle('section-add-ons', open)}
+        locked={lockedSections.has('section-add-ons')}
+        onLockToggle={() => handleLockToggle('section-add-ons')}
+      >
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-sm font-medium">{t('form.addOns') || 'Add-ons'}</h3>
+            <p className="text-xs text-secondary mt-1">
+              {t('form.addOnsHelp') || 'Optional extras customers can add to their order. None are selected by default.'}
+            </p>
+          </div>
+          <Button
+            type="button"
+            onClick={addAddOn}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm"
+          >
+            <Plus size={16} />
+            {t('form.addAddOn') || 'Add Add-on'}
+          </Button>
+        </div>
+
+        {/* Selection mode toggle — off = single (default), on = multi */}
+        <div className="flex items-center gap-3 mt-4">
+          <Switch
+            id="addOnSelectionMode"
+            checked={formData.addOnSelectionMode === 'multi'}
+            onChange={(checked) =>
+              setFormData({
+                ...formData,
+                addOnSelectionMode: checked ? 'multi' : 'single',
+              })
+            }
+            label={t('form.addOnSelectionMode') || 'Selection Mode'}
+          />
+          <span className="text-xs text-secondary">
+            {formData.addOnSelectionMode === 'multi'
+              ? (t('form.addOnModeMulti') || 'Multiple (pick one or more)')
+              : (t('form.addOnModeSingle') || 'Single (pick one)')}
+          </span>
+        </div>
+
+        {formData.addOns.length === 0 && (
+          <p className="text-xs text-secondary mt-4">
+            {t('form.addOnsEmpty') || 'No add-ons defined. Click "Add Add-on" to create one.'}
+          </p>
+        )}
+
+        {formData.addOns.map((addOn, index) => {
+          const addOnLabel = addOn.name.ar || addOn.name.en
+            ? `${addOn.name.ar || addOn.name.en}${addOn.basePrice ? ` — ${addOn.basePrice} ${formData.baseCurrency}` : ''}`
+            : t('form.addOnNumber', { number: index + 1 });
+          return (
+            <div
+              key={index}
+              className="border border-stroke rounded-lg overflow-hidden mt-3"
+            >
+              <div className="flex items-center justify-between px-4 py-3 hover:bg-muted/40 transition-colors">
+                <span className="text-sm font-semibold truncate">
+                  {t('form.addOnNumber', { number: index + 1 })}
+                </span>
+                {addOn.name.ar && (
+                  <span className="text-xs text-secondary truncate ms-2">
+                    {addOnLabel}
+                  </span>
+                )}
+                <Button
+                  variant="custom"
+                  type="button"
+                  onClick={() => removeAddOn(index)}
+                  className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-950 rounded-lg transition-colors shrink-0"
+                  title={t('form.removeAddOn') || 'Remove add-on'}
+                >
+                  <X size={16} />
+                </Button>
+              </div>
+
+              <div className="px-4 pb-4 space-y-3 border-t border-stroke">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-3">
+                  <Input
+                    label={t('form.addOnNameAr') || 'Add-on Name (Arabic)'}
+                    type="text"
+                    value={addOn.name.ar}
+                    onChange={(e) => updateAddOn(index, 'name.ar', e.target.value)}
+                  />
+                  <Input
+                    label={t('form.addOnNameEn') || 'Add-on Name (English)'}
+                    type="text"
+                    value={addOn.name.en}
+                    onChange={(e) => updateAddOn(index, 'name.en', e.target.value)}
+                  />
+                </div>
+
+                <Switch
+                  id={`addOnAvailable_${index}`}
+                  checked={addOn.isAvailable !== false}
+                  onChange={(checked) => updateAddOn(index, 'isAvailable', checked)}
+                  label={t('form.addOnAvailable') || 'Available'}
+                />
+
+                <div className="space-y-2 p-3 rounded-lg border border-stroke bg-card-bg/50">
+                  <Input
+                    label={`${t('form.addOnBasePrice') || 'Base Price'} (${formData.baseCurrency})`}
+                    type="number"
+                    value={addOn.basePrice || ''}
+                    onChange={(e) => updateAddOn(index, 'price', parseFloat(e.target.value) || 0)}
+                    min="0"
+                    step="0.01"
+                  />
+                  {addOn.basePrice > 0 && (
+                    <MultiCurrencyPriceEditor
+                      mainCurrency={formData.baseCurrency}
+                      basePrice={addOn.basePrice}
+                      prices={addOn.prices}
+                      onChange={(prices) => updateAddOn(index, 'prices', prices)}
+                      onMainCurrencyChange={() => { }}
+                      onBasePriceChange={() => { }}
+                      compact
+                    />
+                  )}
+                </div>
+              </div>
             </div>
           );
         })}

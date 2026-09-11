@@ -1,4 +1,4 @@
-# Admin Panel (admin_panel)
+# Admin Panel
 
 Central operations dashboard for running both storefronts: Ghadaq and Manasik.
 

@@ -646,7 +646,8 @@
       "hasSubOrderBadge": "Has Sub",
       "viewParent": "View parent order",
       "viewSub": "View sub order",
-      "successTitle": "Sub order created successfully"
+      "successTitle": "Sub order created successfully",
+      "duplicateNameWarning": "The name \"{name}\" is already used in the parent order. If this product is for the same person, please add it directly to the parent order instead of creating a sub-order."
     }
   },
   "orderDesigns": {
@@ -1263,7 +1264,8 @@
       "hasSubOrderBadge": "Has Sub",
       "viewParent": "View parent order",
       "viewSub": "View sub order",
-      "successTitle": "Sub order created successfully"
+      "successTitle": "Sub order created successfully",
+      "duplicateNameWarning": "The name \"{name}\" is already used in the parent order. If this product is for the same person, please add it directly to the parent order instead of creating a sub-order."
     }
   },
   "admin": {

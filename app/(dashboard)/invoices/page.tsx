@@ -216,10 +216,15 @@ export default function InvoicesPage() {
         try {
             const params = new URLSearchParams({
                 page: '1',
-                limit: '200',
+                // Fetch a large page so "all time" doesn't miss older invoices.
+                // The backend caps at 10000.
+                limit: '10000',
                 view: 'table',
                 source: sourceFilter,
                 tzOffsetMinutes: String(new Date().getTimezoneOffset()),
+                // Filter by creation date, not last status update — invoices
+                // should show orders created in the selected range.
+                dateField: 'createdAt',
             });
             if (searchQuery) params.set('search', searchQuery);
             if (statusFilter !== 'all') params.set('status', statusFilter);

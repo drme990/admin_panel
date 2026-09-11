@@ -158,6 +158,39 @@ export default function CreateSubOrderModal({
   // Use full parent order if loaded, otherwise fall back to the table row data
   const displayParentOrder = fullParentOrder || parentOrder;
 
+  // Extract the parent order's sacrificeFor name(s) so we can warn the admin
+  // if they enter the same name on the sub-order. Sub-orders are meant for
+  // DIFFERENT people — if it's the same person, the product should be added
+  // to the parent order directly.
+  const parentSacrificeFor = useMemo(() => {
+    const fields = displayParentOrder?.reservationData;
+    if (!Array.isArray(fields)) return '';
+    const field = fields.find((f) => f.key === 'sacrificeFor');
+    return (field?.value || '').trim();
+  }, [displayParentOrder]);
+
+  const parentSacrificeForNames = useMemo(
+    () =>
+      parentSacrificeFor
+        .split(/[,،\n]/)
+        .map((n) => n.trim().toLowerCase())
+        .filter(Boolean),
+    [parentSacrificeFor],
+  );
+
+  // Check if any name entered in the sub-order's sacrificeFor field matches
+  // a name in the parent order's sacrificeFor field.
+  const duplicateNameMatch = useMemo(() => {
+    const enteredNames = form.reservationData.sacrificeFor
+      .split(/[,،\n]/)
+      .map((n) => n.trim().toLowerCase())
+      .filter(Boolean);
+    if (enteredNames.length === 0 || parentSacrificeForNames.length === 0) {
+      return null;
+    }
+    return enteredNames.find((n) => parentSacrificeForNames.includes(n)) ?? null;
+  }, [form.reservationData.sacrificeFor, parentSacrificeForNames]);
+
   // Fetch products on open
   useEffect(() => {
     if (isOpen) {
@@ -354,6 +387,13 @@ export default function CreateSubOrderModal({
     const errors: Record<string, string> = {};
     if (form.items.length === 0) {
       errors.items = t('createManualOrder.errors.noItems') || 'At least one item is required';
+    }
+    // Block submission if the sacrificeFor name matches the parent order —
+    // the admin should add the product to the parent order directly instead.
+    if (duplicateNameMatch) {
+      errors.reservation_sacrificeFor =
+        t('subOrder.duplicateNameWarning', { name: duplicateNameMatch }) ||
+        'This name is already used in the parent order. Please add the product to the parent order directly.';
     }
     form.items.forEach((item, index) => {
       if (item.type === 'existing') {
@@ -796,7 +836,12 @@ export default function CreateSubOrderModal({
               placeholder={t('createManualOrder.sacrificeForPlaceholder') || 'Enter name(s)'}
               isRTL={locale === 'ar'}
             />
-            {formErrors[`reservation_sacrificeFor`] && (
+            {duplicateNameMatch && (
+              <div className="mt-2 rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-warning">
+                {t('subOrder.duplicateNameWarning', { name: duplicateNameMatch })}
+              </div>
+            )}
+            {formErrors[`reservation_sacrificeFor`] && !duplicateNameMatch && (
               <p className="text-xs text-error mt-1">{formErrors[`reservation_sacrificeFor`]}</p>
             )}
           </div>

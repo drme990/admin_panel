@@ -107,6 +107,10 @@ function buildExportRows(orders: Order[], locale: string): ExportRow[] {
       })
       .join(', ');
 
+    // Sub-orders inherit all financials from their parent, so we blank
+    // out money fields to avoid double-counting in exported reports.
+    const isSub = Boolean(order.isSubOrder);
+
     return {
       orderNumber: order.orderNumber || '',
       fullName: bd?.fullName || '',
@@ -114,10 +118,10 @@ function buildExportRows(orders: Order[], locale: string): ExportRow[] {
       email: bd?.email || '',
       country: bd?.country || '',
       items,
-      totalAmount: formatAmount(order.totalAmount),
-      paidAmount: formatAmount(order.paidAmount ?? order.totalAmount),
-      remainingAmount: formatAmount(order.remainingAmount ?? 0),
-      currency,
+      totalAmount: isSub ? '' : formatAmount(order.totalAmount),
+      paidAmount: isSub ? '' : formatAmount(order.paidAmount ?? order.totalAmount),
+      remainingAmount: isSub ? '' : formatAmount(order.remainingAmount ?? 0),
+      currency: isSub ? '' : currency,
       status: order.status || '',
       source: order.source || 'manasik',
       createdAt: formatDate(order.createdAt, locale),

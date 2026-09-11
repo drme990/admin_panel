@@ -14,6 +14,7 @@ import QuantityInput from '@/components/ui/quantity-input';
 import Dropdown from '@/components/ui/dropdown';
 import CountrySelector from '@/components/shared/country-selector';
 import RadioButton from '@/components/ui/radio-button';
+import Checkbox from '@/components/ui/checkbox';
 import Tabs from '@/components/ui/tabs';
 import Switch from '@/components/ui/switch';
 import Tooltip from '@/components/ui/tooltip';
@@ -100,6 +101,15 @@ function validatePhoneNumber(phone: string, countryName: string): boolean {
   }
 }
 
+interface ProductAddOn {
+  _id?: string;
+  name: { ar: string; en: string };
+  basePrice: number;
+  baseCurrency: string;
+  prices?: Array<{ currencyCode: string; amount: number }>;
+  isAvailable?: boolean;
+}
+
 interface Product {
   _id: string;
   name: { ar: string; en: string };
@@ -111,6 +121,8 @@ interface Product {
     manualPrice?: number | null;
     isAvailable?: boolean;
   }>;
+  addOns?: ProductAddOn[];
+  addOnSelectionMode?: 'single' | 'multi';
   reservationFields?: Array<{
     key: string;
     type: string;
@@ -139,6 +151,8 @@ interface OrderItemForm {
   customName: string;
   customSize: string;
   customPrice: string;
+  /** IDs of selected add-ons for this item (existing products only). */
+  selectedAddOns: string[];
 }
 
 interface InvoiceEntry {
@@ -185,6 +199,7 @@ const emptyItem = (): OrderItemForm => ({
   customName: '',
   customSize: '',
   customPrice: '',
+  selectedAddOns: [],
 });
 
 const DEFAULT_FORM: FormState = {
@@ -675,6 +690,75 @@ export default function CreateManualOrderModal({
     [getProduct, locale],
   );
 
+  // ── Add-on helpers ────────────────────────────────────────────────────
+  // Returns available add-ons for a product that have a price in the
+  // currently selected currency.
+  const getAvailableAddOns = useCallback(
+    (productId: string): ProductAddOn[] => {
+      const product = getProduct(productId);
+      if (!product?.addOns?.length) return [];
+      return product.addOns.filter((a) => {
+        if (a.isAvailable === false) return false;
+        if (!a._id) return false;
+        const price = a.prices?.find(
+          (p) => p.currencyCode === form.currency,
+        );
+        return !!price;
+      });
+    },
+    [getProduct, form.currency],
+  );
+
+  // Resolve an add-on's unit price in the selected currency.
+  const getAddOnUnitPrice = useCallback(
+    (productId: string, addOnId: string): number => {
+      const product = getProduct(productId);
+      if (!product?.addOns?.length) return 0;
+      const addOn = product.addOns.find((a) => a._id === addOnId);
+      if (!addOn) return 0;
+      const price = addOn.prices?.find(
+        (p) => p.currencyCode === form.currency,
+      );
+      return price?.amount ?? 0;
+    },
+    [getProduct, form.currency],
+  );
+
+  // Compute the total add-on price for a single item (unit price × qty,
+  // summed across selected add-ons). Add-on quantity is always 1.
+  const getItemAddOnsTotal = useCallback(
+    (item: OrderItemForm): number => {
+      if (item.type !== 'existing' || !item.productId) return 0;
+      if (!item.selectedAddOns?.length) return 0;
+      return item.selectedAddOns.reduce(
+        (sum, addOnId) => sum + getAddOnUnitPrice(item.productId, addOnId),
+        0,
+      );
+    },
+    [getAddOnUnitPrice],
+  );
+
+  // Toggle an add-on selection for an item, respecting single/multi mode.
+  const toggleItemAddOn = (itemIndex: number, addOnId: string) => {
+    setForm((prev) => {
+      const item = prev.items[itemIndex];
+      if (!item || item.type !== 'existing') return prev;
+      const product = getProduct(item.productId);
+      const mode = product?.addOnSelectionMode ?? 'multi';
+      let nextSelected: string[];
+      if (mode === 'single') {
+        nextSelected = item.selectedAddOns?.[0] === addOnId ? [] : [addOnId];
+      } else {
+        nextSelected = item.selectedAddOns?.includes(addOnId)
+          ? item.selectedAddOns.filter((id) => id !== addOnId)
+          : [...(item.selectedAddOns ?? []), addOnId];
+      }
+      const nextItems = [...prev.items];
+      nextItems[itemIndex] = { ...item, selectedAddOns: nextSelected };
+      return { ...prev, items: nextItems };
+    });
+  };
+
   // Default currency: use first product's currency, or EGP
   useEffect(() => {
     if (!form.currency) {
@@ -899,10 +983,14 @@ export default function CreateManualOrderModal({
         const overridePrice = parseFloat(item.overridePrice);
         const unitPrice = Number.isFinite(overridePrice) && overridePrice >= 0 ? overridePrice : originalPrice;
         total += unitPrice * item.quantity;
+        // Add selected add-on prices (add-on qty is always 1, but the
+        // product quantity applies — each unit of the product gets the
+        // add-on, matching the storefront checkout behavior).
+        total += getItemAddOnsTotal(item) * item.quantity;
       }
     }
     return total;
-  }, [form.items, getLoadedUnitPrice]);
+  }, [form.items, getLoadedUnitPrice, getItemAddOnsTotal]);
 
   const paidAmountNum = useMemo(() => {
     const n = parseFloat(form.paidAmount);
@@ -1465,6 +1553,9 @@ export default function CreateManualOrderModal({
                   quantity: item.quantity,
                   sizeIndex: item.sizeIndex,
                   customPrice: item.overridePrice ? parseFloat(item.overridePrice) : undefined,
+                  selectedAddOns: item.selectedAddOns?.length
+                    ? item.selectedAddOns.map((addOnId) => ({ addOnId, quantity: 1 }))
+                    : undefined,
                 },
             ),
             currency: form.currency,
@@ -1881,7 +1972,7 @@ export default function CreateManualOrderModal({
                     value={item.type}
                     options={itemTypeOptions}
                     onChange={(val) => {
-                      updateItem(index, { type: val });
+                      updateItem(index, { type: val, selectedAddOns: [] });
                       if (val === 'existing' && priceEditIndices.includes(index)) {
                         dispatch({ type: 'TOGGLE_PRICE_EDIT', index });
                       }
@@ -1917,11 +2008,12 @@ export default function CreateManualOrderModal({
                           value={item.productId}
                           options={productOptions}
                           onChange={(val) => {
-                            const nextItem = { ...item, productId: val, sizeIndex: 0 };
+                            const nextItem = { ...item, productId: val, sizeIndex: 0, selectedAddOns: [] };
                             const loadedPrice = getLoadedUnitPrice(nextItem);
                             updateItem(index, {
                               productId: val,
                               sizeIndex: 0,
+                              selectedAddOns: [],
                               overridePrice: form.isFreeOrder
                                 ? '0'
                                 : loadedPrice > 0 ? loadedPrice.toFixed(2) : '',
@@ -1960,6 +2052,62 @@ export default function CreateManualOrderModal({
                         />
                       </div>
                     )}
+                    {(() => {
+                      const addOns = getAvailableAddOns(item.productId);
+                      if (addOns.length === 0) return null;
+                      const mode = getProduct(item.productId)?.addOnSelectionMode ?? 'multi';
+                      return (
+                        <div className="mt-3 flex flex-col gap-1.5">
+                          <label className="text-xs font-medium text-secondary">
+                            {t('createManualOrder.addOns') || 'Add-ons'}
+                            <span className="text-secondary/60 ms-1">
+                              ({mode === 'single'
+                                ? (t('createManualOrder.addOnModeSingle') || 'pick one')
+                                : (t('createManualOrder.addOnModeMulti') || 'optional')})
+                            </span>
+                          </label>
+                          <div className="flex flex-col gap-1">
+                            {addOns.map((addOn) => {
+                              const checked = item.selectedAddOns?.includes(addOn._id!) ?? false;
+                              const addOnPrice = getAddOnUnitPrice(item.productId, addOn._id!);
+                              const addOnLabel = (
+                                <span className="flex items-center gap-2 w-full">
+                                  <span className="text-sm text-foreground flex-1 min-w-0 truncate">
+                                    {locale === 'ar' ? addOn.name.ar || addOn.name.en : addOn.name.en || addOn.name.ar}
+                                  </span>
+                                  <span className="text-xs font-medium text-secondary shrink-0">
+                                    +{addOnPrice.toFixed(2)} {form.currency}
+                                  </span>
+                                </span>
+                              );
+                              if (mode === 'single') {
+                                return (
+                                  <RadioButton
+                                    key={addOn._id}
+                                    id={`item-${index}-addon-${addOn._id}`}
+                                    name={`item-${index}-addon`}
+                                    value={addOn._id!}
+                                    label={addOnLabel}
+                                    checked={checked}
+                                    size="sm"
+                                    onChange={() => toggleItemAddOn(index, addOn._id!)}
+                                  />
+                                );
+                              }
+                              return (
+                                <Checkbox
+                                  key={addOn._id}
+                                  checked={checked}
+                                  onChange={() => toggleItemAddOn(index, addOn._id!)}
+                                  label={addOnLabel}
+                                  size="sm"
+                                />
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })()}
                     <div className="flex flex-row gap-2 sm:gap-3 items-center mt-3">
                       <div className="flex-1 min-w-0">
                         <Input

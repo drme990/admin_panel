@@ -44,6 +44,7 @@ import {
   LuClipboardCheck,
   LuReceipt,
   LuImages,
+  LuChartPie,
 } from 'react-icons/lu';
 
 const navItems = [
@@ -67,6 +68,13 @@ const navItems = [
     icon: LuClipboardCheck,
     superAdminOnly: false,
     permissionKey: 'orders',
+  },
+  {
+    key: 'shares',
+    href: '/shares',
+    icon: LuChartPie,
+    superAdminOnly: false,
+    permissionKey: 'shares',
   },
   {
     key: 'orderDesigns',
@@ -254,6 +262,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
       'products-discovery': 'products-discovery',
       orders: 'orders',
       execution: 'orders',
+      shares: 'shares',
       'order-designs': 'orderDesigns',
       invoices: 'invoices',
       customers: 'customers',

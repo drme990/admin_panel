@@ -13,6 +13,7 @@ import ConfirmModal, { useConfirmModal } from '@/components/ui/confirm-modal';
 import Tooltip from '@/components/ui/tooltip';
 import Dropdown from '@/components/ui/dropdown';
 import CountrySelector from '@/components/shared/country-selector';
+import ReferralFilter from '@/components/shared/referral-filter';
 import CustomDatePicker from '@/components/ui/custom-date-picker';
 import CustomerOrdersModal from './components/customer-orders-modal';
 import CustomerHistoryModal, {
@@ -47,6 +48,7 @@ type Referral = {
   referralId: string;
   phone: string;
   appId: 'manasik' | 'ghadaq';
+  filterOrder?: number;
 };
 
 type AppFilter = 'all' | 'ghadaq' | 'manasik';
@@ -254,19 +256,6 @@ export default function CustomersPage() {
     ],
     [t],
   );
-
-  const refFilterOptions = useMemo(() => {
-    const options = referrals.map((r) => ({
-      label: r.referralId,
-      value: r.referralId,
-    }));
-    return [
-      { value: 'all' as const, label: tCommon('allReferences') },
-      { value: 'MNK-D' as const, label: 'MNK-D' },
-      { value: 'GHD-D' as const, label: 'GHD-D' },
-      ...options,
-    ];
-  }, [referrals, tCommon]);
 
   const refActionOptions = useMemo(() => {
     const options = referrals.map((r) => ({
@@ -1059,10 +1048,13 @@ export default function CustomersPage() {
                 {tCommon('loadingRefs')}
               </span>
             ) : (
-              <Tabs
+              <ReferralFilter
                 value={refFilter}
-                options={refFilterOptions}
                 onChange={setRefFilter}
+                referrals={referrals}
+                allLabel={tCommon('allReferences')}
+                allValue="all"
+                showName={false}
                 size="sm"
                 className="flex-wrap"
               />

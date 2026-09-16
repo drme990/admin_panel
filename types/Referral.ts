@@ -4,6 +4,7 @@ export interface Referral {
   referralId: string;
   phone: string;
   appId: 'manasik' | 'ghadaq';
+  filterOrder?: number;
   createdAt: string;
   updatedAt: string;
 }

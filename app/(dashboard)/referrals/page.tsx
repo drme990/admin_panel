@@ -12,6 +12,7 @@ import Button from '@/components/ui/button';
 import Tooltip from '@/components/ui/tooltip';
 import { toast } from 'react-toastify';
 import DefaultPhoneNumbersModal from './components/default-phone-numbers-modal';
+import ReorderReferralsModal from './components/reorder-referrals-modal';
 
 import {
   LuPlus as Plus,
@@ -19,6 +20,7 @@ import {
   LuTrash2 as Trash2,
   LuSearch as Search,
   LuPhone,
+  LuArrowUpDown,
 } from 'react-icons/lu';
 
 /**
@@ -57,6 +59,7 @@ export default function ReferralsPage() {
   });
   const [appFilter, setAppFilter] = useState<'all' | 'manasik' | 'ghadaq'>('all');
   const [showDefaultPhonesModal, setShowDefaultPhonesModal] = useState(false);
+  const [showReorderModal, setShowReorderModal] = useState(false);
   const t = useTranslations('admin.referrals');
   const { confirm, modalProps } = useConfirmModal();
   const ToolTipPositions = useLocale() === 'ar' ? 'right' : 'left';
@@ -270,6 +273,15 @@ export default function ReferralsPage() {
             <LuPhone size={18} />
             {t('defaultPhones.button')}
           </Button>
+          <Button
+            variant="outline"
+            className="flex gap-2"
+            onClick={() => setShowReorderModal(true)}
+            disabled={referrals.length < 2}
+          >
+            <LuArrowUpDown size={18} />
+            {t('reorderButton')}
+          </Button>
           <Button className="flex gap-2" onClick={() => setShowModal(true)}>
             <Plus size={20} />
             {t('addReferral')}
@@ -408,6 +420,13 @@ export default function ReferralsPage() {
       <DefaultPhoneNumbersModal
         isOpen={showDefaultPhonesModal}
         onClose={() => setShowDefaultPhonesModal(false)}
+      />
+
+      <ReorderReferralsModal
+        isOpen={showReorderModal}
+        onClose={() => setShowReorderModal(false)}
+        referrals={referrals}
+        onSaved={fetchReferrals}
       />
 
       <ConfirmModal {...modalProps} />

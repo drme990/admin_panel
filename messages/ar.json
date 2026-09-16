@@ -2316,7 +2316,8 @@
         "orderDesignLogs": "سجل التصاميم",
         "orderStatsComponent": "إحصائيات الطلبات",
         "export": "زر التصدير",
-        "freeOrders": "إنشاء طبات مجانية"
+        "freeOrders": "إنشاء طبات مجانية",
+        "shares": "الأسهم"
       },
       "buttons": {
         "cancel": "إلغاء",
@@ -2531,6 +2532,12 @@
       "description": "إدارة شركاء الإحالة",
       "addReferral": "إضافة إحالة",
       "editReferral": "تعديل إحالة",
+      "reorderButton": "ترتيب",
+      "reorderTitle": "إعادة ترتيب فلتر الإحالات",
+      "reorderDragHint": "اسحب وأفلت لإعادة الترتيب",
+      "reorderUnsavedHint": "تغييرات غير محفوظة — اضغط حفظ للتطبيق",
+      "reorderSave": "حفظ الترتيب",
+      "reorderSaving": "جارٍ الحفظ...",
       "deleteConfirm": "هل أنت متأكد من حذف هذه الإحالة؟",
       "deleteConfirmTitle": "حذف الإحالة",
       "deleteButton": "حذف",
@@ -2565,7 +2572,9 @@
         "deleteFailed": "فشل حذف الإحالة",
         "createSuccess": "تم إنشاء الإحالة بنجاح",
         "updateSuccess": "تم تحديث الإحالة بنجاح",
-        "deleteSuccess": "تم حذف الإحالة بنجاح"
+        "deleteSuccess": "تم حذف الإحالة بنجاح",
+        "reorderSuccess": "تم تحديث ترتيب الإحالات بنجاح",
+        "reorderFailed": "فشل تحديث ترتيب الإحالات"
       },
       "defaultPhones": {
         "title": "أرقام الهاتف الافتراضية",

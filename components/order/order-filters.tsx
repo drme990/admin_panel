@@ -4,6 +4,7 @@ import Tabs from '@/components/ui/tabs';
 import Dropdown from '@/components/ui/dropdown';
 import Button from '@/components/ui/button';
 import CustomDatePicker from '@/components/ui/custom-date-picker';
+import ReferralFilter from '@/components/shared/referral-filter';
 import { Referral } from '@/types/Referral';
 import { OrderStatus } from '@/types/Order';
 import { LuSearch, LuRefreshCw } from 'react-icons/lu';
@@ -72,33 +73,6 @@ export default function OrderFilters({
     { label: t('filters.tomorrow'), value: 'tomorrow' },
     { label: t('filters.yesterday'), value: 'yesterday' },
     { label: t('filters.last7Days'), value: 'last7Days' },
-  ];
-
-  const referralTabOptions = [
-    {
-      label: t('filters.allReferrals'),
-      value: '',
-      className: 'border border-stroke text-foreground/80 hover:bg-background hover:text-foreground',
-      activeClassName: 'bg-foreground text-background shadow-sm',
-    },
-    {
-      label: 'MNK-D',
-      value: 'MNK-D',
-      className: 'border border-stroke text-foreground/80 hover:bg-background hover:text-foreground',
-      activeClassName: 'bg-foreground text-background shadow-sm',
-    },
-    {
-      label: 'GHD-D',
-      value: 'GHD-D',
-      className: 'border border-stroke text-foreground/80 hover:bg-background hover:text-foreground',
-      activeClassName: 'bg-foreground text-background shadow-sm',
-    },
-    ...referrals.map((referral) => ({
-      label: `${referral.name} (${referral.referralId})`,
-      value: referral.referralId,
-      className: 'border border-stroke text-foreground/80 hover:bg-background hover:text-foreground',
-      activeClassName: 'bg-foreground text-background shadow-sm',
-    })),
   ];
 
   const statusTabOptions = [
@@ -237,14 +211,12 @@ export default function OrderFilters({
       </div>
 
       {/* Referral tabs */}
-      <div className="overflow-x-auto pb-1">
-        <Tabs<string>
-          value={referralFilter}
-          options={referralTabOptions}
-          onChange={onReferralChange}
-          className="min-w-max"
-        />
-      </div>
+      <ReferralFilter
+        value={referralFilter}
+        onChange={onReferralChange}
+        referrals={referrals}
+        allLabel={t('filters.allReferrals')}
+      />
 
       {/* Status tabs */}
       <div className="overflow-x-auto pb-1">

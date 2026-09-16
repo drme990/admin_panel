@@ -114,6 +114,10 @@ export default function SharesPage() {
   const [showOrdersModal, setShowOrdersModal] = useState(false);
   const [ordersForCampaign, setOrdersForCampaign] =
     useState<ShareCampaign | null>(null);
+  const [showAddSharesModal, setShowAddSharesModal] = useState(false);
+  const [addSharesForCampaign, setAddSharesForCampaign] =
+    useState<ShareCampaign | null>(null);
+  const [addSharesInput, setAddSharesInput] = useState('1');
   const [showProductModal, setShowProductModal] = useState(false);
   const [selectedProductCampaigns, setSelectedProductCampaigns] = useState<
     ShareCampaign[]
@@ -423,6 +427,43 @@ export default function SharesPage() {
     setShowOrdersModal(true);
   };
 
+  const openAddSharesModal = (campaign: ShareCampaign) => {
+    setAddSharesForCampaign(campaign);
+    setAddSharesInput('1');
+    setShowAddSharesModal(true);
+  };
+
+  const handleAddShares = async () => {
+    if (!addSharesForCampaign) return;
+    const count = parseInt(addSharesInput) || 0;
+    if (count < 1) {
+      toast.error(t('invalidSharesCount'));
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const res = await fetch(`/api/shares/${addSharesForCampaign._id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ addSoldShares: count }),
+      });
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        toast.error(extractApiError(data, t('saveError')));
+        return;
+      }
+
+      toast.success(t('sharesAdded'));
+      setShowAddSharesModal(false);
+      void fetchCampaigns();
+    } catch {
+      toast.error(t('saveError'));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const openProductModal = (group: (typeof productGroups)[number]) => {
     setSelectedProductCampaigns(group.campaigns);
     setSelectedProductName(group.productName);
@@ -431,8 +472,14 @@ export default function SharesPage() {
   };
 
   const progressPercent = (campaign: ShareCampaign) => {
-    if (campaign.totalShares === 0) return 0;
-    return Math.round((campaign.soldShares / campaign.totalShares) * 100);
+    if (campaign.totalShares <= 0) return 0;
+    return Math.min(
+      100,
+      Math.max(
+        0,
+        Math.round((campaign.soldShares / campaign.totalShares) * 100),
+      ),
+    );
   };
 
   const localizedName = (name: { ar: string; en: string } | null) => {
@@ -539,6 +586,16 @@ export default function SharesPage() {
                   <LuEye size={16} />
                 </button>
               </Tooltip>
+              {isActive && (
+                <Tooltip content={t('addReservedShares')} position="top">
+                  <button
+                    onClick={() => openAddSharesModal(campaign)}
+                    className="p-1.5 rounded-lg hover:bg-secondary/10 text-secondary"
+                  >
+                    <LuPlus size={16} />
+                  </button>
+                </Tooltip>
+              )}
               {isActive && (
                 <Tooltip content={t('editCampaign')} position="top">
                   <button
@@ -1074,6 +1131,66 @@ export default function SharesPage() {
           </div>
         )}
       </Modal>
+
+      {/* Add Reserved Shares Modal */}
+      {showAddSharesModal && addSharesForCampaign && (
+        <Modal
+          isOpen
+          onClose={() => setShowAddSharesModal(false)}
+          title={t('addReservedShares')}
+          size="md"
+        >
+          <div className="space-y-4">
+            <div className="text-sm text-secondary bg-secondary/5 rounded-lg p-3 space-y-1">
+              <p>
+                <span className="font-medium text-foreground">
+                  {localizedName(addSharesForCampaign.productName)}
+                </span>
+              </p>
+              <p>
+                {t('campaignNumber')}: #
+                {addSharesForCampaign.campaignNumber}
+              </p>
+              <p>
+                {t('shares')}: {addSharesForCampaign.soldShares}/
+                {addSharesForCampaign.totalShares}
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">
+                {t('reservedSharesLabel')} *
+              </label>
+              <Input
+                type="text"
+                inputMode="numeric"
+                value={addSharesInput}
+                onChange={(e) =>
+                  setAddSharesInput(onlyDigits(e.target.value))
+                }
+                onBlur={() => {
+                  const parsed = parseInt(addSharesInput) || 0;
+                  if (parsed < 1) setAddSharesInput('1');
+                }}
+                placeholder="1"
+                helperText={t('reservedSharesHint')}
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                variant="secondary"
+                onClick={() => setShowAddSharesModal(false)}
+              >
+                {t('cancel')}
+              </Button>
+              <Button onClick={handleAddShares} disabled={submitting}>
+                {submitting ? t('saving') : t('add')}
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
 
       {/* Orders Modal */}
       {showOrdersModal && ordersForCampaign && (

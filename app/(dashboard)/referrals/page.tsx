@@ -261,14 +261,14 @@ export default function ReferralsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold text-foreground mb-2">
             {t('title')}
           </h1>
           <p className="text-secondary">{t('description')}</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <Button variant="outline" className="flex gap-2" onClick={() => setShowDefaultPhonesModal(true)}>
             <LuPhone size={18} />
             {t('defaultPhones.button')}
@@ -277,7 +277,10 @@ export default function ReferralsPage() {
             variant="outline"
             className="flex gap-2"
             onClick={() => setShowReorderModal(true)}
-            disabled={referrals.length < 2}
+            // Reordering a filtered subset would write filterOrder
+            // values onto only part of the list — disable while
+            // a search/app filter is active.
+            disabled={referrals.length < 2 || appFilter !== 'all' || !!searchQuery}
           >
             <LuArrowUpDown size={18} />
             {t('reorderButton')}

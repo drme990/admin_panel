@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from 'next-intl';
 import Image from 'next/image';
 import Modal from '@/components/ui/modal';
 import Input from '@/components/ui/input';
+import Checkbox from '@/components/ui/checkbox';
 import Button from '@/components/ui/button';
 import Dropdown from '@/components/ui/dropdown';
 import Tooltip from '@/components/ui/tooltip';
@@ -50,6 +51,8 @@ interface ShareCampaign {
   soldShares: number;
   status: 'active' | 'inactive' | 'completed';
   campaignNumber: number;
+  displayOnProductPage?: boolean;
+  minDisplayPercent?: number;
   sizes: CampaignSize[];
   createdAt: string;
   completedAt: string | null;
@@ -129,9 +132,16 @@ export default function SharesPage() {
   const [campaignNumberInput, setCampaignNumberInput] = useState('1');
   const [totalSharesInput, setTotalSharesInput] = useState('10');
   const [sizeShares, setSizeShares] = useState<Record<number, string>>({});
+  const [displayOnProductPageInput, setDisplayOnProductPageInput] =
+    useState(false);
+  const [minDisplayPercentInput, setMinDisplayPercentInput] = useState('0');
 
   // Edit form state
   const [editTotalSharesInput, setEditTotalSharesInput] = useState('');
+  const [editDisplayOnProductPage, setEditDisplayOnProductPage] =
+    useState(false);
+  const [editMinDisplayPercent, setEditMinDisplayPercent] = useState('0');
+  const [editCampaignNumberInput, setEditCampaignNumberInput] = useState('');
 
   const [submitting, setSubmitting] = useState(false);
 
@@ -237,12 +247,17 @@ export default function SharesPage() {
     setCampaignNumberInput('1');
     setTotalSharesInput('10');
     setSizeShares({});
+    setDisplayOnProductPageInput(false);
+    setMinDisplayPercentInput('0');
     setShowCreateModal(true);
   };
 
   const openEditModal = (campaign: ShareCampaign) => {
     setEditingCampaign(campaign);
     setEditTotalSharesInput(String(campaign.totalShares));
+    setEditDisplayOnProductPage(campaign.displayOnProductPage ?? false);
+    setEditMinDisplayPercent(String(campaign.minDisplayPercent ?? 0));
+    setEditCampaignNumberInput(String(campaign.campaignNumber));
     setShowEditModal(true);
   };
 
@@ -305,6 +320,11 @@ export default function SharesPage() {
           productId: selectedProductId,
           campaignNumber,
           totalShares,
+          displayOnProductPage: displayOnProductPageInput,
+          minDisplayPercent: Math.min(
+            100,
+            parseInt(minDisplayPercentInput) || 0,
+          ),
           sizes,
         }),
       });
@@ -332,9 +352,21 @@ export default function SharesPage() {
       toast.error(t('minShares'));
       return;
     }
+    const campaignNumber = parseInt(editCampaignNumberInput) || 0;
+    if (campaignNumber < 1) {
+      toast.error(t('invalidCampaignNumber'));
+      return;
+    }
     setSubmitting(true);
     try {
-      const body: Record<string, unknown> = {};
+      const body: Record<string, unknown> = {
+        campaignNumber,
+        displayOnProductPage: editDisplayOnProductPage,
+        minDisplayPercent: Math.min(
+          100,
+          parseInt(editMinDisplayPercent) || 0,
+        ),
+      };
       if (editingCampaign.soldShares === 0 && totalShares >= 2) {
         body.totalShares = totalShares;
       }
@@ -815,7 +847,42 @@ export default function SharesPage() {
             </div>
           )}
 
-          {/* Step 4: Per-size shares-per-purchase */}
+          {/* Step 4: Show on product page */}
+          {availableProducts.length > 0 && (
+            <div className="space-y-3">
+              <Checkbox
+                checked={displayOnProductPageInput}
+                onChange={setDisplayOnProductPageInput}
+                label={t('displayOnProductPage')}
+                description={t('displayOnProductPageHint')}
+              />
+              {displayOnProductPageInput && (
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-1">
+                    {t('minDisplayPercent')}
+                  </label>
+                  <Input
+                    type="text"
+                    inputMode="numeric"
+                    value={minDisplayPercentInput}
+                    onChange={(e) =>
+                      setMinDisplayPercentInput(onlyDigits(e.target.value))
+                    }
+                    onBlur={() => {
+                      const parsed = parseInt(minDisplayPercentInput) || 0;
+                      setMinDisplayPercentInput(
+                        String(Math.min(100, Math.max(0, parsed))),
+                      );
+                    }}
+                    placeholder="0"
+                    helperText={t('minDisplayPercentHint')}
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Step 5: Per-size shares-per-purchase */}
           {availableProducts.length > 0 && selectedProduct && (
             <div>
               <label className="block text-sm font-medium text-foreground mb-2">
@@ -902,9 +969,6 @@ export default function SharesPage() {
                 </span>
               </p>
               <p>
-                {t('campaignNumber')}: #{editingCampaign.campaignNumber}
-              </p>
-              <p>
                 {t('shares')}: {editingCampaign.soldShares}/
                 {editingCampaign.totalShares}
               </p>
@@ -916,6 +980,29 @@ export default function SharesPage() {
                   </div>
                 ))}
               </div>
+            </div>
+
+            {/* Campaign code */}
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">
+                {t('campaignNumberLabel')} *
+              </label>
+              <Input
+                type="text"
+                inputMode="numeric"
+                value={editCampaignNumberInput}
+                onChange={(e) =>
+                  setEditCampaignNumberInput(onlyDigits(e.target.value))
+                }
+                onBlur={() => {
+                  const parsed = parseInt(editCampaignNumberInput) || 0;
+                  if (parsed < 1) {
+                    setEditCampaignNumberInput(
+                      String(editingCampaign.campaignNumber),
+                    );
+                  }
+                }}
+              />
             </div>
 
             {/* Edit total shares (only if no shares sold) */}
@@ -942,6 +1029,39 @@ export default function SharesPage() {
                 {t('cannotEditShares')}
               </p>
             )}
+
+            {/* Show on product page */}
+            <div className="space-y-3">
+              <Checkbox
+                checked={editDisplayOnProductPage}
+                onChange={setEditDisplayOnProductPage}
+                label={t('displayOnProductPage')}
+                description={t('displayOnProductPageHint')}
+              />
+              {editDisplayOnProductPage && (
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-1">
+                    {t('minDisplayPercent')}
+                  </label>
+                  <Input
+                    type="text"
+                    inputMode="numeric"
+                    value={editMinDisplayPercent}
+                    onChange={(e) =>
+                      setEditMinDisplayPercent(onlyDigits(e.target.value))
+                    }
+                    onBlur={() => {
+                      const parsed = parseInt(editMinDisplayPercent) || 0;
+                      setEditMinDisplayPercent(
+                        String(Math.min(100, Math.max(0, parsed))),
+                      );
+                    }}
+                    placeholder="0"
+                    helperText={t('minDisplayPercentHint')}
+                  />
+                </div>
+              )}
+            </div>
 
             <div className="flex justify-end gap-2 pt-2">
               <Button variant="secondary" onClick={() => setShowEditModal(false)}>

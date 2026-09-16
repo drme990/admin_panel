@@ -3122,6 +3122,7 @@
       "noOrders": "No orders for this campaign yet",
       "selectProduct": "Select a product",
       "selectProductFirst": "Select a product first",
+      "allProductsHaveCampaigns": "All products already have a share campaign",
       "minShares": "Total shares must be at least 2",
       "invalidCampaignNumber": "Campaign number must be at least 1",
       "cannotEditShares": "Cannot change total shares after shares have been sold",
@@ -3137,6 +3138,7 @@
       "amount": "Amount",
       "orderStatus": "Status",
       "date": "Date",
+      "viewOrder": "View Order",
       "status": {
         "active": "Active",
         "completed": "Completed"

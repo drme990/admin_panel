@@ -2,12 +2,15 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
+import Image from 'next/image';
 import Modal from '@/components/ui/modal';
 import Input from '@/components/ui/input';
 import Button from '@/components/ui/button';
 import Dropdown from '@/components/ui/dropdown';
 import Tooltip from '@/components/ui/tooltip';
 import ConfirmModal, { useConfirmModal } from '@/components/ui/confirm-modal';
+import OrderDetailModal from '@/components/order/order-detail-modal';
+import { type Order } from '@/types/Order';
 import { toast } from 'react-toastify';
 
 import {
@@ -18,6 +21,7 @@ import {
   LuChartPie,
   LuCircleCheck,
   LuClock,
+  LuImage as ImageIcon,
 } from 'react-icons/lu';
 
 interface CampaignSize {
@@ -25,11 +29,17 @@ interface CampaignSize {
   sharesPerPurchase: number;
 }
 
+interface ProductMediaItem {
+  url: string;
+  platform: string;
+}
+
 interface ShareCampaign {
   _id: string;
   productId: string;
   productName: { ar: string; en: string } | null;
   productSlug: string | null;
+  productMedia: ProductMediaItem[];
   productSizes: Array<{
     sizeIndex: number;
     name: { ar: string; en: string };
@@ -58,6 +68,10 @@ interface Product {
   baseCurrency: string;
 }
 
+interface CampaignOrder extends Order {
+  _id: string;
+}
+
 function extractApiError(data: unknown, fallback: string): string {
   if (!data || typeof data !== 'object') return fallback;
   const error = (data as Record<string, unknown>).error;
@@ -74,6 +88,16 @@ function extractApiError(data: unknown, fallback: string): string {
 
 function onlyDigits(value: string): string {
   return value.replace(/[^0-9]/g, '');
+}
+
+function isVideoUrl(url: string): boolean {
+  return /\.(mp4|webm|ogg|mov)(\?|$)/i.test(url);
+}
+
+function getPrimaryImageUrl(media: ProductMediaItem[]): string | null {
+  if (!media || media.length === 0) return null;
+  const firstImage = media.find((m) => !isVideoUrl(m.url));
+  return firstImage?.url || media[0]?.url || null;
 }
 
 export default function SharesPage() {
@@ -95,6 +119,9 @@ export default function SharesPage() {
     ar: string;
     en: string;
   } | null>(null);
+  const [selectedProductMedia, setSelectedProductMedia] = useState<
+    ProductMediaItem[]
+  >([]);
   const [products, setProducts] = useState<Product[]>([]);
 
   // Create form state
@@ -155,6 +182,19 @@ export default function SharesPage() {
 
   const selectedProduct = products.find((p) => p._id === selectedProductId);
 
+  // Products that already have a campaign — excluded from the
+  // "Create Campaign" product dropdown so each product only has
+  // campaigns created once (one active campaign per product).
+  const productIdsWithCampaign = useMemo(
+    () => new Set(campaigns.map((c) => String(c.productId))),
+    [campaigns],
+  );
+
+  const availableProducts = useMemo(
+    () => products.filter((p) => !productIdsWithCampaign.has(String(p._id))),
+    [products, productIdsWithCampaign],
+  );
+
   // Group campaigns by product
   const productGroups = useMemo(() => {
     const groups: Record<
@@ -162,6 +202,7 @@ export default function SharesPage() {
       {
         productId: string;
         productName: { ar: string; en: string } | null;
+        productMedia: ProductMediaItem[];
         productSizes: ShareCampaign['productSizes'];
         baseCurrency: string | null;
         campaigns: ShareCampaign[];
@@ -174,6 +215,7 @@ export default function SharesPage() {
         groups[key] = {
           productId: key,
           productName: c.productName,
+          productMedia: c.productMedia || [],
           productSizes: c.productSizes,
           baseCurrency: c.baseCurrency,
           campaigns: [],
@@ -352,6 +394,7 @@ export default function SharesPage() {
   const openProductModal = (group: (typeof productGroups)[number]) => {
     setSelectedProductCampaigns(group.campaigns);
     setSelectedProductName(group.productName);
+    setSelectedProductMedia(group.productMedia);
     setShowProductModal(true);
   };
 
@@ -377,7 +420,42 @@ export default function SharesPage() {
       .join(' • ');
   };
 
-  // Render a campaign card (used in both product modal and main view)
+  // ── Product Thumbnail ──
+  const ProductThumb = ({
+    media,
+    name,
+    size = 'md',
+  }: {
+    media: ProductMediaItem[];
+    name: string;
+    size?: 'sm' | 'md' | 'lg';
+  }) => {
+    const img = getPrimaryImageUrl(media);
+    const dims =
+      size === 'sm' ? 'w-10 h-10' : size === 'lg' ? 'w-20 h-20' : 'w-14 h-14';
+    if (!img) {
+      return (
+        <div
+          className={`${dims} rounded-lg bg-stroke/10 flex items-center justify-center text-secondary/40`}
+        >
+          <ImageIcon size={size === 'sm' ? 16 : 20} />
+        </div>
+      );
+    }
+    return (
+      <div className={`relative ${dims} rounded-lg overflow-hidden shrink-0`}>
+        <Image
+          src={img}
+          alt={name}
+          fill
+          className="object-cover"
+          unoptimized
+        />
+      </div>
+    );
+  };
+
+  // ── Campaign Card ──
   const CampaignCard = ({
     campaign,
     showActions = true,
@@ -396,33 +474,67 @@ export default function SharesPage() {
           : 'border-stroke bg-background'
           }`}
       >
-        {/* Header */}
+        {/* Header — campaign number, status badge, and actions on one row */}
         <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 min-w-0">
             {isActive ? (
-              <LuClock size={18} className="text-primary" />
+              <LuClock size={18} className="text-primary shrink-0" />
             ) : (
-              <LuCircleCheck size={18} className="text-blue-500" />
+              <LuCircleCheck size={18} className="text-blue-500 shrink-0" />
             )}
-            <span className="font-medium text-foreground">
-              {t('campaignNumber')}: #{campaign.campaignNumber}
+            <span className="font-medium text-foreground truncate">
+              {t('campaignNumber')} #{campaign.campaignNumber}
             </span>
+            {isActive ? (
+              <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700 shrink-0">
+                {t('status.active')}
+              </span>
+            ) : (
+              <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700 shrink-0">
+                {t('status.completed')}
+              </span>
+            )}
           </div>
-          {isActive ? (
-            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">
-              {t('status.active')}
-            </span>
-          ) : (
-            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
-              {t('status.completed')}
-            </span>
+
+          {/* Actions — inline on the header row */}
+          {showActions && (
+            <div className="flex items-center gap-1 shrink-0">
+              <Tooltip content={t('viewOrders')} position="top">
+                <button
+                  onClick={() => openOrdersModal(campaign)}
+                  className="p-1.5 rounded-lg hover:bg-secondary/10 text-secondary"
+                >
+                  <LuEye size={16} />
+                </button>
+              </Tooltip>
+              {isActive && (
+                <Tooltip content={t('editCampaign')} position="top">
+                  <button
+                    onClick={() => openEditModal(campaign)}
+                    className="p-1.5 rounded-lg hover:bg-secondary/10 text-secondary"
+                  >
+                    <LuPen size={16} />
+                  </button>
+                </Tooltip>
+              )}
+              {campaign.soldShares === 0 && (
+                <Tooltip content={t('delete')} position="top">
+                  <button
+                    onClick={() => handleDelete(campaign)}
+                    className="p-1.5 rounded-lg hover:bg-error/10 text-error"
+                  >
+                    <LuTrash2 size={16} />
+                  </button>
+                </Tooltip>
+              )}
+            </div>
           )}
         </div>
 
         {/* Progress */}
         <div className="space-y-1.5 mb-3">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-foreground">
+            <span className="text-sm font-medium text-foreground tabular-nums">
               {campaign.soldShares}/{campaign.totalShares}
             </span>
             <div className="flex-1 h-2 bg-secondary/20 rounded-full overflow-hidden">
@@ -432,7 +544,7 @@ export default function SharesPage() {
                 style={{ width: `${progressPercent(campaign)}%` }}
               />
             </div>
-            <span className="text-xs text-secondary">
+            <span className="text-xs text-secondary tabular-nums">
               {progressPercent(campaign)}%
             </span>
           </div>
@@ -449,7 +561,7 @@ export default function SharesPage() {
         </div>
 
         {/* Dates */}
-        <div className="flex items-center gap-4 text-xs text-secondary/70 mb-3">
+        <div className="flex items-center gap-4 text-xs text-secondary/70">
           <span>
             {t('createdLabel')}: {new Date(campaign.createdAt).toLocaleDateString(isRTL ? 'ar-SA' : 'en-US')}
           </span>
@@ -459,40 +571,6 @@ export default function SharesPage() {
             </span>
           )}
         </div>
-
-        {/* Actions */}
-        {showActions && (
-          <div className="flex items-center gap-2 pt-2 border-t border-stroke">
-            <Tooltip content={t('viewOrders')} position="top">
-              <button
-                onClick={() => openOrdersModal(campaign)}
-                className="p-1.5 rounded-lg hover:bg-secondary/10 text-secondary"
-              >
-                <LuEye size={16} />
-              </button>
-            </Tooltip>
-            {isActive && (
-              <Tooltip content={t('editCampaign')} position="top">
-                <button
-                  onClick={() => openEditModal(campaign)}
-                  className="p-1.5 rounded-lg hover:bg-secondary/10 text-secondary"
-                >
-                  <LuPen size={16} />
-                </button>
-              </Tooltip>
-            )}
-            {campaign.soldShares === 0 && (
-              <Tooltip content={t('delete')} position="top">
-                <button
-                  onClick={() => handleDelete(campaign)}
-                  className="p-1.5 rounded-lg hover:bg-error/10 text-error"
-                >
-                  <LuTrash2 size={16} />
-                </button>
-              </Tooltip>
-            )}
-          </div>
-        )}
       </div>
     );
   };
@@ -527,6 +605,7 @@ export default function SharesPage() {
             const completedCount = group.campaigns.filter(
               (c) => c.status === 'completed',
             ).length;
+            const imgUrl = getPrimaryImageUrl(group.productMedia);
 
             return (
               <button
@@ -534,16 +613,33 @@ export default function SharesPage() {
                 onClick={() => openProductModal(group)}
                 className="text-left rounded-xl border border-stroke bg-card-bg p-4 hover:border-primary/30 hover:shadow-md transition-all"
               >
-                {/* Product name */}
-                <div className="font-medium text-foreground mb-2">
-                  {localizedName(group.productName)}
+                {/* Product thumbnail + name */}
+                <div className="flex items-center gap-3 mb-3">
+                  {imgUrl ? (
+                    <div className="relative w-14 h-14 rounded-lg overflow-hidden shrink-0">
+                      <Image
+                        src={imgUrl}
+                        alt={localizedName(group.productName)}
+                        fill
+                        className="object-cover"
+                        unoptimized
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-14 h-14 rounded-lg bg-stroke/10 flex items-center justify-center text-secondary/40 shrink-0">
+                      <ImageIcon size={20} />
+                    </div>
+                  )}
+                  <div className="font-medium text-foreground line-clamp-2">
+                    {localizedName(group.productName)}
+                  </div>
                 </div>
 
                 {/* Active campaign progress */}
                 {activeCampaign ? (
                   <div className="space-y-1.5 mb-3">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-foreground">
+                      <span className="text-sm font-medium text-foreground tabular-nums">
                         {activeCampaign.soldShares}/
                         {activeCampaign.totalShares}
                       </span>
@@ -555,7 +651,7 @@ export default function SharesPage() {
                           }}
                         />
                       </div>
-                      <span className="text-xs text-secondary">
+                      <span className="text-xs text-secondary tabular-nums">
                         {progressPercent(activeCampaign)}%
                       </span>
                     </div>
@@ -600,14 +696,46 @@ export default function SharesPage() {
             setShowProductModal(false);
             setSelectedProductCampaigns([]);
             setSelectedProductName(null);
+            setSelectedProductMedia([]);
           }}
           title={localizedName(selectedProductName)}
           size="xl"
         >
           <div className="space-y-4">
-            {selectedProductCampaigns.map((campaign) => (
+            {/* Product header with thumbnail */}
+            <div className="flex items-center gap-3 pb-3 border-b border-stroke">
+              <ProductThumb
+                media={selectedProductMedia}
+                name={localizedName(selectedProductName)}
+                size="lg"
+              />
+              <div className="font-medium text-foreground text-lg">
+                {localizedName(selectedProductName)}
+              </div>
+            </div>
+
+            {/* Current campaign */}
+            {selectedProductCampaigns.filter((c) => c.status === 'active').map((campaign) => (
               <CampaignCard key={campaign._id} campaign={campaign} />
             ))}
+
+            {/* Divider — only if there are completed campaigns */}
+            {selectedProductCampaigns.some((c) => c.status === 'completed') && (
+              <div className="flex items-center gap-3 py-2">
+                <div className="flex-1 h-px bg-stroke" />
+                <span className="text-xs font-medium text-secondary uppercase tracking-wide">
+                  {t('status.completed')}
+                </span>
+                <div className="flex-1 h-px bg-stroke" />
+              </div>
+            )}
+
+            {/* Completed campaigns */}
+            {selectedProductCampaigns
+              .filter((c) => c.status === 'completed')
+              .map((campaign) => (
+                <CampaignCard key={campaign._id} campaign={campaign} />
+              ))}
           </div>
         </Modal>
       )}
@@ -621,64 +749,74 @@ export default function SharesPage() {
       >
         <div className="space-y-5">
           {/* Step 1: Select product */}
-          <div>
-            <Dropdown
-              label={t('product')}
-              value={selectedProductId}
-              onChange={handleProductChange}
-              options={[
-                { label: t('selectProduct'), value: '' },
-                ...products.map((p) => ({
-                  label: isRTL ? p.name.ar : p.name.en,
-                  value: p._id,
-                })),
-              ]}
-              searchable
-              searchPlaceholder={t('selectProduct')}
-              required
-            />
-          </div>
+          {availableProducts.length === 0 ? (
+            <p className="text-sm text-secondary text-center py-8">
+              {t('allProductsHaveCampaigns')}
+            </p>
+          ) : (
+            <div>
+              <Dropdown
+                label={t('product')}
+                value={selectedProductId}
+                onChange={handleProductChange}
+                options={[
+                  { label: t('selectProduct'), value: '' },
+                  ...availableProducts.map((p) => ({
+                    label: isRTL ? p.name.ar : p.name.en,
+                    value: p._id,
+                  })),
+                ]}
+                searchable
+                searchPlaceholder={t('selectProduct')}
+                required
+              />
+            </div>
+          )}
 
           {/* Step 2: Campaign number */}
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1">
-              {t('campaignNumberLabel')} *
-            </label>
-            <Input
-              type="text"
-              inputMode="numeric"
-              value={campaignNumberInput}
-              onChange={(e) => setCampaignNumberInput(onlyDigits(e.target.value))}
-              onBlur={() => {
-                const parsed = parseInt(campaignNumberInput) || 0;
-                if (parsed < 1) setCampaignNumberInput('1');
-              }}
-              placeholder="1"
-              helperText={t('campaignNumberHint')}
-            />
-          </div>
+          {availableProducts.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">
+                {t('campaignNumberLabel')} *
+              </label>
+              <Input
+                type="text"
+                inputMode="numeric"
+                value={campaignNumberInput}
+                onChange={(e) => setCampaignNumberInput(onlyDigits(e.target.value))}
+                onBlur={() => {
+                  const parsed = parseInt(campaignNumberInput) || 0;
+                  if (parsed < 1) setCampaignNumberInput('1');
+                }}
+                placeholder="1"
+                helperText={t('campaignNumberHint')}
+              />
+            </div>
+          )}
 
           {/* Step 3: Total shares needed to complete */}
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1">
-              {t('totalSharesLabel')} *
-            </label>
-            <Input
-              type="text"
-              inputMode="numeric"
-              value={totalSharesInput}
-              onChange={(e) => setTotalSharesInput(onlyDigits(e.target.value))}
-              onBlur={() => {
-                const parsed = parseInt(totalSharesInput) || 0;
-                if (parsed < 2) setTotalSharesInput('2');
-              }}
-              placeholder="10"
-              helperText={t('totalSharesHint')}
-            />
-          </div>
+          {availableProducts.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">
+                {t('totalSharesLabel')} *
+              </label>
+              <Input
+                type="text"
+                inputMode="numeric"
+                value={totalSharesInput}
+                onChange={(e) => setTotalSharesInput(onlyDigits(e.target.value))}
+                onBlur={() => {
+                  const parsed = parseInt(totalSharesInput) || 0;
+                  if (parsed < 2) setTotalSharesInput('2');
+                }}
+                placeholder="10"
+                helperText={t('totalSharesHint')}
+              />
+            </div>
+          )}
 
           {/* Step 4: Per-size shares-per-purchase */}
-          {selectedProduct && (
+          {availableProducts.length > 0 && selectedProduct && (
             <div>
               <label className="block text-sm font-medium text-foreground mb-2">
                 {t('sizesSharesLabel')} *
@@ -731,17 +869,19 @@ export default function SharesPage() {
           )}
 
           {/* Actions */}
-          <div className="flex justify-end gap-2 pt-2">
-            <Button variant="secondary" onClick={() => setShowCreateModal(false)}>
-              {t('cancel')}
-            </Button>
-            <Button
-              onClick={handleCreate}
-              disabled={submitting || !selectedProductId}
-            >
-              {submitting ? t('saving') : t('create')}
-            </Button>
-          </div>
+          {availableProducts.length > 0 && (
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="secondary" onClick={() => setShowCreateModal(false)}>
+                {t('cancel')}
+              </Button>
+              <Button
+                onClick={handleCreate}
+                disabled={submitting || !selectedProductId}
+              >
+                {submitting ? t('saving') : t('create')}
+              </Button>
+            </div>
+          )}
         </div>
       </Modal>
 
@@ -825,6 +965,7 @@ export default function SharesPage() {
           }}
           t={t}
           isRTL={isRTL}
+          locale={locale}
         />
       )}
 
@@ -833,30 +974,23 @@ export default function SharesPage() {
   );
 }
 
+// ── Campaign Orders Modal ──
 function CampaignOrdersModal({
   campaign,
   onClose,
   t,
   isRTL,
+  locale,
 }: {
   campaign: ShareCampaign;
   onClose: () => void;
   t: (key: string, values?: Record<string, string | number | Date>) => string;
   isRTL: boolean;
+  locale: string;
 }) {
-  const [orders, setOrders] = useState<
-    Array<{
-      _id: string;
-      orderNumber: string;
-      billingData: { fullName: string };
-      status: string;
-      totalAmount: number;
-      currency: string;
-      createdAt: string;
-      items: Array<{ shareQuantity?: number }>;
-    }>
-  >([]);
+  const [orders, setOrders] = useState<CampaignOrder[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedOrder, setSelectedOrder] = useState<CampaignOrder | null>(null);
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -877,55 +1011,125 @@ function CampaignOrdersModal({
     void fetchOrders();
   }, [campaign._id]);
 
+  const formatDate = (dateStr: string) =>
+    new Date(dateStr).toLocaleDateString(
+      isRTL ? 'ar-SA' : 'en-US',
+      {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      },
+    );
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'paid':
+        return 'bg-emerald-100 text-emerald-700';
+      case 'partial-paid':
+        return 'bg-amber-100 text-amber-700';
+      case 'completed':
+        return 'bg-blue-100 text-blue-700';
+      default:
+        return 'bg-stroke/20 text-secondary';
+    }
+  };
+
   return (
-    <Modal
-      isOpen
-      onClose={onClose}
-      title={`${t('campaignOrders')} #${campaign.campaignNumber}`}
-      size="xl"
-    >
-      {loading ? (
-        <div className="text-center py-8 text-secondary">{t('loading')}</div>
-      ) : orders.length === 0 ? (
-        <div className="text-center py-8 text-secondary">{t('noOrders')}</div>
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border text-secondary text-left">
-                <th className="px-3 py-2">{t('orderNumber')}</th>
-                <th className="px-3 py-2">{t('customer')}</th>
-                <th className="px-3 py-2">{t('shares')}</th>
-                <th className="px-3 py-2">{t('amount')}</th>
-                <th className="px-3 py-2">{t('orderStatus')}</th>
-                <th className="px-3 py-2">{t('date')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {orders.map((order) => (
-                <tr key={order._id} className="border-b border-border/50">
-                  <td className="px-3 py-2 font-mono text-xs">
-                    {order.orderNumber}
-                  </td>
-                  <td className="px-3 py-2">{order.billingData?.fullName}</td>
-                  <td className="px-3 py-2">
-                    {order.items?.[0]?.shareQuantity || 0}
-                  </td>
-                  <td className="px-3 py-2">
-                    {order.totalAmount} {order.currency}
-                  </td>
-                  <td className="px-3 py-2">{order.status}</td>
-                  <td className="px-3 py-2 text-secondary text-xs">
-                    {new Date(order.createdAt).toLocaleDateString(
-                      isRTL ? 'ar-SA' : 'en-US',
-                    )}
-                  </td>
+    <>
+      <Modal
+        isOpen
+        onClose={onClose}
+        title={`${t('campaignOrders')} #${campaign.campaignNumber}`}
+        size="xl"
+      >
+        {loading ? (
+          <div className="text-center py-8 text-secondary">{t('loading')}</div>
+        ) : orders.length === 0 ? (
+          <div className="text-center py-8 text-secondary">{t('noOrders')}</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border text-secondary text-left">
+                  <th className="px-3 py-2 font-medium">{t('orderNumber')}</th>
+                  <th className="px-3 py-2 font-medium">{t('customer')}</th>
+                  <th className="px-3 py-2 font-medium">{t('shares')}</th>
+                  <th className="px-3 py-2 font-medium">{t('amount')}</th>
+                  <th className="px-3 py-2 font-medium">{t('orderStatus')}</th>
+                  <th className="px-3 py-2 font-medium">{t('date')}</th>
+                  <th className="px-3 py-2 font-medium text-right">
+                    {t('viewOrder')}
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </Modal>
+              </thead>
+              <tbody>
+                {orders.map((order) => {
+                  const shareQty =
+                    order.items?.find((i) => i.isShare)?.shareQuantity || 0;
+                  return (
+                    <tr
+                      key={order._id}
+                      className="border-b border-border/50 hover:bg-secondary/5"
+                    >
+                      <td className="px-3 py-2.5 font-mono text-xs">
+                        {order.orderNumber}
+                      </td>
+                      <td className="px-3 py-2.5">
+                        {order.billingData?.fullName || '-'}
+                      </td>
+                      <td className="px-3 py-2.5">
+                        {shareQty > 0 ? (
+                          <span className="px-2 py-0.5 rounded-full text-xs bg-primary/10 text-primary font-medium">
+                            {shareQty}
+                          </span>
+                        ) : (
+                          <span className="text-secondary">-</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2.5 tabular-nums">
+                        {order.totalAmount} {order.currency}
+                      </td>
+                      <td className="px-3 py-2.5">
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}
+                        >
+                          {order.status}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2.5 text-secondary text-xs">
+                        {new Date(order.createdAt).toLocaleDateString(isRTL ? 'ar-SA' : 'en-US')}
+                      </td>
+                      <td className="px-3 py-2.5 text-right">
+                        <Tooltip content={t('viewOrder')} position="top">
+                          <button
+                            onClick={() => setSelectedOrder(order)}
+                            className="p-1.5 rounded-lg hover:bg-secondary/10 text-secondary hover:text-primary transition-colors"
+                          >
+                            <LuEye size={16} />
+                          </button>
+                        </Tooltip>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Modal>
+
+      {/* Order detail modal — uses the same shared OrderDetailModal */}
+      <OrderDetailModal
+        isOpen={!!selectedOrder}
+        onClose={() => setSelectedOrder(null)}
+        order={selectedOrder}
+        loadingDetails={false}
+        formatDate={formatDate}
+        locale={locale}
+        namespace="orders"
+      />
+    </>
   );
 }

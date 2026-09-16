@@ -125,6 +125,12 @@ export interface OrderItem {
   isAddOn?: boolean;
   /** Index of the parent item in the items array (the main product this add-on belongs to). */
   parentItemIndex?: number;
+  /** True when this item contributes to a share campaign. */
+  isShare?: boolean;
+  /** ID of the share campaign this item contributes to. */
+  shareCampaignId?: string;
+  /** Number of shares this item contributes to the campaign. */
+  shareQuantity?: number;
 }
 
 export interface BillingData {

@@ -3121,6 +3121,7 @@
       "noOrders": "لا توجد طلبات لهذه الحملة بعد",
       "selectProduct": "اختر منتجًا",
       "selectProductFirst": "اختر منتجًا أولاً",
+      "allProductsHaveCampaigns": "جميع المنتجات لديها بالفعل حملة أسهم",
       "minShares": "يجب أن يكون إجمالي الأسهم 2 على الأقل",
       "invalidCampaignNumber": "يجب أن يكون رقم الحملة 1 على الأقل",
       "cannotEditShares": "لا يمكن تغيير إجمالي الأسهم بعد بيع أسهم",
@@ -3136,6 +3137,7 @@
       "amount": "المبلغ",
       "orderStatus": "الحالة",
       "date": "التاريخ",
+      "viewOrder": "عرض الطلب",
       "status": {
         "active": "نشط",
         "completed": "مكتمل"

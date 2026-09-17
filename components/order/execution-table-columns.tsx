@@ -675,6 +675,18 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
     {
       header: t('table.invoice'),
       accessor: (order: Order) => {
+        // Sub-orders share the parent's invoice — no invoice UI on sub-order rows
+        if (order.isSubOrder) {
+          return (
+            <div className="flex flex-col items-center gap-1 justify-center min-h-12">
+              <Tooltip position={tooltipPos} content={t('table.subOrderNoInvoice') || 'Sub-order — invoice on main order'}>
+                <span className="inline-flex items-center justify-center p-2 text-secondary/50">
+                  <LuBan size={20} />
+                </span>
+              </Tooltip>
+            </div>
+          );
+        }
         // Free orders don't have invoices
         if (order.isFreeOrder) {
           return (
@@ -770,6 +782,12 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
     {
       header: t('table.paidAmount'),
       accessor: (order: Order) => {
+        // Financials live on the main order only
+        if (order.isSubOrder) {
+          return (
+            <span className="inline-block text-secondary/40 select-none">—</span>
+          );
+        }
         if (order.isFreeOrder) {
           return (
             <span className="font-bold text-success">
@@ -794,6 +812,12 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
     {
       header: t('table.remainingAmount'),
       accessor: (order: Order) => {
+        // Financials live on the main order only
+        if (order.isSubOrder) {
+          return (
+            <span className="inline-block text-secondary/40 select-none">—</span>
+          );
+        }
         const remaining = order.remainingAmount;
 
         if (order.status === 'processing') {
@@ -943,7 +967,7 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
               </Button>
             </Tooltip>
 
-            {!order.isSubOrder && !order.hasSubOrder && !order.isFreeOrder && (
+            {!order.isSubOrder && !order.isFreeOrder && (
               <Tooltip position={tooltipPos} content={t('subOrder.title') || 'Create Sub Order'}>
                 <Button
                   variant="icon-primary"

@@ -161,7 +161,8 @@
       "orderHistory": "تاريخ التغييرات",
       "copied": "تم النسخ!",
       "downloaded": "تم التحميل بنجاح",
-      "freeOrderNoInvoice": "طلب مجاني — لا توجد فاتورة"
+      "freeOrderNoInvoice": "طلب مجاني — لا توجد فاتورة",
+      "subOrderNoInvoice": "طلب فرعي — الفاتورة على الطلب الرئيسي"
     },
     "createManualOrder": {
       "title": "إنشاء طلب يدوي",

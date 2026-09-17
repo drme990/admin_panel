@@ -187,7 +187,7 @@ export function useInvoiceColumns(callbacks: ColumnCallbacks) {
                 <span className="inline-flex h-6 w-6 items-center justify-center">
                   <LuRefreshCw size={14} className="animate-spin text-secondary" />
                 </span>
-              ) : (
+              ) : row.isSubOrder ? null : (
                 <InvoiceUploadTypeMenu
                   onUpload={(type) => onUploadInvoice(row, type)}
                   disabled={isUploading}

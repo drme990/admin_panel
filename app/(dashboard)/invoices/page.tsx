@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { toast } from 'react-toastify';
 
@@ -80,6 +80,14 @@ export default function InvoicesPage() {
     const [categories, setCategories] = useState<Category[]>([]);
     const [referrals, setReferrals] = useState<Referral[]>([]);
     const [totalInvoices, setTotalInvoices] = useState(0);
+    const [statusCounts, setStatusCounts] = useState<Record<string, number>>({
+        total: 0,
+        confirmed: 0,
+        waiting: 0,
+        pending: 0,
+        rejected: 0,
+        deleted: 0,
+    });
 
     // Edit modal state
     const [editingInvoice, setEditingInvoice] = useState<InvoiceRow | null>(null);
@@ -215,11 +223,8 @@ export default function InvoicesPage() {
         setLoading(true);
         try {
             const params = new URLSearchParams({
-                page: '1',
-                // Fetch a large page so "all time" doesn't miss older invoices.
-                // The backend caps at 10000.
-                limit: '10000',
-                view: 'table',
+                page: String(page),
+                limit: String(pageSize),
                 source: sourceFilter,
                 tzOffsetMinutes: String(new Date().getTimezoneOffset()),
                 // Filter by creation date, not last status update — invoices
@@ -232,12 +237,14 @@ export default function InvoicesPage() {
             if (categoryFilter && categoryFilter !== 'all') params.set('category', categoryFilter);
             if (intentionFilter && intentionFilter !== 'all') params.set('intention', intentionFilter);
             if (countryFilter && countryFilter !== 'all') params.set('country', countryFilter);
+            if (reviewFilter !== 'all') params.set('review', reviewFilter);
+            if (paymentMethodFilter !== 'all') params.set('paymentMethod', paymentMethodFilter);
 
             const normalizedRange = normalizeDateRange(fromDateFilter, toDateFilter);
             if (normalizedRange.fromDate) params.set('fromDate', normalizedRange.fromDate);
             if (normalizedRange.toDate) params.set('toDate', normalizedRange.toDate);
 
-            const res = await fetch(`/api/orders?${params.toString()}`, {
+            const res = await fetch(`/api/invoices?${params.toString()}`, {
                 cache: 'no-store',
                 signal,
             });
@@ -247,75 +254,12 @@ export default function InvoicesPage() {
                 return;
             }
 
-            const rows: InvoiceRow[] = [];
-
-            // Build a set of order IDs present in the current page so we can
-            // skip sub-order invoice rows when the parent is also present
-            // (invoices are live-shared, so both would produce duplicates).
-            const pageOrderIds = new Set(
-                (data.data.orders as Order[]).map((o) => String(o._id)),
-            );
-
-            for (const order of data.data.orders as Order[]) {
-                // Skip sub-order rows if the parent is also in this page —
-                // the parent's rows already carry the shared invoices and
-                // will display the sub-order's number as a linked order.
-                if (order.isSubOrder && order.parentOrderId && pageOrderIds.has(String(order.parentOrderId))) {
-                    continue;
-                }
-
-                const invoiceUrls = ((order.invoiceUrls || []) as InvoiceEntry[]);
-                // Derive payment method from the latest paid payment
-                const payments = order.payments || [];
-                const paidPayment = [...payments]
-                    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-                    .find((p) => p.status === 'paid');
-                const paymentMethod = paidPayment?.paymentMethod || order.paymentMethod;
-
-                // The backend includes linkedOrderNumber on orders that have
-                // a parent or sub-order, even when the linked order is not in
-                // the current page (e.g. during search).
-                const linkedOrderNumber = (order as unknown as Record<string, unknown>).linkedOrderNumber as string | undefined;
-
-                invoiceUrls.forEach((inv, idx) => {
-                    const invoiceStatus: string = inv.invoiceStatus ?? 'waiting';
-
-                    if (reviewFilter !== 'all' && invoiceStatus !== reviewFilter) return;
-                    if (paymentMethodFilter !== 'all' && paymentMethod !== paymentMethodFilter) return;
-
-                    rows.push({
-                        _id: `${order._id}_${idx}`,
-                        orderId: order._id,
-                        orderNumber: order.orderNumber,
-                        linkedOrderNumber,
-                        isSubOrder: order.isSubOrder,
-                        invoiceIndex: idx,
-                        url: inv.url,
-                        invoiceStatus,
-                        rejectionReason: inv.rejectionReason || '',
-                        value: inv.value || 0,
-                        currency: order.currency || '',
-                        invoiceCurrency: inv.currency || 'EGP',
-                        orderStatus: order.status,
-                        customerName: order.billingData?.fullName || '',
-                        customerEmail: order.billingData?.email || '',
-                        customerPhone: order.billingData?.phone || '',
-                        source: order.source || '',
-                        paymentMethod,
-                        reservationData: order.reservationData,
-                        referralId: order.referralId,
-                        items: order.items || [],
-                        userId: order.userId,
-                        isGuest: order.isGuest,
-                        createdAt: order.createdAt,
-                        updatedAt: order.updatedAt,
-                    });
-                });
+            setInvoices(data.data.invoices as InvoiceRow[]);
+            setTotalPages(Math.max(1, data.data.pagination?.totalPages ?? 1));
+            setTotalInvoices(data.data.pagination?.total ?? 0);
+            if (data.data.statusCounts) {
+                setStatusCounts(data.data.statusCounts);
             }
-
-            setInvoices(rows);
-            setTotalPages(Math.max(1, Math.ceil(rows.length / pageSize)));
-            setTotalInvoices(rows.length);
         } catch (error) {
             if ((error as { name?: string })?.name === 'AbortError') {
                 return;
@@ -327,7 +271,7 @@ export default function InvoicesPage() {
                 setLoading(false);
             }
         }
-    }, [pageSize, reviewFilter, sourceFilter, paymentMethodFilter, searchQuery, fromDateFilter, toDateFilter, statusFilter, referralFilter, categoryFilter, intentionFilter, countryFilter, t]);
+    }, [page, pageSize, reviewFilter, sourceFilter, paymentMethodFilter, searchQuery, fromDateFilter, toDateFilter, statusFilter, referralFilter, categoryFilter, intentionFilter, countryFilter, t]);
 
     useEffect(() => {
         if (!filtersLoaded) return;
@@ -1119,21 +1063,13 @@ export default function InvoicesPage() {
         });
     };
 
-    // Paginate locally (invoices are flattened from orders)
-    const paginatedInvoices = useMemo(() => {
-        const start = (page - 1) * pageSize;
-        return invoices.slice(start, start + pageSize);
-    }, [invoices, page, pageSize]);
+    // Server-side pagination — `invoices` already holds only the current
+    // page's rows, so no local slicing is needed.
+    const paginatedInvoices = invoices;
 
-    // Status counts for the current filtered invoices
-    const invoiceStats = useMemo(() => {
-        const total = invoices.length;
-        const confirmed = invoices.filter((inv) => inv.invoiceStatus === 'confirmed').length;
-        const waiting = invoices.filter((inv) => inv.invoiceStatus === 'waiting').length;
-        const pending = invoices.filter((inv) => inv.invoiceStatus === 'pending').length;
-        const rejected = invoices.filter((inv) => inv.invoiceStatus === 'rejected').length;
-        return { total, confirmed, waiting, pending, rejected };
-    }, [invoices]);
+    // Status counts across the whole filtered set — computed server-side
+    // (not narrowed by the review filter, so the chips show the full picture).
+    const invoiceStats = statusCounts;
 
     // ---------- Bulk selection & actions ----------
 

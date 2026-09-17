@@ -1149,6 +1149,9 @@ export default function ExecutionPage() {
   };
 
   const handleUploadInvoice = (order: Order) => {
+    // Invoices are managed on the main order only — sub-orders share
+    // the parent's invoices and must not expose upload.
+    if (order.isSubOrder) return;
     invoiceUploadOrderRef.current = order;
     setInvoiceUploadKey((k) => k + 1);
     setInvoiceUploadModalOpen(true);
@@ -1898,6 +1901,19 @@ export default function ExecutionPage() {
                       {
                         header: t('table.invoice'),
                         accessor: (order: Order) => {
+                          // Sub-orders share the parent's invoice — no
+                          // invoice UI at all on sub-order rows
+                          if (order.isSubOrder) {
+                            return (
+                              <div className="flex flex-col items-center gap-1 justify-center min-h-12">
+                                <Tooltip position={ToolTipPositions as 'left' | 'right'} content={t('table.subOrderNoInvoice') || 'Sub-order — invoice on main order'}>
+                                  <span className="inline-flex items-center justify-center p-2 text-secondary/50">
+                                    <LuBan size={20} />
+                                  </span>
+                                </Tooltip>
+                              </div>
+                            );
+                          }
                           // Free orders don't have invoices
                           if (order.isFreeOrder) {
                             return (
@@ -2085,6 +2101,12 @@ export default function ExecutionPage() {
                       {
                         header: t('table.paidAmount'),
                         accessor: (order: Order) => {
+                          // Financials live on the main order only
+                          if (order.isSubOrder) {
+                            return (
+                              <span className="inline-block text-secondary/40 select-none">—</span>
+                            );
+                          }
                           const displayedAmount = typeof order.paidAmount === 'number' ? order.paidAmount : order.totalAmount;
                           const remaining = order.remainingAmount ?? 0;
                           const hasRemaining = remaining > 0.001;
@@ -2099,6 +2121,12 @@ export default function ExecutionPage() {
                       {
                         header: t('table.remainingAmount'),
                         accessor: (order: Order) => {
+                          // Financials live on the main order only
+                          if (order.isSubOrder) {
+                            return (
+                              <span className="inline-block text-secondary/40 select-none">—</span>
+                            );
+                          }
                           const remaining = order.remainingAmount;
                           if (!remaining || remaining <= 0) {
                             return (

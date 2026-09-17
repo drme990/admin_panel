@@ -123,6 +123,12 @@ export function useOrderColumns(callbacks: ColumnCallbacks) {
     {
       header: t('table.paidAmount'),
       accessor: (row: Order) => {
+        // Financials live on the main order only
+        if (row.isSubOrder) {
+          return (
+            <span className="inline-block text-secondary/40 select-none">—</span>
+          );
+        }
         if (row.isFreeOrder) {
           return (
             <span className="font-bold text-success">
@@ -144,6 +150,12 @@ export function useOrderColumns(callbacks: ColumnCallbacks) {
     {
       header: t('table.remainingAmount'),
       accessor: (row: Order) => {
+        // Financials live on the main order only
+        if (row.isSubOrder) {
+          return (
+            <span className="inline-block text-secondary/40 select-none">—</span>
+          );
+        }
         const remaining = row.remainingAmount
 
         if (row.status === 'processing') {
@@ -300,7 +312,7 @@ export function useOrderColumns(callbacks: ColumnCallbacks) {
               </Button>
             </Tooltip>
 
-            {!row.isSubOrder && !row.hasSubOrder && !row.isFreeOrder && (
+            {!row.isSubOrder && !row.isFreeOrder && (
               <Tooltip position={tooltipPos} content={t('subOrder.title') || 'Create Sub Order'}>
                 <Button
                   variant="icon-primary"

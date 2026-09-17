@@ -240,7 +240,7 @@ export default function InvoiceCardView({
                     <span className="inline-flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded-md bg-background/80 backdrop-blur-sm border border-stroke">
                       <LuRefreshCw className="animate-spin text-secondary w-3 h-3 sm:w-3.5 sm:h-3.5" />
                     </span>
-                  ) : (
+                  ) : row.isSubOrder ? null : (
                     <InvoiceUploadTypeMenu
                       onUpload={(type) => onUploadInvoice(row, type)}
                       disabled={isUploading}

@@ -161,7 +161,8 @@
       "orderHistory": "Order History",
       "copied": "Copied!",
       "downloaded": "Downloaded successfully",
-      "freeOrderNoInvoice": "Free order — no invoice"
+      "freeOrderNoInvoice": "Free order — no invoice",
+      "subOrderNoInvoice": "Sub-order — invoice on main order"
     },
     "createManualOrder": {
       "title": "Create Manual Order",

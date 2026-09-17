@@ -196,18 +196,9 @@ export default function SharesPage() {
 
   const selectedProduct = products.find((p) => p._id === selectedProductId);
 
-  // Products that already have a campaign — excluded from the
-  // "Create Campaign" product dropdown so each product only has
-  // campaigns created once (one active campaign per product).
-  const productIdsWithCampaign = useMemo(
-    () => new Set(campaigns.map((c) => String(c.productId))),
-    [campaigns],
-  );
-
-  const availableProducts = useMemo(
-    () => products.filter((p) => !productIdsWithCampaign.has(String(p._id))),
-    [products, productIdsWithCampaign],
-  );
+  // All products are selectable — multiple campaigns per product are
+  // allowed, and admins can delete the current campaign at any time.
+  const availableProducts = products;
 
   // Group campaigns by product
   const productGroups = useMemo(() => {
@@ -352,7 +343,7 @@ export default function SharesPage() {
   const handleEdit = async () => {
     if (!editingCampaign) return;
     const totalShares = parseInt(editTotalSharesInput) || 0;
-    if (totalShares < 2 && editingCampaign.soldShares === 0) {
+    if (totalShares < 2) {
       toast.error(t('minShares'));
       return;
     }
@@ -365,15 +356,13 @@ export default function SharesPage() {
     try {
       const body: Record<string, unknown> = {
         campaignNumber,
+        totalShares,
         displayOnProductPage: editDisplayOnProductPage,
         minDisplayPercent: Math.min(
           100,
           parseInt(editMinDisplayPercent) || 0,
         ),
       };
-      if (editingCampaign.soldShares === 0 && totalShares >= 2) {
-        body.totalShares = totalShares;
-      }
 
       const res = await fetch(`/api/shares/${editingCampaign._id}`, {
         method: 'PATCH',
@@ -606,7 +595,7 @@ export default function SharesPage() {
                   </button>
                 </Tooltip>
               )}
-              {campaign.soldShares === 0 && (
+              {!isCompleted && (
                 <Tooltip content={t('delete')} position="top">
                   <button
                     onClick={() => handleDelete(campaign)}
@@ -1062,30 +1051,26 @@ export default function SharesPage() {
               />
             </div>
 
-            {/* Edit total shares (only if no shares sold) */}
-            {editingCampaign.soldShares === 0 ? (
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1">
-                  {t('totalSharesLabel')} *
-                </label>
-                <Input
-                  type="text"
-                  inputMode="numeric"
-                  value={editTotalSharesInput}
-                  onChange={(e) =>
-                    setEditTotalSharesInput(onlyDigits(e.target.value))
-                  }
-                  onBlur={() => {
-                    const parsed = parseInt(editTotalSharesInput) || 0;
-                    if (parsed < 2) setEditTotalSharesInput('2');
-                  }}
-                />
-              </div>
-            ) : (
-              <p className="text-xs text-warning bg-warning/5 rounded-lg p-3">
-                {t('cannotEditShares')}
-              </p>
-            )}
+            {/* Edit total shares — applies to all active campaigns
+                for this product, and future ones inherit it */}
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">
+                {t('totalSharesLabel')} *
+              </label>
+              <Input
+                type="text"
+                inputMode="numeric"
+                value={editTotalSharesInput}
+                onChange={(e) =>
+                  setEditTotalSharesInput(onlyDigits(e.target.value))
+                }
+                onBlur={() => {
+                  const parsed = parseInt(editTotalSharesInput) || 0;
+                  if (parsed < 2) setEditTotalSharesInput('2');
+                }}
+                helperText={t('totalSharesEditHint')}
+              />
+            </div>
 
             {/* Show on product page */}
             <div className="space-y-3">

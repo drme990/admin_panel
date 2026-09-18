@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { toast } from 'react-toastify';
 import {
@@ -8,8 +8,6 @@ import {
   LuPlus,
   LuSplit,
   LuRefreshCw,
-  LuUpload,
-  LuImage,
 } from 'react-icons/lu';
 
 import Modal from '@/components/ui/modal';
@@ -18,13 +16,19 @@ import Input from '@/components/ui/input';
 import Dropdown from '@/components/ui/dropdown';
 import QuantityInput from '@/components/ui/quantity-input';
 import Tabs from '@/components/ui/tabs';
-import Textarea from '@/components/ui/textarea';
-import RadioButton from '@/components/ui/radio-button';
 import Switch from '@/components/ui/switch';
 import CustomDatePicker from '@/components/ui/custom-date-picker';
-import MultiNameInput from '@/components/ui/multi-name-input';
+import ManualReservationFields from '@/components/order/manual-reservation-fields';
 import { uploadImageToR2, deleteOldImage } from '../../lib/image-upload-utils';
 import { getOrderItemDisplayName } from '../../lib/order/order-utils';
+import {
+  getVisibleFieldOptions,
+  isExecutionDateKey,
+  mergeProductReservationFields,
+  parsePictureUrls,
+  serializePictureUrls,
+  toIsoLocalDate,
+} from '@/lib/reservation-fields';
 
 import { Order } from '@/types/Order';
 
@@ -47,6 +51,8 @@ interface Product {
     label: { ar: string; en: string };
     required?: boolean;
     options?: Array<{ ar: string; en: string }>;
+    maxLength?: number;
+    supportsMulti?: boolean;
   }>;
 }
 
@@ -69,6 +75,7 @@ interface ReservationData {
   shortDuaa: string;
   executionDate: string;
   photo: string;
+  [key: string]: string;
 }
 
 interface SubOrderFormState {
@@ -128,10 +135,10 @@ export default function CreateSubOrderModal({
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [creating, setCreating] = useState(false);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
-  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [uploadingPictureField, setUploadingPictureField] = useState<string | null>(null);
+  const [blockedExecutionDates, setBlockedExecutionDates] = useState<string[]>([]);
   const [loadingParentDetails, setLoadingParentDetails] = useState(false);
   const [fullParentOrder, setFullParentOrder] = useState<Order | null>(null);
-  const photoInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch full parent order details on open so items include price, currency, size info
   useEffect(() => {
@@ -207,6 +214,22 @@ export default function CreateSubOrderModal({
           toast.error(t('createManualOrder.loadProductsFailed') || 'Failed to load products');
         })
         .finally(() => setLoadingProducts(false));
+
+      // Blocked execution dates for the custom-date picker (same
+      // restriction the checkout date picker enforces).
+      fetch('/api/booking', { cache: 'no-store' })
+        .then((r) => r.json())
+        .then((data) => {
+          const dates = data?.data?.blockedExecutionDates;
+          if (Array.isArray(dates)) {
+            setBlockedExecutionDates(
+              dates.filter((d): d is string => typeof d === 'string'),
+            );
+          }
+        })
+        .catch(() => {
+          // Non-fatal — the backend still validates blocked dates.
+        });
     }
   }, [isOpen, t]);
 
@@ -256,23 +279,71 @@ export default function CreateSubOrderModal({
     return priceEntry?.amount || 0;
   }, [products, currency]);
 
-  // Compute the union of REQUIRED reservation field keys across all selected
-  // existing products. Custom products contribute nothing. executionDate is
-  // excluded because the backend always assigns it (defaults to next day).
-  const requiredReservationFieldKeys = useMemo<Set<string>>(() => {
-    const keys = new Set<string>();
-    for (const item of form.items) {
-      if (item.type !== 'existing' || !item.productId) continue;
-      const product = products.find((p) => p._id === item.productId);
-      if (!product?.reservationFields) continue;
-      for (const field of product.reservationFields) {
-        if (field.required && field.key !== 'executionDate') {
-          keys.add(field.key);
+  // Merge the reservation field configs of all selected existing products
+  // — the union of fields any selected product accepts, deduplicated by
+  // key and ordered like checkout. Custom products contribute nothing.
+  const selectedProducts = useMemo(
+    () =>
+      form.items
+        .filter((item) => item.type === 'existing' && item.productId)
+        .map((item) => products.find((p) => p._id === item.productId))
+        .filter((p): p is Product => p !== undefined),
+    [form.items, products],
+  );
+
+  const mergedReservationFields = useMemo(
+    () => mergeProductReservationFields(selectedProducts),
+    [selectedProducts],
+  );
+
+  // executionDate is handled by the custom-date switch below — the
+  // backend always assigns one. When a selected product marks it
+  // required, the switch is forced on.
+  const executionDateRequired = useMemo(
+    () =>
+      mergedReservationFields.some(
+        (f) => isExecutionDateKey(f.key) && f.required,
+      ),
+    [mergedReservationFields],
+  );
+  const effectiveUseCustomExecutionDate =
+    form.useCustomExecutionDate || executionDateRequired;
+
+  // Drop stale reservation values the current product selection no
+  // longer accepts — keys not in the merged config, and select/radio
+  // values outside the field's visible options. executionDate is
+  // switch-controlled and skipped.
+  useEffect(() => {
+    setForm((prev) => {
+      const next = { ...prev.reservationData };
+      let changed = false;
+
+      const acceptedKeys = new Set(mergedReservationFields.map((f) => f.key));
+      for (const key of Object.keys(next)) {
+        if (isExecutionDateKey(key)) continue;
+        if (!acceptedKeys.has(key) && next[key]) {
+          next[key] = '';
+          changed = true;
         }
       }
-    }
-    return keys;
-  }, [form.items, products]);
+
+      for (const field of mergedReservationFields) {
+        if (field.type !== 'select' && field.type !== 'radio') continue;
+        const current = next[field.key];
+        if (!current) continue;
+        const options = getVisibleFieldOptions(field);
+        if (
+          options.length > 0 &&
+          !options.some((o) => o.ar === current || o.en === current)
+        ) {
+          next[field.key] = '';
+          changed = true;
+        }
+      }
+
+      return changed ? { ...prev, reservationData: next } : prev;
+    });
+  }, [mergedReservationFields]);
 
   const addItem = () => {
     setForm((prev) => ({
@@ -315,118 +386,56 @@ export default function CreateSubOrderModal({
     [t],
   );
 
-  // Intention options follow the MAIN (first existing) product's
-  // reservationFields config exactly — the same options the customer
-  // sees at checkout, including hiding عقيقة for non-sacrifice
-  // products. Values stay Arabic (canonical stored value) while labels
-  // follow the admin's locale. Falls back to the full preset list when
-  // the main product has no intention config.
-  const intentionOptions = useMemo(() => {
-    const mainItem = form.items.find(
-      (item) => item.type === 'existing' && item.productId,
+  // Picture fields accept up to 4 images and store them as a
+  // JSON-array string — the same format checkout produces.
+  const handleUploadPictures = async (fieldKey: string, files: File[]) => {
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
+    const valid = files.filter(
+      (f) => allowedTypes.includes(f.type) && f.size <= 5 * 1024 * 1024,
     );
-    const product = mainItem
-      ? products.find((p) => p._id === mainItem.productId)
-      : undefined;
-    const field = product?.reservationFields?.find(
-      (f) => f.key === 'intention',
-    );
-    const rawOptions =
-      field?.options && field.options.length > 0
-        ? field.options
-        : [
-          { ar: 'عقيقة', en: 'Aqeeqah' },
-          { ar: 'أُضحيــَــة', en: 'Sacrifice' },
-          { ar: 'صدقة', en: 'Charity' },
-          { ar: 'نذر', en: 'Vow' },
-          { ar: 'فدو', en: 'Protective' },
-        ];
-    // Mirrors checkout: عقيقة is hidden unless the product works as a
-    // sacrifice. With no product selected, keep the full preset list.
-    const hideAqeeqah = product ? !product.workAsSacrifice : false;
-    return rawOptions
-      .filter(
-        (opt) =>
-          !hideAqeeqah ||
-          (!opt.en.toLowerCase().includes('aqeeqah') && opt.ar !== 'عقيقة'),
-      )
-      .map((opt) => {
-        const value = opt.ar || opt.en;
-        const label = locale === 'ar' ? opt.ar || opt.en : opt.en || opt.ar;
-        return value ? { label: label || value, value } : null;
-      })
-      .filter((o): o is { label: string; value: string } => o !== null);
-  }, [form.items, products, locale]);
-
-  // Drop a previously chosen intention the current product selection
-  // no longer allows.
-  useEffect(() => {
-    const current = form.reservationData.intention;
-    if (!current) return;
-    if (!intentionOptions.some((o) => o.value === current)) {
-      setForm((prev) => ({
-        ...prev,
-        reservationData: { ...prev.reservationData, intention: '' },
-      }));
+    if (valid.length === 0) {
+      toast.error(t('createManualOrder.photoUploadFailed') || 'Failed to upload photo');
+      return;
     }
-  }, [intentionOptions, form.reservationData.intention]);
 
-  const genderOptions = useMemo(
-    () => [
-      { label: t('createManualOrder.genderMale') || 'Male', value: 'ذكر' },
-      { label: t('createManualOrder.genderFemale') || 'Female', value: 'انثى' },
-      { label: t('createManualOrder.genderBoth') || 'Both', value: 'ذكور و اناث' },
-    ],
-    [t],
-  );
-
-  const isAliveOptions = useMemo(
-    () => [
-      { label: t('createManualOrder.statusAlive') || 'Alive', value: 'حي' },
-      { label: t('createManualOrder.statusDead') || 'Dead', value: 'متوفي' },
-      { label: t('createManualOrder.statusBoth') || 'Both', value: 'احياء و متوفين' },
-    ],
-    [t],
-  );
-
-  const handlePhotoFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    e.target.value = '';
+    const existing = parsePictureUrls(form.reservationData[fieldKey] || '');
+    const toUpload = valid.slice(0, Math.max(0, 4 - existing.length));
+    if (toUpload.length === 0) return;
 
     try {
-      setUploadingPhoto(true);
-      const oldPhotoUrl = form.reservationData.photo;
-      const url = await uploadImageToR2(file);
-      setForm((prev) => ({
-        ...prev,
-        reservationData: { ...prev.reservationData, photo: url },
-      }));
-
-      if (oldPhotoUrl) {
-        await deleteOldImage(oldPhotoUrl);
-      }
+      setUploadingPictureField(fieldKey);
+      const urls = await Promise.all(toUpload.map((f) => uploadImageToR2(f)));
+      setForm((prev) => {
+        const current = parsePictureUrls(prev.reservationData[fieldKey] || '');
+        return {
+          ...prev,
+          reservationData: {
+            ...prev.reservationData,
+            [fieldKey]: serializePictureUrls([...current, ...urls].slice(0, 4)),
+          },
+        };
+      });
     } catch {
       toast.error(t('createManualOrder.photoUploadFailed') || 'Failed to upload photo');
     } finally {
-      setUploadingPhoto(false);
+      setUploadingPictureField(null);
     }
   };
 
-  const handleRemovePhoto = async () => {
-    const photoUrl = form.reservationData.photo;
-    if (!photoUrl) return;
-
-    setForm((prev) => ({
-      ...prev,
-      reservationData: { ...prev.reservationData, photo: '' },
-    }));
-
-    try {
-      await deleteOldImage(photoUrl);
-    } catch {
+  const handleRemovePicture = (fieldKey: string, url: string) => {
+    setForm((prev) => {
+      const current = parsePictureUrls(prev.reservationData[fieldKey] || '');
+      return {
+        ...prev,
+        reservationData: {
+          ...prev.reservationData,
+          [fieldKey]: serializePictureUrls(current.filter((u) => u !== url)),
+        },
+      };
+    });
+    deleteOldImage(url).catch(() => {
       // ignore
-    }
+    });
   };
 
   const validateForm = (): Record<string, string> => {
@@ -456,16 +465,63 @@ export default function CreateSubOrderModal({
         }
       }
     });
-    // Enforce per-product required reservation fields (union across selected
-    // existing products). Custom products contribute no required fields.
-    requiredReservationFieldKeys.forEach((fieldKey) => {
-      const value = (form.reservationData as unknown as Record<string, string>)[fieldKey];
-      if (!value || !value.trim()) {
-        errors[`reservation_${fieldKey}`] =
+    // Enforce per-product reservation field rules — the same validation
+    // checkout applies: required fields, text/textarea maxLength, and
+    // select/radio values restricted to the field's visible options.
+    for (const field of mergedReservationFields) {
+      if (isExecutionDateKey(field.key)) continue;
+      const value = (form.reservationData[field.key] || '').trim();
+
+      if (field.required && !value) {
+        errors[`reservation_${field.key}`] =
           t('createManualOrder.errors.reservationFieldRequired') ||
           'This reservation field is required for the selected product';
+        continue;
       }
-    });
+      if (!value) continue;
+
+      if (
+        (field.type === 'text' || field.type === 'textarea') &&
+        field.maxLength &&
+        value.length > field.maxLength
+      ) {
+        errors[`reservation_${field.key}`] =
+          t('createManualOrder.errors.reservationMaxLength', { max: field.maxLength }) ||
+          `This field is limited to ${field.maxLength} characters`;
+      }
+
+      if (field.type === 'select' || field.type === 'radio') {
+        const options = getVisibleFieldOptions(field);
+        if (
+          options.length > 0 &&
+          !options.some((o) => o.ar === value || o.en === value)
+        ) {
+          errors[`reservation_${field.key}`] =
+            t('createManualOrder.errors.invalidReservationOption') ||
+            'Invalid option for the selected product';
+        }
+      }
+    }
+
+    // Custom execution date — same restrictions as checkout: required
+    // while the switch is on, strictly after today, never a blocked date.
+    if (effectiveUseCustomExecutionDate) {
+      const execValue = form.reservationData.executionDate.trim();
+      const today = toIsoLocalDate(new Date());
+      if (!execValue) {
+        errors[`reservation_executionDate`] =
+          t('createManualOrder.errors.reservationFieldRequired') ||
+          'This reservation field is required for the selected product';
+      } else if (execValue <= today) {
+        errors[`reservation_executionDate`] =
+          t('createManualOrder.errors.executionDatePast') ||
+          'Execution date must be after today';
+      } else if (blockedExecutionDates.includes(execValue)) {
+        errors[`reservation_executionDate`] =
+          t('createManualOrder.errors.executionDateBlocked') ||
+          'Execution date is not available';
+      }
+    }
     return errors;
   };
 
@@ -486,27 +542,28 @@ export default function CreateSubOrderModal({
     setFormErrors({});
     setCreating(true);
     try {
-      const reservationData: Array<{ key: string; value: string }> = [];
-      if (form.reservationData.sacrificeFor.trim()) {
-        reservationData.push({ key: 'sacrificeFor', value: form.reservationData.sacrificeFor.trim() });
-      }
-      if (form.reservationData.gender) {
-        reservationData.push({ key: 'gender', value: form.reservationData.gender });
-      }
-      if (form.reservationData.isAlive) {
-        reservationData.push({ key: 'isAlive', value: form.reservationData.isAlive });
-      }
-      if (form.reservationData.intention) {
-        reservationData.push({ key: 'intention', value: form.reservationData.intention });
-      }
-      if (form.reservationData.shortDuaa.trim()) {
-        reservationData.push({ key: 'shortDuaa', value: form.reservationData.shortDuaa.trim() });
-      }
-      if (form.useCustomExecutionDate && form.reservationData.executionDate.trim()) {
-        reservationData.push({ key: 'executionDate', value: form.reservationData.executionDate.trim() });
-      }
-      if (form.reservationData.photo.trim()) {
-        reservationData.push({ key: 'photo', value: form.reservationData.photo.trim() });
+      // Reservation answers are built from the merged product field
+      // config — the same {key, label, type, value} shape checkout
+      // submits. The backend re-validates everything against the
+      // products' own config.
+      const reservationData = mergedReservationFields
+        .filter((f) => !isExecutionDateKey(f.key))
+        .map((f) => ({
+          key: f.key,
+          label: f.label,
+          type: f.type,
+          value: (form.reservationData[f.key] || '').trim(),
+        }));
+      if (
+        effectiveUseCustomExecutionDate &&
+        form.reservationData.executionDate.trim()
+      ) {
+        reservationData.push({
+          key: 'executionDate',
+          label: { ar: 'تاريخ التنفيذ', en: 'Execution Date' },
+          type: 'date',
+          value: form.reservationData.executionDate.trim(),
+        });
       }
 
       const res = await fetch(`/api/orders/${parentOrder?._id}/sub-order`, {
@@ -863,214 +920,39 @@ export default function CreateSubOrderModal({
         <h4 className="text-sm font-semibold text-foreground mb-3">
           {t('createManualOrder.reservationData') || 'Reservation Data'}
         </h4>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div data-error-key="reservation_sacrificeFor">
-            <label className="text-xs font-medium text-secondary mb-1.5 block">
-              {t('createManualOrder.sacrificeFor') || 'Sacrifice For'}
-              {requiredReservationFieldKeys.has('sacrificeFor') && (
-                <span className="text-error ms-0.5">*</span>
-              )}
-            </label>
-            <MultiNameInput
-              value={form.reservationData.sacrificeFor}
-              onChange={(value) =>
-                setForm((prev) => ({
-                  ...prev,
-                  reservationData: { ...prev.reservationData, sacrificeFor: value },
-                }))
-              }
-              placeholder={t('createManualOrder.sacrificeForPlaceholder') || 'Enter name(s)'}
-              isRTL={locale === 'ar'}
-            />
-            {duplicateNameMatch && (
+        <ManualReservationFields
+          fields={mergedReservationFields.filter((f) => !isExecutionDateKey(f.key))}
+          values={form.reservationData}
+          errors={
+            duplicateNameMatch
+              ? { ...formErrors, reservation_sacrificeFor: undefined }
+              : formErrors
+          }
+          locale={locale}
+          t={t}
+          uploadingField={uploadingPictureField}
+          blockedExecutionDates={blockedExecutionDates}
+          onValueChange={(key, value) =>
+            setForm((prev) => ({
+              ...prev,
+              reservationData: { ...prev.reservationData, [key]: value },
+            }))
+          }
+          onUploadPictures={handleUploadPictures}
+          onRemovePicture={handleRemovePicture}
+          fieldFooters={{
+            sacrificeFor: duplicateNameMatch ? (
               <div className="mt-2 rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-warning">
                 {t('subOrder.duplicateNameWarning', { name: duplicateNameMatch })}
               </div>
-            )}
-            {formErrors[`reservation_sacrificeFor`] && !duplicateNameMatch && (
-              <p className="text-xs text-error mt-1">{formErrors[`reservation_sacrificeFor`]}</p>
-            )}
-          </div>
-          <div data-error-key="reservation_intention">
-            <label className="text-xs font-medium text-secondary mb-1.5 block">
-              {t('createManualOrder.intention') || 'Intention'}
-              {requiredReservationFieldKeys.has('intention') && (
-                <span className="text-error ms-0.5">*</span>
-              )}
-            </label>
-            <Dropdown
-              value={form.reservationData.intention}
-              options={intentionOptions}
-              onChange={(val) =>
-                setForm((prev) => ({
-                  ...prev,
-                  reservationData: { ...prev.reservationData, intention: val },
-                }))
-              }
-              placeholder={t('createManualOrder.selectIntention') || 'Select intention'}
-            />
-            {formErrors[`reservation_intention`] && (
-              <p className="text-xs text-error mt-1">{formErrors[`reservation_intention`]}</p>
-            )}
-          </div>
-          <div data-error-key="reservation_gender">
-            <label className="text-xs font-medium text-secondary mb-1.5 block">
-              {t('createManualOrder.gender') || 'Gender'}
-              {requiredReservationFieldKeys.has('gender') && (
-                <span className="text-error ms-0.5">*</span>
-              )}
-            </label>
-            <div className="flex flex-wrap gap-4">
-              {genderOptions.map((option) => (
-                <RadioButton
-                  key={`gender-${option.value}`}
-                  id={`gender-${option.value}`}
-                  name="sub-order-gender"
-                  value={option.value}
-                  label={option.label}
-                  checked={form.reservationData.gender === option.value}
-                  onChange={(val) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      reservationData: { ...prev.reservationData, gender: val },
-                    }))
-                  }
-                />
-              ))}
-            </div>
-            {formErrors[`reservation_gender`] && (
-              <p className="text-xs text-error mt-1">{formErrors[`reservation_gender`]}</p>
-            )}
-          </div>
-          <div data-error-key="reservation_isAlive">
-            <label className="text-xs font-medium text-secondary mb-1.5 block">
-              {t('createManualOrder.isAlive') || 'Status'}
-              {requiredReservationFieldKeys.has('isAlive') && (
-                <span className="text-error ms-0.5">*</span>
-              )}
-            </label>
-            <div className="flex flex-wrap gap-4">
-              {isAliveOptions.map((option) => (
-                <RadioButton
-                  key={`status-${option.value}`}
-                  id={`status-${option.value}`}
-                  name="sub-order-status"
-                  value={option.value}
-                  label={option.label}
-                  checked={form.reservationData.isAlive === option.value}
-                  onChange={(val) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      reservationData: { ...prev.reservationData, isAlive: val },
-                    }))
-                  }
-                />
-              ))}
-            </div>
-            {formErrors[`reservation_isAlive`] && (
-              <p className="text-xs text-error mt-1">{formErrors[`reservation_isAlive`]}</p>
-            )}
-          </div>
-          <div className="sm:col-span-2" data-error-key="reservation_shortDuaa">
-            <label className="text-xs font-medium text-secondary mb-1.5 block">
-              {t('createManualOrder.shortDuaa') || 'Short Duaa'}
-              {requiredReservationFieldKeys.has('shortDuaa') && (
-                <span className="text-error ms-0.5">*</span>
-              )}
-            </label>
-            <Textarea
-              value={form.reservationData.shortDuaa}
-              onChange={(value) =>
-                setForm((prev) => ({
-                  ...prev,
-                  reservationData: { ...prev.reservationData, shortDuaa: value },
-                }))
-              }
-              placeholder={t('createManualOrder.shortDuaa') || 'Short Duaa'}
-              rows={2}
-              maxLength={250}
-              showCount
-            />
-            {formErrors[`reservation_shortDuaa`] && (
-              <p className="text-xs text-error mt-1">{formErrors[`reservation_shortDuaa`]}</p>
-            )}
-          </div>
-
-          <div className="sm:col-span-2 mb-3" data-error-key="reservation_photo">
-            <label className="text-xs font-medium text-secondary mb-1.5 block">
-              {t('createManualOrder.photo') || 'Photo'}
-              {requiredReservationFieldKeys.has('photo') && (
-                <span className="text-error ms-0.5">*</span>
-              )}
-            </label>
-            <div className="flex items-center gap-3 flex-wrap">
-              <Button
-                variant="outline"
-                size="custom"
-                className="px-3 py-2"
-                onClick={() => photoInputRef.current?.click()}
-                disabled={uploadingPhoto}
-              >
-                {uploadingPhoto ? (
-                  <LuRefreshCw size={16} className="animate-spin me-2" />
-                ) : (
-                  <LuUpload size={16} className="me-2" />
-                )}
-                {form.reservationData.photo
-                  ? t('createManualOrder.changePhoto') || 'Change Photo'
-                  : t('createManualOrder.uploadPhoto') || 'Upload Photo'}
-              </Button>
-
-              {form.reservationData.photo && (
-                <button
-                  type="button"
-                  onClick={handleRemovePhoto}
-                  className="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-error/30 text-error hover:bg-error/10 transition-colors shrink-0"
-                  title={t('createManualOrder.removePhoto') || 'Remove Photo'}
-                >
-                  <LuX size={16} />
-                </button>
-              )}
-            </div>
-
-            {form.reservationData.photo && (
-              <div className="mt-3">
-                <div className="relative w-64 h-64 rounded-lg overflow-hidden border border-stroke shrink-0 group">
-                  {/* eslint-disable-next-line @next/next/no-img-element -- dynamic user-provided URL */}
-                  <img
-                    src={form.reservationData.photo}
-                    alt="User photo"
-                    className="w-full h-full object-cover"
-                  />
-                  <a
-                    href={form.reservationData.photo}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="absolute inset-0 bg-black/0 group-hover:bg-black/30 flex items-center justify-center transition-colors"
-                    title={t('createManualOrder.viewPhoto') || 'View Photo'}
-                  >
-                    <LuImage size={32} className="text-white opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </a>
-                </div>
-              </div>
-            )}
-            {formErrors[`reservation_photo`] && (
-              <p className="text-xs text-error mt-1">{formErrors[`reservation_photo`]}</p>
-            )}
-          </div>
-
-          <input
-            ref={photoInputRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={handlePhotoFileChange}
-          />
-        </div>
+            ) : undefined,
+          }}
+        />
 
         <div className="flex flex-col gap-3 mt-4">
           <Switch
-            checked={form.useCustomExecutionDate}
+            checked={effectiveUseCustomExecutionDate}
+            disabled={executionDateRequired}
             onChange={(checked) => {
               setForm((prev) => ({
                 ...prev,
@@ -1080,26 +962,35 @@ export default function CreateSubOrderModal({
                   : { ...prev.reservationData, executionDate: '' },
               }));
             }}
-            label={t('createManualOrder.customExecutionDate') || 'Custom Execution Date'}
+            label={
+              `${t('createManualOrder.customExecutionDate') || 'Custom Execution Date'}${executionDateRequired ? ' *' : ''}`
+            }
           />
-          {form.useCustomExecutionDate && (
-            <CustomDatePicker
-              value={form.reservationData.executionDate}
-              onChange={(val) =>
-                setForm((prev) => ({
-                  ...prev,
-                  reservationData: { ...prev.reservationData, executionDate: val },
-                }))
-              }
-              locale={locale}
-              placeholder={t('createManualOrder.executionDate') || 'Execution Date'}
-              minDate={(() => {
-                const today = new Date();
-                return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-              })()}
-            />
+          {effectiveUseCustomExecutionDate && (
+            <>
+              <CustomDatePicker
+                value={form.reservationData.executionDate}
+                onChange={(val) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    reservationData: { ...prev.reservationData, executionDate: val },
+                  }))
+                }
+                locale={locale}
+                placeholder={t('createManualOrder.executionDate') || 'Execution Date'}
+                minDate={(() => {
+                  const tomorrow = new Date();
+                  tomorrow.setDate(tomorrow.getDate() + 1);
+                  return toIsoLocalDate(tomorrow);
+                })()}
+                disabledDates={blockedExecutionDates}
+              />
+              {formErrors[`reservation_executionDate`] && (
+                <p className="text-xs text-error mt-1">{formErrors[`reservation_executionDate`]}</p>
+              )}
+            </>
           )}
-          {!form.useCustomExecutionDate && (
+          {!effectiveUseCustomExecutionDate && (
             <p className="text-sm text-secondary">
               {t('createManualOrder.defaultExecutionDateHint') || 'Default execution date will be assigned automatically.'}
             </p>

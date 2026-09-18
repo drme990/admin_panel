@@ -27,7 +27,7 @@ interface ManualReservationFieldsProps {
   values: Record<string, string>;
   errors: Record<string, string | undefined>;
   locale: string;
-  t: (key: string) => string;
+  t: (key: string, values?: Record<string, string | number>) => string;
   uploadingField: string | null;
   blockedExecutionDates?: string[];
   onValueChange: (key: string, value: string) => void;
@@ -46,7 +46,7 @@ function PictureFieldInput({
 }: {
   value: string;
   uploading: boolean;
-  t: (key: string) => string;
+  t: (key: string, values?: Record<string, string | number>) => string;
   onUpload: (files: File[]) => void;
   onRemove: (url: string) => void;
 }) {
@@ -285,8 +285,9 @@ export default function ManualReservationFields({
         {(field.type === 'text' || field.type === 'textarea') &&
           field.maxLength && (
             <p className="text-xs text-secondary mt-1">
-              {t('createManualOrder.reservationMaxChars') ||
-                `Max ${field.maxLength} characters`}
+              {t('createManualOrder.reservationMaxChars', {
+                max: field.maxLength,
+              })}
             </p>
           )}
       </div>

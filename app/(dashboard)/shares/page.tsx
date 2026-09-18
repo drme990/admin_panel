@@ -77,6 +77,14 @@ interface CampaignOrder extends Order {
   _id: string;
 }
 
+interface ManualShareEntry {
+  count: number;
+  addedAt: string;
+  addedById?: string;
+  addedByName?: string;
+  addedByEmail?: string;
+}
+
 function extractApiError(data: unknown, fallback: string): string {
   if (!data || typeof data !== 'object') return fallback;
   const error = (data as Record<string, unknown>).error;
@@ -1348,8 +1356,8 @@ export default function SharesPage() {
                           type="button"
                           onClick={() => setMoveTargetCampaignId(target._id)}
                           className={`w-full flex items-center justify-between rounded-lg border p-3 text-start transition-colors ${selected
-                              ? 'border-primary bg-primary/5'
-                              : 'border-stroke hover:border-primary/50'
+                            ? 'border-primary bg-primary/5'
+                            : 'border-stroke hover:border-primary/50'
                             }`}
                         >
                           <span className="text-sm font-medium text-foreground">
@@ -1420,6 +1428,7 @@ function CampaignOrdersModal({
   locale: string;
 }) {
   const [orders, setOrders] = useState<CampaignOrder[]>([]);
+  const [manualEntries, setManualEntries] = useState<ManualShareEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<CampaignOrder | null>(null);
 
@@ -1432,6 +1441,7 @@ function CampaignOrdersModal({
         const data = await res.json();
         if (data.success) {
           setOrders(data.data.orders);
+          setManualEntries(data.data.manualEntries || []);
         }
       } catch {
         // ignore
@@ -1467,6 +1477,15 @@ function CampaignOrdersModal({
     }
   };
 
+  // Manual additions as pseudo-rows — entries recorded since tracking was
+  // added, plus a fallback row for legacy manualShares with no entries.
+  const manualRows: ManualShareEntry[] = [...manualEntries];
+  const entriesTotal = manualEntries.reduce((s, e) => s + (e.count || 0), 0);
+  const legacyManual = Math.max(0, (campaign.manualShares ?? 0) - entriesTotal);
+  if (legacyManual > 0) {
+    manualRows.push({ count: legacyManual, addedAt: '' });
+  }
+
   return (
     <>
       <Modal
@@ -1477,7 +1496,7 @@ function CampaignOrdersModal({
       >
         {loading ? (
           <div className="text-center py-8 text-secondary">{t('loading')}</div>
-        ) : orders.length === 0 ? (
+        ) : orders.length === 0 && manualRows.length === 0 ? (
           <div className="text-center py-8 text-secondary">{t('noOrders')}</div>
         ) : (
           <div className="overflow-x-auto">
@@ -1545,6 +1564,30 @@ function CampaignOrdersModal({
                     </tr>
                   );
                 })}
+                {manualRows.map((entry, idx) => (
+                  <tr
+                    key={`manual-${idx}`}
+                    className="border-b border-border/50 hover:bg-secondary/5"
+                  >
+                    <td className="px-3 py-2.5 font-mono text-xs">M</td>
+                    <td className="px-3 py-2.5">
+                      {entry.addedByName || entry.addedByEmail || 'M'}
+                    </td>
+                    <td className="px-3 py-2.5">
+                      <span className="px-2 py-0.5 rounded-full text-xs bg-primary/10 text-primary font-medium">
+                        {entry.count}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2.5 tabular-nums">M</td>
+                    <td className="px-3 py-2.5">M</td>
+                    <td className="px-3 py-2.5 text-secondary text-xs">
+                      {entry.addedAt
+                        ? new Date(entry.addedAt).toLocaleDateString(isRTL ? 'ar-SA' : 'en-US')
+                        : 'M'}
+                    </td>
+                    <td className="px-3 py-2.5 text-right">M</td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>

@@ -35,6 +35,8 @@ interface Props {
   totalOrders: number;
   statusFilter: string;
   onStatusChange: (value: string) => void;
+  orderTypeFilter: string;
+  onOrderTypeChange: (value: string) => void;
   intentionFilter: string;
   onIntentionChange: (value: string) => void;
   countryFilter: string;
@@ -63,6 +65,8 @@ export default function ExecutionFilters({
   totalOrders,
   statusFilter,
   onStatusChange,
+  orderTypeFilter,
+  onOrderTypeChange,
   intentionFilter,
   onIntentionChange,
   countryFilter,
@@ -229,6 +233,41 @@ export default function ExecutionFilters({
           value={statusFilter}
           options={statusTabOptions}
           onChange={onStatusChange}
+          className="min-w-max"
+        />
+      </div>
+
+      {/* Order type tabs */}
+      <div className="overflow-x-auto pb-1">
+        <Tabs<string>
+          value={orderTypeFilter}
+          options={[
+            {
+              label: t('filters.allTypes'),
+              value: 'all',
+              className: 'border border-stroke text-foreground/80 hover:bg-background hover:text-foreground',
+              activeClassName: 'bg-foreground text-background shadow-sm',
+            },
+            {
+              label: t('filters.websiteType'),
+              value: 'website',
+              className: 'border border-stroke text-foreground/80 hover:bg-background hover:text-foreground',
+              activeClassName: 'bg-foreground text-background shadow-sm',
+            },
+            {
+              label: t('filters.manualType'),
+              value: 'manual',
+              className: 'border border-stroke text-foreground/80 hover:bg-background hover:text-foreground',
+              activeClassName: 'bg-foreground text-background shadow-sm',
+            },
+            {
+              label: t('filters.subOrderType'),
+              value: 'subOrder',
+              className: 'border border-stroke text-foreground/80 hover:bg-background hover:text-foreground',
+              activeClassName: 'bg-foreground text-background shadow-sm',
+            },
+          ]}
+          onChange={onOrderTypeChange}
           className="min-w-max"
         />
       </div>

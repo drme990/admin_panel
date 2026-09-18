@@ -31,6 +31,7 @@ export interface OrderPageState {
   searchInput: string;
   searchQuery: string;
   whatsappFilter?: string;
+  orderTypeFilter?: string;
   categoryFilter?: string;
   intentionFilter?: string;
   countryFilter?: string;
@@ -89,6 +90,7 @@ export const initialOrderPageState: OrderPageState = {
   searchInput: '',
   searchQuery: '',
   whatsappFilter: 'all',
+  orderTypeFilter: 'all',
   categoryFilter: 'all',
   intentionFilter: 'all',
   countryFilter: '',
@@ -130,6 +132,7 @@ export type FilterPayload = Partial<
     | 'searchInput'
     | 'searchQuery'
     | 'whatsappFilter'
+    | 'orderTypeFilter'
     | 'categoryFilter'
     | 'intentionFilter'
     | 'countryFilter'

@@ -146,6 +146,7 @@ export default function OrderHistoryPage() {
     referralFilter,
     sourceFilter,
     whatsappFilter,
+    orderTypeFilter,
     searchInput,
     searchQuery,
     selectedOrder,
@@ -259,6 +260,9 @@ export default function OrderHistoryPage() {
         if (whatsappFilter && whatsappFilter !== 'all') {
           params.set('whatsappState', whatsappFilter);
         }
+        if (orderTypeFilter && orderTypeFilter !== 'all') {
+          params.set('orderType', orderTypeFilter);
+        }
         if (searchQuery) params.set('search', searchQuery);
 
         const normalizedRange = normalizeDateRange(
@@ -305,6 +309,7 @@ export default function OrderHistoryPage() {
       referralFilter,
       sourceFilter,
       whatsappFilter,
+      orderTypeFilter,
       searchQuery,
       fromDateFilter,
       toDateFilter,
@@ -334,6 +339,9 @@ export default function OrderHistoryPage() {
         if (sourceFilter) params.set('source', sourceFilter);
         if (whatsappFilter && whatsappFilter !== 'all') {
           params.set('whatsappState', whatsappFilter);
+        }
+        if (orderTypeFilter && orderTypeFilter !== 'all') {
+          params.set('orderType', orderTypeFilter);
         }
         if (searchQuery) params.set('search', searchQuery);
 
@@ -371,6 +379,7 @@ export default function OrderHistoryPage() {
       referralFilter,
       sourceFilter,
       whatsappFilter,
+      orderTypeFilter,
       searchQuery,
       fromDateFilter,
       toDateFilter,
@@ -895,6 +904,8 @@ export default function OrderHistoryPage() {
         referrals={referrals}
         statusFilter={statusFilter as StatusTabValue}
         onStatusChange={(val) => setFilter({ statusFilter: val as StatusTabValue })}
+        orderTypeFilter={orderTypeFilter || 'all'}
+        onOrderTypeChange={(val) => setFilter({ orderTypeFilter: val })}
         totalOrders={totalOrders}
       />
 

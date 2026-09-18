@@ -1,6 +1,13 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import Tabs from '@/components/ui/tabs';
+import {
+  FALLBACK_REF_POSITIONS,
+  fetchDefaultRefPositions,
+  mergeDefaultRefs,
+  type DefaultRefPositions,
+} from '@/lib/default-refs';
 
 const BASE_TAB_CLASS =
   'border border-stroke text-foreground/80 hover:bg-background hover:text-foreground';
@@ -35,11 +42,12 @@ export interface ReferralFilterProps {
 /**
  * Shared referral filter tabs.
  *
- * Renders: [All] [MNK-D] [GHD-D] [...referrals sorted by filterOrder]
+ * Renders: [All] [...defaults + referrals merged by position]
  *
- * The `MNK-D` and `GHD-D` tabs are always first (after "All"),
- * then the referrals follow in the order returned by the API
- * (sorted by `filterOrder` ascending, then `createdAt` descending).
+ * The virtual `MNK-D` / `GHD-D` tabs are merged into the referral list
+ * at the positions saved via the referrals reorder modal (fetched from
+ * /api/referrals/default-order). Until the fetch resolves they sit at
+ * their classic positions 0 and 1, right after "All".
  */
 export default function ReferralFilter({
   value,
@@ -51,6 +59,25 @@ export default function ReferralFilter({
   size,
   showName = true,
 }: ReferralFilterProps) {
+  const [positions, setPositions] = useState<DefaultRefPositions>(
+    FALLBACK_REF_POSITIONS,
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchDefaultRefPositions().then((next) => {
+      if (!cancelled) setPositions(next);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const merged = mergeDefaultRefs(referrals, positions, (id) => ({
+    name: id,
+    referralId: id,
+  }));
+
   const options = [
     {
       label: allLabel,
@@ -58,22 +85,11 @@ export default function ReferralFilter({
       className: BASE_TAB_CLASS,
       activeClassName: ACTIVE_TAB_CLASS,
     },
-    {
-      label: 'MNK-D',
-      value: 'MNK-D',
-      className: BASE_TAB_CLASS,
-      activeClassName: ACTIVE_TAB_CLASS,
-    },
-    {
-      label: 'GHD-D',
-      value: 'GHD-D',
-      className: BASE_TAB_CLASS,
-      activeClassName: ACTIVE_TAB_CLASS,
-    },
-    ...referrals.map((referral) => ({
-      label: showName
-        ? `${referral.name} (${referral.referralId})`
-        : referral.referralId,
+    ...merged.map((referral) => ({
+      label:
+        showName && referral.name !== referral.referralId
+          ? `${referral.name} (${referral.referralId})`
+          : referral.referralId,
       value: referral.referralId,
       className: BASE_TAB_CLASS,
       activeClassName: ACTIVE_TAB_CLASS,

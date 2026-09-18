@@ -172,6 +172,7 @@ export default function ExecutionPage() {
     categoryFilter,
     intentionFilter,
     countryFilter,
+    orderTypeFilter,
     searchInput,
     searchQuery,
     selectedOrder,
@@ -297,6 +298,7 @@ export default function ExecutionPage() {
         if (statusFilter !== 'all') params.set('status', statusFilter);
         if (intentionFilter && intentionFilter !== 'all') params.set('intention', intentionFilter);
         if (countryFilter && countryFilter !== 'all') params.set('country', countryFilter);
+        if (orderTypeFilter && orderTypeFilter !== 'all') params.set('orderType', orderTypeFilter);
         if (searchQuery) params.set('search', searchQuery);
 
         const normalizedRange = normalizeDateRange(fromDateFilter, toDateFilter);
@@ -359,6 +361,7 @@ export default function ExecutionPage() {
       statusFilter,
       intentionFilter,
       countryFilter,
+      orderTypeFilter,
       searchQuery,
       page,
       pageSize,
@@ -380,6 +383,7 @@ export default function ExecutionPage() {
       if (statusFilter !== 'all') params.set('status', statusFilter);
       if (intentionFilter && intentionFilter !== 'all') params.set('intention', intentionFilter);
       if (countryFilter && countryFilter !== 'all') params.set('country', countryFilter);
+      if (orderTypeFilter && orderTypeFilter !== 'all') params.set('orderType', orderTypeFilter);
       if (searchQuery) params.set('search', searchQuery);
 
       const normalizedRange = normalizeDateRange(fromDateFilter, toDateFilter);
@@ -406,6 +410,7 @@ export default function ExecutionPage() {
       statusFilter,
       intentionFilter,
       countryFilter,
+      orderTypeFilter,
       searchQuery,
       t,
     ],
@@ -423,6 +428,7 @@ export default function ExecutionPage() {
     if (statusFilter !== 'all') params.set('status', statusFilter);
     if (intentionFilter && intentionFilter !== 'all') params.set('intention', intentionFilter);
     if (countryFilter && countryFilter !== 'all') params.set('country', countryFilter);
+    if (orderTypeFilter && orderTypeFilter !== 'all') params.set('orderType', orderTypeFilter);
     if (searchQuery) params.set('search', searchQuery);
     const normalizedRange = normalizeDateRange(fromDateFilter, toDateFilter);
     if (normalizedRange.fromDate) params.set('fromDate', normalizedRange.fromDate);
@@ -506,6 +512,7 @@ export default function ExecutionPage() {
         if (statusFilter !== 'all') params.set('status', statusFilter);
         if (intentionFilter && intentionFilter !== 'all') params.set('intention', intentionFilter);
         if (countryFilter && countryFilter !== 'all') params.set('country', countryFilter);
+        if (orderTypeFilter && orderTypeFilter !== 'all') params.set('orderType', orderTypeFilter);
         if (searchQuery) params.set('search', searchQuery);
 
         const normalizedRange = normalizeDateRange(fromDateFilter, toDateFilter);
@@ -541,6 +548,7 @@ export default function ExecutionPage() {
       statusFilter,
       intentionFilter,
       countryFilter,
+      orderTypeFilter,
       searchQuery,
       t,
     ],
@@ -557,6 +565,7 @@ export default function ExecutionPage() {
         if (categoryFilter && categoryFilter !== 'all') params.set('category', categoryFilter);
         if (intentionFilter && intentionFilter !== 'all') params.set('intention', intentionFilter);
         if (countryFilter && countryFilter !== 'all') params.set('country', countryFilter);
+        if (orderTypeFilter && orderTypeFilter !== 'all') params.set('orderType', orderTypeFilter);
         if (searchQuery) params.set('search', searchQuery);
 
         const normalizedRange = normalizeDateRange(fromDateFilter, toDateFilter);
@@ -583,7 +592,7 @@ export default function ExecutionPage() {
         }
       }
     },
-    [statusFilter, sourceFilter, referralFilter, categoryFilter, intentionFilter, countryFilter, searchQuery, fromDateFilter, toDateFilter, setLoadingStats, setStats],
+    [statusFilter, sourceFilter, referralFilter, categoryFilter, intentionFilter, countryFilter, orderTypeFilter, searchQuery, fromDateFilter, toDateFilter, setLoadingStats, setStats],
   );
 
   useEffect(() => {
@@ -1741,6 +1750,8 @@ export default function ExecutionPage() {
         totalOrders={totalOrders}
         statusFilter={statusFilter}
         onStatusChange={(val) => setFilter({ statusFilter: val })}
+        orderTypeFilter={orderTypeFilter || 'all'}
+        onOrderTypeChange={(val) => setFilter({ orderTypeFilter: val })}
         intentionFilter={intentionFilter as string}
         onIntentionChange={(val) => setFilter({ intentionFilter: val })}
         countryFilter={countryFilter as string}

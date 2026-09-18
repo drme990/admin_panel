@@ -40,7 +40,11 @@
       "whatsappStateAll": "كل الحالات",
       "whatsappStateClicked": "تم النقر",
       "whatsappStateNotClicked": "لم يتم النقر",
-      "whatsappStateNoNeedToClick": "لا حاجة للنقر"
+      "whatsappStateNoNeedToClick": "لا حاجة للنقر",
+      "allTypes": "الكل",
+      "websiteType": "الموقع",
+      "manualType": "يدوي",
+      "subOrderType": "طلب فرعي"
     },
     "total": "إجمالي الحجوزات",
     "status": {
@@ -929,7 +933,11 @@
       "allReferrals": "كل الإحالات",
       "allSources": "كل المصادر",
       "manasikSource": "مناسك",
-      "ghadaqSource": "غدق"
+      "ghadaqSource": "غدق",
+      "allTypes": "الكل",
+      "websiteType": "الموقع",
+      "manualType": "يدوي",
+      "subOrderType": "طلب فرعي"
     },
     "status": {
       "pending": "قيد الانتظار",
@@ -1443,7 +1451,11 @@
         "allCategories": "كل الفئات",
         "country": "الدولة",
         "allCountries": "كل الدول",
-        "searchCountry": "ابحث عن دولة..."
+        "searchCountry": "ابحث عن دولة...",
+        "allTypes": "الكل",
+        "websiteType": "الموقع",
+        "manualType": "يدوي",
+        "subOrderType": "طلب فرعي"
       },
       "totalCount": "{count} فاتورة",
       "header": {
@@ -2364,7 +2376,10 @@
         "thisMonth": "هذا الشهر",
         "lastMonth": "الشهر الماضي",
         "fromDate": "من تاريخ",
-        "toDate": "إلى تاريخ"
+        "toDate": "إلى تاريخ",
+        "allOrders": "الكل",
+        "orderedBefore": "حجز فعلي",
+        "neverOrdered": "نية حجز"
       },
       "common": {
         "allReferences": "كل المعرفات",
@@ -2392,7 +2407,8 @@
         "filterRef": "الإحالة",
         "filterTier": "الفئة",
         "filterProfileCountry": "دولة الملف",
-        "filterDetectedCountry": "الدولة المكتشفة"
+        "filterDetectedCountry": "الدولة المكتشفة",
+        "filterOrders": "الحجز"
       },
       "status": {
         "active": "نشط",
@@ -3117,6 +3133,7 @@
       "addReservedShares": "إضافة أسهم محجوزة",
       "reservedSharesLabel": "الأسهم المحجوزة",
       "reservedSharesHint": "عدد الأسهم المحجوزة مسبقًا والتي يجب إضافتها إلى عدد الأسهم المباعة في هذه الحملة",
+      "sharesBreakdown": "{orders} من الطلبات + {manual} يدوي",
       "invalidSharesCount": "يجب أن يكون عدد الأسهم 1 على الأقل",
       "sharesAdded": "تمت إضافة الأسهم بنجاح",
       "add": "إضافة",
@@ -3159,6 +3176,13 @@
       "orderStatus": "الحالة",
       "date": "التاريخ",
       "viewOrder": "عرض الطلب",
+      "moveShares": "نقل الأسهم",
+      "moveSharesFrom": "من الحملة",
+      "amountToMove": "عدد الأسهم المراد نقلها",
+      "amountToMoveHint": "يمكن نقل ما يصل إلى {max} سهم",
+      "selectTargetCampaign": "اختر الحملة المستهدفة",
+      "noAvailableCampaigns": "لا توجد حملات نشطة أخرى لهذا المنتج. أنشئ حملة جديدة أولاً ثم انقل الأسهم إليها.",
+      "sharesMoved": "تم نقل الأسهم بنجاح",
       "status": {
         "active": "نشط",
         "completed": "مكتمل"

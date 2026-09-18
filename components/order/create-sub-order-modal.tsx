@@ -40,6 +40,7 @@ interface Product {
     isAvailable?: boolean;
     designName?: string;
   }>;
+  workAsSacrifice?: boolean;
   reservationFields?: Array<{
     key: string;
     type: string;
@@ -314,16 +315,61 @@ export default function CreateSubOrderModal({
     [t],
   );
 
-  const intentionOptions = useMemo(
-    () => [
-      { label: t('createManualOrder.intentionAqeeqah') || 'Aqeeqah', value: 'عقيقة' },
-      { label: t('createManualOrder.intentionSacrifice') || 'Sacrifice', value: 'أُضحيــَــة' },
-      { label: t('createManualOrder.intentionCharity') || 'Charity', value: 'صدقة' },
-      { label: t('createManualOrder.intentionVow') || 'Vow', value: 'نذر' },
-      { label: t('createManualOrder.intentionProtective') || 'Protective', value: 'فدو' },
-    ],
-    [t],
-  );
+  // Intention options follow the MAIN (first existing) product's
+  // reservationFields config exactly — the same options the customer
+  // sees at checkout, including hiding عقيقة for non-sacrifice
+  // products. Values stay Arabic (canonical stored value) while labels
+  // follow the admin's locale. Falls back to the full preset list when
+  // the main product has no intention config.
+  const intentionOptions = useMemo(() => {
+    const mainItem = form.items.find(
+      (item) => item.type === 'existing' && item.productId,
+    );
+    const product = mainItem
+      ? products.find((p) => p._id === mainItem.productId)
+      : undefined;
+    const field = product?.reservationFields?.find(
+      (f) => f.key === 'intention',
+    );
+    const rawOptions =
+      field?.options && field.options.length > 0
+        ? field.options
+        : [
+          { ar: 'عقيقة', en: 'Aqeeqah' },
+          { ar: 'أُضحيــَــة', en: 'Sacrifice' },
+          { ar: 'صدقة', en: 'Charity' },
+          { ar: 'نذر', en: 'Vow' },
+          { ar: 'فدو', en: 'Protective' },
+        ];
+    // Mirrors checkout: عقيقة is hidden unless the product works as a
+    // sacrifice. With no product selected, keep the full preset list.
+    const hideAqeeqah = product ? !product.workAsSacrifice : false;
+    return rawOptions
+      .filter(
+        (opt) =>
+          !hideAqeeqah ||
+          (!opt.en.toLowerCase().includes('aqeeqah') && opt.ar !== 'عقيقة'),
+      )
+      .map((opt) => {
+        const value = opt.ar || opt.en;
+        const label = locale === 'ar' ? opt.ar || opt.en : opt.en || opt.ar;
+        return value ? { label: label || value, value } : null;
+      })
+      .filter((o): o is { label: string; value: string } => o !== null);
+  }, [form.items, products, locale]);
+
+  // Drop a previously chosen intention the current product selection
+  // no longer allows.
+  useEffect(() => {
+    const current = form.reservationData.intention;
+    if (!current) return;
+    if (!intentionOptions.some((o) => o.value === current)) {
+      setForm((prev) => ({
+        ...prev,
+        reservationData: { ...prev.reservationData, intention: '' },
+      }));
+    }
+  }, [intentionOptions, form.reservationData.intention]);
 
   const genderOptions = useMemo(
     () => [

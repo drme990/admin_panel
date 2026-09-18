@@ -163,6 +163,7 @@ export default function OrderDesignsPage() {
       statusFilter: savedFilters?.statusFilter ?? 'all',
       intentionFilter: savedFilters?.intentionFilter ?? 'all',
       countryFilter: savedFilters?.countryFilter ?? '',
+      orderTypeFilter: savedFilters?.orderTypeFilter ?? 'all',
       pageSize: savedFilters?.pageSize ?? 52,
       referralFilter: savedFilters?.referralFilter ?? '',
       searchInput: savedFilters?.searchInput ?? '',
@@ -186,6 +187,7 @@ export default function OrderDesignsPage() {
     categoryFilter,
     intentionFilter,
     countryFilter,
+    orderTypeFilter,
     searchInput,
     searchQuery,
     selectedOrder,
@@ -232,6 +234,7 @@ export default function OrderDesignsPage() {
         categoryFilter,
         intentionFilter,
         countryFilter,
+        orderTypeFilter,
         searchInput,
         searchQuery,
         page,
@@ -242,7 +245,7 @@ export default function OrderDesignsPage() {
     } catch (err) {
       console.error('Failed to save order-designs filters:', err);
     }
-  }, [fromDateFilter, toDateFilter, statusFilter, sourceFilter, referralFilter, categoryFilter, intentionFilter, countryFilter, searchInput, searchQuery, page, pageSize, reviewFilter]);
+  }, [fromDateFilter, toDateFilter, statusFilter, sourceFilter, referralFilter, categoryFilter, intentionFilter, countryFilter, orderTypeFilter, searchInput, searchQuery, page, pageSize, reviewFilter]);
 
   // ── Category drill-down (same UX as the execution page) ────────────────
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
@@ -299,6 +302,7 @@ export default function OrderDesignsPage() {
         if (statusFilter !== 'all') params.set('status', statusFilter);
         if (intentionFilter && intentionFilter !== 'all') params.set('intention', intentionFilter);
         if (countryFilter && countryFilter !== 'all') params.set('country', countryFilter);
+        if (orderTypeFilter && orderTypeFilter !== 'all') params.set('orderType', orderTypeFilter);
         if (searchQuery) params.set('search', searchQuery);
 
         const normalizedRange = normalizeDateRange(fromDateFilter, toDateFilter);
@@ -353,6 +357,7 @@ export default function OrderDesignsPage() {
     [
       fromDateFilter, toDateFilter, sourceFilter, referralFilter,
       categoryFilter, statusFilter, intentionFilter, countryFilter,
+      orderTypeFilter,
       searchQuery, page, pageSize, t, setLoading, dispatch,
     ],
   );
@@ -369,6 +374,7 @@ export default function OrderDesignsPage() {
     if (statusFilter !== 'all') params.set('status', statusFilter);
     if (intentionFilter && intentionFilter !== 'all') params.set('intention', intentionFilter);
     if (countryFilter && countryFilter !== 'all') params.set('country', countryFilter);
+    if (orderTypeFilter && orderTypeFilter !== 'all') params.set('orderType', orderTypeFilter);
     if (searchQuery) params.set('search', searchQuery);
     const normalizedRange = normalizeDateRange(fromDateFilter, toDateFilter);
     if (normalizedRange.fromDate) params.set('fromDate', normalizedRange.fromDate);
@@ -440,6 +446,7 @@ export default function OrderDesignsPage() {
         if (categoryFilter && categoryFilter !== 'all') params.set('category', categoryFilter);
         if (intentionFilter && intentionFilter !== 'all') params.set('intention', intentionFilter);
         if (countryFilter && countryFilter !== 'all') params.set('country', countryFilter);
+        if (orderTypeFilter && orderTypeFilter !== 'all') params.set('orderType', orderTypeFilter);
         if (searchQuery) params.set('search', searchQuery);
 
         const normalizedRange = normalizeDateRange(fromDateFilter, toDateFilter);
@@ -461,7 +468,7 @@ export default function OrderDesignsPage() {
     },
     [
       statusFilter, sourceFilter, referralFilter, categoryFilter,
-      intentionFilter, countryFilter, searchQuery, fromDateFilter, toDateFilter,
+      intentionFilter, countryFilter, orderTypeFilter, searchQuery, fromDateFilter, toDateFilter,
       setLoadingStats, setStats,
     ],
   );
@@ -490,6 +497,7 @@ export default function OrderDesignsPage() {
         if (statusFilter !== 'all') params.set('status', statusFilter);
         if (intentionFilter && intentionFilter !== 'all') params.set('intention', intentionFilter);
         if (countryFilter && countryFilter !== 'all') params.set('country', countryFilter);
+        if (orderTypeFilter && orderTypeFilter !== 'all') params.set('orderType', orderTypeFilter);
         if (searchQuery) params.set('search', searchQuery);
 
         const normalizedRange = normalizeDateRange(fromDateFilter, toDateFilter);
@@ -517,7 +525,7 @@ export default function OrderDesignsPage() {
     },
     [
       fromDateFilter, toDateFilter, sourceFilter, referralFilter,
-      statusFilter, intentionFilter, countryFilter, searchQuery, t,
+      statusFilter, intentionFilter, countryFilter, orderTypeFilter, searchQuery, t,
     ],
   );
 
@@ -1451,6 +1459,8 @@ export default function OrderDesignsPage() {
         totalOrders={totalOrders}
         statusFilter={statusFilter}
         onStatusChange={(val) => setFilter({ statusFilter: val })}
+        orderTypeFilter={orderTypeFilter || 'all'}
+        onOrderTypeChange={(val) => setFilter({ orderTypeFilter: val })}
         intentionFilter={intentionFilter as string}
         onIntentionChange={(val) => setFilter({ intentionFilter: val })}
         countryFilter={countryFilter as string}

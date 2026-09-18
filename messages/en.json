@@ -40,7 +40,11 @@
       "whatsappStateAll": "All states",
       "whatsappStateClicked": "Clicked",
       "whatsappStateNotClicked": "Not clicked",
-      "whatsappStateNoNeedToClick": "No need to click"
+      "whatsappStateNoNeedToClick": "No need to click",
+      "allTypes": "All",
+      "websiteType": "Website",
+      "manualType": "Manual",
+      "subOrderType": "Sub-order"
     },
     "total": "Total",
     "status": {
@@ -929,7 +933,11 @@
       "allReferrals": "All Referrals",
       "allSources": "All Sources",
       "manasikSource": "Manasik",
-      "ghadaqSource": "Ghadaq"
+      "ghadaqSource": "Ghadaq",
+      "allTypes": "All",
+      "websiteType": "Website",
+      "manualType": "Manual",
+      "subOrderType": "Sub-order"
     },
     "status": {
       "pending": "Pending",
@@ -1444,7 +1452,11 @@
         "allCategories": "All Categories",
         "country": "Country",
         "allCountries": "All Countries",
-        "searchCountry": "Search country..."
+        "searchCountry": "Search country...",
+        "allTypes": "All",
+        "websiteType": "Website",
+        "manualType": "Manual",
+        "subOrderType": "Sub-order"
       },
       "totalCount": "{count} invoices",
       "header": {
@@ -2365,7 +2377,10 @@
         "thisMonth": "This Month",
         "lastMonth": "Last Month",
         "fromDate": "From Date",
-        "toDate": "To Date"
+        "toDate": "To Date",
+        "allOrders": "All",
+        "orderedBefore": "Ordered Before",
+        "neverOrdered": "Never Ordered"
       },
       "common": {
         "allReferences": "All References",
@@ -2393,7 +2408,8 @@
         "filterRef": "Referral",
         "filterTier": "Tier",
         "filterProfileCountry": "Profile Country",
-        "filterDetectedCountry": "Detected Country"
+        "filterDetectedCountry": "Detected Country",
+        "filterOrders": "Orders"
       },
       "status": {
         "active": "Active",
@@ -3118,6 +3134,7 @@
       "addReservedShares": "Add Reserved Shares",
       "reservedSharesLabel": "Reserved Shares",
       "reservedSharesHint": "How many shares are already reserved and should be added to this campaign's sold count",
+      "sharesBreakdown": "{orders} from orders + {manual} manual",
       "invalidSharesCount": "Shares count must be at least 1",
       "sharesAdded": "Shares added successfully",
       "add": "Add",
@@ -3160,6 +3177,13 @@
       "orderStatus": "Status",
       "date": "Date",
       "viewOrder": "View Order",
+      "moveShares": "Move Shares",
+      "moveSharesFrom": "From campaign",
+      "amountToMove": "Amount to move",
+      "amountToMoveHint": "Up to {max} shares can be moved",
+      "selectTargetCampaign": "Select target campaign",
+      "noAvailableCampaigns": "No other active campaigns for this product. Create a new campaign first, then move the shares to it.",
+      "sharesMoved": "Shares moved successfully",
       "status": {
         "active": "Active",
         "completed": "Completed"

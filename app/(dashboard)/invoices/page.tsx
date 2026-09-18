@@ -77,6 +77,7 @@ export default function InvoicesPage() {
     const [statusFilter, setStatusFilter] = useState<OrderStatus | 'all'>('all');
     const [intentionFilter, setIntentionFilter] = useState('all');
     const [countryFilter, setCountryFilter] = useState('');
+    const [orderTypeFilter, setOrderTypeFilter] = useState('all');
     const [categories, setCategories] = useState<Category[]>([]);
     const [referrals, setReferrals] = useState<Referral[]>([]);
     const [totalInvoices, setTotalInvoices] = useState(0);
@@ -169,6 +170,7 @@ export default function InvoicesPage() {
                 if (typeof saved.categoryFilter === 'string') setCategoryFilter(saved.categoryFilter);
                 if (saved.statusFilter) setStatusFilter(saved.statusFilter);
                 if (typeof saved.intentionFilter === 'string') setIntentionFilter(saved.intentionFilter);
+                if (typeof saved.orderTypeFilter === 'string') setOrderTypeFilter(saved.orderTypeFilter);
                 if (typeof saved.countryFilter === 'string') {
                     setCountryFilter(saved.countryFilter === 'all' ? '' : saved.countryFilter);
                 }
@@ -197,6 +199,7 @@ export default function InvoicesPage() {
             categoryFilter,
             statusFilter,
             intentionFilter,
+            orderTypeFilter,
             countryFilter,
             viewMode,
             pageSize,
@@ -213,6 +216,7 @@ export default function InvoicesPage() {
         categoryFilter,
         statusFilter,
         intentionFilter,
+        orderTypeFilter,
         countryFilter,
         viewMode,
         pageSize,
@@ -237,6 +241,7 @@ export default function InvoicesPage() {
             if (categoryFilter && categoryFilter !== 'all') params.set('category', categoryFilter);
             if (intentionFilter && intentionFilter !== 'all') params.set('intention', intentionFilter);
             if (countryFilter && countryFilter !== 'all') params.set('country', countryFilter);
+            if (orderTypeFilter && orderTypeFilter !== 'all') params.set('orderType', orderTypeFilter);
             if (reviewFilter !== 'all') params.set('review', reviewFilter);
             if (paymentMethodFilter !== 'all') params.set('paymentMethod', paymentMethodFilter);
 
@@ -271,7 +276,7 @@ export default function InvoicesPage() {
                 setLoading(false);
             }
         }
-    }, [page, pageSize, reviewFilter, sourceFilter, paymentMethodFilter, searchQuery, fromDateFilter, toDateFilter, statusFilter, referralFilter, categoryFilter, intentionFilter, countryFilter, t]);
+    }, [page, pageSize, reviewFilter, sourceFilter, paymentMethodFilter, searchQuery, fromDateFilter, toDateFilter, statusFilter, referralFilter, categoryFilter, intentionFilter, orderTypeFilter, countryFilter, t]);
 
     useEffect(() => {
         if (!filtersLoaded) return;
@@ -1266,6 +1271,11 @@ export default function InvoicesPage() {
                 statusFilter={statusFilter}
                 onStatusChange={(val) => {
                     setStatusFilter(val);
+                    setPage(1);
+                }}
+                orderTypeFilter={orderTypeFilter}
+                onOrderTypeChange={(val) => {
+                    setOrderTypeFilter(val);
                     setPage(1);
                 }}
                 intentionFilter={intentionFilter}

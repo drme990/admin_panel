@@ -128,6 +128,9 @@ export default function CustomersPage() {
   const [search, setSearch] = useState('');
   const [appFilter, setAppFilter] = useState<AppFilter>('all');
   const [banFilter, setBanFilter] = useState<BanFilter>('all');
+  const [hasOrdersFilter, setHasOrdersFilter] = useState<
+    'all' | 'ordered' | 'never'
+  >('all');
   const [refFilter, setRefFilter] = useState<RefFilter>('all');
   const [tierFilter, setTierFilter] = useState<TierFilter>('all');
   const [countryFilter, setCountryFilter] = useState('');
@@ -257,6 +260,15 @@ export default function CustomersPage() {
     [t],
   );
 
+  const hasOrdersFilterOptions = useMemo(
+    () => [
+      { value: 'all' as const, label: t('filters.allOrders') },
+      { value: 'ordered' as const, label: t('filters.orderedBefore') },
+      { value: 'never' as const, label: t('filters.neverOrdered') },
+    ],
+    [t],
+  );
+
   const refActionOptions = useMemo(() => {
     const options = referrals.map((r) => ({
       label: r.referralId,
@@ -278,6 +290,7 @@ export default function CustomersPage() {
       if (banFilter === 'active') params.set('isBanned', 'false');
       if (refFilter !== 'all') params.set('ref', refFilter);
       if (tierFilter !== 'all') params.set('tier', tierFilter === 'none' ? '__none__' : tierFilter);
+      if (hasOrdersFilter !== 'all') params.set('hasOrders', hasOrdersFilter);
       if (countryFilter) params.set('country', countryFilter);
       if (detectedCountryFilter) params.set('detectedCountry', detectedCountryFilter);
       if (search.trim()) params.set('search', search.trim());
@@ -316,7 +329,7 @@ export default function CustomersPage() {
     } finally {
       setLoading(false);
     }
-  }, [appFilter, banFilter, refFilter, tierFilter, countryFilter, detectedCountryFilter, search, fromDateFilter, toDateFilter, page, pageSize, t]);
+  }, [appFilter, banFilter, refFilter, tierFilter, hasOrdersFilter, countryFilter, detectedCountryFilter, search, fromDateFilter, toDateFilter, page, pageSize, t]);
 
   const fetchCustomersForExport = useCallback(async (limit: number, offset: number = 0) => {
     const params = new URLSearchParams();
@@ -325,6 +338,7 @@ export default function CustomersPage() {
     if (banFilter === 'active') params.set('isBanned', 'false');
     if (refFilter !== 'all') params.set('ref', refFilter);
     if (tierFilter !== 'all') params.set('tier', tierFilter === 'none' ? '__none__' : tierFilter);
+    if (hasOrdersFilter !== 'all') params.set('hasOrders', hasOrdersFilter);
     if (countryFilter) params.set('country', countryFilter);
     if (detectedCountryFilter) params.set('detectedCountry', detectedCountryFilter);
     if (search.trim()) params.set('search', search.trim());
@@ -349,15 +363,15 @@ export default function CustomersPage() {
     }
 
     return (data.data.customers || []) as Customer[];
-  }, [appFilter, banFilter, refFilter, tierFilter, countryFilter, detectedCountryFilter, search, fromDateFilter, toDateFilter, t]);
+  }, [appFilter, banFilter, refFilter, tierFilter, hasOrdersFilter, countryFilter, detectedCountryFilter, search, fromDateFilter, toDateFilter, t]);
 
   useEffect(() => {
     setPage(1);
-  }, [appFilter, banFilter, refFilter, tierFilter, countryFilter, detectedCountryFilter, search, fromDateFilter, toDateFilter, pageSize]);
+  }, [appFilter, banFilter, refFilter, tierFilter, hasOrdersFilter, countryFilter, detectedCountryFilter, search, fromDateFilter, toDateFilter, pageSize]);
 
   useEffect(() => {
     setSelectedCustomerKeys([]);
-  }, [page, appFilter, banFilter, refFilter, tierFilter, countryFilter, detectedCountryFilter, search, fromDateFilter, toDateFilter, pageSize]);
+  }, [page, appFilter, banFilter, refFilter, tierFilter, hasOrdersFilter, countryFilter, detectedCountryFilter, search, fromDateFilter, toDateFilter, pageSize]);
 
   useEffect(() => {
     fetchCustomers();
@@ -1034,6 +1048,19 @@ export default function CustomersPage() {
               value={banFilter}
               options={banFilterOptions}
               onChange={setBanFilter}
+              size="sm"
+              className="flex-wrap"
+            />
+          </div>
+
+          <div className="space-y-1">
+            <p className="text-[10px] uppercase text-secondary font-medium tracking-wide">
+              {tCommon('filterOrders')}
+            </p>
+            <Tabs
+              value={hasOrdersFilter}
+              options={hasOrdersFilterOptions}
+              onChange={setHasOrdersFilter}
               size="sm"
               className="flex-wrap"
             />

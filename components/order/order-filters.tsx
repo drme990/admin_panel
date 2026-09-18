@@ -34,6 +34,8 @@ interface Props {
   referrals: Referral[];
   statusFilter: StatusTabValue;
   onStatusChange: (value: StatusTabValue) => void;
+  orderTypeFilter: string;
+  onOrderTypeChange: (value: string) => void;
   totalOrders: number;
 }
 
@@ -57,6 +59,8 @@ export default function OrderFilters({
   referrals,
   statusFilter,
   onStatusChange,
+  orderTypeFilter,
+  onOrderTypeChange,
   totalOrders,
 }: Props) {
   const t = useTranslations('orders');
@@ -224,6 +228,41 @@ export default function OrderFilters({
           value={statusFilter}
           options={statusTabOptions}
           onChange={onStatusChange}
+          className="min-w-max"
+        />
+      </div>
+
+      {/* Order type tabs */}
+      <div className="overflow-x-auto pb-1">
+        <Tabs<string>
+          value={orderTypeFilter}
+          options={[
+            {
+              label: t('filters.allTypes'),
+              value: 'all',
+              className: 'border border-stroke text-foreground/80 hover:bg-background hover:text-foreground',
+              activeClassName: 'bg-foreground text-background shadow-sm',
+            },
+            {
+              label: t('filters.websiteType'),
+              value: 'website',
+              className: 'border border-stroke text-foreground/80 hover:bg-background hover:text-foreground',
+              activeClassName: 'bg-foreground text-background shadow-sm',
+            },
+            {
+              label: t('filters.manualType'),
+              value: 'manual',
+              className: 'border border-stroke text-foreground/80 hover:bg-background hover:text-foreground',
+              activeClassName: 'bg-foreground text-background shadow-sm',
+            },
+            {
+              label: t('filters.subOrderType'),
+              value: 'subOrder',
+              className: 'border border-stroke text-foreground/80 hover:bg-background hover:text-foreground',
+              activeClassName: 'bg-foreground text-background shadow-sm',
+            },
+          ]}
+          onChange={onOrderTypeChange}
           className="min-w-max"
         />
       </div>

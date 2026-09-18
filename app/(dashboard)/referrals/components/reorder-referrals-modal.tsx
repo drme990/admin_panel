@@ -7,6 +7,11 @@ import Button from '@/components/ui/button';
 import { toast } from 'react-toastify';
 import type { Referral } from '@/types/Referral';
 import { LuGripVertical } from 'react-icons/lu';
+import {
+  defaultRefAppId,
+  fetchDefaultRefPositions,
+  mergeDefaultRefs,
+} from '@/lib/default-refs';
 
 interface Props {
   isOpen: boolean;
@@ -37,12 +42,30 @@ export default function ReorderReferralsModal({
   const dragIndex = useRef<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
-  // Reset items when the modal opens
+  // Reset items when the modal opens — merge the virtual default refs
+  // (MNK-D / GHD-D) in at their saved positions so they can be dragged
+  // like any other referral.
   useEffect(() => {
-    if (isOpen) {
-      setItems(referrals);
-      setHasChanges(false);
-    }
+    if (!isOpen) return;
+    let cancelled = false;
+    setHasChanges(false);
+    fetchDefaultRefPositions().then((positions) => {
+      if (cancelled) return;
+      setItems(
+        mergeDefaultRefs(referrals, positions, (id) => ({
+          _id: id,
+          name: id,
+          referralId: id,
+          phone: '',
+          appId: defaultRefAppId(id),
+          createdAt: '',
+          updatedAt: '',
+        })),
+      );
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [isOpen, referrals]);
 
   const handleDragStart = (index: number) => {

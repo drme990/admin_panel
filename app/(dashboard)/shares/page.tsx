@@ -23,6 +23,7 @@ import {
   LuCircleCheck,
   LuClock,
   LuImage as ImageIcon,
+  LuArrowRightLeft,
 } from 'react-icons/lu';
 
 interface CampaignSize {
@@ -49,6 +50,7 @@ interface ShareCampaign {
   baseCurrency: string | null;
   totalShares: number;
   soldShares: number;
+  manualShares?: number;
   status: 'active' | 'inactive' | 'completed';
   campaignNumber: number;
   displayOnProductPage?: boolean;
@@ -118,6 +120,11 @@ export default function SharesPage() {
   const [addSharesForCampaign, setAddSharesForCampaign] =
     useState<ShareCampaign | null>(null);
   const [addSharesInput, setAddSharesInput] = useState('1');
+  const [showMoveSharesModal, setShowMoveSharesModal] = useState(false);
+  const [moveSharesForCampaign, setMoveSharesForCampaign] =
+    useState<ShareCampaign | null>(null);
+  const [moveTargetCampaignId, setMoveTargetCampaignId] = useState('');
+  const [moveSharesInput, setMoveSharesInput] = useState('1');
   const [showProductModal, setShowProductModal] = useState(false);
   const [selectedProductCampaigns, setSelectedProductCampaigns] = useState<
     ShareCampaign[]
@@ -453,6 +460,50 @@ export default function SharesPage() {
     }
   };
 
+  const openMoveSharesModal = (campaign: ShareCampaign) => {
+    setMoveSharesForCampaign(campaign);
+    setMoveTargetCampaignId('');
+    setMoveSharesInput(String(campaign.soldShares));
+    setShowMoveSharesModal(true);
+  };
+
+  const handleMoveShares = async () => {
+    if (!moveSharesForCampaign || !moveTargetCampaignId) return;
+    const amount = parseInt(moveSharesInput) || 0;
+    if (amount < 1 || amount > moveSharesForCampaign.soldShares) {
+      toast.error(t('invalidSharesCount'));
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const res = await fetch(
+        `/api/shares/${moveSharesForCampaign._id}/move`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            targetCampaignId: moveTargetCampaignId,
+            amount,
+          }),
+        },
+      );
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        toast.error(extractApiError(data, t('saveError')));
+        return;
+      }
+
+      toast.success(t('sharesMoved'));
+      setShowMoveSharesModal(false);
+      void fetchCampaigns();
+    } catch {
+      toast.error(t('saveError'));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const openProductModal = (group: (typeof productGroups)[number]) => {
     setSelectedProductCampaigns(group.campaigns);
     setSelectedProductName(group.productName);
@@ -595,7 +646,17 @@ export default function SharesPage() {
                   </button>
                 </Tooltip>
               )}
-              {!isCompleted && (
+              {!isCompleted && campaign.soldShares > 0 && (
+                <Tooltip content={t('moveShares')} position="top">
+                  <button
+                    onClick={() => openMoveSharesModal(campaign)}
+                    className="p-1.5 rounded-lg hover:bg-secondary/10 text-secondary"
+                  >
+                    <LuArrowRightLeft size={16} />
+                  </button>
+                </Tooltip>
+              )}
+              {!isCompleted && campaign.soldShares === 0 && (
                 <Tooltip content={t('delete')} position="top">
                   <button
                     onClick={() => handleDelete(campaign)}
@@ -626,6 +687,14 @@ export default function SharesPage() {
               {progressPercent(campaign)}%
             </span>
           </div>
+          {(campaign.manualShares ?? 0) > 0 && (
+            <div className="text-xs text-secondary">
+              {t('sharesBreakdown', {
+                orders: campaign.soldShares - (campaign.manualShares ?? 0),
+                manual: campaign.manualShares ?? 0,
+              })}
+            </div>
+          )}
           {isActive && remaining > 0 && (
             <div className="text-xs text-secondary">
               {t('remaining', { count: remaining })}
@@ -1018,6 +1087,16 @@ export default function SharesPage() {
                 {t('shares')}: {editingCampaign.soldShares}/
                 {editingCampaign.totalShares}
               </p>
+              {(editingCampaign.manualShares ?? 0) > 0 && (
+                <p className="text-xs">
+                  {t('sharesBreakdown', {
+                    orders:
+                      editingCampaign.soldShares -
+                      (editingCampaign.manualShares ?? 0),
+                    manual: editingCampaign.manualShares ?? 0,
+                  })}
+                </p>
+              )}
               <div className="text-xs mt-1">
                 {editingCampaign.sizes.map((s) => (
                   <div key={s.sizeIndex}>
@@ -1140,6 +1219,16 @@ export default function SharesPage() {
                 {t('shares')}: {addSharesForCampaign.soldShares}/
                 {addSharesForCampaign.totalShares}
               </p>
+              {(addSharesForCampaign.manualShares ?? 0) > 0 && (
+                <p>
+                  {t('sharesBreakdown', {
+                    orders:
+                      addSharesForCampaign.soldShares -
+                      (addSharesForCampaign.manualShares ?? 0),
+                    manual: addSharesForCampaign.manualShares ?? 0,
+                  })}
+                </p>
+              )}
             </div>
 
             <div>
@@ -1171,6 +1260,126 @@ export default function SharesPage() {
               </Button>
               <Button onClick={handleAddShares} disabled={submitting}>
                 {submitting ? t('saving') : t('add')}
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Move Shares Modal */}
+      {showMoveSharesModal && moveSharesForCampaign && (
+        <Modal
+          isOpen
+          onClose={() => setShowMoveSharesModal(false)}
+          title={t('moveShares')}
+          size="md"
+        >
+          <div className="space-y-4">
+            <div className="text-sm text-secondary bg-secondary/5 rounded-lg p-3 space-y-1">
+              <p>
+                <span className="font-medium text-foreground">
+                  {localizedName(moveSharesForCampaign.productName)}
+                </span>
+              </p>
+              <p>
+                {t('moveSharesFrom')}: #{moveSharesForCampaign.campaignNumber}
+                {' — '}
+                {moveSharesForCampaign.soldShares}/
+                {moveSharesForCampaign.totalShares}
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">
+                {t('amountToMove')} *
+              </label>
+              <Input
+                type="text"
+                inputMode="numeric"
+                value={moveSharesInput}
+                onChange={(e) =>
+                  setMoveSharesInput(onlyDigits(e.target.value))
+                }
+                onBlur={() => {
+                  const parsed = parseInt(moveSharesInput) || 0;
+                  if (parsed < 1) setMoveSharesInput('1');
+                  if (parsed > moveSharesForCampaign.soldShares) {
+                    setMoveSharesInput(
+                      String(moveSharesForCampaign.soldShares),
+                    );
+                  }
+                }}
+                placeholder={String(moveSharesForCampaign.soldShares)}
+                helperText={t('amountToMoveHint', {
+                  max: moveSharesForCampaign.soldShares,
+                })}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">
+                {t('selectTargetCampaign')} *
+              </label>
+              {(() => {
+                const targets = campaigns.filter(
+                  (c) =>
+                    c.productId === moveSharesForCampaign.productId &&
+                    c.status === 'active' &&
+                    c._id !== moveSharesForCampaign._id,
+                );
+                if (targets.length === 0) {
+                  return (
+                    <div className="text-sm text-secondary bg-secondary/5 rounded-lg p-3">
+                      {t('noAvailableCampaigns')}
+                    </div>
+                  );
+                }
+                return (
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                    {targets.map((target) => {
+                      const remaining = Math.max(
+                        0,
+                        target.totalShares - target.soldShares,
+                      );
+                      const selected = moveTargetCampaignId === target._id;
+                      return (
+                        <button
+                          key={target._id}
+                          type="button"
+                          onClick={() => setMoveTargetCampaignId(target._id)}
+                          className={`w-full flex items-center justify-between rounded-lg border p-3 text-start transition-colors ${selected
+                              ? 'border-primary bg-primary/5'
+                              : 'border-stroke hover:border-primary/50'
+                            }`}
+                        >
+                          <span className="text-sm font-medium text-foreground">
+                            {t('campaignNumber')} #{target.campaignNumber}
+                          </span>
+                          <span className="text-xs text-secondary tabular-nums">
+                            {target.soldShares}/{target.totalShares}
+                            {' — '}
+                            {t('remaining', { count: remaining })}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                variant="secondary"
+                onClick={() => setShowMoveSharesModal(false)}
+              >
+                {t('cancel')}
+              </Button>
+              <Button
+                onClick={handleMoveShares}
+                disabled={submitting || !moveTargetCampaignId}
+              >
+                {submitting ? t('saving') : t('moveShares')}
               </Button>
             </div>
           </div>

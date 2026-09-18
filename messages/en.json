@@ -3204,6 +3204,9 @@
       "selectTargetCampaign": "Select target campaign",
       "noAvailableCampaigns": "No other active campaigns for this product. Create a new campaign first, then move the shares to it.",
       "sharesMoved": "Shares moved successfully",
+      "swapOrder": "Move to another campaign",
+      "moveOrderTitle": "Move Order Shares",
+      "orderMoved": "Order shares moved successfully",
       "status": {
         "active": "Active",
         "completed": "Completed"

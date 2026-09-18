@@ -128,11 +128,6 @@ export default function SharesPage() {
   const [addSharesForCampaign, setAddSharesForCampaign] =
     useState<ShareCampaign | null>(null);
   const [addSharesInput, setAddSharesInput] = useState('1');
-  const [showMoveSharesModal, setShowMoveSharesModal] = useState(false);
-  const [moveSharesForCampaign, setMoveSharesForCampaign] =
-    useState<ShareCampaign | null>(null);
-  const [moveTargetCampaignId, setMoveTargetCampaignId] = useState('');
-  const [moveSharesInput, setMoveSharesInput] = useState('1');
   const [showProductModal, setShowProductModal] = useState(false);
   const [selectedProductCampaigns, setSelectedProductCampaigns] = useState<
     ShareCampaign[]
@@ -468,50 +463,6 @@ export default function SharesPage() {
     }
   };
 
-  const openMoveSharesModal = (campaign: ShareCampaign) => {
-    setMoveSharesForCampaign(campaign);
-    setMoveTargetCampaignId('');
-    setMoveSharesInput(String(campaign.soldShares));
-    setShowMoveSharesModal(true);
-  };
-
-  const handleMoveShares = async () => {
-    if (!moveSharesForCampaign || !moveTargetCampaignId) return;
-    const amount = parseInt(moveSharesInput) || 0;
-    if (amount < 1 || amount > moveSharesForCampaign.soldShares) {
-      toast.error(t('invalidSharesCount'));
-      return;
-    }
-    setSubmitting(true);
-    try {
-      const res = await fetch(
-        `/api/shares/${moveSharesForCampaign._id}/move`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            targetCampaignId: moveTargetCampaignId,
-            amount,
-          }),
-        },
-      );
-      const data = await res.json();
-
-      if (!res.ok || !data.success) {
-        toast.error(extractApiError(data, t('saveError')));
-        return;
-      }
-
-      toast.success(t('sharesMoved'));
-      setShowMoveSharesModal(false);
-      void fetchCampaigns();
-    } catch {
-      toast.error(t('saveError'));
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
   const openProductModal = (group: (typeof productGroups)[number]) => {
     setSelectedProductCampaigns(group.campaigns);
     setSelectedProductName(group.productName);
@@ -626,7 +577,10 @@ export default function SharesPage() {
           {/* Actions — inline on the header row */}
           {showActions && (
             <div className="flex items-center gap-1 shrink-0">
-              <Tooltip content={t('viewOrders')} position="top">
+              <Tooltip
+                content={t('viewOrders')}
+                position={isRTL ? 'right' : 'left'}
+              >
                 <button
                   onClick={() => openOrdersModal(campaign)}
                   className="p-1.5 rounded-lg hover:bg-secondary/10 text-secondary"
@@ -635,7 +589,10 @@ export default function SharesPage() {
                 </button>
               </Tooltip>
               {isActive && (
-                <Tooltip content={t('addReservedShares')} position="top">
+                <Tooltip
+                  content={t('addReservedShares')}
+                  position={isRTL ? 'right' : 'left'}
+                >
                   <button
                     onClick={() => openAddSharesModal(campaign)}
                     className="p-1.5 rounded-lg hover:bg-secondary/10 text-secondary"
@@ -645,7 +602,10 @@ export default function SharesPage() {
                 </Tooltip>
               )}
               {isActive && (
-                <Tooltip content={t('editCampaign')} position="top">
+                <Tooltip
+                  content={t('editCampaign')}
+                  position={isRTL ? 'right' : 'left'}
+                >
                   <button
                     onClick={() => openEditModal(campaign)}
                     className="p-1.5 rounded-lg hover:bg-secondary/10 text-secondary"
@@ -654,18 +614,11 @@ export default function SharesPage() {
                   </button>
                 </Tooltip>
               )}
-              {!isCompleted && campaign.soldShares > 0 && (
-                <Tooltip content={t('moveShares')} position="top">
-                  <button
-                    onClick={() => openMoveSharesModal(campaign)}
-                    className="p-1.5 rounded-lg hover:bg-secondary/10 text-secondary"
-                  >
-                    <LuArrowRightLeft size={16} />
-                  </button>
-                </Tooltip>
-              )}
               {!isCompleted && campaign.soldShares === 0 && (
-                <Tooltip content={t('delete')} position="top">
+                <Tooltip
+                  content={t('delete')}
+                  position={isRTL ? 'right' : 'left'}
+                >
                   <button
                     onClick={() => handleDelete(campaign)}
                     className="p-1.5 rounded-lg hover:bg-error/10 text-error"
@@ -1274,130 +1227,12 @@ export default function SharesPage() {
         </Modal>
       )}
 
-      {/* Move Shares Modal */}
-      {showMoveSharesModal && moveSharesForCampaign && (
-        <Modal
-          isOpen
-          onClose={() => setShowMoveSharesModal(false)}
-          title={t('moveShares')}
-          size="md"
-        >
-          <div className="space-y-4">
-            <div className="text-sm text-secondary bg-secondary/5 rounded-lg p-3 space-y-1">
-              <p>
-                <span className="font-medium text-foreground">
-                  {localizedName(moveSharesForCampaign.productName)}
-                </span>
-              </p>
-              <p>
-                {t('moveSharesFrom')}: #{moveSharesForCampaign.campaignNumber}
-                {' — '}
-                {moveSharesForCampaign.soldShares}/
-                {moveSharesForCampaign.totalShares}
-              </p>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">
-                {t('amountToMove')} *
-              </label>
-              <Input
-                type="text"
-                inputMode="numeric"
-                value={moveSharesInput}
-                onChange={(e) =>
-                  setMoveSharesInput(onlyDigits(e.target.value))
-                }
-                onBlur={() => {
-                  const parsed = parseInt(moveSharesInput) || 0;
-                  if (parsed < 1) setMoveSharesInput('1');
-                  if (parsed > moveSharesForCampaign.soldShares) {
-                    setMoveSharesInput(
-                      String(moveSharesForCampaign.soldShares),
-                    );
-                  }
-                }}
-                placeholder={String(moveSharesForCampaign.soldShares)}
-                helperText={t('amountToMoveHint', {
-                  max: moveSharesForCampaign.soldShares,
-                })}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">
-                {t('selectTargetCampaign')} *
-              </label>
-              {(() => {
-                const targets = campaigns.filter(
-                  (c) =>
-                    c.productId === moveSharesForCampaign.productId &&
-                    c.status === 'active' &&
-                    c._id !== moveSharesForCampaign._id,
-                );
-                if (targets.length === 0) {
-                  return (
-                    <div className="text-sm text-secondary bg-secondary/5 rounded-lg p-3">
-                      {t('noAvailableCampaigns')}
-                    </div>
-                  );
-                }
-                return (
-                  <div className="space-y-2 max-h-64 overflow-y-auto">
-                    {targets.map((target) => {
-                      const remaining = Math.max(
-                        0,
-                        target.totalShares - target.soldShares,
-                      );
-                      const selected = moveTargetCampaignId === target._id;
-                      return (
-                        <button
-                          key={target._id}
-                          type="button"
-                          onClick={() => setMoveTargetCampaignId(target._id)}
-                          className={`w-full flex items-center justify-between rounded-lg border p-3 text-start transition-colors ${selected
-                            ? 'border-primary bg-primary/5'
-                            : 'border-stroke hover:border-primary/50'
-                            }`}
-                        >
-                          <span className="text-sm font-medium text-foreground">
-                            {t('campaignNumber')} #{target.campaignNumber}
-                          </span>
-                          <span className="text-xs text-secondary tabular-nums">
-                            {target.soldShares}/{target.totalShares}
-                            {' — '}
-                            {t('remaining', { count: remaining })}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                );
-              })()}
-            </div>
-
-            <div className="flex justify-end gap-2 pt-2">
-              <Button
-                variant="secondary"
-                onClick={() => setShowMoveSharesModal(false)}
-              >
-                {t('cancel')}
-              </Button>
-              <Button
-                onClick={handleMoveShares}
-                disabled={submitting || !moveTargetCampaignId}
-              >
-                {submitting ? t('saving') : t('moveShares')}
-              </Button>
-            </div>
-          </div>
-        </Modal>
-      )}
-
       {/* Orders Modal */}
       {showOrdersModal && ordersForCampaign && (
         <CampaignOrdersModal
           campaign={ordersForCampaign}
+          campaigns={campaigns}
+          onChanged={() => void fetchCampaigns()}
           onClose={() => {
             setShowOrdersModal(false);
             setOrdersForCampaign(null);
@@ -1416,12 +1251,16 @@ export default function SharesPage() {
 // ── Campaign Orders Modal ──
 function CampaignOrdersModal({
   campaign,
+  campaigns,
+  onChanged,
   onClose,
   t,
   isRTL,
   locale,
 }: {
   campaign: ShareCampaign;
+  campaigns: ShareCampaign[];
+  onChanged: () => void;
   onClose: () => void;
   t: (key: string, values?: Record<string, string | number | Date>) => string;
   isRTL: boolean;
@@ -1431,26 +1270,73 @@ function CampaignOrdersModal({
   const [manualEntries, setManualEntries] = useState<ManualShareEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<CampaignOrder | null>(null);
+  const [swapOrder, setSwapOrder] = useState<CampaignOrder | null>(null);
+  const [swapTargetCampaignId, setSwapTargetCampaignId] = useState('');
+  const [swapping, setSwapping] = useState(false);
+
+  const fetchOrders = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/shares/${campaign._id}/orders?limit=200`, {
+        cache: 'no-store',
+      });
+      const data = await res.json();
+      if (data.success) {
+        setOrders(data.data.orders);
+        setManualEntries(data.data.manualEntries || []);
+      }
+    } catch {
+      // ignore
+    } finally {
+      setLoading(false);
+    }
+  }, [campaign._id]);
 
   useEffect(() => {
-    const fetchOrders = async () => {
-      try {
-        const res = await fetch(`/api/shares/${campaign._id}/orders?limit=200`, {
-          cache: 'no-store',
-        });
-        const data = await res.json();
-        if (data.success) {
-          setOrders(data.data.orders);
-          setManualEntries(data.data.manualEntries || []);
-        }
-      } catch {
-        // ignore
-      } finally {
-        setLoading(false);
-      }
-    };
     void fetchOrders();
-  }, [campaign._id]);
+  }, [fetchOrders]);
+
+  // Shares of this order that live on THIS campaign
+  const orderShareQtyOnCampaign = (order: CampaignOrder) =>
+    (order.items || [])
+      .filter(
+        (i) =>
+          i.isShare &&
+          String(i.shareCampaignId || '') === String(campaign._id),
+      )
+      .reduce((sum, i) => sum + (i.shareQuantity || 0), 0);
+
+  const openSwap = (order: CampaignOrder) => {
+    setSwapOrder(order);
+    setSwapTargetCampaignId('');
+  };
+
+  const handleSwapOrder = async () => {
+    if (!swapOrder || !swapTargetCampaignId) return;
+    setSwapping(true);
+    try {
+      const res = await fetch(`/api/shares/${campaign._id}/move`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orderId: swapOrder._id,
+          targetCampaignId: swapTargetCampaignId,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        toast.error(extractApiError(data, t('saveError')));
+        return;
+      }
+      toast.success(t('orderMoved'));
+      setSwapOrder(null);
+      void fetchOrders();
+      onChanged();
+    } catch {
+      toast.error(t('saveError'));
+    } finally {
+      setSwapping(false);
+    }
+  };
 
   const formatDate = (dateStr: string) =>
     new Date(dateStr).toLocaleDateString(
@@ -1516,8 +1402,7 @@ function CampaignOrdersModal({
               </thead>
               <tbody>
                 {orders.map((order) => {
-                  const shareQty =
-                    order.items?.find((i) => i.isShare)?.shareQuantity || 0;
+                  const shareQty = orderShareQtyOnCampaign(order);
                   return (
                     <tr
                       key={order._id}
@@ -1552,14 +1437,32 @@ function CampaignOrdersModal({
                         {new Date(order.createdAt).toLocaleDateString(isRTL ? 'ar-SA' : 'en-US')}
                       </td>
                       <td className="px-3 py-2.5 text-right">
-                        <Tooltip content={t('viewOrder')} position="top">
-                          <button
-                            onClick={() => setSelectedOrder(order)}
-                            className="p-1.5 rounded-lg hover:bg-secondary/10 text-secondary hover:text-primary transition-colors"
+                        <div className="inline-flex items-center gap-1">
+                          {shareQty > 0 && (
+                            <Tooltip
+                              content={t('swapOrder')}
+                              position={isRTL ? 'right' : 'left'}
+                            >
+                              <button
+                                onClick={() => openSwap(order)}
+                                className="p-1.5 rounded-lg hover:bg-secondary/10 text-secondary hover:text-primary transition-colors"
+                              >
+                                <LuArrowRightLeft size={16} />
+                              </button>
+                            </Tooltip>
+                          )}
+                          <Tooltip
+                            content={t('viewOrder')}
+                            position={isRTL ? 'right' : 'left'}
                           >
-                            <LuEye size={16} />
-                          </button>
-                        </Tooltip>
+                            <button
+                              onClick={() => setSelectedOrder(order)}
+                              className="p-1.5 rounded-lg hover:bg-secondary/10 text-secondary hover:text-primary transition-colors"
+                            >
+                              <LuEye size={16} />
+                            </button>
+                          </Tooltip>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -1593,6 +1496,98 @@ function CampaignOrdersModal({
           </div>
         )}
       </Modal>
+
+      {/* Swap order to another campaign */}
+      {swapOrder && (
+        <Modal
+          isOpen
+          onClose={() => setSwapOrder(null)}
+          title={t('moveOrderTitle')}
+          size="md"
+        >
+          <div className="space-y-4">
+            <div className="text-sm text-secondary bg-secondary/5 rounded-lg p-3 space-y-1">
+              <p>
+                {t('orderNumber')}: {swapOrder.orderNumber} —{' '}
+                <span className="font-medium text-foreground">
+                  {orderShareQtyOnCampaign(swapOrder)}{' '}
+                  {t('shares')}
+                </span>
+              </p>
+              <p>
+                {t('moveSharesFrom')}: #{campaign.campaignNumber}
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">
+                {t('selectTargetCampaign')} *
+              </label>
+              {(() => {
+                const targets = campaigns.filter(
+                  (c) =>
+                    c.productId === campaign.productId &&
+                    c.status === 'active' &&
+                    c._id !== campaign._id,
+                );
+                if (targets.length === 0) {
+                  return (
+                    <div className="text-sm text-secondary bg-secondary/5 rounded-lg p-3">
+                      {t('noAvailableCampaigns')}
+                    </div>
+                  );
+                }
+                return (
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                    {targets.map((target) => {
+                      const remaining = Math.max(
+                        0,
+                        target.totalShares - target.soldShares,
+                      );
+                      const selected = swapTargetCampaignId === target._id;
+                      return (
+                        <button
+                          key={target._id}
+                          type="button"
+                          onClick={() => setSwapTargetCampaignId(target._id)}
+                          className={`w-full flex items-center justify-between rounded-lg border p-3 text-start transition-colors ${selected
+                            ? 'border-primary bg-primary/5'
+                            : 'border-stroke hover:border-primary/50'
+                            }`}
+                        >
+                          <span className="text-sm font-medium text-foreground">
+                            {t('campaignNumber')} #{target.campaignNumber}
+                          </span>
+                          <span className="text-xs text-secondary tabular-nums">
+                            {target.soldShares}/{target.totalShares}
+                            {' — '}
+                            {t('remaining', { count: remaining })}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                variant="secondary"
+                onClick={() => setSwapOrder(null)}
+              >
+                {t('cancel')}
+              </Button>
+              <Button
+                onClick={handleSwapOrder}
+                disabled={swapping || !swapTargetCampaignId}
+              >
+                {swapping ? t('saving') : t('moveShares')}
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
 
       {/* Order detail modal — uses the same shared OrderDetailModal */}
       <OrderDetailModal

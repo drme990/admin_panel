@@ -3203,6 +3203,9 @@
       "selectTargetCampaign": "اختر الحملة المستهدفة",
       "noAvailableCampaigns": "لا توجد حملات نشطة أخرى لهذا المنتج. أنشئ حملة جديدة أولاً ثم انقل الأسهم إليها.",
       "sharesMoved": "تم نقل الأسهم بنجاح",
+      "swapOrder": "نقل إلى حملة أخرى",
+      "moveOrderTitle": "نقل أسهم الطلب",
+      "orderMoved": "تم نقل أسهم الطلب بنجاح",
       "status": {
         "active": "نشط",
         "completed": "مكتمل"

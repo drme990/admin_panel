@@ -251,6 +251,8 @@ export interface Order {
   source?: 'manasik' | 'ghadaq';
   location?: string;
   locale?: string;
+  /** IP-detected country of the order's user (from the user doc) */
+  detectedCountry?: string | null;
   internalNotes?: InternalNote[];
   // Free order tracking
   isFreeOrder?: boolean;

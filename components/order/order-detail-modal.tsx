@@ -812,6 +812,11 @@ export default function OrderDetailModal({
                         value={order.billingData.country}
                       />
                       <InfoRow
+                        icon={<LuGlobe size={14} />}
+                        label={t('detectedCountry')}
+                        value={order.detectedCountry || 'N/A'}
+                      />
+                      <InfoRow
                         icon={<LuCalendar size={14} />}
                         label={t('createdAt')}
                         value={formatDate(order.createdAt)}

@@ -83,11 +83,10 @@ export default function TransactionFormModal({ isOpen, onClose, supplierId, tran
     try {
       const formData = new FormData();
       formData.append('file', file);
-      // Pass the current attachment as oldUrl so the backend deletes it
-      // from R2 after the new upload succeeds — prevents orphaned files.
-      if (attachment) {
-        formData.append('oldUrl', attachment);
-      }
+      // No `oldUrl` here — deleting the previous attachment now would be
+      // a pre-save delete: if the form is cancelled, the transaction
+      // would still reference a deleted file. The payout PUT route
+      // cleans up the replaced attachment after a successful save.
 
       const res = await fetch('/api/upload/invoice', {
         method: 'POST',
@@ -216,18 +215,8 @@ export default function TransactionFormModal({ isOpen, onClose, supplierId, tran
                 variant="custom"
                 size="custom"
                 onClick={() => {
-                  // Best-effort: delete the file from R2 so it doesn't
-                  // become an orphan when the attachment is removed.
-                  if (attachment && !attachment.startsWith('data:')) {
-                    fetch('/api/upload/invoice', {
-                      method: 'DELETE',
-                      headers: { 'Content-Type': 'application/json' },
-                      credentials: 'include',
-                      body: JSON.stringify({ url: attachment }),
-                    }).catch((err) => {
-                      console.warn('Failed to delete attachment from R2:', err);
-                    });
-                  }
+                  // R2 deletion is deferred to save — the payout PUT
+                  // route cleans up removed attachments post-save.
                   setAttachment('');
                 }}
                 className="text-xs text-error hover:underline"

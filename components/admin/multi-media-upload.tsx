@@ -30,22 +30,6 @@ interface MultiMediaUploadProps {
   onCancelUploadReady?: (cancelUpload: (() => void) | null) => void;
 }
 
-const backendBaseUrl = (
-  process.env.BACKEND_URL ||
-  (process.env.NODE_ENV === 'development' ? 'http://localhost:3000' : '')
-).replace(/\/$/, '');
-
-const buildApiUrl = (path: string) => {
-  return backendBaseUrl ? `${backendBaseUrl}${path}` : path;
-};
-
-const getDeleteEndpoint = (isVideo: boolean) => {
-  if (backendBaseUrl) {
-    return isVideo ? '/api/admin/upload/video' : '/api/admin/upload/image';
-  }
-  return isVideo ? '/api/upload/video' : '/api/upload/image';
-};
-
 const isVideoUrl = (url: string) => {
   return /\.(mp4|webm|mov|qt)(\?.*)?$/i.test(url) || url.includes('/videos/');
 };
@@ -120,7 +104,7 @@ export default function MultiMediaUpload({
     onChange(updated);
   };
 
-  const handleRemoveMedia = async (index: number) => {
+  const handleRemoveMedia = (index: number) => {
     if (uploading) return;
 
     const updated = media.filter((_, i) => i !== index);
@@ -130,22 +114,13 @@ export default function MultiMediaUpload({
       return;
     }
 
-    const removedUrl = media[index]?.url;
-    if (!removedUrl) return;
+    // The R2 file is NOT deleted here. The same URL may still be
+    // referenced by other products (duplicates share media URLs), and
+    // the admin may cancel the form without saving — deleting now would
+    // permanently break those images. The backend product update route
+    // deletes removed media after a successful save, only when no other
+    // document references the URL.
     onChange(updated);
-
-    try {
-      const isVideo = isVideoUrl(removedUrl);
-      const endpoint = buildApiUrl(getDeleteEndpoint(isVideo));
-      await fetch(endpoint, {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ url: removedUrl }),
-      });
-    } catch {
-      // silently fail
-    }
   };
 
   const handleMoveMedia = (fromIndex: number, toIndex: number) => {
@@ -187,11 +162,10 @@ export default function MultiMediaUpload({
               <div
                 key={`${mediaUrl}-${index}`}
                 className={`relative aspect-square rounded-xl overflow-hidden border 
-                ${
-                  index === 0
+                ${index === 0
                     ? 'border-success ring-2 ring-success/30'
                     : 'border-stroke'
-                } bg-gray-50`}
+                  } bg-gray-50`}
               >
                 {/* Media */}
                 {isVideo ? (

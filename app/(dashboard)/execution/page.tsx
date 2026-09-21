@@ -1403,10 +1403,14 @@ export default function ExecutionPage() {
   const handleRegenerateDesign = async (order: Order) => {
     setCreatingDesignOrderId(order._id);
     try {
-      // 1. Delete existing designs (R2 images + design app projects)
+      // 1. Delete existing designs (R2 images + design app projects).
+      // `skipVersionEvent=true` removes the old designUrls entries WITHOUT
+      // recording `admin_delete` history versions — the subsequent
+      // generate-design call creates the new version (admin_regenerate),
+      // so history shows v1 → v2(new) instead of v1 → v2(deleted) → v3(new).
       const designs = order.designUrls || [];
       if (designs.length > 0) {
-        const deleteRes = await fetch(`/api/orders/${order._id}/designs`, {
+        const deleteRes = await fetch(`/api/orders/${order._id}/designs?skipVersionEvent=true`, {
           method: 'DELETE',
           credentials: 'include',
         });

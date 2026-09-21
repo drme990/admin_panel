@@ -416,7 +416,9 @@ export default function AppearancePage() {
   );
 
   const handleDeleteImage = (row: 'row1' | 'row2', index: number) => {
-    const imageToDelete = images[activeProject]?.[row]?.[index];
+    // The R2 file is NOT deleted here — the appearance doc still
+    // references it until Save. The backend appearance PUT route deletes
+    // removed files post-save, only when no other doc references them.
     setImages((prev) => ({
       ...prev,
       [activeProject]: {
@@ -424,33 +426,10 @@ export default function AppearancePage() {
         [row]: prev[activeProject][row].filter((_, i) => i !== index),
       },
     }));
-
-    // Best-effort: delete the image from R2 so it doesn't become an orphan.
-    if (imageToDelete && !imageToDelete.startsWith('data:')) {
-      fetch(`/api/upload/image?url=${encodeURIComponent(imageToDelete)}`, {
-        method: 'DELETE',
-        credentials: 'include',
-      }).catch((err) => {
-        console.warn('Failed to delete image from R2:', err);
-      });
-    }
   };
 
-  const handleDeleteAudio = async (id: string) => {
-    const audio = audioReviews.find((a) => a.id === id);
-    if (!audio) return;
-
+  const handleDeleteAudio = (id: string) => {
     setAudioReviews((prev) => prev.filter((a) => a.id !== id));
-
-    try {
-      await fetch('/api/upload/audio', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: audio.url }),
-      });
-    } catch {
-      // best effort cleanup
-    }
   };
 
   const handleAudioUpdate = (id: string, updates: Partial<AudioReview>) => {
@@ -498,20 +477,9 @@ export default function AppearancePage() {
   );
 
   const handleDeleteProductBanner = useCallback((id: string) => {
-    setProductsBanners((prev) => {
-      const bannerToDelete = prev.find((b) => b.id === id);
-      // Best-effort: delete the banner image from R2 so it doesn't
-      // become an orphan.
-      if (bannerToDelete?.imageUrl && !bannerToDelete.imageUrl.startsWith('data:')) {
-        fetch(`/api/upload/image?url=${encodeURIComponent(bannerToDelete.imageUrl)}`, {
-          method: 'DELETE',
-          credentials: 'include',
-        }).catch((err) => {
-          console.warn('Failed to delete product banner from R2:', err);
-        });
-      }
-      return prev.filter((banner) => banner.id !== id);
-    });
+    // R2 deletion is deferred to the appearance save (post-save diff) —
+    // deleting now would break the live site if the form isn't saved.
+    setProductsBanners((prev) => prev.filter((banner) => banner.id !== id));
   }, []);
 
   const handleUpdateProductBanner = useCallback(
@@ -719,15 +687,7 @@ export default function AppearancePage() {
             onUpdate={handleAudioUpdate}
             onSetMain={handleAudioSetMain}
             onRemoveImage={(id) => {
-              const audio = audioReviews.find((a) => a.id === id);
-              if (audio?.userImage && !audio.userImage.startsWith('data:')) {
-                fetch(`/api/upload/image?url=${encodeURIComponent(audio.userImage)}`, {
-                  method: 'DELETE',
-                  credentials: 'include',
-                }).catch((err) => {
-                  console.warn('Failed to delete audio user image from R2:', err);
-                });
-              }
+              // R2 deletion deferred to save — see handleDeleteImage.
               handleAudioUpdate(id, { userImage: '' });
             }}
             t={t}

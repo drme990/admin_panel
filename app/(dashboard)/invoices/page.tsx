@@ -46,7 +46,7 @@ import {
     addDaysToIsoDate,
     downloadInvoiceFile,
 } from './lib/invoice-utils';
-import { uploadInvoiceToR2 } from '@/lib/image-upload-utils';
+import { deleteInvoiceFromR2, uploadInvoiceToR2 } from '@/lib/image-upload-utils';
 import { cn } from '@/lib/utils';
 
 type DateQuickPreset = 'today' | 'tomorrow' | 'yesterday' | 'last7Days' | 'all';
@@ -725,7 +725,7 @@ export default function InvoicesPage() {
 
         setUploadingInvoiceId(uploadInvoiceTarget._id);
         try {
-            const newUrl = await uploadInvoiceToR2(file, uploadInvoiceTarget.url);
+            const newUrl = await uploadInvoiceToR2(file);
             const fetchRes = await fetch(`/api/orders/${uploadInvoiceTarget.orderId}`, { cache: 'no-store' });
             const fetchData = await fetchRes.json();
             if (!fetchData.success) {
@@ -749,6 +749,11 @@ export default function InvoicesPage() {
             if (!patchData.success) {
                 throw new Error(patchData.error || t('updateFailed'));
             }
+
+            // Only delete the old R2 file after the order was updated —
+            // deleting before PATCH could leave the order referencing a
+            // removed object if the PATCH fails.
+            deleteInvoiceFromR2(uploadInvoiceTarget.url).catch(() => { });
 
             setInvoices((prev) =>
                 prev.map((inv) =>

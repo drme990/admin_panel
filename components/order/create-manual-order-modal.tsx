@@ -19,6 +19,7 @@ import Switch from '@/components/ui/switch';
 import Tooltip from '@/components/ui/tooltip';
 import CustomDatePicker from '@/components/ui/custom-date-picker';
 import { uploadImageToR2, uploadInvoiceToR2, deleteOldImage } from '../../lib/image-upload-utils';
+import { isValidCustomerName } from '@/lib/customer-name';
 import { cn } from '@/lib/utils';
 import ManualReservationFields from '@/components/order/manual-reservation-fields';
 import {
@@ -1201,13 +1202,9 @@ export default function CreateManualOrderModal({
       }
     }
     if (!form.billingData.fullName.trim()) {
-      const firstSacrificeName = form.reservationData.sacrificeFor
-        .split('\n')
-        .map((n) => n.trim())
-        .filter(Boolean)[0];
-      if (!firstSacrificeName) {
-        errors.fullName = t('createManualOrder.errors.fullNameOrSacrificeForRequired') || 'Please enter a customer name or a sacrifice-for name';
-      }
+      errors.fullName = t('createManualOrder.errors.fullNameRequired') || 'Full name is required';
+    } else if (!isValidCustomerName(form.billingData.fullName)) {
+      errors.fullName = t('createManualOrder.errors.fullNameInvalid') || 'Name can only contain letters and numbers';
     }
     if (!form.billingData.email.trim()) {
       errors.email = t('createManualOrder.errors.emailRequired');

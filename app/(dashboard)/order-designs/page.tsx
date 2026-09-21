@@ -768,7 +768,11 @@ export default function OrderDesignsPage() {
       });
       toast.success(isRTL ? 'تم استبدال التصميم' : 'Design replaced');
 
-      if (existingDesign) {
+      // Only delete the old file if it was an admin-uploaded image. URLs
+      // under `design/` belong to the design system — mutable order
+      // designs AND immutable version archives — and must not be deleted
+      // here (the backend also rejects `design/` keys on this endpoint).
+      if (existingDesign && !existingDesign.url.includes('/design/')) {
         deleteOldImage(existingDesign.url).catch((err: unknown) => {
           console.warn('Failed to delete old design image from R2:', err);
         });

@@ -260,12 +260,6 @@ export default function ExecutionFilters({
               className: 'border border-stroke text-foreground/80 hover:bg-background hover:text-foreground',
               activeClassName: 'bg-foreground text-background shadow-sm',
             },
-            {
-              label: t('filters.subOrderType'),
-              value: 'subOrder',
-              className: 'border border-stroke text-foreground/80 hover:bg-background hover:text-foreground',
-              activeClassName: 'bg-foreground text-background shadow-sm',
-            },
           ]}
           onChange={onOrderTypeChange}
           className="min-w-max"

@@ -69,9 +69,16 @@ export default function OrderHistoryPage() {
   const initialWhatsappState =
     (searchParams.get('whatsapp') as WhatsappFilterValue | null) || 'all';
   const initialSpecificDate = searchParams.get('date') || '';
+  // Default to today when no date filter is provided in the URL.
+  const defaultDate =
+    initialSpecificDate ||
+    (searchParams.get('fromDate') || searchParams.get('toDate')
+      ? ''
+      : getRelativeIsoDate(0));
   const initialFromDate =
-    searchParams.get('fromDate') || initialSpecificDate || '';
-  const initialToDate = searchParams.get('toDate') || initialSpecificDate || '';
+    searchParams.get('fromDate') || initialSpecificDate || defaultDate;
+  const initialToDate =
+    searchParams.get('toDate') || initialSpecificDate || defaultDate;
   const normalizedInitialRange = normalizeDateRange(
     initialFromDate,
     initialToDate,

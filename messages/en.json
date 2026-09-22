@@ -2433,7 +2433,9 @@
         "filterTier": "Tier",
         "filterProfileCountry": "Profile Country",
         "filterDetectedCountry": "Detected Country",
-        "filterOrders": "Orders"
+        "filterOrders": "Orders",
+        "filterIntention": "Intention",
+        "allIntentions": "All Intentions"
       },
       "status": {
         "active": "Active",
@@ -2475,7 +2477,8 @@
         "remainingAmount": "Remaining Amount",
         "itemsLabel": "Items ({count})",
         "lifetimeSpending": "Lifetime Spending",
-        "totalOrders": "Total Orders"
+        "totalOrders": "Total Orders",
+        "intention": "Intention"
       },
       "historyModal": {
         "title": "Referral History",

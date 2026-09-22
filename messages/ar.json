@@ -2432,7 +2432,9 @@
         "filterTier": "الفئة",
         "filterProfileCountry": "دولة الملف",
         "filterDetectedCountry": "الدولة المكتشفة",
-        "filterOrders": "الحجز"
+        "filterOrders": "الحجز",
+        "filterIntention": "النية",
+        "allIntentions": "كل النيات"
       },
       "status": {
         "active": "نشط",
@@ -2474,7 +2476,8 @@
         "remainingAmount": "المبلغ المتبقي",
         "itemsLabel": "العناصر ({count})",
         "lifetimeSpending": "إجمالي الإنفاق",
-        "totalOrders": "إجمالي الطلبات"
+        "totalOrders": "إجمالي الطلبات",
+        "intention": "النية"
       },
       "historyModal": {
         "title": "سجل الإحالة",

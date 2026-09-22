@@ -22,6 +22,7 @@ import CustomerHistoryModal, {
 import CustomerInfoModal from './components/customer-info-modal';
 import CustomerExportModal from './components/customer-export-modal';
 import { Order } from '@/types/Order';
+import { RESERVATION_FIELD_PRESETS } from '@/lib/reservation-fields';
 
 import { toast } from 'react-toastify';
 
@@ -133,6 +134,7 @@ export default function CustomersPage() {
   >('all');
   const [refFilter, setRefFilter] = useState<RefFilter>('all');
   const [tierFilter, setTierFilter] = useState<TierFilter>('all');
+  const [intentionFilter, setIntentionFilter] = useState<string>('all');
   const [countryFilter, setCountryFilter] = useState('');
   const [detectedCountryFilter, setDetectedCountryFilter] = useState('');
   const [fromDateFilter, setFromDateFilter] = useState('');
@@ -278,6 +280,19 @@ export default function CustomersPage() {
     return options;
   }, [referrals]);
 
+  // Same option set as the execution page's نية filter — labels follow
+  // the active locale, and the backend matches both ar/en variants.
+  const intentionOptions = useMemo(() => {
+    const preset = RESERVATION_FIELD_PRESETS.find((p) => p.key === 'intention');
+    return [
+      { value: 'all', label: tCommon('allIntentions') },
+      ...(preset?.options ?? []).map((option) => ({
+        value: locale === 'ar' ? option.ar : option.en,
+        label: locale === 'ar' ? option.ar : option.en,
+      })),
+    ];
+  }, [tCommon, locale]);
+
 
 
   const fetchCustomers = useCallback(async () => {
@@ -290,6 +305,7 @@ export default function CustomersPage() {
       if (banFilter === 'active') params.set('isBanned', 'false');
       if (refFilter !== 'all') params.set('ref', refFilter);
       if (tierFilter !== 'all') params.set('tier', tierFilter === 'none' ? '__none__' : tierFilter);
+      if (intentionFilter !== 'all') params.set('intention', intentionFilter);
       if (hasOrdersFilter !== 'all') params.set('hasOrders', hasOrdersFilter);
       if (countryFilter) params.set('country', countryFilter);
       if (detectedCountryFilter) params.set('detectedCountry', detectedCountryFilter);
@@ -329,7 +345,7 @@ export default function CustomersPage() {
     } finally {
       setLoading(false);
     }
-  }, [appFilter, banFilter, refFilter, tierFilter, hasOrdersFilter, countryFilter, detectedCountryFilter, search, fromDateFilter, toDateFilter, page, pageSize, t]);
+  }, [appFilter, banFilter, refFilter, tierFilter, intentionFilter, hasOrdersFilter, countryFilter, detectedCountryFilter, search, fromDateFilter, toDateFilter, page, pageSize, t]);
 
   const fetchCustomersForExport = useCallback(async (limit: number, offset: number = 0) => {
     const params = new URLSearchParams();
@@ -338,6 +354,7 @@ export default function CustomersPage() {
     if (banFilter === 'active') params.set('isBanned', 'false');
     if (refFilter !== 'all') params.set('ref', refFilter);
     if (tierFilter !== 'all') params.set('tier', tierFilter === 'none' ? '__none__' : tierFilter);
+    if (intentionFilter !== 'all') params.set('intention', intentionFilter);
     if (hasOrdersFilter !== 'all') params.set('hasOrders', hasOrdersFilter);
     if (countryFilter) params.set('country', countryFilter);
     if (detectedCountryFilter) params.set('detectedCountry', detectedCountryFilter);
@@ -363,15 +380,15 @@ export default function CustomersPage() {
     }
 
     return (data.data.customers || []) as Customer[];
-  }, [appFilter, banFilter, refFilter, tierFilter, hasOrdersFilter, countryFilter, detectedCountryFilter, search, fromDateFilter, toDateFilter, t]);
+  }, [appFilter, banFilter, refFilter, tierFilter, intentionFilter, hasOrdersFilter, countryFilter, detectedCountryFilter, search, fromDateFilter, toDateFilter, t]);
 
   useEffect(() => {
     setPage(1);
-  }, [appFilter, banFilter, refFilter, tierFilter, hasOrdersFilter, countryFilter, detectedCountryFilter, search, fromDateFilter, toDateFilter, pageSize]);
+  }, [appFilter, banFilter, refFilter, tierFilter, intentionFilter, hasOrdersFilter, countryFilter, detectedCountryFilter, search, fromDateFilter, toDateFilter, pageSize]);
 
   useEffect(() => {
     setSelectedCustomerKeys([]);
-  }, [page, appFilter, banFilter, refFilter, tierFilter, hasOrdersFilter, countryFilter, detectedCountryFilter, search, fromDateFilter, toDateFilter, pageSize]);
+  }, [page, appFilter, banFilter, refFilter, tierFilter, intentionFilter, hasOrdersFilter, countryFilter, detectedCountryFilter, search, fromDateFilter, toDateFilter, pageSize]);
 
   useEffect(() => {
     fetchCustomers();
@@ -829,7 +846,7 @@ export default function CustomersPage() {
       {
         header: t('table.actions'),
         accessor: (customer: Customer) => (
-          <div className="flex flex-wrap justify-center gap-2 w-30">
+          <div className="grid grid-cols-2 justify-items-center gap-2 w-24 mx-auto">
             <Tooltip content={tOrders('title')} position={ToolTipPositions}>
               <Button
                 variant="icon-primary"
@@ -972,7 +989,7 @@ export default function CustomersPage() {
         </div>
       </div>
 
-      <div className="bg-card-bg border border-stroke rounded-site p-4 space-y-4">
+      <div className="bg-card-bg border border-stroke rounded-site p-3 sm:p-4 space-y-3 sm:space-y-4">
         {/* Date range filter */}
         <div className="rounded-site border border-stroke bg-background p-4 space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1026,7 +1043,7 @@ export default function CustomersPage() {
           suffix={<LuSearch className="text-secondary" size={18} />}
         />
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 auto-rows-fr">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-3 sm:gap-y-4 auto-rows-fr">
           <div className="space-y-1">
             <p className="text-[10px] uppercase text-secondary font-medium tracking-wide">
               {tCommon('filterApp')}
@@ -1112,6 +1129,22 @@ export default function CustomersPage() {
                 className="flex-wrap"
               />
             )}
+          </div>
+
+          <div className="space-y-1">
+            <p className="text-[10px] uppercase text-secondary font-medium tracking-wide">
+              {tCommon('filterIntention')}
+            </p>
+            <Dropdown
+              value={intentionFilter}
+              options={intentionOptions}
+              onChange={(value) => {
+                setIntentionFilter(value);
+                setPage(1);
+              }}
+              placeholder={tCommon('allIntentions')}
+              className="w-full"
+            />
           </div>
 
           <div className="space-y-1">

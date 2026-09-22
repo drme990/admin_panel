@@ -31,6 +31,7 @@ import {
 } from '@/lib/reservation-fields';
 
 import { Order } from '@/types/Order';
+import { countryDisplayName } from '@/lib/countries';
 
 interface Product {
   _id: string;
@@ -672,7 +673,7 @@ export default function CreateSubOrderModal({
             </div>
             <div>
               <span className="text-secondary text-xs">{t('createManualOrder.country') || 'Country'}</span>
-              <p className="font-medium">{displayParentOrder.billingData?.country || 'N/A'}</p>
+              <p className="font-medium">{countryDisplayName(displayParentOrder.billingData?.country) || 'N/A'}</p>
             </div>
             <div>
               <span className="text-secondary text-xs">{t('createManualOrder.currency') || 'Currency'}</span>

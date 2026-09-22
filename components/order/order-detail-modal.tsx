@@ -9,6 +9,7 @@ import { Order, OrderPayment } from '@/types/Order';
 import { STATUS_COLORS, PAYMENT_STATUS_COLORS } from '../../lib/order/order-status';
 import { isImageUrl, updateDesignReviewStatus } from '../../lib/order/order-utils';
 import { getPaymentMethodLabel } from '@/lib/order';
+import { countryDisplayName } from '@/lib/countries';
 import InvoicePreviewModal from './invoice-preview-modal';
 import {
   LuCreditCard,
@@ -809,12 +810,12 @@ export default function OrderDetailModal({
                       <InfoRow
                         icon={<LuGlobe size={14} />}
                         label={t('country')}
-                        value={order.billingData.country}
+                        value={countryDisplayName(order.billingData.country) || 'N/A'}
                       />
                       <InfoRow
                         icon={<LuGlobe size={14} />}
                         label={t('detectedCountry')}
-                        value={order.detectedCountry || 'N/A'}
+                        value={countryDisplayName(order.detectedCountry) || 'N/A'}
                       />
                       <InfoRow
                         icon={<LuCalendar size={14} />}

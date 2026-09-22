@@ -13,6 +13,7 @@ import Button from '@/components/ui/button';
 import Checkbox from '@/components/ui/checkbox';
 import Input from '@/components/ui/input';
 import { Customer, UserTier } from '../types';
+import { countryDisplayName } from '@/lib/countries';
 
 interface CustomerExportModalProps {
   isOpen: boolean;
@@ -98,8 +99,8 @@ function buildExportRows(
     name: customer.name || '',
     email: customer.email || '',
     phone: customer.phone || '',
-    country: customer.country || '',
-    detectedCountry: customer.detectedCountry || '',
+    country: countryDisplayName(customer.country),
+    detectedCountry: countryDisplayName(customer.detectedCountry),
     appId: customer.appId || '',
     ref: customer.ref || '',
     tier: customer.tier ? tierMap.get(customer.tier) || customer.tier : '',

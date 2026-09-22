@@ -6,6 +6,7 @@ import Loading from '@/components/ui/loading';
 import Modal from '@/components/ui/modal';
 import Tabs from '@/components/ui/tabs';
 import { useTranslations } from 'next-intl';
+import { countryDisplayName } from '@/lib/countries';
 
 type RefHistoryEntry = {
   _id: string;
@@ -46,7 +47,7 @@ function formatRef(value: string | null) {
 }
 
 function formatCountry(value: string | null) {
-  return value || 'No country';
+  return countryDisplayName(value) || 'No country';
 }
 
 function formatRelativeDate(dateString: string) {

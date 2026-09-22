@@ -3,6 +3,7 @@
 import Button from '@/components/ui/button';
 import Modal from '@/components/ui/modal';
 import { useTranslations } from 'next-intl';
+import { countryDisplayName } from '@/lib/countries';
 
 interface CustomerInfoModalProps {
   isOpen: boolean;
@@ -99,7 +100,7 @@ export default function CustomerInfoModal({
               {t('detectedCountry')}
             </p>
             <p className="text-sm font-medium text-foreground">
-              {customer.detectedCountry || t('notAvailable')}
+              {countryDisplayName(customer.detectedCountry) || t('notAvailable')}
             </p>
           </div>
           <div>

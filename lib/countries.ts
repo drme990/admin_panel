@@ -212,3 +212,23 @@ export const COUNTRIES: Country[] = [
 export function getCountryByCode(code: string): Country | undefined {
   return COUNTRIES.find((country) => country.code === code.toUpperCase());
 }
+
+/**
+ * Display helper — normalize any stored country value (ISO code like
+ * 'EG', or a name in any casing like 'egypt') to the canonical English
+ * long name ('Egypt'). Unknown values are returned as-is.
+ */
+export function countryDisplayName(raw: string | null | undefined): string {
+  if (!raw) return '';
+  const value = raw.trim();
+  if (!value) return '';
+  const normalized = value.toLowerCase();
+  const match = COUNTRIES.find(
+    (c) =>
+      c.code.toLowerCase() === normalized ||
+      c.value.toLowerCase() === normalized ||
+      c.en.toLowerCase() === normalized ||
+      c.ar === value,
+  );
+  return match ? match.en : value;
+}

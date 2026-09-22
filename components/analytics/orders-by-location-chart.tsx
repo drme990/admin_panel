@@ -28,8 +28,17 @@ export default function OrdersByLocationChart({
 }) {
   const t = useTranslations('admin.analytics');
 
-  // 🌍 Convert country codes → full names
+  // 🌍 Convert country codes → full names.
+  // `location` may already store the long name (e.g. 'Egypt') — Intl throws
+  // on non-code input, so fall back to the raw value in that case.
   const regionNames = new Intl.DisplayNames(['en'], { type: 'region' });
+  const toDisplayName = (value: string) => {
+    try {
+      return regionNames.of(value) || value;
+    } catch {
+      return value;
+    }
+  };
 
   return (
     <div
@@ -71,9 +80,7 @@ export default function OrdersByLocationChart({
             <YAxis
               type="category"
               dataKey="name"
-              tickFormatter={(value) =>
-                regionNames.of(value as string) || value
-              }
+              tickFormatter={(value) => toDisplayName(value as string)}
               stroke="var(--secondary)"
               fontSize={12}
               tickLine={false}
@@ -85,8 +92,7 @@ export default function OrdersByLocationChart({
             <Tooltip
               formatter={(value, _name, item) => {
                 const countryCode = item?.payload?.name;
-                const fullName =
-                  regionNames.of(countryCode as string) || countryCode;
+                const fullName = toDisplayName(countryCode as string);
 
                 // Normalize value (handles number | string | array | undefined)
                 const normalizedValue = Array.isArray(value)

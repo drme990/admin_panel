@@ -129,9 +129,8 @@ export default function SharesPage() {
     useState<ShareCampaign | null>(null);
   const [addSharesInput, setAddSharesInput] = useState('1');
   const [showProductModal, setShowProductModal] = useState(false);
-  const [selectedProductCampaigns, setSelectedProductCampaigns] = useState<
-    ShareCampaign[]
-  >([]);
+  const [selectedProductIdForModal, setSelectedProductIdForModal] =
+    useState<string | null>(null);
   const [selectedProductName, setSelectedProductName] = useState<{
     ar: string;
     en: string;
@@ -164,23 +163,26 @@ export default function SharesPage() {
   const isRTL = locale === 'ar';
   const { confirm, modalProps } = useConfirmModal();
 
-  const fetchCampaigns = useCallback(async () => {
-    setLoading(true);
-    try {
-      const params = new URLSearchParams({ page: '1', limit: '200' });
-      const res = await fetch(`/api/shares?${params.toString()}`, {
-        cache: 'no-store',
-      });
-      const data = await res.json();
-      if (data.success) {
-        setCampaigns(data.data.campaigns);
+  const fetchCampaigns = useCallback(
+    async (silent = false) => {
+      if (!silent) setLoading(true);
+      try {
+        const params = new URLSearchParams({ page: '1', limit: '200' });
+        const res = await fetch(`/api/shares?${params.toString()}`, {
+          cache: 'no-store',
+        });
+        const data = await res.json();
+        if (data.success) {
+          setCampaigns(data.data.campaigns);
+        }
+      } catch {
+        if (!silent) toast.error(t('fetchError'));
+      } finally {
+        if (!silent) setLoading(false);
       }
-    } catch {
-      toast.error(t('fetchError'));
-    } finally {
-      setLoading(false);
-    }
-  }, [t]);
+    },
+    [t],
+  );
 
   const fetchProducts = useCallback(async () => {
     try {
@@ -342,7 +344,7 @@ export default function SharesPage() {
 
       toast.success(t('created'));
       setShowCreateModal(false);
-      void fetchCampaigns();
+      void fetchCampaigns(true);
     } catch {
       toast.error(t('saveError'));
     } finally {
@@ -388,7 +390,7 @@ export default function SharesPage() {
 
       toast.success(t('updated'));
       setShowEditModal(false);
-      void fetchCampaigns();
+      void fetchCampaigns(true);
     } catch {
       toast.error(t('saveError'));
     } finally {
@@ -415,7 +417,7 @@ export default function SharesPage() {
         return;
       }
       toast.success(t('deleted'));
-      void fetchCampaigns();
+      void fetchCampaigns(true);
     } catch {
       toast.error(t('deleteError'));
     }
@@ -455,7 +457,22 @@ export default function SharesPage() {
 
       toast.success(t('sharesAdded'));
       setShowAddSharesModal(false);
-      void fetchCampaigns();
+
+      // Update the campaign in local state immediately so the UI
+      // reflects the new share count without a full reload.
+      if (data.data) {
+        setCampaigns((prev) =>
+          prev.map((c) =>
+            c._id === addSharesForCampaign._id
+              ? { ...c, ...data.data, _id: String(data.data._id) }
+              : c,
+          ),
+        );
+      }
+
+      // Silent background refetch to catch any auto-created campaigns
+      // (e.g., when the campaign completed and a new one was spun up).
+      void fetchCampaigns(true);
     } catch {
       toast.error(t('saveError'));
     } finally {
@@ -464,11 +481,24 @@ export default function SharesPage() {
   };
 
   const openProductModal = (group: (typeof productGroups)[number]) => {
-    setSelectedProductCampaigns(group.campaigns);
+    setSelectedProductIdForModal(group.productId);
     setSelectedProductName(group.productName);
     setSelectedProductMedia(group.productMedia);
     setShowProductModal(true);
   };
+
+  // Derive the selected product's campaigns from the live campaigns
+  // state so the modal always reflects the latest data (e.g., after
+  // adding reserved shares) without needing to reopen the modal.
+  const selectedProductCampaigns = useMemo(
+    () =>
+      selectedProductIdForModal
+        ? campaigns.filter(
+          (c) => String(c.productId) === selectedProductIdForModal,
+        )
+        : [],
+    [campaigns, selectedProductIdForModal],
+  );
 
   const progressPercent = (campaign: ShareCampaign) => {
     if (campaign.totalShares <= 0) return 0;
@@ -802,7 +832,7 @@ export default function SharesPage() {
           isOpen
           onClose={() => {
             setShowProductModal(false);
-            setSelectedProductCampaigns([]);
+            setSelectedProductIdForModal(null);
             setSelectedProductName(null);
             setSelectedProductMedia([]);
           }}
@@ -1232,7 +1262,7 @@ export default function SharesPage() {
         <CampaignOrdersModal
           campaign={ordersForCampaign}
           campaigns={campaigns}
-          onChanged={() => void fetchCampaigns()}
+          onChanged={() => void fetchCampaigns(true)}
           onClose={() => {
             setShowOrdersModal(false);
             setOrdersForCampaign(null);

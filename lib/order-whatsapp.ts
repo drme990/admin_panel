@@ -189,8 +189,8 @@ export function buildOrderWhatsappMessage(data: OrderWhatsappData): string {
   const executionDate =
     reservationMap.get('executionDate')?.value?.trim() ?? '';
 
-  // --- Build per‑item blocks (first two items only) ---
-  const itemsToShow = data.items?.slice(0, 2) ?? [];
+  // --- Build per‑item blocks (all items) ---
+  const itemsToShow = data.items ?? [];
   const itemBlocks: string[] = [];
 
   const memorialLine =
@@ -295,7 +295,10 @@ export function buildOrderWhatsappMessage(data: OrderWhatsappData): string {
   return lines.join('\n');
 }
 
-export function buildOrderWhatsappMessageFromOrder(order: Order): string {
+export function buildOrderWhatsappMessageFromOrder(
+  order: Order,
+  linkedOrder?: Order | null,
+): string {
   const reservationMap = new Map<ReservationFieldKey, ReservationOrderField>();
   for (const field of order.reservationData || []) {
     if (!reservationMap.has(field.key as ReservationFieldKey)) {
@@ -303,12 +306,36 @@ export function buildOrderWhatsappMessageFromOrder(order: Order): string {
     }
   }
 
+  // When a linked order (sub-order or parent) is provided, merge the
+  // items and financials so the WhatsApp message treats the parent +
+  // sub-order as a single combined order.
+  const allItems =
+    linkedOrder && linkedOrder.items?.length
+      ? [...order.items, ...linkedOrder.items]
+      : order.items;
+
+  // Use fullAmount (combined total) when available — it reflects the
+  // sum of both orders' items. Fall back to totalAmount for standalone
+  // orders without a linked counterpart.
+  const combinedAmount = order.fullAmount ?? order.totalAmount;
+
+  // remainingAmount is shared across linked orders (synced by
+  // syncSharedFields), so either order's value is correct.
+  const remainingAmount = order.remainingAmount;
+
+  // Order number: show both numbers when a linked order exists so the
+  // recipient can cross-reference either one.
+  const orderNumber =
+    linkedOrder && linkedOrder.orderNumber
+      ? `${order.orderNumber} + ${linkedOrder.orderNumber}`
+      : order.orderNumber;
+
   return buildOrderWhatsappMessage({
-    orderNumber: order.orderNumber,
+    orderNumber,
     currency: order.currency,
-    remainingAmount: order.remainingAmount,
-    items: order.items,
-    amount: order.totalAmount,
+    remainingAmount,
+    items: allItems,
+    amount: combinedAmount,
     billingData: order.billingData,
     reservationMap,
     referralId: order.referralId || null,

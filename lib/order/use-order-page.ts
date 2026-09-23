@@ -399,10 +399,27 @@ export function useOrderPage(options: UseOrderPageOptions) {
     async (order: Order) => {
       const fullOrder = await fetchOrderDetails(order._id, false);
       const resolvedOrder = fullOrder || order;
+
+      // If this order is part of a parent/sub-order pair, fetch the
+      // linked order so the WhatsApp message includes all items and
+      // combined financials as a single order.
+      let linkedOrder: Order | null = null;
+      if (resolvedOrder.isSubOrder && resolvedOrder.parentOrderId) {
+        linkedOrder = await fetchOrderDetails(
+          resolvedOrder.parentOrderId,
+          false,
+        );
+      } else if (resolvedOrder.hasSubOrder && resolvedOrder.subOrderId) {
+        linkedOrder = await fetchOrderDetails(
+          resolvedOrder.subOrderId,
+          false,
+        );
+      }
+
       const message =
         resolvedOrder.status === 'processing'
           ? buildProcessingOrderWhatsappFollowUpMessage(resolvedOrder)
-          : buildOrderWhatsappMessageFromOrder(resolvedOrder);
+          : buildOrderWhatsappMessageFromOrder(resolvedOrder, linkedOrder);
 
       return {
         message,

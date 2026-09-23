@@ -1808,7 +1808,21 @@ export default function CreateManualOrderModal({
         throw new Error(data.error || 'Failed to fetch order');
       }
       const fullOrder = data.data as Order;
-      const message = buildOrderWhatsappMessageFromOrder(fullOrder);
+
+      // Fetch the linked sub-order or parent so the WhatsApp message
+      // includes all items and combined financials.
+      let linkedOrder: Order | null = null;
+      if (fullOrder.isSubOrder && fullOrder.parentOrderId) {
+        const linkedRes = await fetch(`/api/orders/${fullOrder.parentOrderId}`, { cache: 'no-store' });
+        const linkedData = await linkedRes.json();
+        if (linkedData.success) linkedOrder = linkedData.data as Order;
+      } else if (fullOrder.hasSubOrder && fullOrder.subOrderId) {
+        const linkedRes = await fetch(`/api/orders/${fullOrder.subOrderId}`, { cache: 'no-store' });
+        const linkedData = await linkedRes.json();
+        if (linkedData.success) linkedOrder = linkedData.data as Order;
+      }
+
+      const message = buildOrderWhatsappMessageFromOrder(fullOrder, linkedOrder);
       const whatsappPhone = normalizeWhatsappPhone(fullOrder.billingData?.phone);
       if (!whatsappPhone) {
         toast.error(t('copyWhatsapp.invalidPhone') || 'Invalid phone number');

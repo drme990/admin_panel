@@ -890,7 +890,24 @@ export default function InvoicesPage() {
         }
     };
 
-    const startOrderWhatsappMessage = (order: Order) => {
+    const fetchLinkedOrder = async (order: Order): Promise<Order | null> => {
+        if (order.isSubOrder && order.parentOrderId) {
+            try {
+                const res = await fetch(`/api/orders/${order.parentOrderId}`, { cache: 'no-store' });
+                const data = await res.json();
+                if (data.success) return data.data as Order;
+            } catch { /* ignore */ }
+        } else if (order.hasSubOrder && order.subOrderId) {
+            try {
+                const res = await fetch(`/api/orders/${order.subOrderId}`, { cache: 'no-store' });
+                const data = await res.json();
+                if (data.success) return data.data as Order;
+            } catch { /* ignore */ }
+        }
+        return null;
+    };
+
+    const startOrderWhatsappMessage = async (order: Order) => {
         const phone = normalizeWhatsappPhone(order.billingData?.phone);
         if (!phone) {
             toast.error(t('copyFailed'));
@@ -898,7 +915,8 @@ export default function InvoicesPage() {
         }
         setWhatsappOrderId(order._id);
         try {
-            const message = buildOrderWhatsappMessageFromOrder(order);
+            const linkedOrder = await fetchLinkedOrder(order);
+            const message = buildOrderWhatsappMessageFromOrder(order, linkedOrder);
             const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
             window.open(url, '_blank', 'noopener,noreferrer');
         } catch {
@@ -928,7 +946,8 @@ export default function InvoicesPage() {
     const copyOrderWhatsappMessage = async (order: Order) => {
         setCopyingMessageOrderId(order._id);
         try {
-            const message = buildOrderWhatsappMessageFromOrder(order);
+            const linkedOrder = await fetchLinkedOrder(order);
+            const message = buildOrderWhatsappMessageFromOrder(order, linkedOrder);
             await copyToClipboard(message);
             toast.success(t('copied'));
         } catch {

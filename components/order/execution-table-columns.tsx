@@ -30,7 +30,7 @@ import Checkbox from '@/components/ui/checkbox';
 import Tooltip from '@/components/ui/tooltip';
 import { Order } from '@/types/Order';
 import { STATUS_COLORS, WHATSAPP_STATE_CLASSES } from '../../lib/order/order-status';
-import { getOrderItemDisplayName } from '../../lib/order/order-utils';
+import { getFirstPaymentPaidAt, getOrderItemDisplayName } from '../../lib/order/order-utils';
 import { downloadFile } from '@/lib/download-utils';
 
 function getReservationValue(order: Order, key: string): string | undefined {
@@ -278,7 +278,7 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
                   </Tooltip>
                 </div>
                 <span className="text-xs text-secondary whitespace-nowrap">
-                  {formatDateTime(order.statusUpdateTime, locale)}
+                  {formatDateTime(getFirstPaymentPaidAt(order), locale)}
                 </span>
               </div>
             </div>
@@ -347,7 +347,7 @@ export function useExecutionColumns(callbacks: ColumnCallbacks) {
                 </Tooltip>
               </div>
               <span className="text-xs text-secondary whitespace-nowrap">
-                {formatDateTime(order.statusUpdateTime, locale)}
+                {formatDateTime(getFirstPaymentPaidAt(order), locale)}
               </span>
             </div>
           </div>

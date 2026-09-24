@@ -4,6 +4,21 @@ import type {
   DesignVersionHistoryResponse,
   RestoreVersionResponse,
 } from '@/types/OrderDesignVersion';
+import type { Order } from '@/types/Order';
+
+/** The moment the order was first paid — the earliest `paidAt` on the
+ * payment timeline (timeline order follows `createdAt`; failed/pending
+ * attempts have no `paidAt` and are skipped). */
+export function getFirstPaymentPaidAt(
+  order: Pick<Order, 'payments'>,
+): string | undefined {
+  return [...(order.payments ?? [])]
+    .sort(
+      (a, b) =>
+        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+    )
+    .find((p) => p.paidAt)?.paidAt;
+}
 
 export function toIsoDateInput(date: Date): string {
   const year = date.getFullYear();

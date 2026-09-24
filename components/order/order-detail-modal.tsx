@@ -7,7 +7,7 @@ import Button from '@/components/ui/button';
 import Tooltip from '@/components/ui/tooltip';
 import { Order, OrderPayment } from '@/types/Order';
 import { STATUS_COLORS, PAYMENT_STATUS_COLORS } from '../../lib/order/order-status';
-import { isImageUrl, updateDesignReviewStatus } from '../../lib/order/order-utils';
+import { getFirstPaymentPaidAt, isImageUrl, updateDesignReviewStatus } from '../../lib/order/order-utils';
 import { getPaymentMethodLabel } from '@/lib/order';
 import { countryDisplayName } from '@/lib/countries';
 import InvoicePreviewModal from './invoice-preview-modal';
@@ -356,14 +356,22 @@ export default function OrderDetailModal({
                           </span>
                         )}
                     </div>
-                    <div className="flex items-center gap-3 text-xs text-secondary">
-                      <span>
-                        {t('createdAt')}: <span className="font-medium text-foreground">{formatDateTime(order.createdAt)}</span>
-                      </span>
-                      <span className="text-stroke">|</span>
-                      <span>
-                        {t('lastUpdated')}: <span className="font-medium text-foreground">{formatDateTime(order.statusUpdateTime)}</span>
-                      </span>
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-secondary">
+                      {(
+                        [
+                          [t('createdAt'), order.createdAt],
+                          [t('lastUpdated'), order.updatedAt],
+                          [t('statusChangedAt'), order.statusUpdateTime],
+                          [t('firstPaymentAt'), getFirstPaymentPaidAt(order)],
+                        ] as Array<[string, string | Date | undefined]>
+                      ).map(([label, value]) => (
+                        <span key={label}>
+                          {label}:{' '}
+                          <span className="font-medium text-foreground">
+                            {value ? formatDateTime(value) : 'N/A'}
+                          </span>
+                        </span>
+                      ))}
                     </div>
                   </div>
 

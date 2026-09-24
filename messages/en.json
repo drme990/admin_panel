@@ -2604,6 +2604,8 @@
     "referral": "Referral",
     "createdAt": "Created At",
     "lastUpdated": "Last Updated",
+    "statusChangedAt": "Status Changed At",
+    "firstPaymentAt": "First Payment At",
     "yes": "Yes",
     "internalNotes": "Internal Notes",
     "adminInfo": "Admin Information",

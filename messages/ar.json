@@ -2604,6 +2604,8 @@
     "referral": "الإحالة",
     "createdAt": "تاريخ الإنشاء",
     "lastUpdated": "آخر تحديث",
+    "statusChangedAt": "تاريخ تغيير الحالة",
+    "firstPaymentAt": "تاريخ أول دفعة",
     "yes": "نعم",
     "internalNotes": "ملاحظات داخلية",
     "adminInfo": "معلومات المسؤول",

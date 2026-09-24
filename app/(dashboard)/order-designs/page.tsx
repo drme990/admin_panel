@@ -1660,9 +1660,6 @@ export default function OrderDesignsPage() {
         onClose={closeModal}
         order={selectedOrder}
         loadingDetails={loadingOrderDetails}
-        formatDate={formatDate}
-        locale={locale}
-        namespace="execution"
         onCreatePaymentLink={selectedOrder ? handleCreatePaymentLink : undefined}
         isCreatingPaymentLink={selectedOrder ? creatingPaymentLinkOrderId === selectedOrder._id : false}
         onDesignReviewChange={(orderId, productId, reviewed) => {

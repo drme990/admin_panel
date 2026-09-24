@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { LuFileText } from 'react-icons/lu';
 
 import Modal from '@/components/ui/modal';
@@ -22,6 +22,8 @@ export interface OrderHistoryEntry {
   | 'invoiceImage'
   | 'invoiceStatus'
   | 'invoiceValue'
+  | 'invoiceDeleted'
+  | 'billing'
   | 'executionDate'
   | 'bulk_execution_date'
   | 'gender'
@@ -62,6 +64,8 @@ function formatChangeType(
     invoiceImage: 'orderHistory.typeInvoiceImage',
     invoiceStatus: 'orderHistory.typeInvoiceStatus',
     invoiceValue: 'orderHistory.typeInvoiceValue',
+    invoiceDeleted: 'orderHistory.typeInvoiceDeleted',
+    billing: 'orderHistory.typeBilling',
     executionDate: 'orderHistory.typeExecutionDate',
     bulk_execution_date: 'orderHistory.typeBulkExecutionDate',
     gender: 'orderHistory.typeGender',
@@ -339,12 +343,105 @@ function TextValue({ type, value }: { type: OrderHistoryEntry['changeType']; val
 function StatusValue({ value, t }: { value: string | null; t: (key: string) => string }) {
   if (!value) return <span className="text-secondary">-</span>;
   const colorClass = STATUS_COLORS[value as OrderStatus] || 'bg-gray-100 text-gray-800';
-  const label = t(`status.${value}`) || value;
+  // Labels come from orderHistory.status.* — identical in every namespace, so a
+  // status renders the same whichever page opened the modal. (The page-level
+  // status.* keys intentionally diverge between orders/execution.)
+  const label = t(`orderHistory.status.${value}`) || value;
   return (
     <span className={`inline-block px-2 py-0.5 text-xs font-medium rounded-full ${colorClass}`}>
       {label}
     </span>
   );
+}
+
+/** Stored execution dates are "YYYY-MM-DD"; older rows may be localized text. */
+function formatStoredDate(value: string, locale: string): string {
+  const iso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (iso) {
+    // Local-time parse — new Date('YYYY-MM-DD') is UTC and can shift the day.
+    const d = new Date(+iso[1], +iso[2] - 1, +iso[3]);
+    return new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(d);
+  }
+  // Legacy "September 14th, 2026" — strip ordinals so Date.parse accepts it.
+  const parsed = Date.parse(value.replace(/(\d+)(st|nd|rd|th)/gi, '$1'));
+  if (Number.isNaN(parsed)) return value;
+  return new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(new Date(parsed));
+}
+
+function DateValue({ value, locale }: { value: string | null; locale: string }) {
+  if (!value) return <span className="text-secondary">-</span>;
+  return <span className="text-foreground">{formatStoredDate(value, locale)}</span>;
+}
+
+function parsePaymentValue(value: string | null): Record<string, unknown> | null {
+  if (!value) return null;
+  try {
+    const parsed = JSON.parse(value);
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      return parsed as Record<string, unknown>;
+    }
+  } catch {
+    // not JSON
+  }
+  return null;
+}
+
+function PaymentValue({
+  value,
+  onClick,
+}: {
+  value: string | null;
+  onClick?: (url: string) => void;
+}) {
+  if (!value) return <span className="text-secondary">-</span>;
+  const parsed = parsePaymentValue(value);
+  if (!parsed) {
+    return <span className="text-foreground break-all">{value}</span>;
+  }
+  const amount =
+    typeof parsed.paidAmount === 'number'
+      ? parsed.paidAmount
+      : typeof parsed.gatewayAmount === 'number'
+        ? parsed.gatewayAmount
+        : typeof parsed.amount === 'number'
+          ? parsed.amount
+          : null;
+  const currency =
+    typeof parsed.currency === 'string'
+      ? parsed.currency
+      : typeof parsed.gatewayCurrency === 'string'
+        ? parsed.gatewayCurrency
+        : '';
+  const note =
+    typeof parsed.paymentMethod === 'string'
+      ? parsed.paymentMethod
+      : typeof parsed.status === 'string'
+        ? parsed.status
+        : null;
+  const invoiceUrl =
+    typeof parsed.invoiceUrl === 'string' ? parsed.invoiceUrl : null;
+  const text = [
+    amount !== null ? `${amount} ${currency}`.trim() : null,
+    note,
+  ]
+    .filter(Boolean)
+    .join(' — ');
+
+  if (invoiceUrl) {
+    return (
+      <button
+        type="button"
+        onClick={() => onClick?.(invoiceUrl)}
+        className="flex items-center gap-2 text-primary hover:underline text-sm"
+      >
+        <span className="inline-flex items-center justify-center p-2 rounded-lg border border-stroke bg-background">
+          <LuFileText size={24} />
+        </span>
+        <span className="break-all max-w-50">{text || invoiceUrl}</span>
+      </button>
+    );
+  }
+  return <span className="text-foreground break-all">{text || value}</span>;
 }
 
 export default function OrderHistoryModal({
@@ -358,17 +455,29 @@ export default function OrderHistoryModal({
   namespace = 'execution',
 }: Props) {
   const t = useTranslations(namespace);
+  const locale = useLocale();
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   // Find the index of the most recent status change (history is newest-first)
   const latestStatusIndex = history.findIndex((e) => e.changeType === 'status');
+
+  // One canonical timestamp for every page hosting this modal — date + time,
+  // formatted by the active app locale (not the browser's).
+  const formatHistoryDateTime = (value: string) => {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return new Intl.DateTimeFormat(locale, {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    }).format(date);
+  };
 
   const renderValue = (entry: OrderHistoryEntry, field: 'previousValue' | 'newValue') => {
     const value = entry[field];
     if (entry.changeType === 'photo') {
       return <PhotoValue value={value} onClick={setPreviewUrl} />;
     }
-    if (entry.changeType === 'invoice') {
+    if (entry.changeType === 'invoice' || entry.changeType === 'invoiceDeleted') {
       return <InvoiceValue value={value} onClick={setPreviewUrl} />;
     }
     if (entry.changeType === 'invoiceImage') {
@@ -379,6 +488,15 @@ export default function OrderHistoryModal({
     }
     if (entry.changeType === 'invoiceValue') {
       return <InvoiceValueValue value={value} />;
+    }
+    if (entry.changeType === 'payment') {
+      return <PaymentValue value={value} onClick={setPreviewUrl} />;
+    }
+    if (
+      entry.changeType === 'executionDate' ||
+      entry.changeType === 'bulk_execution_date'
+    ) {
+      return <DateValue value={value} locale={locale} />;
     }
     if (entry.changeType === 'status') {
       return <StatusValue value={value} t={t} />;
@@ -432,7 +550,7 @@ export default function OrderHistoryModal({
                       {formatChangeType(entry.changeType, t)}
                     </span>
                     <span className="text-xs text-secondary">
-                      {new Date(entry.createdAt).toLocaleString()}
+                      {formatHistoryDateTime(entry.createdAt)}
                     </span>
                   </div>
 

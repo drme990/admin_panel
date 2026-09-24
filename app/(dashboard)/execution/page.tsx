@@ -615,15 +615,6 @@ export default function ExecutionPage() {
     [updateOrderStatus, fetchExecution, fetchExecutionStats],
   );
 
-  const formatDate = (date: string | Date | undefined) => {
-    if (!date) return '-';
-    return new Date(date).toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
-  };
-
   const handleChangeExecutionDate = (order: Order) => {
     setBulkExecutionDateTargetIds(null);
     setChangeExecutionDateModalOpen(true);
@@ -2215,9 +2206,6 @@ export default function ExecutionPage() {
         onClose={closeModal}
         order={selectedOrder}
         loadingDetails={loadingOrderDetails}
-        formatDate={formatDate}
-        locale={locale}
-        namespace="execution"
         onCreatePaymentLink={selectedOrder ? handleCreatePaymentLink : undefined}
         isCreatingPaymentLink={selectedOrder ? creatingPaymentLinkOrderId === selectedOrder._id : false}
         onDesignReviewChange={handleDesignReviewChange}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useRef } from 'react';
 import Button from '@/components/ui/button';
 import Dropdown from '@/components/ui/dropdown';
 import Input from '@/components/ui/input';
@@ -8,7 +8,7 @@ import MultiNameInput from '@/components/ui/multi-name-input';
 import RadioButton from '@/components/ui/radio-button';
 import Textarea from '@/components/ui/textarea';
 import CustomDatePicker from '@/components/ui/custom-date-picker';
-import { LuChevronDown, LuRefreshCw, LuUpload, LuX } from 'react-icons/lu';
+import { LuRefreshCw, LuUpload, LuX } from 'react-icons/lu';
 import {
   getVisibleFieldOptions,
   isExecutionDateKey,
@@ -139,7 +139,6 @@ export default function ManualReservationFields({
   fieldFooters,
 }: ManualReservationFieldsProps) {
   const isRTL = locale === 'ar';
-  const [showOptional, setShowOptional] = useState(false);
 
   // executionDate is rendered separately (custom-date switch) in the
   // manual flow — the backend always resolves one for every order.
@@ -312,32 +311,10 @@ export default function ManualReservationFields({
       )}
 
       {optionalFields.length > 0 && (
-        <div className="pt-2 border-t border-stroke/70 space-y-3">
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="w-full md:w-auto mx-auto"
-            onClick={() => setShowOptional((prev) => !prev)}
-          >
-            {showOptional ? (
-              <span>
-                {t('createManualOrder.hideMoreOptions') || 'Hide more options'}{' '}
-                <LuChevronDown className="inline-block mx-2 rotate-180" />
-              </span>
-            ) : (
-              <span>
-                {t('createManualOrder.showMoreOptions') || 'Show more options'}{' '}
-                <LuChevronDown className="inline-block mx-2" />
-              </span>
-            )}
-          </Button>
-
-          {showOptional && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {optionalFields.map(renderField)}
-            </div>
-          )}
+        <div className="pt-2 border-t border-stroke/70">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {optionalFields.map(renderField)}
+          </div>
         </div>
       )}
     </div>

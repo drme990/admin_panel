@@ -1,5 +1,5 @@
 import { type ReactNode, useState, useEffect } from 'react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { toast } from 'react-toastify';
 
 import Modal from '@/components/ui/modal';
@@ -43,9 +43,6 @@ interface Props {
   onClose: () => void;
   order: Order | null;
   loadingDetails: boolean;
-  formatDate: (date: string) => string;
-  locale: string;
-  namespace?: 'orders' | 'execution';
   onCreatePaymentLink?: (order: Order) => void;
   isCreatingPaymentLink?: boolean;
   /** Called after a design's reviewed status is successfully updated, so
@@ -157,9 +154,6 @@ export default function OrderDetailModal({
   onClose,
   order,
   loadingDetails,
-  formatDate,
-  locale,
-  namespace = 'orders',
   onCreatePaymentLink,
   isCreatingPaymentLink,
   onDesignReviewChange,
@@ -167,7 +161,22 @@ export default function OrderDetailModal({
   onInvoiceEditValue,
   onSwapOrder,
 }: Props) {
-  const t = useTranslations(namespace);
+  // Dedicated orderDetails namespace — identical labels on every page.
+  const t = useTranslations('orderDetails');
+  const locale = useLocale();
+
+  // One canonical timestamp format — date + time, app locale. Every page
+  // renders the same value regardless of which screen opened the modal.
+  const formatDateTime = (value: string | Date | undefined) => {
+    if (!value) return '-';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '-';
+    return new Intl.DateTimeFormat(locale, {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    }).format(date);
+  };
+
   const [copiedPaymentId, setCopiedPaymentId] = useState<string | null>(null);
   const [now, setNow] = useState<number>(() => Date.now());
   // Stable cache-bust value for design images — uses the order's
@@ -285,7 +294,7 @@ export default function OrderDetailModal({
                 </>
               )}
               <span>
-                {t('orderDetails')} - {order.orderNumber}
+                {t('title')} - {order.orderNumber}
               </span>
               {order.isSubOrder && (
                 <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-primary/10 text-primary">
@@ -299,14 +308,14 @@ export default function OrderDetailModal({
               )}
             </div>
           ) : (
-            t('orderDetails')
+            t('title')
           )
         }
         size="lg"
       >
         {order && loadingDetails ? (
           <div className="py-8 text-center text-sm text-secondary">
-            {t('loadingOrderDetails')}
+            {t('loading')}
           </div>
         ) : order ? (
           <div className="flex flex-col gap-6">
@@ -349,11 +358,11 @@ export default function OrderDetailModal({
                     </div>
                     <div className="flex items-center gap-3 text-xs text-secondary">
                       <span>
-                        {t('createdAt')}: <span className="font-medium text-foreground">{formatDate(order.createdAt)}</span>
+                        {t('createdAt')}: <span className="font-medium text-foreground">{formatDateTime(order.createdAt)}</span>
                       </span>
                       <span className="text-stroke">|</span>
                       <span>
-                        {t('lastUpdated')}: <span className="font-medium text-foreground">{formatDate(order.statusUpdateTime)}</span>
+                        {t('lastUpdated')}: <span className="font-medium text-foreground">{formatDateTime(order.statusUpdateTime)}</span>
                       </span>
                     </div>
                   </div>
@@ -595,13 +604,13 @@ export default function OrderDetailModal({
                                 <InfoRow
                                   icon={<LuCalendar size={14} />}
                                   label={t('paymentTimeline.createdAt')}
-                                  value={formatDate(payment.createdAt)}
+                                  value={formatDateTime(payment.createdAt)}
                                 />
                                 {payment.paidAt && (
                                   <InfoRow
                                     icon={<LuCalendar size={14} />}
                                     label={t('paymentTimeline.paidAt')}
-                                    value={formatDate(payment.paidAt)}
+                                    value={formatDateTime(payment.paidAt)}
                                   />
                                 )}
                                 {payment.easykashRef && (
@@ -820,12 +829,12 @@ export default function OrderDetailModal({
                       <InfoRow
                         icon={<LuCalendar size={14} />}
                         label={t('createdAt')}
-                        value={formatDate(order.createdAt)}
+                        value={formatDateTime(order.createdAt)}
                       />
                       <InfoRow
                         icon={<LuCalendar size={14} />}
                         label={t('lastUpdated')}
-                        value={formatDate(order.statusUpdateTime)}
+                        value={formatDateTime(order.statusUpdateTime)}
                       />
                       <InfoRow
                         icon={<LuHash size={14} />}
@@ -1117,7 +1126,7 @@ export default function OrderDetailModal({
                       <div className="flex items-center gap-2 text-xs text-secondary">
                         <span className="font-medium">{note.author}</span>
                         <span>·</span>
-                        <span>{formatDate(note.createdAt)}</span>
+                        <span>{formatDateTime(note.createdAt)}</span>
                       </div>
                     </div>
                   ))}

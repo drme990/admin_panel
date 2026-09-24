@@ -1269,7 +1269,6 @@ export default function SharesPage() {
           }}
           t={t}
           isRTL={isRTL}
-          locale={locale}
         />
       )}
 
@@ -1286,7 +1285,6 @@ function CampaignOrdersModal({
   onClose,
   t,
   isRTL,
-  locale,
 }: {
   campaign: ShareCampaign;
   campaigns: ShareCampaign[];
@@ -1294,7 +1292,6 @@ function CampaignOrdersModal({
   onClose: () => void;
   t: (key: string, values?: Record<string, string | number | Date>) => string;
   isRTL: boolean;
-  locale: string;
 }) {
   const [orders, setOrders] = useState<CampaignOrder[]>([]);
   const [manualEntries, setManualEntries] = useState<ManualShareEntry[]>([]);
@@ -1367,18 +1364,6 @@ function CampaignOrdersModal({
       setSwapping(false);
     }
   };
-
-  const formatDate = (dateStr: string) =>
-    new Date(dateStr).toLocaleDateString(
-      isRTL ? 'ar-SA' : 'en-US',
-      {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      },
-    );
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -1625,9 +1610,6 @@ function CampaignOrdersModal({
         onClose={() => setSelectedOrder(null)}
         order={selectedOrder}
         loadingDetails={false}
-        formatDate={formatDate}
-        locale={locale}
-        namespace="orders"
       />
     </>
   );

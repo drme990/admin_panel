@@ -23,6 +23,7 @@ import { isValidCustomerName } from '@/lib/customer-name';
 import { cn } from '@/lib/utils';
 import ManualReservationFields from '@/components/order/manual-reservation-fields';
 import {
+  CUSTOM_ITEM_RESERVATION_FIELDS,
   getVisibleFieldOptions,
   isExecutionDateKey,
   mergeProductReservationFields,
@@ -679,7 +680,8 @@ export default function CreateManualOrderModal({
 
   // Merge the reservation field configs of all selected existing products
   // — the union of fields any selected product accepts, deduplicated by
-  // key and ordered like checkout. Custom products contribute nothing.
+  // key and ordered like checkout. Custom items have no product config,
+  // so they contribute the full preset list (all fields, optional).
   const selectedProducts = useMemo(
     () =>
       form.items
@@ -689,9 +691,16 @@ export default function CreateManualOrderModal({
     [form.items, getProduct],
   );
 
+  const hasCustomItem = form.items.some((item) => item.type === 'custom');
+
   const mergedReservationFields = useMemo(
-    () => mergeProductReservationFields(selectedProducts),
-    [selectedProducts],
+    () =>
+      mergeProductReservationFields(
+        hasCustomItem
+          ? [CUSTOM_ITEM_RESERVATION_FIELDS, ...selectedProducts]
+          : selectedProducts,
+      ),
+    [selectedProducts, hasCustomItem],
   );
 
   // executionDate is handled by the custom-date switch below — the

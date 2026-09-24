@@ -195,6 +195,17 @@ export function isExecutionDateKey(key: string): boolean {
   return key === 'executionDate';
 }
 
+/**
+ * Synthetic product contributing every reservation preset — merged in
+ * when a manual order contains "custom" items (they have no product
+ * config to draw fields from). All fields are optional, and عقيقة
+ * stays visible since a custom order may be a sacrifice.
+ */
+export const CUSTOM_ITEM_RESERVATION_FIELDS: ReservationFieldProductLike = {
+  workAsSacrifice: true,
+  reservationFields: RESERVATION_FIELD_PRESETS,
+};
+
 function normalizeIntentionValue(value: string): string {
   return value
     .trim()

@@ -1521,9 +1521,6 @@ export default function InvoicesPage() {
                 onClose={closeModal}
                 order={selectedOrder}
                 loadingDetails={loadingOrderDetails}
-                formatDate={formatDate}
-                locale={locale}
-                namespace="orders"
                 onCreatePaymentLink={selectedOrder ? handleCreatePaymentLink : undefined}
                 isCreatingPaymentLink={selectedOrder ? creatingPaymentLinkOrderId === selectedOrder._id : false}
             />

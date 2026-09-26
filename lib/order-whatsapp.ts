@@ -295,6 +295,34 @@ export function buildOrderWhatsappMessage(data: OrderWhatsappData): string {
   return lines.join('\n');
 }
 
+// New-user credentials message — sent on WhatsApp / copied after a
+// manual order creates a fresh account. Edit the strings here to
+// change both the copied text and the success-modal preview.
+export const NEW_USER_CREDENTIALS_MESSAGE = {
+  greeting:
+    '🎉 *تهانينا، لقد أنشئنا لك (حِساب مَجاني) على موقعنا الإلكتروني*',
+  loginHint:
+    '🌐 استعمل هذه البيانات لتسجيل الدخول والاستفادة من خدمات الموقع.',
+  loginUrl: 'www.manasik.net/login',
+  usernameLabel: '* اسم المستخدم:',
+  passwordLabel: '* كلمة المرور المؤقتة:',
+} as const;
+
+export function buildNewUserCredentialsMessage(
+  email: string,
+  password: string,
+): string {
+  const m = NEW_USER_CREDENTIALS_MESSAGE;
+  return [
+    m.greeting,
+    '',
+    `${m.loginHint} ${m.loginUrl}`,
+    '',
+    `${m.usernameLabel} ${email}`,
+    `${m.passwordLabel} ${password}`,
+  ].join('\n');
+}
+
 export function buildOrderWhatsappMessageFromOrder(
   order: Order,
   linkedOrder?: Order | null,

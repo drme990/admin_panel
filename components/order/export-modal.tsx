@@ -111,6 +111,13 @@ function buildExportRows(orders: Order[], locale: string): ExportRow[] {
     // out money fields to avoid double-counting in exported reports.
     const isSub = Boolean(order.isSubOrder);
 
+    // totalAmount is the charged tranche on partial orders — fullAmount
+    // is the real order total (paid + remaining). Fall back to
+    // totalAmount for orders without fullAmount.
+    const total = order.fullAmount ?? order.totalAmount;
+    const paid = order.paidAmount ?? (order.status === 'paid' ? total : 0);
+    const remaining = order.remainingAmount ?? Math.max(total - paid, 0);
+
     return {
       orderNumber: order.orderNumber || '',
       fullName: bd?.fullName || '',
@@ -118,9 +125,9 @@ function buildExportRows(orders: Order[], locale: string): ExportRow[] {
       email: bd?.email || '',
       country: bd?.country || '',
       items,
-      totalAmount: isSub ? '' : formatAmount(order.totalAmount),
-      paidAmount: isSub ? '' : formatAmount(order.paidAmount ?? order.totalAmount),
-      remainingAmount: isSub ? '' : formatAmount(order.remainingAmount ?? 0),
+      totalAmount: isSub ? '' : formatAmount(total),
+      paidAmount: isSub ? '' : formatAmount(paid),
+      remainingAmount: isSub ? '' : formatAmount(remaining),
       currency: isSub ? '' : currency,
       status: order.status || '',
       source: order.source || 'manasik',

@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from 'next-intl';
 import Image from 'next/image';
 import Modal from '@/components/ui/modal';
 import Input from '@/components/ui/input';
+import QuantityInput from '@/components/ui/quantity-input';
 import Checkbox from '@/components/ui/checkbox';
 import Button from '@/components/ui/button';
 import Dropdown from '@/components/ui/dropdown';
@@ -127,7 +128,7 @@ export default function SharesPage() {
   const [showAddSharesModal, setShowAddSharesModal] = useState(false);
   const [addSharesForCampaign, setAddSharesForCampaign] =
     useState<ShareCampaign | null>(null);
-  const [addSharesInput, setAddSharesInput] = useState('1');
+  const [addSharesTotal, setAddSharesTotal] = useState(0);
   const [showProductModal, setShowProductModal] = useState(false);
   const [selectedProductIdForModal, setSelectedProductIdForModal] =
     useState<string | null>(null);
@@ -430,13 +431,15 @@ export default function SharesPage() {
 
   const openAddSharesModal = (campaign: ShareCampaign) => {
     setAddSharesForCampaign(campaign);
-    setAddSharesInput('1');
+    setAddSharesTotal(campaign.soldShares);
     setShowAddSharesModal(true);
   };
 
   const handleAddShares = async () => {
     if (!addSharesForCampaign) return;
-    const count = parseInt(addSharesInput) || 0;
+    // The stepper shows the new resolved-shares total — the API
+    // expects only the added delta.
+    const count = addSharesTotal - addSharesForCampaign.soldShares;
     if (count < 1) {
       toast.error(t('invalidSharesCount'));
       return;
@@ -1226,20 +1229,15 @@ export default function SharesPage() {
               <label className="block text-sm font-medium text-foreground mb-1">
                 {t('reservedSharesLabel')} *
               </label>
-              <Input
-                type="text"
-                inputMode="numeric"
-                value={addSharesInput}
-                onChange={(e) =>
-                  setAddSharesInput(onlyDigits(e.target.value))
-                }
-                onBlur={() => {
-                  const parsed = parseInt(addSharesInput) || 0;
-                  if (parsed < 1) setAddSharesInput('1');
-                }}
-                placeholder="1"
-                helperText={t('reservedSharesHint')}
+              <QuantityInput
+                value={addSharesTotal}
+                min={addSharesForCampaign.soldShares}
+                max={addSharesForCampaign.totalShares}
+                onChange={setAddSharesTotal}
               />
+              <p className="text-xs text-secondary text-center">
+                {t('reservedSharesHint')}
+              </p>
             </div>
 
             <div className="flex justify-end gap-2 pt-2">
@@ -1249,7 +1247,13 @@ export default function SharesPage() {
               >
                 {t('cancel')}
               </Button>
-              <Button onClick={handleAddShares} disabled={submitting}>
+              <Button
+                onClick={handleAddShares}
+                disabled={
+                  submitting ||
+                  addSharesTotal - addSharesForCampaign.soldShares < 1
+                }
+              >
                 {submitting ? t('saving') : t('add')}
               </Button>
             </div>

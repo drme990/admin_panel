@@ -39,7 +39,7 @@ import { COUNTRIES } from '@/lib/countries';
 import { MANUAL_PAYMENT_METHODS, EASYKASH_PAYMENT_METHOD } from '@/lib/order';
 import CurrencySelector from '@/components/shared/currency-selector';
 import type { PaymentMethod, Order } from '@/types/Order';
-import { buildOrderWhatsappMessageFromOrder } from '@/lib/order-whatsapp';
+import { buildOrderWhatsappMessageFromOrder, buildNewUserCredentialsMessage, NEW_USER_CREDENTIALS_MESSAGE } from '@/lib/order-whatsapp';
 import { normalizeWhatsappPhone } from '@/lib/order/order-utils';
 import ExchangeRateDisplay from '@/components/order/exchange-rate-display';
 
@@ -1849,7 +1849,10 @@ export default function CreateManualOrderModal({
 
   const handleCopyCredentials = async () => {
     if (!result?.createdUser) return;
-    const text = `🎉 *تهانينا، لقد أنشئنا لك (حِساب مَجاني) على موقعنا الإلكتروني*\n\n🌐 استعمل هذه البيانات لتسجيل الدخول والاستفادة من خدمات الموقع. www.manasik.net\n\n* اسم المستخدم: ${result.createdUser.email}\n* كلمة المرور المؤقتة: ${result.createdUser.password}`;
+    const text = buildNewUserCredentialsMessage(
+      result.createdUser.email,
+      result.createdUser.password,
+    );
     try {
       await navigator.clipboard.writeText(text);
       dispatch({ type: 'SET_CREDENTIALS_COPIED', copied: true });
@@ -1931,16 +1934,16 @@ export default function CreateManualOrderModal({
           {result.createdUser && (
             <div className="p-4 rounded-lg bg-primary/5 border border-primary/10 text-right" dir="rtl">
               <p className="text-sm font-medium text-foreground mb-3 leading-relaxed whitespace-pre-line">
-                🎉 *تهانينا، لقد أنشئنا لك (حِساب مَجاني) على موقعنا الإلكتروني*
-                {'\n\n'}🌐 استعمل هذه البيانات لتسجيل الدخول والاستفادة من خدمات الموقع. www.manasik.net
+                {NEW_USER_CREDENTIALS_MESSAGE.greeting}
+                {'\n\n'}{NEW_USER_CREDENTIALS_MESSAGE.loginHint} {NEW_USER_CREDENTIALS_MESSAGE.loginUrl}
               </p>
               <div className="space-y-2 text-sm">
                 <div className="flex items-center justify-between gap-2 p-2 rounded-lg border border-stroke bg-background">
-                  <span className="text-secondary">* اسم المستخدم:</span>
+                  <span className="text-secondary">{NEW_USER_CREDENTIALS_MESSAGE.usernameLabel}</span>
                   <span className="font-medium text-foreground ltr" dir="ltr">{result.createdUser.email}</span>
                 </div>
                 <div className="flex items-center justify-between gap-2 p-2 rounded-lg border border-stroke bg-background">
-                  <span className="text-secondary">* كلمة المرور المؤقتة:</span>
+                  <span className="text-secondary">{NEW_USER_CREDENTIALS_MESSAGE.passwordLabel}</span>
                   <span className="font-medium text-foreground ltr" dir="ltr">{result.createdUser.password}</span>
                 </div>
               </div>

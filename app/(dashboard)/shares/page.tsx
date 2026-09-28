@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef, type ChangeEvent } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import Image from 'next/image';
 import Modal from '@/components/ui/modal';
@@ -12,7 +12,16 @@ import Dropdown from '@/components/ui/dropdown';
 import Tooltip from '@/components/ui/tooltip';
 import ConfirmModal, { useConfirmModal } from '@/components/ui/confirm-modal';
 import OrderDetailModal from '@/components/order/order-detail-modal';
+import OrderGalleryModal from '@/components/order/order-gallery-modal';
 import { type Order } from '@/types/Order';
+import {
+  buildDesignFilename,
+  downloadItemsIndividually,
+  downloadItemsAsZip,
+  type DesignDownloadItem,
+} from '@/lib/download-utils';
+import { uploadImageToR2, deleteOldImage } from '@/lib/image-upload-utils';
+import { getOrderItemDisplayName, replaceDesignImage } from '@/lib/order/order-utils';
 import { toast } from 'react-toastify';
 
 import {
@@ -26,6 +35,13 @@ import {
   LuImage as ImageIcon,
   LuArrowRightLeft,
   LuHistory,
+  LuDownload,
+  LuUpload,
+  LuRefreshCw,
+  LuFileArchive,
+  LuFiles,
+  LuPalette,
+  LuSparkles,
 } from 'react-icons/lu';
 
 interface CampaignSize {
@@ -140,6 +156,35 @@ function getPrimaryImageUrl(media: ProductMediaItem[]): string | null {
   return firstImage?.url || media[0]?.url || null;
 }
 
+/** Flatten every design on the given orders into download items (url + filename). */
+function collectDesignItems(
+  orders: CampaignOrder[],
+  locale: string,
+): DesignDownloadItem[] {
+  const items: DesignDownloadItem[] = [];
+  for (const order of orders) {
+    const orderItems = order.items || [];
+    (order.designUrls || []).forEach((design, idx) => {
+      const itemIndex = orderItems.findIndex(
+        (i) => i.productId === design.productId,
+      );
+      const item = itemIndex >= 0 ? orderItems[itemIndex] : undefined;
+      const label = item
+        ? getOrderItemDisplayName(item, locale)
+        : design.productName || '';
+      items.push({
+        url: design.url,
+        filename: buildDesignFilename(
+          order.orderNumber,
+          label,
+          itemIndex >= 0 ? itemIndex + 1 : idx + 1,
+        ),
+      });
+    });
+  }
+  return items;
+}
+
 export default function SharesPage() {
   const [campaigns, setCampaigns] = useState<ShareCampaign[]>([]);
   const [loading, setLoading] = useState(true);
@@ -192,6 +237,12 @@ export default function SharesPage() {
   >(null);
   const [historyLoading, setHistoryLoading] = useState(false);
 
+  // Designs download — dropdown menu per campaign card + in-flight download.
+  const [downloadMenuFor, setDownloadMenuFor] = useState<string | null>(null);
+  const [designsDownloading, setDesignsDownloading] = useState<string | null>(
+    null,
+  ); // `${campaignId}:${mode}` while a download runs
+
   const t = useTranslations('admin.shares');
   const locale = useLocale();
   const isRTL = locale === 'ar';
@@ -232,6 +283,56 @@ export default function SharesPage() {
       setHistoryLoading(false);
     }
   }, [t]);
+
+  // Close the designs dropdown when clicking anywhere outside it
+  useEffect(() => {
+    if (!downloadMenuFor) return;
+    const close = (e: MouseEvent) => {
+      if (!(e.target as HTMLElement).closest?.('[data-designs-menu]')) {
+        setDownloadMenuFor(null);
+      }
+    };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, [downloadMenuFor]);
+
+  // Downloads every design of every order in the campaign — either as
+  // separate files or one zip, matching the order-designs page options.
+  const handleCampaignDownload = async (
+    campaign: ShareCampaign,
+    mode: 'individual' | 'zip',
+  ) => {
+    if (designsDownloading) return;
+    setDownloadMenuFor(null);
+    setDesignsDownloading(`${campaign._id}:${mode}`);
+    try {
+      const res = await fetch(`/api/shares/${campaign._id}/orders?limit=200`, {
+        cache: 'no-store',
+      });
+      const data = await res.json();
+      const orders: CampaignOrder[] = data.success
+        ? data.data.orders || []
+        : [];
+      const items = collectDesignItems(orders, locale);
+      if (items.length === 0) {
+        toast.info(t('designs.empty'));
+        return;
+      }
+      if (mode === 'zip') {
+        await downloadItemsAsZip(
+          items,
+          `campaign-${campaign.campaignNumber}-designs`,
+        );
+      } else {
+        await downloadItemsIndividually(items);
+      }
+      toast.success(t('designs.downloaded'));
+    } catch {
+      toast.error(t('designs.downloadFailed'));
+    } finally {
+      setDesignsDownloading(null);
+    }
+  };
 
   const fetchProducts = useCallback(async () => {
     try {
@@ -669,6 +770,54 @@ export default function SharesPage() {
                   <LuEye size={16} />
                 </button>
               </Tooltip>
+              <div className="relative" data-designs-menu>
+                <Tooltip
+                  content={t('designs.downloadAll')}
+                  position={isRTL ? 'right' : 'left'}
+                >
+                  <button
+                    onClick={() =>
+                      setDownloadMenuFor(
+                        downloadMenuFor === campaign._id
+                          ? null
+                          : campaign._id,
+                      )
+                    }
+                    disabled={designsDownloading !== null}
+                    className="p-1.5 rounded-lg hover:bg-secondary/10 text-secondary disabled:opacity-50"
+                  >
+                    {designsDownloading?.startsWith(`${campaign._id}:`) ? (
+                      <LuRefreshCw size={16} className="animate-spin" />
+                    ) : (
+                      <LuDownload size={16} />
+                    )}
+                  </button>
+                </Tooltip>
+                {downloadMenuFor === campaign._id && (
+                  <div className="absolute inset-e-0 top-full mt-1 z-50 w-44 rounded-lg border border-stroke bg-card-bg shadow-lg py-1">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        void handleCampaignDownload(campaign, 'individual')
+                      }
+                      className="w-full px-4 py-2 text-start text-sm text-foreground hover:bg-background transition-colors flex items-center gap-2"
+                    >
+                      <LuFiles size={14} className="text-secondary" />
+                      {t('designs.individual')}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        void handleCampaignDownload(campaign, 'zip')
+                      }
+                      className="w-full px-4 py-2 text-start text-sm text-foreground hover:bg-background transition-colors flex items-center gap-2"
+                    >
+                      <LuFileArchive size={14} className="text-secondary" />
+                      {t('designs.zip')}
+                    </button>
+                  </div>
+                )}
+              </div>
               {isActive && (
                 <Tooltip
                   content={t('history.title')}
@@ -1335,6 +1484,7 @@ export default function SharesPage() {
           }}
           t={t}
           isRTL={isRTL}
+          locale={locale}
         />
       )}
 
@@ -1410,6 +1560,19 @@ export default function SharesPage() {
   );
 }
 
+// Maps a backend skip reasonCode to the localized string used on the
+// execution/order-designs pages — same keys, same messages.
+const DESIGN_REASON_KEYS: Record<string, string> = {
+  noTemplate: 'table.designReasonNoTemplate',
+  noBookingProduct: 'table.designReasonNoBookingProduct',
+  templateNotFound: 'table.designReasonTemplateNotFound',
+  designAppNotConfigured: 'table.designReasonDesignAppNotConfigured',
+  callbackSecretNotConfigured: 'table.designReasonCallbackSecretNotConfigured',
+  timeout: 'table.designReasonTimeout',
+  unknown: 'table.designReasonUnknown',
+  internalError: 'table.designReasonInternalError',
+};
+
 // ── Campaign Orders Modal ──
 function CampaignOrdersModal({
   campaign,
@@ -1418,6 +1581,7 @@ function CampaignOrdersModal({
   onClose,
   t,
   isRTL,
+  locale,
 }: {
   campaign: ShareCampaign;
   campaigns: ShareCampaign[];
@@ -1425,6 +1589,7 @@ function CampaignOrdersModal({
   onClose: () => void;
   t: (key: string, values?: Record<string, string | number | Date>) => string;
   isRTL: boolean;
+  locale: string;
 }) {
   const [orders, setOrders] = useState<CampaignOrder[]>([]);
   const [manualEntries, setManualEntries] = useState<ManualShareEntry[]>([]);
@@ -1433,6 +1598,26 @@ function CampaignOrdersModal({
   const [swapOrder, setSwapOrder] = useState<CampaignOrder | null>(null);
   const [swapTargetCampaignId, setSwapTargetCampaignId] = useState('');
   const [swapping, setSwapping] = useState(false);
+
+  const tExec = useTranslations('execution');
+
+  // Per-order design actions (view / download / upload / generate / edit)
+  const [designsOrderId, setDesignsOrderId] = useState<string | null>(null);
+  const [downloadingOrderId, setDownloadingOrderId] = useState<string | null>(
+    null,
+  );
+  const [creatingDesignOrderId, setCreatingDesignOrderId] = useState<
+    string | null
+  >(null);
+  const [uploadingKey, setUploadingKey] = useState<string | null>(null);
+  const uploadInputRef = useRef<HTMLInputElement>(null);
+  const uploadTargetRef = useRef<{ orderId: string; productId: string } | null>(
+    null,
+  );
+  // Derived so the designs modal always shows fresh designUrls after upload
+  const designsOrder = designsOrderId
+    ? orders.find((o) => o._id === designsOrderId) ?? null
+    : null;
 
   const fetchOrders = useCallback(async () => {
     try {
@@ -1498,6 +1683,198 @@ function CampaignOrdersModal({
     }
   };
 
+  // ── Per-order design actions ────────────────────────────────────────────
+
+  const handleDownloadOrderDesigns = async (order: CampaignOrder) => {
+    if (downloadingOrderId || (order.designUrls || []).length === 0) return;
+    setDownloadingOrderId(order._id);
+    try {
+      await downloadItemsIndividually(collectDesignItems([order], locale));
+      toast.success(t('designs.downloaded'));
+    } catch {
+      toast.error(t('designs.downloadFailed'));
+    } finally {
+      setDownloadingOrderId(null);
+    }
+  };
+
+  // Which productId a row-level upload should target: the design/item of
+  // this campaign's product first, then the first design, then first item.
+  const resolveUploadProductId = (order: CampaignOrder): string =>
+    order.designUrls?.find((d) => d.productId === campaign.productId)
+      ?.productId ||
+    order.designUrls?.[0]?.productId ||
+    order.items?.find((i) => i.productId === campaign.productId)?.productId ||
+    order.items?.[0]?.productId ||
+    '';
+
+  const triggerUploadDesign = (order: CampaignOrder, productId: string) => {
+    if (uploadingKey || !productId) return;
+    uploadTargetRef.current = { orderId: order._id, productId };
+    uploadInputRef.current?.click();
+  };
+
+  const handleUploadFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    const target = uploadTargetRef.current;
+    if (e.target) e.target.value = '';
+    if (!file || !target) return;
+
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error(t('designs.invalidImage'));
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error(t('designs.imageTooLarge'));
+      return;
+    }
+
+    setUploadingKey(`${target.orderId}::${target.productId}`);
+    try {
+      const order = orders.find((o) => o._id === target.orderId);
+      const existing = order?.designUrls?.find(
+        (d) => d.productId === target.productId,
+      );
+      const newUrl = await uploadImageToR2(file);
+      await replaceDesignImage(target.orderId, target.productId, newUrl);
+
+      setOrders((prev) =>
+        prev.map((o) => {
+          if (o._id !== target.orderId) return o;
+          const designUrls = existing
+            ? (o.designUrls || []).map((d) =>
+              d.productId === target.productId
+                ? { ...d, url: newUrl, reviewed: false }
+                : d,
+            )
+            : [
+              ...(o.designUrls || []),
+              {
+                productId: target.productId,
+                url: newUrl,
+                templateType: 'text' as const,
+                reviewed: false,
+                createdAt: new Date().toISOString(),
+              },
+            ];
+          return { ...o, designUrls };
+        }),
+      );
+      toast.success(t('designs.uploaded'));
+
+      // Old admin-uploaded images are safe to delete; `design/` keys belong
+      // to the design system (version archives) and must never be removed.
+      if (existing && !existing.url.includes('/design/')) {
+        deleteOldImage(existing.url).catch(() => { });
+      }
+    } catch {
+      toast.error(t('designs.uploadFailed'));
+    } finally {
+      setUploadingKey(null);
+      uploadTargetRef.current = null;
+    }
+  };
+
+  // Refetch one order and merge only its designUrls into the local list —
+  // same role as the execution page's UPDATE_ORDER_IN_LIST dispatch.
+  const refreshOrderDesigns = async (orderId: string) => {
+    try {
+      const res = await fetch(`/api/orders/${orderId}`, { cache: 'no-store' });
+      const data = await res.json();
+      if (data.success) {
+        setOrders((prev) =>
+          prev.map((o) =>
+            o._id === orderId
+              ? { ...o, designUrls: data.data.designUrls }
+              : o,
+          ),
+        );
+      }
+    } catch {
+      // keep stale designs — next modal open refetches anyway
+    }
+  };
+
+  // ── Generate / regenerate design — same flow as order-designs page ──
+  const runGenerateDesign = async (
+    order: CampaignOrder,
+    { isRegenerate }: { isRegenerate: boolean },
+  ) => {
+    if (creatingDesignOrderId) return;
+    setCreatingDesignOrderId(order._id);
+    try {
+      if (isRegenerate && (order.designUrls || []).length > 0) {
+        const delRes = await fetch(
+          `/api/orders/${order._id}/designs?skipVersionEvent=true`,
+          { method: 'DELETE', credentials: 'include' },
+        );
+        const delData = await delRes.json();
+        if (!delData.success) {
+          throw new Error(tExec('table.regenerateDesignFailed'));
+        }
+      }
+
+      const res = await fetch(`/api/orders/${order._id}/generate-design`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      const data = await res.json();
+      if (!data.success) {
+        const code = data.error?.code || 'internalError';
+        throw new Error(
+          tExec(DESIGN_REASON_KEYS[code] || 'table.designReasonUnknown'),
+        );
+      }
+
+      const generated = data.data?.generated || [];
+      const skipped: Array<{ reasonCode?: string }> =
+        data.data?.skipped || [];
+
+      if (generated.length === 0 && skipped.length === 0) {
+        toast.error(tExec('table.designCreateFailed'));
+      } else if (generated.length === 0) {
+        const reasonCode = skipped[0]?.reasonCode || 'unknown';
+        const localizedReason = tExec(
+          DESIGN_REASON_KEYS[reasonCode] || 'table.designReasonUnknown',
+        );
+        toast.error(
+          tExec('table.designCreateAllSkipped', { reason: localizedReason }),
+        );
+      } else if (skipped.length > 0) {
+        toast.info(tExec('table.designCreatePartial'));
+      } else {
+        toast.success(
+          isRegenerate
+            ? tExec('table.designRegenerated')
+            : tExec('table.designCreated'),
+        );
+      }
+
+      await refreshOrderDesigns(order._id);
+    } catch (error) {
+      const fallback = isRegenerate
+        ? tExec('table.regenerateDesignFailed')
+        : tExec('table.designCreateFailed');
+      toast.error(error instanceof Error ? error.message : fallback);
+    } finally {
+      setCreatingDesignOrderId(null);
+    }
+  };
+
+  // Opens the design-app editor on this order's design instance —
+  // same behavior as the edit button on the execution table.
+  const handleEditDesign = (order: CampaignOrder) => {
+    const designs = order.designUrls || [];
+    const projectId = designs[designs.length - 1]?.projectId;
+    const designAppUrl = process.env.NEXT_PUBLIC_DESIGN_APP_URL;
+    if (!projectId || !designAppUrl) {
+      toast.error(tExec('table.designCreateFailed'));
+      return;
+    }
+    window.open(`${designAppUrl}/editor/d/${projectId}`, '_blank');
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'paid':
@@ -1543,6 +1920,9 @@ function CampaignOrdersModal({
                   <th className="px-3 py-2 font-medium">{t('amount')}</th>
                   <th className="px-3 py-2 font-medium">{t('orderStatus')}</th>
                   <th className="px-3 py-2 font-medium">{t('date')}</th>
+                  <th className="px-3 py-2 font-medium text-center">
+                    {tExec('table.design')}
+                  </th>
                   <th className="px-3 py-2 font-medium text-right">
                     {t('viewOrder')}
                   </th>
@@ -1583,6 +1963,232 @@ function CampaignOrdersModal({
                       </td>
                       <td className="px-3 py-2.5 text-secondary text-xs">
                         {new Date(order.createdAt).toLocaleDateString(isRTL ? 'ar-SA' : 'en-US')}
+                      </td>
+                      {/* Design column — same layout as the execution table:
+                          palette icon (preview / state) + mini action row */}
+                      <td className="px-3 py-2.5">
+                        {(() => {
+                          const designs = order.designUrls || [];
+                          const hasDesign = designs.length > 0;
+                          const isCreating =
+                            creatingDesignOrderId === order._id;
+                          const isDownloading =
+                            downloadingOrderId === order._id;
+                          const allReviewed =
+                            hasDesign && designs.every((d) => d.reviewed);
+                          const iconColor = hasDesign
+                            ? 'text-primary'
+                            : 'text-secondary/50';
+                          const uploadPid = resolveUploadProductId(order);
+                          return (
+                            <div className="flex flex-col items-center gap-1">
+                              {hasDesign ? (
+                                <Tooltip
+                                  content={
+                                    allReviewed
+                                      ? tExec('table.reviewed')
+                                      : tExec('table.waitingForReview')
+                                  }
+                                  position={isRTL ? 'right' : 'left'}
+                                >
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setDesignsOrderId(order._id)
+                                    }
+                                    disabled={isCreating}
+                                    className={`relative inline-flex items-center justify-center p-2 ${iconColor} disabled:opacity-50`}
+                                    aria-label={tExec('table.viewDesign')}
+                                  >
+                                    {isCreating ? (
+                                      <LuRefreshCw
+                                        size={24}
+                                        className="animate-spin"
+                                      />
+                                    ) : (
+                                      <LuPalette size={24} />
+                                    )}
+                                    {!isCreating && (
+                                      <span
+                                        className={`absolute top-0.5 left-0.5 h-2 w-2 rounded-full border border-card-bg ${allReviewed
+                                          ? 'bg-success'
+                                          : 'bg-warning'
+                                          }`}
+                                      />
+                                    )}
+                                  </button>
+                                </Tooltip>
+                              ) : (
+                                <span
+                                  className={`inline-flex items-center justify-center p-2 ${iconColor}`}
+                                >
+                                  {isCreating ? (
+                                    <LuRefreshCw
+                                      size={24}
+                                      className="animate-spin"
+                                    />
+                                  ) : (
+                                    <LuPalette size={24} />
+                                  )}
+                                </span>
+                              )}
+                              <div className="flex flex-row gap-1">
+                                {hasDesign ? (
+                                  <>
+                                    <Tooltip
+                                      content={tExec('table.downloadDesign')}
+                                      position={isRTL ? 'right' : 'left'}
+                                    >
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          void handleDownloadOrderDesigns(
+                                            order,
+                                          )
+                                        }
+                                        disabled={isCreating || isDownloading}
+                                        className="h-5 w-5 p-0 inline-flex items-center justify-center text-secondary hover:text-foreground disabled:opacity-50"
+                                        aria-label={tExec(
+                                          'table.downloadDesign',
+                                        )}
+                                      >
+                                        {isDownloading ? (
+                                          <LuRefreshCw
+                                            size={12}
+                                            className="animate-spin"
+                                          />
+                                        ) : (
+                                          <LuDownload size={12} />
+                                        )}
+                                      </button>
+                                    </Tooltip>
+                                    {uploadPid && (
+                                      <Tooltip
+                                        content={t('designs.upload')}
+                                        position={isRTL ? 'right' : 'left'}
+                                      >
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            triggerUploadDesign(
+                                              order,
+                                              uploadPid,
+                                            )
+                                          }
+                                          disabled={
+                                            isCreating || uploadingKey !== null
+                                          }
+                                          className="h-5 w-5 p-0 inline-flex items-center justify-center text-secondary hover:text-foreground disabled:opacity-50"
+                                          aria-label={t('designs.upload')}
+                                        >
+                                          {uploadingKey ===
+                                            `${order._id}::${uploadPid}` ? (
+                                            <LuRefreshCw
+                                              size={12}
+                                              className="animate-spin"
+                                            />
+                                          ) : (
+                                            <LuUpload size={12} />
+                                          )}
+                                        </button>
+                                      </Tooltip>
+                                    )}
+                                    <Tooltip
+                                      content={tExec(
+                                        'table.regenerateDesign',
+                                      )}
+                                      position={isRTL ? 'right' : 'left'}
+                                    >
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          void runGenerateDesign(order, {
+                                            isRegenerate: true,
+                                          })
+                                        }
+                                        disabled={isCreating}
+                                        className="h-5 w-5 p-0 inline-flex items-center justify-center text-secondary hover:text-foreground disabled:opacity-50"
+                                        aria-label={tExec(
+                                          'table.regenerateDesign',
+                                        )}
+                                      >
+                                        <LuRefreshCw size={12} />
+                                      </button>
+                                    </Tooltip>
+                                    <Tooltip
+                                      content={tExec('table.editDesign')}
+                                      position={isRTL ? 'right' : 'left'}
+                                    >
+                                      <button
+                                        type="button"
+                                        onClick={() => handleEditDesign(order)}
+                                        disabled={isCreating}
+                                        className="h-5 w-5 p-0 inline-flex items-center justify-center text-secondary hover:text-foreground disabled:opacity-50"
+                                        aria-label={tExec('table.editDesign')}
+                                      >
+                                        <LuPen size={12} />
+                                      </button>
+                                    </Tooltip>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Tooltip
+                                      content={tExec('table.createDesign')}
+                                      position={isRTL ? 'right' : 'left'}
+                                    >
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          void runGenerateDesign(order, {
+                                            isRegenerate: false,
+                                          })
+                                        }
+                                        disabled={isCreating}
+                                        className="h-5 w-5 p-0 inline-flex items-center justify-center text-secondary hover:text-foreground disabled:opacity-50"
+                                        aria-label={tExec(
+                                          'table.createDesign',
+                                        )}
+                                      >
+                                        <LuSparkles size={12} />
+                                      </button>
+                                    </Tooltip>
+                                    {uploadPid && (
+                                      <Tooltip
+                                        content={t('designs.upload')}
+                                        position={isRTL ? 'right' : 'left'}
+                                      >
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            triggerUploadDesign(
+                                              order,
+                                              uploadPid,
+                                            )
+                                          }
+                                          disabled={
+                                            isCreating || uploadingKey !== null
+                                          }
+                                          className="h-5 w-5 p-0 inline-flex items-center justify-center text-secondary hover:text-foreground disabled:opacity-50"
+                                          aria-label={t('designs.upload')}
+                                        >
+                                          {uploadingKey ===
+                                            `${order._id}::${uploadPid}` ? (
+                                            <LuRefreshCw
+                                              size={12}
+                                              className="animate-spin"
+                                            />
+                                          ) : (
+                                            <LuUpload size={12} />
+                                          )}
+                                        </button>
+                                      </Tooltip>
+                                    )}
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })()}
                       </td>
                       <td className="px-3 py-2.5 text-right">
                         <div className="inline-flex items-center gap-1">
@@ -1636,6 +2242,7 @@ function CampaignOrdersModal({
                         ? new Date(entry.addedAt).toLocaleDateString(isRTL ? 'ar-SA' : 'en-US')
                         : 'M'}
                     </td>
+                    <td className="px-3 py-2.5 text-center">—</td>
                     <td className="px-3 py-2.5 text-right">M</td>
                   </tr>
                 ))}
@@ -1737,6 +2344,37 @@ function CampaignOrdersModal({
         </Modal>
       )}
 
+      {/* Hidden input shared by the row upload button and the designs modal */}
+      <input
+        ref={uploadInputRef}
+        type="file"
+        accept="image/jpeg,image/jpg,image/png,image/webp"
+        className="hidden"
+        onChange={handleUploadFileChange}
+      />
+
+      {/* Per-order designs — same gallery lightbox as the execution table */}
+      <OrderGalleryModal
+        key={`design-${designsOrderId ?? 'closed'}`}
+        order={designsOrder}
+        mode="design"
+        onClose={() => setDesignsOrderId(null)}
+        onDesignReviewChange={(orderId, productId, reviewed) =>
+          setOrders((prev) =>
+            prev.map((o) =>
+              o._id === orderId
+                ? {
+                  ...o,
+                  designUrls: (o.designUrls || []).map((d) =>
+                    d.productId === productId ? { ...d, reviewed } : d,
+                  ),
+                }
+                : o,
+            ),
+          )
+        }
+      />
+
       {/* Order detail modal — uses the same shared OrderDetailModal */}
       <OrderDetailModal
         isOpen={!!selectedOrder}
@@ -1747,3 +2385,4 @@ function CampaignOrdersModal({
     </>
   );
 }
+

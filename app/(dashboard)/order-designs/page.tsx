@@ -14,7 +14,12 @@ import Tooltip from '@/components/ui/tooltip';
 import Modal from '@/components/ui/modal';
 import Checkbox from '@/components/ui/checkbox';
 import BulkAction from '@/components/ui/bulk-action';
-import { downloadFile } from '@/lib/download-utils';
+import {
+  downloadFile,
+  buildDesignFilename,
+  downloadItemsIndividually,
+  downloadItemsAsZip,
+} from '@/lib/download-utils';
 import { uploadImageToR2, deleteOldImage } from '@/lib/image-upload-utils';
 
 import { Order, OrderDesignUrl, OrderItem, ReservationOrderField } from '@/types/Order';
@@ -67,13 +72,6 @@ type ReviewFilter = 'all' | 'reviewed' | 'waiting';
 /** Stable key identifying a single item/design within the selection set */
 function cardKey(orderId: string, productId: string): string {
   return `${orderId}::${productId}`;
-}
-
-/** Sanitize + build a filename for a design when included in a zip download */
-function buildDesignFilename(orderNumber: string, productLabel: string, itemIndex: number): string {
-  const base = `${orderNumber}${productLabel ? `-${productLabel}` : ''}${itemIndex > 1 ? `-${itemIndex}` : ''}`;
-  const safe = base.replace(/[^a-zA-Z0-9-_. \u0600-\u06FF]/g, '_').trim() || 'design';
-  return `${safe}.jpg`;
 }
 
 // ── Flattened design card (one per order item) ────────────────────────────
@@ -901,9 +899,7 @@ export default function OrderDesignsPage() {
     if (items.length === 0) return;
     setIsDownloadingZip(true);
     try {
-      for (const item of items) {
-        await downloadFile(item.url, item.filename);
-      }
+      await downloadItemsIndividually(items);
       toast.success(isRTL ? 'تم تحميل التصاميم' : 'Designs downloaded');
       clearSelection();
     } catch (error) {
@@ -918,27 +914,7 @@ export default function OrderDesignsPage() {
     if (items.length === 0) return;
     setIsDownloadingZip(true);
     try {
-      const res = await fetch('/api/order-designs/download-zip', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items }),
-      });
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.error || `HTTP ${res.status}`);
-      }
-      const blob = await res.blob();
-      const blobUrl = URL.createObjectURL(blob);
-      const dateTime = new Date().toISOString().replace('T', '_').replace(/:/g, '-').split('.')[0];
-      const a = document.createElement('a');
-      a.href = blobUrl;
-      a.download = `order-designs-${dateTime}.zip`;
-      a.style.display = 'none';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(blobUrl);
+      await downloadItemsAsZip(items);
       toast.success(isRTL ? 'تم تحميل التصاميم' : 'Designs downloaded');
       clearSelection();
     } catch (error) {

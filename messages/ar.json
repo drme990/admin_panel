@@ -2703,6 +2703,19 @@
           "autoCreated": "أُنشئت تلقائياً",
           "deleted": "تم حذف الحملة"
         }
+      },
+      "designs": {
+        "downloadAll": "تحميل التصاميم",
+        "individual": "ملفات منفصلة",
+        "zip": "ملف ZIP",
+        "empty": "لا توجد تصاميم في هذه الحملة بعد",
+        "upload": "رفع تصميم",
+        "downloaded": "تم تحميل التصاميم",
+        "downloadFailed": "فشل تحميل التصاميم",
+        "uploaded": "تم رفع التصميم",
+        "uploadFailed": "فشل رفع الصورة",
+        "invalidImage": "يُسمح فقط بصور JPG أو PNG أو WebP",
+        "imageTooLarge": "يجب أن يكون حجم الصورة أقل من 5 ميجابايت"
       }
     },
     "notFound": {

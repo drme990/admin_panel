@@ -2703,6 +2703,19 @@
           "autoCreated": "Auto-created",
           "deleted": "Campaign deleted"
         }
+      },
+      "designs": {
+        "downloadAll": "Download designs",
+        "individual": "Individual files",
+        "zip": "ZIP archive",
+        "empty": "No designs on this campaign yet",
+        "upload": "Upload design",
+        "downloaded": "Designs downloaded",
+        "downloadFailed": "Failed to download designs",
+        "uploaded": "Design uploaded",
+        "uploadFailed": "Failed to upload image",
+        "invalidImage": "Only JPG, PNG or WebP images are allowed",
+        "imageTooLarge": "Image must be smaller than 5MB"
       }
     },
     "notFound": {

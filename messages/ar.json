@@ -2685,6 +2685,24 @@
       "status": {
         "active": "نشط",
         "completed": "مكتمل"
+      },
+      "history": {
+        "title": "سجل الحملة",
+        "allCampaigns": "كل الحملات",
+        "empty": "لا توجد تغييرات مسجلة بعد",
+        "changeTypes": {
+          "created": "تم إنشاء الحملة",
+          "status": "تغيير الحالة",
+          "totalShares": "تغيير إجمالي الأسهم",
+          "campaignNumber": "تغيير رمز الحملة",
+          "displayOnProductPage": "تغيير العرض في صفحة المنتج",
+          "minDisplayPercent": "تغيير الحد الأدنى لنسبة العرض",
+          "movedSharesOut": "أسهم منقولة خارجاً",
+          "movedSharesIn": "أسهم منقولة داخلاً",
+          "autoCompleted": "اكتملت تلقائياً",
+          "autoCreated": "أُنشئت تلقائياً",
+          "deleted": "تم حذف الحملة"
+        }
       }
     },
     "notFound": {

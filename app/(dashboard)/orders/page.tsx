@@ -43,7 +43,7 @@ interface OrdersResponse {
 
 type StatusTabValue = 'all' | OrderStatus;
 type WhatsappFilterValue = 'all' | 'clicked' | 'not-clicked' | 'no-need-to-click';
-type DateQuickPreset = 'today' | 'tomorrow' | 'yesterday' | 'last7Days' | 'all';
+type DateQuickPreset = 'today' | 'yesterday' | 'last7Days' | 'all';
 
 const STATUS_TAB_VALUES: StatusTabValue[] = [
   'all', 'pending', 'processing', 'partial-paid',
@@ -599,7 +599,6 @@ export default function OrderHistoryPage() {
   };
 
   const today = getRelativeIsoDate(0);
-  const tomorrow = getRelativeIsoDate(1);
   const yesterday = getRelativeIsoDate(-1);
   const lastSevenDaysStart = getRelativeIsoDate(-6);
   const normalizedSelectedRange = normalizeDateRange(fromDateFilter, toDateFilter);
@@ -609,13 +608,11 @@ export default function OrderHistoryPage() {
       ? 'all'
       : normalizedSelectedRange.fromDate === today && normalizedSelectedRange.toDate === today
         ? 'today'
-        : normalizedSelectedRange.fromDate === tomorrow && normalizedSelectedRange.toDate === tomorrow
-          ? 'tomorrow'
-          : normalizedSelectedRange.fromDate === yesterday && normalizedSelectedRange.toDate === yesterday
-            ? 'yesterday'
-            : normalizedSelectedRange.fromDate === lastSevenDaysStart && normalizedSelectedRange.toDate === today
-              ? 'last7Days'
-              : 'custom';
+        : normalizedSelectedRange.fromDate === yesterday && normalizedSelectedRange.toDate === yesterday
+          ? 'yesterday'
+          : normalizedSelectedRange.fromDate === lastSevenDaysStart && normalizedSelectedRange.toDate === today
+            ? 'last7Days'
+            : 'custom';
 
   const applyDatePreset = (preset: DateQuickPreset) => {
     if (preset === 'all') {
@@ -624,10 +621,6 @@ export default function OrderHistoryPage() {
     }
     if (preset === 'today') {
       setDateRange({ fromDateFilter: today, toDateFilter: today });
-      return;
-    }
-    if (preset === 'tomorrow') {
-      setDateRange({ fromDateFilter: tomorrow, toDateFilter: tomorrow });
       return;
     }
     if (preset === 'yesterday') {

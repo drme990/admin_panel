@@ -2685,6 +2685,24 @@
       "status": {
         "active": "Active",
         "completed": "Completed"
+      },
+      "history": {
+        "title": "Campaign History",
+        "allCampaigns": "All campaigns",
+        "empty": "No changes recorded yet",
+        "changeTypes": {
+          "created": "Campaign created",
+          "status": "Status changed",
+          "totalShares": "Total shares changed",
+          "campaignNumber": "Campaign code changed",
+          "displayOnProductPage": "Product-page display changed",
+          "minDisplayPercent": "Min display % changed",
+          "movedSharesOut": "Shares moved out",
+          "movedSharesIn": "Shares moved in",
+          "autoCompleted": "Auto-completed",
+          "autoCreated": "Auto-created",
+          "deleted": "Campaign deleted"
+        }
       }
     },
     "notFound": {

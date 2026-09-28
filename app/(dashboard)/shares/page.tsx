@@ -25,6 +25,7 @@ import {
   LuClock,
   LuImage as ImageIcon,
   LuArrowRightLeft,
+  LuHistory,
 } from 'react-icons/lu';
 
 interface CampaignSize {
@@ -84,6 +85,31 @@ interface ManualShareEntry {
   addedById?: string;
   addedByName?: string;
   addedByEmail?: string;
+}
+
+interface CampaignHistoryEntry {
+  _id: string;
+  campaignId: string;
+  campaignNumber: number;
+  productName: { ar: string; en: string } | null;
+  changeType:
+  | 'created'
+  | 'status'
+  | 'totalShares'
+  | 'campaignNumber'
+  | 'displayOnProductPage'
+  | 'minDisplayPercent'
+  | 'movedSharesOut'
+  | 'movedSharesIn'
+  | 'autoCompleted'
+  | 'autoCreated'
+  | 'deleted';
+  previousValue: string | null;
+  newValue: string | null;
+  details: string;
+  changedByUserName: string;
+  changedByUserEmail: string;
+  createdAt: string;
 }
 
 function extractApiError(data: unknown, fallback: string): string {
@@ -159,6 +185,13 @@ export default function SharesPage() {
 
   const [submitting, setSubmitting] = useState(false);
 
+  // History modal — overall log across all campaigns.
+  const [showHistory, setShowHistory] = useState(false);
+  const [historyEntries, setHistoryEntries] = useState<
+    CampaignHistoryEntry[] | null
+  >(null);
+  const [historyLoading, setHistoryLoading] = useState(false);
+
   const t = useTranslations('admin.shares');
   const locale = useLocale();
   const isRTL = locale === 'ar';
@@ -184,6 +217,21 @@ export default function SharesPage() {
     },
     [t],
   );
+
+  const openHistory = useCallback(async () => {
+    setShowHistory(true);
+    setHistoryEntries(null);
+    setHistoryLoading(true);
+    try {
+      const res = await fetch('/api/shares/history', { cache: 'no-store' });
+      const data = await res.json();
+      if (data.success) setHistoryEntries(data.data);
+    } catch {
+      toast.error(t('fetchError'));
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, [t]);
 
   const fetchProducts = useCallback(async () => {
     try {
@@ -621,6 +669,19 @@ export default function SharesPage() {
                   <LuEye size={16} />
                 </button>
               </Tooltip>
+              {isActive && (
+                <Tooltip
+                  content={t('history.title')}
+                  position={isRTL ? 'right' : 'left'}
+                >
+                  <button
+                    onClick={() => void openHistory()}
+                    className="p-1.5 rounded-lg hover:bg-secondary/10 text-secondary"
+                  >
+                    <LuHistory size={16} />
+                  </button>
+                </Tooltip>
+              )}
               {isActive && (
                 <Tooltip
                   content={t('addReservedShares')}
@@ -1276,6 +1337,73 @@ export default function SharesPage() {
           isRTL={isRTL}
         />
       )}
+
+      {/* Campaign history modal — all campaigns */}
+      <Modal
+        isOpen={showHistory}
+        onClose={() => {
+          setShowHistory(false);
+          setHistoryEntries(null);
+        }}
+        title={t('history.title')}
+        size="lg"
+      >
+        {historyLoading || !historyEntries ? (
+          <p className="text-sm text-secondary py-6 text-center">
+            {t('loading')}
+          </p>
+        ) : historyEntries.length === 0 ? (
+          <p className="text-sm text-secondary py-6 text-center">
+            {t('history.empty')}
+          </p>
+        ) : (
+          <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+            {historyEntries.map((entry) => (
+              <div
+                key={entry._id}
+                className="rounded-lg border border-stroke p-3 space-y-1"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-sm text-secondary truncate">
+                      {localizedName(entry.productName)}
+                    </span>
+                    <span className="text-xs font-mono text-secondary shrink-0">
+                      #{entry.campaignNumber}
+                    </span>
+                    <span className="text-sm font-medium text-foreground truncate">
+                      {t(`history.changeTypes.${entry.changeType}`)}
+                    </span>
+                  </div>
+                  <span className="text-xs text-secondary shrink-0">
+                    {new Date(entry.createdAt).toLocaleString(
+                      isRTL ? 'ar-SA' : 'en-US',
+                    )}
+                  </span>
+                </div>
+                {(entry.previousValue || entry.newValue) && (
+                  <div className="text-sm text-secondary tabular-nums">
+                    {entry.previousValue ?? '—'}
+                    {' → '}
+                    <span className="text-foreground font-medium">
+                      {entry.newValue ?? '—'}
+                    </span>
+                  </div>
+                )}
+                {entry.details && (
+                  <p className="text-xs text-secondary/80">{entry.details}</p>
+                )}
+                <p className="text-xs text-secondary/70">
+                  {entry.changedByUserName}
+                  {entry.changedByUserEmail
+                    ? ` · ${entry.changedByUserEmail}`
+                    : ''}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
+      </Modal>
 
       <ConfirmModal {...modalProps} />
     </div>

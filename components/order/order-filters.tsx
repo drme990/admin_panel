@@ -12,7 +12,7 @@ import { STATUS_COLORS } from '../../lib/order/order-status';
 
 type StatusTabValue = 'all' | OrderStatus;
 type WhatsappFilterValue = 'all' | 'clicked' | 'not-clicked' | 'no-need-to-click';
-type DateQuickPreset = 'today' | 'tomorrow' | 'yesterday' | 'last7Days' | 'all';
+type DateQuickPreset = 'today' | 'yesterday' | 'last7Days' | 'all';
 
 interface Props {
   searchInput: string;
@@ -74,7 +74,6 @@ export default function OrderFilters({
   const datePresetOptions: Array<{ label: string; value: DateQuickPreset }> = [
     { label: t('filters.dateModeAll'), value: 'all' },
     { label: t('filters.today'), value: 'today' },
-    { label: t('filters.tomorrow'), value: 'tomorrow' },
     { label: t('filters.yesterday'), value: 'yesterday' },
     { label: t('filters.last7Days'), value: 'last7Days' },
   ];

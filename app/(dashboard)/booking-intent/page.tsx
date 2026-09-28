@@ -46,7 +46,6 @@ type StatusTab = 'all' | 'new' | 'contacted' | 'refused' | 'converted';
 type DateQuickPreset =
   | 'all'
   | 'today'
-  | 'tomorrow'
   | 'yesterday'
   | 'last7Days'
   | 'custom';
@@ -290,7 +289,6 @@ export default function BookingIntentPage() {
     }
     const offsets: Record<string, [number, number]> = {
       today: [0, 0],
-      tomorrow: [1, 1],
       yesterday: [-1, -1],
       last7Days: [-6, 0],
     };
@@ -480,7 +478,6 @@ export default function BookingIntentPage() {
         [
           'dateModeAll',
           'today',
-          'tomorrow',
           'yesterday',
           'last7Days',
         ] as const

@@ -169,6 +169,8 @@ export default function LogsPage() {
     { value: 'booking', label: t('resources.booking') },
     { value: 'category', label: t('resources.category') },
     { value: 'supplier', label: t('resources.supplier') },
+    { value: 'shareCampaign', label: t('resources.shareCampaign') },
+    { value: 'bookingIntent', label: t('resources.bookingIntent') },
   ];
 
   return (

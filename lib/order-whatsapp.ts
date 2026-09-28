@@ -420,3 +420,42 @@ export function buildProcessingOrderWhatsappFollowUpMessage(
     'هل واجهتك أي مشكلة أثناء الخطوات أو في التطبيق؟',
   ].join('\n');
 }
+
+// Booking-intent follow-up — sent to the account owner (the person who
+// started/pays for the order), naming the مؤدى عنه when known. Edit the
+// strings here to change the message.
+export const BOOKING_INTENT_WHATSAPP_MESSAGE = {
+  greeting: 'السلام عليكم ورحمه الله وبركاته',
+  /** `{foundation}` → مناسك / غدق */
+  intro: 'معك خدمة عملاء مؤسسة {foundation}',
+  /** `{product}` = first item name, `{name}` = مؤدى عنه / customer name */
+  body: 'لاحظنا أنه تم التقديم على طلب "{product}" باسم: "{name}"، ولم يكتمل الدفع أو التسجيل.',
+  closing: 'هل واجهتك أي مشكلة أثناء الخطوات أو في التطبيق؟',
+} as const;
+
+export function buildBookingIntentWhatsappMessage(input: {
+  source?: 'manasik' | 'ghadaq';
+  /** The account owner / payer — the person we're messaging. */
+  customerName?: string;
+  productName?: string;
+  /** مؤدى عنه — falls back to the customer name. */
+  reservationName?: string;
+}): string {
+  const m = BOOKING_INTENT_WHATSAPP_MESSAGE;
+  const customerName = input.customerName?.trim() ?? '';
+  const foundation = getProcessingFollowUpFoundationName(input.source);
+  const product = input.productName?.trim() || 'المنتج';
+  const reservationName =
+    input.reservationName?.trim() || customerName || 'غير محدد';
+
+  return [
+    customerName ? `${m.greeting} أ/ ${customerName}` : m.greeting,
+    m.intro.replace('{foundation}', foundation),
+    '',
+    m.body
+      .replace('{product}', product)
+      .replace('{name}', reservationName),
+    '',
+    m.closing,
+  ].join('\n');
+}

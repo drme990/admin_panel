@@ -45,6 +45,7 @@ import {
   LuReceipt,
   LuImages,
   LuChartPie,
+  LuPhoneMissed,
 } from 'react-icons/lu';
 
 const navItems = [
@@ -66,6 +67,13 @@ const navItems = [
     key: 'execution',
     href: '/execution',
     icon: LuClipboardCheck,
+    superAdminOnly: false,
+    permissionKey: 'orders',
+  },
+  {
+    key: 'bookingIntent',
+    href: '/booking-intent',
+    icon: LuPhoneMissed,
     superAdminOnly: false,
     permissionKey: 'orders',
   },
@@ -262,6 +270,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
       'products-discovery': 'products-discovery',
       orders: 'orders',
       execution: 'orders',
+      'booking-intent': 'orders',
       shares: 'shares',
       'order-designs': 'orderDesigns',
       invoices: 'invoices',

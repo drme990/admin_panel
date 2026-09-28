@@ -871,9 +871,10 @@ export default function SharesPage() {
               </div>
             )}
 
-            {/* Completed campaigns */}
+            {/* Completed campaigns — newest first */}
             {selectedProductCampaigns
               .filter((c) => c.status === 'completed')
+              .sort((a, b) => b.campaignNumber - a.campaignNumber)
               .map((campaign) => (
                 <CampaignCard key={campaign._id} campaign={campaign} />
               ))}

@@ -9,6 +9,7 @@ import {
   LuInfo as InfoIcon,
 } from 'react-icons/lu';
 import Button from '@/components/ui/button';
+import Input from '@/components/ui/input';
 import CustomDatePicker from '@/components/ui/custom-date-picker';
 import TimePicker from '@/components/ui/time-picker';
 import Switch from '@/components/ui/switch';
@@ -78,6 +79,7 @@ export default function BookingAdminPage() {
   const [lastDayEndAt, setLastDayEndAt] = useState<string | null>(null);
   const [defaultExecutionDate, setDefaultExecutionDate] = useState<string>('');
   const [summerTimeEnabled, setSummerTimeEnabled] = useState<boolean>(false);
+  const [intentDelayMinutes, setIntentDelayMinutes] = useState<string>('60');
 
   const { confirm, modalProps } = useConfirmModal();
 
@@ -117,6 +119,9 @@ export default function BookingAdminPage() {
           setLastDayEndAt(data.data?.lastDayEndAt ?? null);
           setDefaultExecutionDate(data.data?.defaultExecutionDate ?? '');
           setSummerTimeEnabled(data.data?.summerTimeEnabled ?? false);
+          setIntentDelayMinutes(
+            String(data.data?.bookingIntentDisplayDelayMinutes ?? 60),
+          );
         } else {
           toast.error(t('loadFailed'));
         }
@@ -228,12 +233,23 @@ export default function BookingAdminPage() {
   };
 
   const saveChanges = async () => {
+    const delayMinutes = Number(intentDelayMinutes);
+    if (
+      !Number.isInteger(delayMinutes) ||
+      delayMinutes < 0 ||
+      delayMinutes > 10080
+    ) {
+      toast.error(t('intentDelayInvalid'));
+      return;
+    }
+
     setSaving(true);
     try {
       const body: Record<string, unknown> = {
         blockedExecutionDates: sortedDates,
         cutoffTime: cutoffTime || null,
         summerTimeEnabled,
+        bookingIntentDisplayDelayMinutes: delayMinutes,
       };
 
       if (defaultExecutionDate) {
@@ -380,6 +396,29 @@ export default function BookingAdminPage() {
               onChange={setSummerTimeEnabled}
               disabled={saving}
             />
+          </div>
+        </div>
+
+        {/* Booking Intent display delay */}
+        <div className="rounded-site border border-stroke bg-background p-4">
+          <div className="flex items-center justify-between gap-4">
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-foreground">
+                {t('intentDelay')}
+              </p>
+              <p className="text-xs text-secondary">{t('intentDelayHint')}</p>
+            </div>
+            <div className="w-32 shrink-0">
+              <Input
+                type="number"
+                min={0}
+                max={10080}
+                step={5}
+                value={intentDelayMinutes}
+                onChange={(e) => setIntentDelayMinutes(e.target.value)}
+                disabled={saving}
+              />
+            </div>
           </div>
         </div>
       </div>

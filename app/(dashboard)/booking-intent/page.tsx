@@ -146,7 +146,7 @@ export default function BookingIntentPage() {
   const { user } = useAuth();
   const canSeeStats =
     user?.role === 'super_admin' ||
-    (user?.allowedPages?.includes('customers') ?? false);
+    (user?.allowedActions?.includes('achievements') ?? false);
   const tooltipPos = (locale === 'ar' ? 'right' : 'left') as
     | 'left'
     | 'right';
@@ -160,10 +160,10 @@ export default function BookingIntentPage() {
   const [referralFilter, setReferralFilter] = useState('');
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
-  const [fromDate, setFromDate] = useState('');
-  const [toDate, setToDate] = useState('');
+  const [fromDate, setFromDate] = useState(() => getRelativeIsoDate(0));
+  const [toDate, setToDate] = useState(() => getRelativeIsoDate(0));
   const [activeDatePreset, setActiveDatePreset] =
-    useState<DateQuickPreset>('all');
+    useState<DateQuickPreset>('today');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(52);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -595,22 +595,26 @@ export default function BookingIntentPage() {
             <LuRefreshCw size={16} className="animate-spin" />
           );
 
+          const canWhatsapp = isMine(row) || user?.role === 'super_admin';
+
           return (
             <div className="flex flex-row flex-wrap items-center gap-2">
-              <Tooltip position={tooltipPos} content={t('actions.whatsapp')}>
-                <Button
-                  variant="icon-primary"
-                  size="custom"
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    openWhatsApp(row);
-                  }}
-                  aria-label={t('actions.whatsapp')}
-                >
-                  <FaWhatsapp size={16} />
-                </Button>
-              </Tooltip>
+              {canWhatsapp && (
+                <Tooltip position={tooltipPos} content={t('actions.whatsapp')}>
+                  <Button
+                    variant="icon-primary"
+                    size="custom"
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openWhatsApp(row);
+                    }}
+                    aria-label={t('actions.whatsapp')}
+                  >
+                    <FaWhatsapp size={16} />
+                  </Button>
+                </Tooltip>
+              )}
 
               {row.status === 'new' && (
                 <Tooltip position={tooltipPos} content={claimTip}>
@@ -719,7 +723,7 @@ export default function BookingIntentPage() {
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [t, locale, tooltipPos, actionBusy, isMine, data],
+    [t, locale, tooltipPos, actionBusy, isMine, data, user?.role],
   );
 
   return (

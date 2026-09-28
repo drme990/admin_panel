@@ -551,8 +551,12 @@ export default function CreateManualOrderModal({
   const [blockedExecutionDates, setBlockedExecutionDates] = useState<string[]>([]);
   const [uploadingPictureField, setUploadingPictureField] = useState<string | null>(null);
   const freeOrderMenuRef = useRef<HTMLDivElement>(null);
-  // Permission check: super_admin always allowed; admin needs 'freeOrders' in allowedPages
-  const canCreateFreeOrder = user?.role === 'super_admin' || (user?.allowedPages?.includes('freeOrders') ?? false);
+  // Permission check: super_admin always allowed; admin needs 'freeOrders' action
+  // (legacy fallback: it used to be stored in allowedPages)
+  const canCreateFreeOrder =
+    user?.role === 'super_admin' ||
+    user?.allowedActions?.includes('freeOrders') ||
+    ((user?.allowedPages ?? []) as string[]).includes('freeOrders');
   // invoiceInputRef → for files (PDF, DOC, TXT)
   // invoiceImageInputRef → for images (JPG, PNG, WebP)
   const invoiceInputRef = useRef<HTMLInputElement | null>(null);

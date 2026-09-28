@@ -1776,7 +1776,8 @@
       "deleteConfirmButton": "حذف",
       "deleteCancelButton": "إلغاء",
       "emptyMessage": "لا يوجد مشرفين",
-      "pagesAccess": "صفحات متاحة",
+      "pagesAccess": "صفحات",
+      "actionsAccess": "إجراءات",
       "table": {
         "name": "الاسم",
         "email": "البريد الإلكتروني",
@@ -1799,8 +1800,16 @@
         "passwordPlaceholder": "6 أحرف على الأقل",
         "passwordOptionalPlaceholder": "اتركها فارغة للإبقاء على كلمة المرور الحالية",
         "role": "الدور",
-        "allowedPages": "الصفحات المسموحة",
-        "allowedPagesHelp": "حدد صفحات لوحة التحكم التي يمكن لهذا المستخدم الوصول إليها"
+        "allowedPages": "الصفحات",
+        "allowedPagesHelp": "حدد صفحات لوحة التحكم التي يمكن لهذا المستخدم الوصول إليها",
+        "allowedActions": "الإجراءات",
+        "allowedActionsHelp": "حدد الإجراءات المحددة التي يمكن لهذا المستخدم تنفيذها"
+      },
+      "actionLabels": {
+        "achievements": "إنجازات المسؤولين",
+        "orderStatsComponent": "إحصائيات الطلبات",
+        "export": "زر التصدير",
+        "freeOrders": "إنشاء طبات مجانية"
       },
       "pageLabels": {
         "products": "المنتجات",
@@ -1827,9 +1836,6 @@
         "accounts": "الحسابات",
         "crm": "إدارة العلاقات",
         "orderDesignLogs": "سجل التصاميم",
-        "orderStatsComponent": "إحصائيات الطلبات",
-        "export": "زر التصدير",
-        "freeOrders": "إنشاء طبات مجانية",
         "shares": "الأسهم"
       },
       "buttons": {
@@ -2698,6 +2704,7 @@
     "addOnBadge": "إضافة",
     "customerInfo": "معلومات العميل",
     "source": "المصدر",
+    "name": "الاسم",
     "email": "البريد الإلكتروني",
     "phone": "رقم الهاتف",
     "country": "الدولة",

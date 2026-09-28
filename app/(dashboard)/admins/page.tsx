@@ -2,7 +2,13 @@
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
-import { User, AdminPage, ALL_ADMIN_PAGES } from '@/types/User';
+import {
+  User,
+  AdminPage,
+  AdminAction,
+  ALL_ADMIN_PAGES,
+  ALL_ADMIN_ACTIONS,
+} from '@/types/User';
 import { Referral } from '@/types/Referral';
 import Table from '@/components/ui/table';
 import Modal from '@/components/ui/modal';
@@ -38,6 +44,7 @@ export default function UsersPage() {
     password: '',
     role: 'admin' as 'admin' | 'super_admin',
     allowedPages: [] as AdminPage[],
+    allowedActions: [] as AdminAction[],
     ref: [] as string[],
   });
   const [referrals, setReferrals] = useState<Referral[]>([]);
@@ -110,6 +117,7 @@ export default function UsersPage() {
       password: '',
       role: 'admin',
       allowedPages: [],
+      allowedActions: [],
       ref: [],
     });
     setShowModal(true);
@@ -124,6 +132,7 @@ export default function UsersPage() {
       password: '',
       role: user.role,
       allowedPages: user.allowedPages ?? [],
+      allowedActions: user.allowedActions ?? [],
       ref: Array.isArray(user.ref) ? user.ref : user.ref ? [user.ref] : [],
     });
     setShowModal(true);
@@ -225,6 +234,13 @@ export default function UsersPage() {
                   {user.allowedPages.length} {t('pagesAccess')}
                 </span>
               )}
+            {user.role === 'admin' &&
+              user.allowedActions &&
+              user.allowedActions.length > 0 && (
+                <span className="text-xs text-secondary">
+                  {user.allowedActions.length} {t('actionsAccess')}
+                </span>
+              )}
           </div>
         ),
       },
@@ -301,6 +317,7 @@ export default function UsersPage() {
         email: formData.email,
         role: formData.role,
         allowedPages: formData.allowedPages,
+        allowedActions: formData.allowedActions,
         ref: formData.ref,
       };
       if (formData.password.trim().length >= 6)
@@ -461,37 +478,75 @@ export default function UsersPage() {
                 role: value as 'admin' | 'super_admin',
                 allowedPages:
                   value === 'super_admin' ? [] : formData.allowedPages,
+                allowedActions:
+                  value === 'super_admin' ? [] : formData.allowedActions,
               })
             }
           />
 
           {formData.role === 'admin' && (
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-foreground">
-                {t('form.allowedPages')}
-              </label>
-              <p className="text-xs text-secondary mb-2">
-                {t('form.allowedPagesHelp')}
-              </p>
-              <div className="grid grid-cols-2 gap-2">
-                {ALL_ADMIN_PAGES.map((page) => (
-                  <div
-                    key={page}
-                    className="flex items-center gap-2 p-2 rounded-lg border border-stroke hover:bg-muted/50 transition-colors"
-                  >
-                    <Checkbox
-                      checked={formData.allowedPages.includes(page)}
-                      onChange={(checked) => {
-                        const pages = checked
-                          ? [...formData.allowedPages, page]
-                          : formData.allowedPages.filter((p) => p !== page);
-                        setFormData({ ...formData, allowedPages: pages });
-                      }}
-                      label={t(`pageLabels.${page}`)}
-                      size="sm"
-                    />
-                  </div>
-                ))}
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-foreground">
+                  {t('form.allowedPages')}
+                </label>
+                <p className="text-xs text-secondary mb-2">
+                  {t('form.allowedPagesHelp')}
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  {ALL_ADMIN_PAGES.map((page) => (
+                    <div
+                      key={page}
+                      className="flex items-center gap-2 p-2 rounded-lg border border-stroke hover:bg-muted/50 transition-colors"
+                    >
+                      <Checkbox
+                        checked={formData.allowedPages.includes(page)}
+                        onChange={(checked) => {
+                          const pages = checked
+                            ? [...formData.allowedPages, page]
+                            : formData.allowedPages.filter((p) => p !== page);
+                          setFormData({ ...formData, allowedPages: pages });
+                        }}
+                        label={t(`pageLabels.${page}`)}
+                        size="sm"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-foreground">
+                  {t('form.allowedActions')}
+                </label>
+                <p className="text-xs text-secondary mb-2">
+                  {t('form.allowedActionsHelp')}
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  {ALL_ADMIN_ACTIONS.map((action) => (
+                    <div
+                      key={action}
+                      className="flex items-center gap-2 p-2 rounded-lg border border-stroke hover:bg-muted/50 transition-colors"
+                    >
+                      <Checkbox
+                        checked={formData.allowedActions.includes(action)}
+                        onChange={(checked) => {
+                          const actions = checked
+                            ? [...formData.allowedActions, action]
+                            : formData.allowedActions.filter(
+                              (a) => a !== action,
+                            );
+                          setFormData({
+                            ...formData,
+                            allowedActions: actions,
+                          });
+                        }}
+                        label={t(`actionLabels.${action}`)}
+                        size="sm"
+                      />
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           )}

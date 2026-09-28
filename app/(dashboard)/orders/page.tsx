@@ -55,7 +55,11 @@ export default function OrderHistoryPage() {
   const locale = useLocale();
   const ToolTipPositions = locale === 'ar' ? 'right' : 'left';
   const { user } = useAuth();
-  const canSeeStats = user?.role === 'super_admin' || user?.allowedPages?.includes('orderStatsComponent');
+  // Legacy fallback: this action used to be stored in allowedPages
+  const canSeeStats =
+    user?.role === 'super_admin' ||
+    user?.allowedActions?.includes('orderStatsComponent') ||
+    ((user?.allowedPages ?? []) as string[]).includes('orderStatsComponent');
   const searchParams = useSearchParams();
   const initialQuery = searchParams.get('q') || '';
   const initialStatusParam = searchParams.get('s');

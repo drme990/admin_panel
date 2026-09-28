@@ -75,8 +75,10 @@ export default function ExecutionPage() {
   const locale = useLocale();
   const { user: currentUser } = useAuth();
   const isSuperAdmin = currentUser?.role === 'super_admin';
-  const canSeeStats = isSuperAdmin || currentUser?.allowedPages?.includes('orderStatsComponent');
-  const canExport = isSuperAdmin || currentUser?.allowedPages?.includes('export');
+  // Legacy fallback: these actions used to be stored in allowedPages
+  const legacyPages = (currentUser?.allowedPages ?? []) as string[];
+  const canSeeStats = isSuperAdmin || currentUser?.allowedActions?.includes('orderStatsComponent') || legacyPages.includes('orderStatsComponent');
+  const canExport = isSuperAdmin || currentUser?.allowedActions?.includes('export') || legacyPages.includes('export');
 
   const tomorrow = getRelativeIsoDate(1);
 

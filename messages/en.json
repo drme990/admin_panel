@@ -1776,7 +1776,8 @@
       "deleteConfirmButton": "Delete",
       "deleteCancelButton": "Cancel",
       "emptyMessage": "No admins found",
-      "pagesAccess": "pages access",
+      "pagesAccess": "pages",
+      "actionsAccess": "actions",
       "table": {
         "name": "Name",
         "email": "Email",
@@ -1799,8 +1800,16 @@
         "passwordPlaceholder": "Minimum 6 characters",
         "passwordOptionalPlaceholder": "Leave blank to keep current password",
         "role": "Role",
-        "allowedPages": "Allowed Pages",
-        "allowedPagesHelp": "Select which admin pages this user can access"
+        "allowedPages": "Pages",
+        "allowedPagesHelp": "Select which admin pages this user can access",
+        "allowedActions": "Actions",
+        "allowedActionsHelp": "Select the specific actions this user can perform"
+      },
+      "actionLabels": {
+        "achievements": "Admin achievements",
+        "orderStatsComponent": "Order Stats",
+        "export": "Export Button",
+        "freeOrders": "Create Free Orders"
       },
       "pageLabels": {
         "products": "Products",
@@ -1827,9 +1836,6 @@
         "accounts": "Accounts",
         "crm": "CRM",
         "orderDesignLogs": "Design Logs",
-        "orderStatsComponent": "Order Stats",
-        "export": "Export Button",
-        "freeOrders": "Create Free Orders",
         "shares": "Shares"
       },
       "buttons": {
@@ -2698,6 +2704,7 @@
     "addOnBadge": "Add-on",
     "customerInfo": "Customer Information",
     "source": "Source",
+    "name": "Name",
     "email": "Email",
     "phone": "Phone Number",
     "country": "Country",

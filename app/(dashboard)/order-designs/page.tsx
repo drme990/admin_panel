@@ -123,7 +123,11 @@ export default function OrderDesignsPage() {
   const locale = useLocale();
   const isRTL = locale === 'ar';
   const { user } = useAuth();
-  const canSeeStats = user?.role === 'super_admin' || user?.allowedPages?.includes('orderStatsComponent');
+  // Legacy fallback: this action used to be stored in allowedPages
+  const canSeeStats =
+    user?.role === 'super_admin' ||
+    user?.allowedActions?.includes('orderStatsComponent') ||
+    ((user?.allowedPages ?? []) as string[]).includes('orderStatsComponent');
 
   const tomorrow = getRelativeIsoDate(1);
 

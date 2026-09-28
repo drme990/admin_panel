@@ -22,10 +22,25 @@ export type AdminPage =
   | 'suppliers'
   | 'orderDesigns'
   | 'orderDesignLogs'
+  | 'shares';
+
+/**
+ * Action-level permissions — specific things an admin can do inside a
+ * page they can already access. Distinct from `AdminPage`: a page grants
+ * entry, an action grants a capability within it.
+ */
+export type AdminAction =
+  | 'achievements'
   | 'orderStatsComponent'
   | 'export'
-  | 'freeOrders'
-  | 'shares';
+  | 'freeOrders';
+
+export const ALL_ADMIN_ACTIONS: AdminAction[] = [
+  'achievements',
+  'orderStatsComponent',
+  'export',
+  'freeOrders',
+];
 
 export const ALL_ADMIN_PAGES: AdminPage[] = [
   'products',
@@ -49,9 +64,6 @@ export const ALL_ADMIN_PAGES: AdminPage[] = [
   'accounts',
   'suppliers',
   'orderDesigns',
-  'orderStatsComponent',
-  'export',
-  'freeOrders',
   'shares',
 ];
 
@@ -62,6 +74,7 @@ export interface User {
   password?: string;
   role: 'admin' | 'super_admin';
   allowedPages?: AdminPage[];
+  allowedActions?: AdminAction[];
   ref?: string[];
   createdAt: Date;
   updatedAt: Date;

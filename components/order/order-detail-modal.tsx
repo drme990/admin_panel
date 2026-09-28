@@ -18,6 +18,7 @@ import {
   LuPackage,
   LuMail,
   LuPhone,
+  LuUser,
   LuGlobe,
   LuTag,
   LuUserRoundPlus,
@@ -813,6 +814,11 @@ export default function OrderDetailModal({
                             ? t('customerType.guest')
                             : t('customerType.registered')
                         }
+                      />
+                      <InfoRow
+                        icon={<LuUser size={14} />}
+                        label={t('name')}
+                        value={order.billingData.fullName || 'N/A'}
                       />
                       <InfoRow
                         icon={<LuMail size={14} />}

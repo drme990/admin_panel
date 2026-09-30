@@ -250,6 +250,8 @@
         "invoiceRequired": "Invoice is required for this payment method",
         "invoiceValueRequired": "Invoice value is required",
         "invoiceValueInvalid": "Invoice value must be a positive number",
+        "invoiceValueExceedsPaid": "Invoice value cannot exceed the paid amount by more than 10%",
+        "invoiceTotalExceedsPaid": "Total invoice value cannot exceed the paid amount by more than 10%",
         "paidAmountRequired": "Paid amount must be greater than 0",
         "paidAmountInvalid": "Paid amount must be less than the order total",
         "reservationFieldRequired": "This field is required for the selected product",
@@ -851,6 +853,8 @@
         "invoiceRequired": "Invoice is required for this payment method",
         "invoiceValueRequired": "Invoice value is required",
         "invoiceValueInvalid": "Invoice value must be a positive number",
+        "invoiceValueExceedsPaid": "Invoice value cannot exceed the paid amount by more than 10%",
+        "invoiceTotalExceedsPaid": "Total invoice value cannot exceed the paid amount by more than 10%",
         "paidAmountRequired": "Paid amount must be greater than 0",
         "paidAmountInvalid": "Paid amount must be less than the order total",
         "reservationFieldRequired": "This field is required for the selected product",
@@ -2295,30 +2299,22 @@
       "title": "Booking Intent",
       "description": "Customers who started an order but didn't pay. Abandoned orders appear {minutes} minutes after creation.",
       "loading": "Loading...",
-      "saving": "Saving...",
       "empty": "No booking intents match your filters.",
       "loadFailed": "Failed to load booking intents",
       "actionFailed": "Action failed. Please try again.",
-      "actionSuccess": "Done",
-      "resolveSuccess": "Resolved successfully",
-      "noPhone": "This customer has no valid phone number",
       "claimedByOther": "Already claimed by {name}",
-      "claimAll": "Claim all {count}",
-      "talkingWith": "Talking with {name}",
       "attempts": "{count} payment attempts",
       "tries": "Tried {count}x",
+      "intentState": {
+        "notConnected": "Not connected",
+        "connected": "Connected",
+        "confirmed": "Confirmed"
+      },
       "status": {
         "all": "All",
         "new": "Not Contacted",
         "contacted": "Talking",
-        "refused": "Refused",
-        "converted": "Converted",
-        "closed": "Closed"
-      },
-      "auto": {
-        "paid": "Paid automatically",
-        "purchased_elsewhere": "Bought in another order",
-        "cancelled": "Order cancelled"
+        "converted": "Converted"
       },
       "age": {
         "m": "{count}m ago",
@@ -2327,10 +2323,6 @@
       },
       "filters": {
         "search": "Search name, phone, email, order #...",
-        "assigned": "Assigned to",
-        "assignedAll": "All assignees",
-        "assignedMe": "Assigned to me",
-        "assignedNone": "Unassigned",
         "source": "Source",
         "sourceAll": "All sources",
         "fromDate": "From date",
@@ -2344,46 +2336,20 @@
         "allReferrals": "All Referrals",
         "dateModeAll": "All Time",
         "today": "Today",
-        "tomorrow": "Tomorrow",
         "yesterday": "Yesterday",
         "last7Days": "Last 7 Days",
         "total": "Total"
       },
-      "colCustomer": "Customer",
-      "colOrder": "Order",
       "colAmount": "Amount",
-      "colWhen": "Attempted",
-      "colStatus": "Status",
-      "colTalkingTo": "Talking To",
       "colActions": "Actions",
-      "actions": {
-        "whatsapp": "WhatsApp follow-up",
-        "claim": "Claim",
-        "resolve": "Resolve",
-        "release": "Release",
-        "reopen": "Reopen",
-        "viewOrder": "View order"
-      },
-      "resolveModal": {
-        "title": "Resolve intent",
-        "for": "{name} — order {order}",
-        "refusedHint": "Customer declined to complete the order",
-        "convertedHint": "Customer agreed / paid through another channel",
-        "note": "Note (optional)",
-        "notePlaceholder": "What happened on the call...",
-        "applyToAll": "Apply to all {count} open intents for this customer",
-        "cancel": "Cancel",
-        "submit": "Resolve"
-      },
       "stats": {
         "title": "Admin achievements",
-        "hint": "Counted in the selected date range; conversion = converted ÷ (converted + refused).",
+        "hint": "Counted in the selected date range.",
         "empty": "No admin activity yet.",
         "admin": "Admin",
         "claimed": "Claimed",
         "contacted": "Talking",
         "converted": "Converted",
-        "refused": "Refused",
         "rate": "Conv. rate"
       }
     },

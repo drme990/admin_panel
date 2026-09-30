@@ -1245,6 +1245,9 @@ export default function CreateManualOrderModal({
         errors.invoice = t('createManualOrder.errors.invoiceRequired');
       }
       if (!isEasykash) {
+        const paidCap = paidAmountNum * 1.1;
+        let invoiceTotal = 0;
+        let hasCapError = false;
         invoices.forEach((invoice, index) => {
           if (invoice.value.trim() === '') {
             errors[`invoice_${index}_value`] = t('createManualOrder.errors.invoiceValueRequired') || 'Invoice value is required';
@@ -1252,8 +1255,29 @@ export default function CreateManualOrderModal({
             errors[`invoice_${index}_value`] = t('createManualOrder.errors.invoiceValueInvalid') || 'Invoice value must be a number';
           } else if (parseFloat(invoice.value) <= 0) {
             errors[`invoice_${index}_value`] = t('createManualOrder.errors.invoiceValueInvalid') || 'Invoice value must be greater than 0';
+          } else if (
+            paidAmountNum > 0 &&
+            invoice.currency === form.currency &&
+            parseFloat(invoice.value) > paidCap + 0.001
+          ) {
+            errors[`invoice_${index}_value`] =
+              t('createManualOrder.errors.invoiceValueExceedsPaid') ||
+              'Invoice value cannot exceed the paid amount by more than 10%';
+            hasCapError = true;
+          }
+          if (invoice.currency === form.currency) {
+            invoiceTotal += parseFloat(invoice.value) || 0;
           }
         });
+        if (
+          !hasCapError &&
+          paidAmountNum > 0 &&
+          invoiceTotal > paidCap + 0.001
+        ) {
+          errors.invoice =
+            t('createManualOrder.errors.invoiceTotalExceedsPaid') ||
+            'Total invoice value cannot exceed the paid amount by more than 10%';
+        }
       }
       if (form.paidAmount.trim() === '' || !Number.isFinite(parseFloat(form.paidAmount))) {
         errors.paidAmount = t('createManualOrder.errors.paidAmountRequired');

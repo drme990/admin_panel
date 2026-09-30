@@ -250,6 +250,8 @@
         "invoiceRequired": "الفاتورة مطلوبة لطريقة الدفع هذه",
         "invoiceValueRequired": "قيمة الفاتورة مطلوبة",
         "invoiceValueInvalid": "قيمة الفاتورة يجب أن تكون رقماً موجباً",
+        "invoiceValueExceedsPaid": "قيمة الفاتورة لا يمكن أن تتجاوز المبلغ المدفوع بأكثر من 10%",
+        "invoiceTotalExceedsPaid": "إجمالي قيم الفواتير لا يمكن أن يتجاوز المبلغ المدفوع بأكثر من 10%",
         "paidAmountRequired": "المبلغ المدفوع يجب أن يكون أكبر من 0",
         "paidAmountInvalid": "المبلغ المدفوع يجب أن يكون أقل من إجمالي الطلب",
         "reservationFieldRequired": "هذا الحقل مطلوب للمنتج المحدد",
@@ -851,6 +853,8 @@
         "invoiceRequired": "الفاتورة مطلوبة لطريقة الدفع هذه",
         "invoiceValueRequired": "قيمة الفاتورة مطلوبة",
         "invoiceValueInvalid": "قيمة الفاتورة يجب أن تكون رقماً موجباً",
+        "invoiceValueExceedsPaid": "قيمة الفاتورة لا يمكن أن تتجاوز المبلغ المدفوع بأكثر من 10%",
+        "invoiceTotalExceedsPaid": "إجمالي قيم الفواتير لا يمكن أن يتجاوز المبلغ المدفوع بأكثر من 10%",
         "paidAmountRequired": "المبلغ المدفوع يجب أن يكون أكبر من 0",
         "paidAmountInvalid": "المبلغ المدفوع يجب أن يكون أقل من إجمالي الطلب",
         "reservationFieldRequired": "هذا الحقل مطلوب للمنتج المحدد",
@@ -2295,30 +2299,22 @@
       "title": "نوايا الحجز",
       "description": "عملاء بدأوا طلباً ولم يكملوا الدفع. تظهر الطلبات المتروكة بعد {minutes} دقيقة من إنشائها.",
       "loading": "جاري التحميل...",
-      "saving": "جاري الحفظ...",
       "empty": "لا توجد نوايا حجز تطابق عوامل التصفية.",
       "loadFailed": "فشل تحميل نوايا الحجز",
       "actionFailed": "فشل تنفيذ الإجراء. حاول مرة أخرى.",
-      "actionSuccess": "تم بنجاح",
-      "resolveSuccess": "تمت المعالجة بنجاح",
-      "noPhone": "لا يوجد رقم هاتف صالح لهذا العميل",
       "claimedByOther": "تم الاستلام مسبقاً بواسطة {name}",
-      "claimAll": "استلام الكل ({count})",
-      "talkingWith": "يتحدث معه {name}",
       "attempts": "{count} محاولات دفع",
       "tries": "حاول {count} مرات",
+      "intentState": {
+        "notConnected": "لم يتم التواصل",
+        "connected": "تم التواصل",
+        "confirmed": "مؤكد"
+      },
       "status": {
         "all": "الكل",
         "new": "لم يُتواصل",
         "contacted": "قيد التواصل",
-        "refused": "رفض",
-        "converted": "تم التحويل",
-        "closed": "مغلق"
-      },
-      "auto": {
-        "paid": "تم الدفع تلقائياً",
-        "purchased_elsewhere": "اشترى في طلب آخر",
-        "cancelled": "أُلغي الطلب"
+        "converted": "تم التحويل"
       },
       "age": {
         "m": "منذ {count} دقيقة",
@@ -2327,10 +2323,6 @@
       },
       "filters": {
         "search": "ابحث بالاسم أو الهاتف أو البريد أو رقم الطلب...",
-        "assigned": "مُسند إلى",
-        "assignedAll": "جميع المسؤولين",
-        "assignedMe": "مُسند إليّ",
-        "assignedNone": "غير مُسند",
         "source": "المصدر",
         "sourceAll": "كل المصادر",
         "fromDate": "من تاريخ",
@@ -2344,46 +2336,20 @@
         "allReferrals": "كل الإحالات",
         "dateModeAll": "كل الأوقات",
         "today": "اليوم",
-        "tomorrow": "غداً",
         "yesterday": "أمس",
         "last7Days": "آخر 7 أيام",
         "total": "الإجمالي"
       },
-      "colCustomer": "العميل",
-      "colOrder": "الطلب",
       "colAmount": "المبلغ",
-      "colWhen": "وقت المحاولة",
-      "colStatus": "الحالة",
-      "colTalkingTo": "المسؤول",
       "colActions": "الإجراءات",
-      "actions": {
-        "whatsapp": "متابعة واتساب",
-        "claim": "استلام",
-        "resolve": "معالجة",
-        "release": "تحرير",
-        "reopen": "إعادة فتح",
-        "viewOrder": "عرض الطلب"
-      },
-      "resolveModal": {
-        "title": "معالجة النية",
-        "for": "{name} — طلب {order}",
-        "refusedHint": "العميل رفض إتمام الطلب",
-        "convertedHint": "العميل وافق / دفع عبر قناة أخرى",
-        "note": "ملاحظة (اختياري)",
-        "notePlaceholder": "ماذا حدث في المكالمة...",
-        "applyToAll": "تطبيق على كل النوايا المفتوحة لهذا العميل ({count})",
-        "cancel": "إلغاء",
-        "submit": "معالجة"
-      },
       "stats": {
         "title": "إنجازات المسؤولين",
-        "hint": "تُحتسب ضمن النطاق الزمني المحدد؛ التحويل = المحوَّلون ÷ (المحوَّلون + الرافضون).",
+        "hint": "تُحتسب ضمن النطاق الزمني المحدد.",
         "empty": "لا يوجد نشاط للمسؤولين بعد.",
         "admin": "المسؤول",
         "claimed": "المستلمة",
         "contacted": "قيد التواصل",
         "converted": "المحوَّلة",
-        "refused": "المرفوضة",
         "rate": "نسبة التحويل"
       }
     },

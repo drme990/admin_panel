@@ -56,7 +56,7 @@ import { RESERVATION_FIELD_PRESETS } from '@/lib/reservation-fields';
 import type { Category } from '@/types/Category';
 import type { Order, OrderStatus } from '@/types/Order';
 
-type IntentStatus = 'new' | 'contacted' | 'refused' | 'converted' | 'closed';
+type IntentStatus = 'new' | 'contacted' | 'converted';
 type StatusTab = 'all' | 'new' | 'contacted' | 'converted';
 type DateQuickPreset =
   | 'all'
@@ -87,19 +87,12 @@ interface BookingIntentRow {
   currency: string;
   source?: 'manasik' | 'ghadaq';
   paymentAttemptCount: number;
-  /** How many orders the customer abandoned for this product set. */
-  attemptCount: number;
   orderCreatedAt: string;
   /** Full order doc — powers the execution-style cells. */
   order: Order;
   status: IntentStatus;
   assignedTo?: IntentAdmin;
   assignedAt?: string;
-  resolvedAt?: string;
-  resolvedBy?: 'admin' | 'auto';
-  autoReason?: 'paid' | 'purchased_elsewhere' | 'cancelled';
-  note?: string;
-  openIntentCount: number;
 }
 
 interface IntentListResponse {
@@ -497,10 +490,9 @@ export default function BookingIntentPage() {
         : prev,
     );
 
-  /** Claim the intent — 'reopen' only exists for legacy refused rows. */
+  /** Claim the intent — the first WhatsApp click owns the customer. */
   const ensureClaimed = async (intent: BookingIntentRow) => {
-    const path = intent.status === 'refused' ? 'reopen' : 'claim';
-    const res = await fetch(`/api/booking-intents/${intent._id}/${path}`, {
+    const res = await fetch(`/api/booking-intents/${intent._id}/claim`, {
       method: 'POST',
     });
     const json = await res.json();
@@ -519,7 +511,7 @@ export default function BookingIntentPage() {
     try {
       setAsyncAction({ whatsappOrderId: intent.orderId });
       // Unclaimed intents are claimed by whoever clicks first.
-      if (intent.status === 'new' || intent.status === 'refused') {
+      if (intent.status === 'new') {
         const claimed = await ensureClaimed(intent);
         if (!claimed) {
           void fetchIntents(true);
@@ -685,9 +677,9 @@ export default function BookingIntentPage() {
     return value ? value.substring(0, 10) : '';
   };
 
-  // A status change may resolve the intent (paid → converted, cancelled →
-  // closed) — patch the row in place first, then refetch so the list
-  // reconciles (paid rows drop out) without a visual jump.
+  // A paid-like status change flips the talking achievement to paid
+  // (→ 'converted' row) — patch in place first, then refetch so the
+  // list reconciles (paid rows drop out) without a visual jump.
   const handleUpdateOrderStatus = async (
     status: OrderStatus,
     cancellationReason?: string,
@@ -701,9 +693,7 @@ export default function BookingIntentPage() {
           status,
         )
           ? 'converted'
-          : status === 'cancelled' || status === 'failed'
-            ? 'closed'
-            : row.status;
+          : row.status;
         patchIntentRow(row._id, { status: nextStatus }, { status });
       }
       void fetchIntents(true);
@@ -869,8 +859,6 @@ export default function BookingIntentPage() {
                     {t(`age.${age.unit}`, { count: age.count })}
                     {' · '}
                     {t('attempts', { count: row.paymentAttemptCount })}
-                    {row.attemptCount > 1 &&
-                      ` · ${t('tries', { count: row.attemptCount })}`}
                   </span>
                 </div>
               </div>

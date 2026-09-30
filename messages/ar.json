@@ -2304,7 +2304,6 @@
       "actionFailed": "فشل تنفيذ الإجراء. حاول مرة أخرى.",
       "claimedByOther": "تم الاستلام مسبقاً بواسطة {name}",
       "attempts": "{count} محاولات دفع",
-      "tries": "حاول {count} مرات",
       "intentState": {
         "notConnected": "لم يتم التواصل",
         "connected": "تم التواصل",

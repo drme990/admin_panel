@@ -18,6 +18,7 @@ export const PAYMENT_METHODS: PaymentMethod[] = [
     'fawry',
     'meeza',
     'valu',
+    'apple_pay',
     'other',
 ];
 
@@ -33,6 +34,7 @@ export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, { ar: string; en: stri
     vodafone_cash: { ar: 'فودافون كاش', en: 'Vodafone Cash' },
     paypal: { ar: 'باي بال', en: 'PayPal' },
     binance: { ar: 'بايننس', en: 'Binance' },
+    apple_pay: { ar: 'آبل باي', en: 'Apple Pay' },
     other: { ar: 'أخرى', en: 'Other' },
 };
 

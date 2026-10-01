@@ -469,6 +469,7 @@
         "paidAmount": "مدفوع",
         "remainingAmount": "باقي",
         "currency": "العملة",
+        "paymentMethod": "طريقة الدفع",
         "status": "الحالة",
         "source": "المصدر",
         "createdAt": "تاريخ الإنشاء",

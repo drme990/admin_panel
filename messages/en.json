@@ -469,6 +469,7 @@
         "paidAmount": "Paid",
         "remainingAmount": "Remaining",
         "currency": "Currency",
+        "paymentMethod": "Payment Method",
         "status": "Status",
         "source": "Source",
         "createdAt": "Created At",

@@ -87,7 +87,8 @@ export type PaymentMethod =
   | 'insta_pay'
   | 'vodafone_cash'
   | 'paypal'
-  | 'binance';
+  | 'binance'
+  | 'apple_pay';
 
 type LocalizedOrderText = {
   ar?: string;

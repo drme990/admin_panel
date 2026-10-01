@@ -9,6 +9,8 @@ import * as XLSX from 'xlsx';
 import { toast } from 'react-toastify';
 
 import { getOrderItemDisplayName } from '@/lib/order/order-utils';
+import { getPaymentMethodLabel } from '@/lib/order';
+import type { PaymentMethod } from '@/types/Order';
 import Modal from '@/components/ui/modal';
 import Button from '@/components/ui/button';
 import Checkbox from '@/components/ui/checkbox';
@@ -44,6 +46,7 @@ interface ExportRow {
   paidAmount: string;
   remainingAmount: string;
   currency: string;
+  paymentMethod: string;
   status: string;
   source: string;
   createdAt: string;
@@ -68,6 +71,7 @@ const EXPORT_COLUMNS: ExportColumn[] = [
   { key: 'paidAmount', labelKey: 'export.headers.paidAmount' },
   { key: 'remainingAmount', labelKey: 'export.headers.remainingAmount' },
   { key: 'currency', labelKey: 'export.headers.currency' },
+  { key: 'paymentMethod', labelKey: 'export.headers.paymentMethod' },
   { key: 'status', labelKey: 'export.headers.status' },
   { key: 'source', labelKey: 'export.headers.source' },
   { key: 'createdAt', labelKey: 'export.headers.createdAt' },
@@ -118,6 +122,17 @@ function buildExportRows(orders: Order[], locale: string): ExportRow[] {
     const paid = order.paidAmount ?? (order.status === 'paid' ? total : 0);
     const remaining = order.remainingAmount ?? Math.max(total - paid, 0);
 
+    // Distinct methods actually used — order-level method + each
+    // payment entry (split payments can mix methods).
+    const methods = new Set<PaymentMethod>();
+    if (order.paymentMethod) methods.add(order.paymentMethod);
+    for (const p of order.payments ?? []) {
+      if (p.paymentMethod) methods.add(p.paymentMethod);
+    }
+    const paymentMethod = [...methods]
+      .map((m) => getPaymentMethodLabel(m, locale === 'ar' ? 'ar' : 'en'))
+      .join(', ');
+
     return {
       orderNumber: order.orderNumber || '',
       fullName: bd?.fullName || '',
@@ -129,6 +144,7 @@ function buildExportRows(orders: Order[], locale: string): ExportRow[] {
       paidAmount: isSub ? '' : formatAmount(paid),
       remainingAmount: isSub ? '' : formatAmount(remaining),
       currency: isSub ? '' : currency,
+      paymentMethod: isSub ? '' : paymentMethod,
       status: order.status || '',
       source: order.source || 'manasik',
       createdAt: formatDate(order.createdAt, locale),

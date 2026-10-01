@@ -18,6 +18,12 @@ import {
   LuPenLine,
   LuHistory,
   LuBan,
+  LuPencil,
+  LuUpload,
+  LuArrowUp,
+  LuArrowDown,
+  LuArrowUpDown,
+  LuCreditCard,
   LuPhoneOff,
   LuPhoneCall,
   LuCircleCheck,
@@ -42,19 +48,27 @@ import ChangeExecutionDateModal from '@/components/order/change-execution-date-m
 import OrderHistoryModal, {
   type OrderHistoryEntry,
 } from '@/components/order/order-history-modal';
+import EditOrderModal from '@/components/order/edit-order-modal';
+import ExecutionTitle from '@/components/order/execution-title';
 import CountrySelector from '@/components/shared/country-selector';
 import ReferralFilter, {
   type ReferralFilterItem,
 } from '@/components/shared/referral-filter';
 import useOrderPage from '@/lib/order/use-order-page';
 import { downloadFile } from '@/lib/download-utils';
+import { deleteOldImage, uploadImageToR2 } from '@/lib/image-upload-utils';
 import {
+  addDaysToIsoDate,
   getOrderItemDisplayName,
   getRelativeIsoDate,
 } from '@/lib/order/order-utils';
 import { RESERVATION_FIELD_PRESETS } from '@/lib/reservation-fields';
 import type { Category } from '@/types/Category';
-import type { Order, OrderStatus } from '@/types/Order';
+import type {
+  Order,
+  OrderStatus,
+  ReservationOrderField,
+} from '@/types/Order';
 
 type IntentStatus = 'new' | 'contacted' | 'converted';
 type StatusTab = 'all' | 'new' | 'contacted' | 'converted';
@@ -176,6 +190,25 @@ function getPhotoUrls(order: Order): string[] {
   return [raw];
 }
 
+/** Set the `photo` reservation field, adding it when missing (first upload). */
+function mergePhotoReservationValue(
+  order: Order,
+  value: string,
+): Order['reservationData'] {
+  const data = order.reservationData ?? [];
+  const idx = data.findIndex((f) => f.key === 'photo');
+  if (idx === -1) {
+    const field: ReservationOrderField = {
+      key: 'photo',
+      label: { ar: 'الصورة', en: 'Photo' },
+      type: 'picture',
+      value,
+    };
+    return [...data, field];
+  }
+  return data.map((f, i) => (i === idx ? { ...f, value } : f));
+}
+
 async function copyToClipboard(text: string): Promise<void> {
   if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
     await navigator.clipboard.writeText(text);
@@ -256,6 +289,9 @@ export default function BookingIntentPage() {
   const [statsLoading, setStatsLoading] = useState(false);
 
   const [photoPreviewOrder, setPhotoPreviewOrder] = useState<Order | null>(null);
+  const [uploadingPhotoOrderId, setUploadingPhotoOrderId] = useState<string | null>(null);
+  // Amount sort — null = default (newest first), then desc → asc cycles.
+  const [amountSort, setAmountSort] = useState<'asc' | 'desc' | null>(null);
   const { confirm, modalProps } = useConfirmModal();
 
   // Shared order-action layer — same handlers the execution page uses
@@ -271,15 +307,21 @@ export default function BookingIntentPage() {
     setBlockedUserIds,
     setBlockingOrderId,
     setAsyncAction,
+    setEditOrderModalOpen,
+    setEditingField,
+    fetchOrderDetails,
+    photoUploadOrderRef,
+    photoInputRef,
     viewOrder,
     closeModal,
     handleChangeStatus,
     closeChangeStatusModal,
     updateOrderStatus,
+    updateOrder,
     startOrderWhatsappMessage,
     copyOrderWhatsappNumber,
     copyOrderWhatsappMessage,
-  } = useOrderPage({ namespace: 'execution' });
+  } = useOrderPage({ namespace: 'execution', whatsappFollowUpOnly: true });
 
   const {
     selectedOrder,
@@ -292,6 +334,9 @@ export default function BookingIntentPage() {
     isOrderHistoryModalOpen,
     orderHistory,
     loadingOrderHistory,
+    isEditOrderModalOpen,
+    editingField,
+    savingOrderId,
     whatsappOrderId,
     copyingPhoneOrderId,
     copyingMessageOrderId,
@@ -375,6 +420,10 @@ export default function BookingIntentPage() {
         if (search) params.set('search', search);
         if (fromDate) params.set('fromDate', fromDate);
         if (toDate) params.set('toDate', toDate);
+        if (amountSort) {
+          params.set('sortBy', 'amount');
+          params.set('sortOrder', amountSort);
+        }
 
         const res = await fetch(`/api/booking-intents?${params}`, {
           cache: 'no-store',
@@ -391,7 +440,7 @@ export default function BookingIntentPage() {
         setLoading(false);
       }
     },
-    [statusTab, sourceFilter, categoryFilter, intentionFilter, countryFilter, referralFilter, search, fromDate, toDate, page, pageSize, t],
+    [statusTab, sourceFilter, categoryFilter, intentionFilter, countryFilter, referralFilter, search, fromDate, toDate, amountSort, page, pageSize, t],
   );
 
   const fetchStats = useCallback(async () => {
@@ -455,6 +504,23 @@ export default function BookingIntentPage() {
     const [fromOffset, toOffset] = offsets[preset];
     setFromDate(getRelativeIsoDate(fromOffset));
     setToDate(getRelativeIsoDate(toOffset));
+  };
+
+  // Day arrows — same as execution: shift the single-day window ±1 and
+  // re-resolve the matching quick preset.
+  const shiftDay = (delta: number) => {
+    if (!fromDate) return;
+    const next = addDaysToIsoDate(fromDate, delta);
+    setFromDate(next);
+    setToDate(next);
+    setPage(1);
+    setActiveDatePreset(
+      next === getRelativeIsoDate(0)
+        ? 'today'
+        : next === getRelativeIsoDate(-1)
+          ? 'yesterday'
+          : 'custom',
+    );
   };
 
   const isMine = useCallback(
@@ -533,6 +599,168 @@ export default function BookingIntentPage() {
     } finally {
       setAsyncAction({ whatsappOrderId: null });
     }
+  };
+
+  // Same field-edit flow as the execution page — pencil buttons in the
+  // For / Items / Duaa cells open the shared EditOrderModal.
+  const handleEditField = (order: Order, field: 'name' | 'items' | 'duaa') => {
+    orderDispatch({ type: 'SET_SELECTED_ORDER', payload: order });
+    setEditingField(field);
+    setEditOrderModalOpen(true);
+  };
+
+  const closeEditOrderModal = () => {
+    setEditOrderModalOpen(false);
+    setEditingField(null);
+  };
+
+  const handleUpdateOrder = async (
+    orderId: string,
+    fields: Parameters<typeof updateOrder>[1],
+  ) => {
+    const ok = await updateOrder(orderId, fields);
+    if (ok) {
+      // Refresh the row's embedded order in place so the table shows the
+      // edit without reshuffling.
+      const fullOrder = await fetchOrderDetails(orderId, false);
+      const intentRow = data?.intents.find((r) => r.orderId === orderId);
+      if (intentRow && fullOrder) {
+        patchIntentRow(intentRow._id, {}, fullOrder);
+      }
+      void fetchIntents(true);
+    }
+    return ok;
+  };
+
+  // ── Photo edit — same as the execution page: upload via the cell
+  // button, delete/replace single photos from the gallery modal. ──
+  const handleUploadPhoto = (order: Order) => {
+    photoUploadOrderRef.current = order;
+    photoInputRef.current?.click();
+  };
+
+  const handlePhotoFileChange = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    const order = photoUploadOrderRef.current;
+    if (!order) return;
+
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
+    const existingUrls = getPhotoUrls(order);
+
+    if (existingUrls.length >= 4) {
+      toast.error(te('editOrder.maxPhotosReached') || 'Maximum 4 images allowed');
+      if (photoInputRef.current) photoInputRef.current.value = '';
+      return;
+    }
+
+    const remainingSlots = 4 - existingUrls.length;
+    const selectedFiles = Array.from(files).slice(0, remainingSlots);
+    if (files.length > remainingSlots) {
+      toast.info(te('editOrder.maxPhotosReached') || `Only ${remainingSlots} image(s) can be uploaded`);
+    }
+
+    for (const file of selectedFiles) {
+      if (!allowedTypes.includes(file.type)) {
+        toast.error(te('editOrder.invalidImage'));
+        if (photoInputRef.current) photoInputRef.current.value = '';
+        return;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error(te('editOrder.imageTooLarge'));
+        if (photoInputRef.current) photoInputRef.current.value = '';
+        return;
+      }
+    }
+
+    try {
+      setUploadingPhotoOrderId(order._id);
+      const newUrls = await Promise.all(
+        selectedFiles.map((file) => uploadImageToR2(file)),
+      );
+      const updatedUrls = [...existingUrls, ...newUrls];
+      await updateOrder(order._id, { photo: JSON.stringify(updatedUrls) });
+      const intentRow = data?.intents.find((r) => r.orderId === order._id);
+      if (intentRow) {
+        patchIntentRow(intentRow._id, {}, {
+          reservationData: mergePhotoReservationValue(order, JSON.stringify(updatedUrls)),
+        });
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : te('editOrder.uploadFailed');
+      toast.error(message);
+      console.error('Photo upload failed:', error);
+    } finally {
+      photoUploadOrderRef.current = null;
+      setUploadingPhotoOrderId(null);
+      if (photoInputRef.current) photoInputRef.current.value = '';
+    }
+  };
+
+  // Remove one photo — optimistic on the open modal + intent row, then
+  // persist and delete the file from R2 in the background.
+  const handleDeletePhoto = async (order: Order, urlToDelete: string) => {
+    const existingUrls = getPhotoUrls(order);
+    const updatedUrls = existingUrls.filter((u) => u !== urlToDelete);
+    const newValue = updatedUrls.length > 0 ? JSON.stringify(updatedUrls) : '';
+    const updatedReservationData = mergePhotoReservationValue(order, newValue);
+
+    const updatedOrder: Order = { ...order, reservationData: updatedReservationData };
+    setPhotoPreviewOrder(updatedOrder);
+    patchIntentRow(order._id, {}, { reservationData: updatedReservationData });
+    if (updatedUrls.length === 0) setPhotoPreviewOrder(null);
+
+    try {
+      await updateOrder(order._id, { photo: newValue });
+    } catch (error) {
+      console.error('Failed to persist photo deletion:', error);
+      setPhotoPreviewOrder(order);
+      patchIntentRow(order._id, {}, { reservationData: order.reservationData });
+    }
+
+    deleteOldImage(urlToDelete).catch((err: unknown) => {
+      console.warn('Failed to delete image from R2:', err);
+    });
+  };
+
+  // Replace one photo — upload the new file, swap the URL, delete the
+  // old one from R2.
+  const handleReplacePhoto = async (order: Order, oldUrl: string, file: File) => {
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error(te('editOrder.invalidImage'));
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error(te('editOrder.imageTooLarge'));
+      return;
+    }
+
+    const existingUrls = getPhotoUrls(order);
+    const newUrl = await uploadImageToR2(file);
+    const updatedUrls = existingUrls.map((u) => (u === oldUrl ? newUrl : u));
+    const updatedReservationData = mergePhotoReservationValue(
+      order,
+      JSON.stringify(updatedUrls),
+    );
+
+    const updatedOrder: Order = { ...order, reservationData: updatedReservationData };
+    setPhotoPreviewOrder(updatedOrder);
+    patchIntentRow(order._id, {}, { reservationData: updatedReservationData });
+
+    try {
+      await updateOrder(order._id, { photo: JSON.stringify(updatedUrls) });
+    } catch (error) {
+      console.error('Failed to persist photo replacement:', error);
+      setPhotoPreviewOrder(order);
+      patchIntentRow(order._id, {}, { reservationData: order.reservationData });
+    }
+
+    deleteOldImage(oldUrl).catch((err: unknown) => {
+      console.warn('Failed to delete old image from R2:', err);
+    });
   };
 
   const handleChangeExecutionDate = (order: Order) => {
@@ -769,6 +997,12 @@ export default function BookingIntentPage() {
     [t],
   );
 
+  // Amount sort cycles: default (newest) → desc → asc → default.
+  const cycleAmountSort = () => {
+    setAmountSort((prev) => (prev === null ? 'desc' : prev === 'desc' ? 'asc' : null));
+    setPage(1);
+  };
+
   // ── Table columns ──────────────────────────────────────────────────
 
   const columns = useMemo(
@@ -827,6 +1061,20 @@ export default function BookingIntentPage() {
                       </Button>
                     </Tooltip>
                   )}
+                  <Tooltip position={tooltipPos} content={te('table.editName')}>
+                    <Button
+                      variant="ghost"
+                      size="custom"
+                      className="h-5 w-5 p-0 text-secondary hover:text-foreground"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleEditField(order, 'name');
+                      }}
+                      aria-label={te('table.editName')}
+                    >
+                      <LuPencil size={12} />
+                    </Button>
+                  </Tooltip>
                 </div>
                 <div className="flex flex-col items-start gap-0.5">
                   <div className="flex items-center gap-1.5">
@@ -857,7 +1105,14 @@ export default function BookingIntentPage() {
                     {formatDateTime(row.orderCreatedAt, locale)}
                     {' · '}
                     {t(`age.${age.unit}`, { count: age.count })}
-                    {' · '}
+                  </span>
+                  <span
+                    className={`mt-0.5 inline-flex items-center gap-1 self-start rounded-full px-2 py-0.5 text-[11px] font-semibold ${row.paymentAttemptCount > 0
+                      ? 'bg-warning/15 text-warning'
+                      : 'bg-background text-secondary'
+                      }`}
+                  >
+                    <LuCreditCard size={11} />
                     {t('attempts', { count: row.paymentAttemptCount })}
                   </span>
                 </div>
@@ -910,6 +1165,20 @@ export default function BookingIntentPage() {
                     <LuCopy size={12} />
                   </Button>
                 </Tooltip>
+                <Tooltip position={tooltipPos} content={te('table.editItems')}>
+                  <Button
+                    variant="ghost"
+                    size="custom"
+                    className="h-5 w-5 p-0 text-secondary hover:text-foreground"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleEditField(order, 'items');
+                    }}
+                    aria-label={te('table.editItems')}
+                  >
+                    <LuPencil size={12} />
+                  </Button>
+                </Tooltip>
               </div>
             </div>
           );
@@ -959,6 +1228,35 @@ export default function BookingIntentPage() {
                 </span>
               )}
               <div className="flex flex-row gap-1">
+                <Tooltip
+                  position={tooltipPos}
+                  content={
+                    photoUrls.length >= 4
+                      ? te('table.maxPhotosReached') || 'Maximum 4 images'
+                      : te('table.uploadPhoto')
+                  }
+                >
+                  <Button
+                    variant="ghost"
+                    size="custom"
+                    className="h-5 w-5 p-0 text-secondary hover:text-foreground"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleUploadPhoto(order);
+                    }}
+                    disabled={
+                      uploadingPhotoOrderId === order._id ||
+                      photoUrls.length >= 4
+                    }
+                    aria-label={te('table.uploadPhoto')}
+                  >
+                    {uploadingPhotoOrderId === order._id ? (
+                      <LuRefreshCw size={12} className="animate-spin" />
+                    ) : (
+                      <LuUpload size={12} />
+                    )}
+                  </Button>
+                </Tooltip>
                 <Tooltip
                   position={tooltipPos}
                   content={te('table.downloadPhoto')}
@@ -1039,6 +1337,20 @@ export default function BookingIntentPage() {
                     <LuCopy size={12} />
                   </Button>
                 </Tooltip>
+                <Tooltip position={tooltipPos} content={te('table.editDuaa')}>
+                  <Button
+                    variant="ghost"
+                    size="custom"
+                    className="h-5 w-5 p-0 text-secondary hover:text-foreground"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleEditField(row.order, 'duaa');
+                    }}
+                    aria-label={te('table.editDuaa')}
+                  >
+                    <LuPencil size={12} />
+                  </Button>
+                </Tooltip>
               </div>
             </div>
           );
@@ -1046,7 +1358,23 @@ export default function BookingIntentPage() {
         className: 'min-w-16',
       },
       {
-        header: t('colAmount'),
+        header: (
+          <button
+            type="button"
+            onClick={cycleAmountSort}
+            className="inline-flex items-center gap-1 hover:text-primary transition-colors"
+            aria-label={t('colAmount')}
+          >
+            {t('colAmount')}
+            {amountSort === 'desc' ? (
+              <LuArrowDown size={13} className="text-primary" />
+            ) : amountSort === 'asc' ? (
+              <LuArrowUp size={13} className="text-primary" />
+            ) : (
+              <LuArrowUpDown size={13} className="text-secondary/60" />
+            )}
+          </button>
+        ),
         accessor: (row: BookingIntentRow) => (
           <span className="font-bold text-foreground" dir="ltr">
             {row.amount.toFixed(2)} {row.currency}
@@ -1232,7 +1560,7 @@ export default function BookingIntentPage() {
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [t, te, locale, tooltipPos, isMine, data, user?.role, page, pageSize, whatsappOrderId, copyingPhoneOrderId, copyingMessageOrderId, blockedUserIds, blockingOrderId],
+    [t, te, locale, tooltipPos, isMine, data, user?.role, page, pageSize, amountSort, whatsappOrderId, copyingPhoneOrderId, copyingMessageOrderId, blockedUserIds, blockingOrderId],
   );
 
   return (
@@ -1395,6 +1723,16 @@ export default function BookingIntentPage() {
         </div>
       </div>
 
+      {fromDate && (
+        <ExecutionTitle
+          date={fromDate}
+          locale={locale}
+          label={t('title')}
+          onPrevDay={() => shiftDay(-1)}
+          onNextDay={() => shiftDay(1)}
+        />
+      )}
+
       {/* Table */}
       <Table<BookingIntentRow>
         columns={columns}
@@ -1486,6 +1824,17 @@ export default function BookingIntentPage() {
         order={photoPreviewOrder}
         mode="photo"
         onClose={() => setPhotoPreviewOrder(null)}
+        onDeletePhoto={
+          photoPreviewOrder
+            ? (url) => handleDeletePhoto(photoPreviewOrder, url)
+            : undefined
+        }
+        onReplacePhoto={
+          photoPreviewOrder
+            ? (oldUrl, file) =>
+              handleReplacePhoto(photoPreviewOrder, oldUrl, file)
+            : undefined
+        }
       />
 
       {/* Order details — the order that put this customer on the page */}
@@ -1515,6 +1864,15 @@ export default function BookingIntentPage() {
         locale={locale}
       />
 
+      <EditOrderModal
+        isOpen={isEditOrderModalOpen}
+        onClose={closeEditOrderModal}
+        order={selectedOrder}
+        field={editingField}
+        onUpdate={handleUpdateOrder}
+        updating={savingOrderId !== null}
+      />
+
       <OrderHistoryModal
         isOpen={isOrderHistoryModalOpen}
         onClose={closeOrderHistoryModal}
@@ -1525,6 +1883,15 @@ export default function BookingIntentPage() {
       />
 
       <ConfirmModal {...modalProps} />
+
+      <input
+        ref={photoInputRef}
+        type="file"
+        accept="image/*"
+        multiple
+        className="hidden"
+        onChange={handlePhotoFileChange}
+      />
     </div>
   );
 }

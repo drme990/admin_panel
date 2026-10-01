@@ -313,10 +313,16 @@ export function orderPageReducer(state: OrderPageState, action: OrderPageAction)
 export interface UseOrderPageOptions {
   namespace: 'orders' | 'execution';
   initialState?: Partial<OrderPageState>;
+  /**
+   * Always send the processing-order follow-up message, regardless of
+   * the order's status — used by booking-intent, where every row is an
+   * incomplete order being chased.
+   */
+  whatsappFollowUpOnly?: boolean;
 }
 
 export function useOrderPage(options: UseOrderPageOptions) {
-  const { namespace, initialState } = options;
+  const { namespace, initialState, whatsappFollowUpOnly } = options;
   const t = useTranslations(namespace);
   const [state, dispatch] = useReducer(
     orderPageReducer,
@@ -417,7 +423,7 @@ export function useOrderPage(options: UseOrderPageOptions) {
       }
 
       const message =
-        resolvedOrder.status === 'processing'
+        whatsappFollowUpOnly || resolvedOrder.status === 'processing'
           ? buildProcessingOrderWhatsappFollowUpMessage(resolvedOrder)
           : buildOrderWhatsappMessageFromOrder(resolvedOrder, linkedOrder);
 
@@ -426,7 +432,7 @@ export function useOrderPage(options: UseOrderPageOptions) {
         whatsappPhone: normalizeWhatsappPhone(resolvedOrder.billingData?.phone),
       };
     },
-    [fetchOrderDetails],
+    [fetchOrderDetails, whatsappFollowUpOnly],
   );
 
   const viewOrder = useCallback(

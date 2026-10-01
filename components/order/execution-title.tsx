@@ -9,6 +9,8 @@ interface Props {
     locale: string;
     onPrevDay: () => void;
     onNextDay: () => void;
+    /** Title word before the date — defaults to "Executions". */
+    label?: string;
 }
 
 function toIsoDateInput(d: Date): string {
@@ -25,8 +27,9 @@ function getRelativeIsoDate(daysOffset: number): string {
     return toIsoDateInput(d);
 }
 
-export default function ExecutionTitle({ date, locale, onPrevDay, onNextDay }: Props) {
+export default function ExecutionTitle({ date, locale, onPrevDay, onNextDay, label }: Props) {
     const t = useTranslations('execution');
+    const titleWord = label ?? t('header.executions');
 
     const todayStr = getRelativeIsoDate(0);
     const tomorrowStr = getRelativeIsoDate(1);
@@ -70,13 +73,13 @@ export default function ExecutionTitle({ date, locale, onPrevDay, onNextDay }: P
                     {relativeLabel ? (
                         <>
                             <span className="text-success">
-                                {t('header.executions')} {relativeLabel}:
+                                {titleWord} {relativeLabel}:
                             </span>
                             {' '}{dayName} - {formattedDate}
                         </>
                     ) : (
                         <>
-                            {t('header.executions')} {dayName} - {formattedDate}
+                            {titleWord} {dayName} - {formattedDate}
                         </>
                     )}
                 </h2>

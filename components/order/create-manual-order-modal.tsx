@@ -1079,21 +1079,15 @@ export default function CreateManualOrderModal({
   const isPartialPayment = paidAmountNum > 0 && paidAmountNum < fullOrderTotal;
 
   // When the order total changes (e.g. product changed, quantity changed,
-  // or price override), recalculate the paid/remaining amounts so they
-  // stay consistent with the new total. If the paid amount now exceeds the
-  // new total, clear both fields so the admin re-enters them.
+  // or price override), recalculate the remaining amount so it stays
+  // consistent with the new total. A paid amount above the total is
+  // valid (sub-orders consume the surplus) — it's kept, and remaining
+  // just clamps to 0.
   useEffect(() => {
     if (fullOrderTotal <= 0) return;
     setForm((prev) => {
       const paid = parseFloat(prev.paidAmount);
       const remaining = parseFloat(prev.remainingAmount);
-
-      // If the paid amount exceeds the new order total, clear both fields
-      // — the admin needs to re-enter the paid amount for the new product.
-      if (Number.isFinite(paid) && paid > fullOrderTotal) {
-        if (prev.paidAmount === '' && prev.remainingAmount === '') return prev;
-        return { ...prev, paidAmount: '', remainingAmount: '' };
-      }
 
       if (paymentEditField === 'paid') {
         // Admin was editing paid → keep paid, recalc remaining
@@ -1283,12 +1277,11 @@ export default function CreateManualOrderModal({
         errors.paidAmount = t('createManualOrder.errors.paidAmountRequired');
       } else if (paidAmountNum <= 0) {
         errors.paidAmount = t('createManualOrder.errors.paidAmountRequired');
-      } else if (paidAmountNum > fullOrderTotal) {
-        errors.paidAmount = t('createManualOrder.errors.paidAmountInvalid') || 'Paid amount must not exceed the order total';
       }
+      // paid may exceed the total on purpose (sub-orders consume the surplus)
     }
     return errors;
-  }, [form, isEasykash, invoices, paidAmountNum, fullOrderTotal, phoneWhatsappClicked, mergedReservationFields, effectiveUseCustomExecutionDate, blockedExecutionDates, t]);
+  }, [form, isEasykash, invoices, paidAmountNum, phoneWhatsappClicked, mergedReservationFields, effectiveUseCustomExecutionDate, blockedExecutionDates, t]);
 
   const updateItem = (index: number, patch: Partial<OrderItemForm>) => {
     setForm((prev) => {
@@ -2528,7 +2521,7 @@ export default function CreateManualOrderModal({
                         step="0.01"
                         fullWidth={false}
                         value={form.remainingAmount}
-                        placeholder={fullOrderTotal > 0 ? `${t('createManualOrder.remaining') || 'Remaining'}: ${(fullOrderTotal - paidAmountNum).toFixed(2)}` : `0.00 ${form.currency}`}
+                        placeholder={fullOrderTotal > 0 ? `${t('createManualOrder.remaining') || 'Remaining'}: ${Math.max(0, fullOrderTotal - paidAmountNum).toFixed(2)}` : `0.00 ${form.currency}`}
                         readOnly={paymentEditField === 'paid'}
                         onChange={(e) => {
                           const rem = e.target.value;

@@ -1074,7 +1074,7 @@ export default function OrderDetailModal({
                               >
                                 <div className="relative overflow-hidden">
                                   <Image
-                                    src={`${design.url}${design.url.includes('?') ? '&' : '?'}v=${designCacheBust}`}
+                                    src={`${design.url}${design.url.includes('?') ? '&' : '?'}v=${design.currentVersion ?? designCacheBust}`}
                                     alt={`Design ${designIndex + 1} (${variantLabel})`}
                                     className="w-full max-w-50 h-auto object-cover rounded"
                                     width={200}
@@ -1104,7 +1104,7 @@ export default function OrderDetailModal({
                                     : t('reservationData.waitingForReview')}
                                 </button>
                                 <a
-                                  href={`${design.url}${design.url.includes('?') ? '&' : '?'}v=${designCacheBust}`}
+                                  href={`${design.url}${design.url.includes('?') ? '&' : '?'}v=${design.currentVersion ?? designCacheBust}`}
                                   download
                                   target="_blank"
                                   rel="noopener noreferrer"

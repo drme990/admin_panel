@@ -1786,7 +1786,7 @@ function CampaignOrdersModal({
         setOrders((prev) =>
           prev.map((o) =>
             o._id === orderId
-              ? { ...o, designUrls: data.data.designUrls }
+              ? { ...o, designUrls: data.data.designUrls, updatedAt: data.data.updatedAt }
               : o,
           ),
         );

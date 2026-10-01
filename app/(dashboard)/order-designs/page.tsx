@@ -851,7 +851,7 @@ export default function OrderDesignsPage() {
       if (updatedOrder) {
         dispatch({
           type: 'UPDATE_ORDER_IN_LIST',
-          payload: { orderId: order._id, updates: { designUrls: updatedOrder.designUrls } },
+          payload: { orderId: order._id, updates: { designUrls: updatedOrder.designUrls, updatedAt: updatedOrder.updatedAt } },
         });
       }
     } catch (error) {
@@ -1094,9 +1094,11 @@ export default function OrderDesignsPage() {
       ? `${designAppUrl}/editor/d/${design.projectId}`
       : undefined;
 
-    // Preview image URL with cache-busting
+    // Preview image URL with cache-busting — keyed on the design's
+    // currentVersion so a regenerate/restore (same R2 URL) still
+    // busts the browser cache.
     const previewUrl = design?.url
-      ? `${design.url}${design.url.includes('?') ? '&' : '?'}v=${cardOrder.statusUpdateTime || cardOrder.updatedAt || ''}`
+      ? `${design.url}${design.url.includes('?') ? '&' : '?'}v=${design.currentVersion ?? (cardOrder.statusUpdateTime || cardOrder.updatedAt || '')}`
       : undefined;
 
     const isSelected = design ? selectedKeys.has(cardKey(cardOrder._id, design.productId)) : false;
@@ -1743,7 +1745,7 @@ export default function OrderDesignsPage() {
                   type: 'UPDATE_ORDER_IN_LIST',
                   payload: {
                     orderId: historyTarget.order._id,
-                    updates: { designUrls: updatedOrder.designUrls },
+                    updates: { designUrls: updatedOrder.designUrls, updatedAt: updatedOrder.updatedAt },
                   },
                 });
               }

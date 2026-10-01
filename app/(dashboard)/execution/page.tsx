@@ -1314,7 +1314,7 @@ export default function ExecutionPage() {
           type: 'UPDATE_ORDER_IN_LIST',
           payload: {
             orderId: order._id,
-            updates: { designUrls: updatedOrder.designUrls },
+            updates: { designUrls: updatedOrder.designUrls, updatedAt: updatedOrder.updatedAt },
           },
         });
       }
@@ -1450,7 +1450,7 @@ export default function ExecutionPage() {
           type: 'UPDATE_ORDER_IN_LIST',
           payload: {
             orderId: order._id,
-            updates: { designUrls: updatedOrder.designUrls },
+            updates: { designUrls: updatedOrder.designUrls, updatedAt: updatedOrder.updatedAt },
           },
         });
       }

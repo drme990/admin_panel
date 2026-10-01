@@ -685,7 +685,7 @@ export function useOrderPage(options: UseOrderPageOptions) {
                   if (updatedOrder) {
                     dispatch({
                       type: 'UPDATE_ORDER_IN_LIST',
-                      payload: { orderId, updates: { designUrls: updatedOrder.designUrls } },
+                      payload: { orderId, updates: { designUrls: updatedOrder.designUrls, updatedAt: updatedOrder.updatedAt } },
                     });
                     const doneMsg = t('table.designRegenerated');
                     if (doneMsg && doneMsg !== 'table.designRegenerated') {

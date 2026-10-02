@@ -34,7 +34,6 @@ import {
   LuUserCog,
   LuChartNoAxesCombined,
   LuBaggageClaim,
-  LuRadar,
   LuArchive,
   LuFolderTree,
   LuTruck,
@@ -195,13 +194,6 @@ const navItems = [
     icon: LuUserRoundPlus,
     superAdminOnly: false,
     permissionKey: 'referrals',
-  },
-  {
-    key: 'refTracker',
-    href: '/ref-tracker',
-    icon: LuRadar,
-    superAdminOnly: true,
-    permissionKey: 'refTracker',
   },
   {
     key: 'appearance',

@@ -933,7 +933,6 @@
       "customers": "العملاء",
       "analytics": "التحليلات",
       "referrals": "الإحالات",
-      "refTracker": "متتبع الإحالة",
       "activityLogs": "سجل النشاطات",
       "orderDesignLogs": "سجل التصاميم",
       "appearance": "المظهر",
@@ -1069,56 +1068,6 @@
       "view": {
         "list": "قائمة",
         "card": "بطاقة"
-      }
-    },
-    "refTracker": {
-      "title": "متتبع الإحالة",
-      "description": "تتبع جلسات التطبيق ومصادر الإحالة والنقرات المهمة التي تقود إلى مسار الدفع.",
-      "refresh": "تحديث",
-      "emptyMessage": "لا توجد بيانات للمتتبع",
-      "filters": {
-        "session": "الجلسة",
-        "user": "معرف المستخدم",
-        "ref": "الإحالة",
-        "ip": "عنوان IP",
-        "product": "المنتج",
-        "clear": "مسح المرشحات"
-      },
-      "app": {
-        "all": "كل التطبيقات",
-        "manasik": "مناسك",
-        "ghadaq": "غدق"
-      },
-      "actions": {
-        "all": "كل الإجراءات",
-        "sessionCreated": "تم إنشاء الجلسة",
-        "navigateProducts": "الانتقال إلى المنتجات",
-        "selectProduct": "اختيار منتج",
-        "payNow": "ادفع الآن",
-        "checkoutChoice": "اختيار الدفع",
-        "proceedToPayment": "الانتقال إلى الدفع"
-      },
-      "choices": {
-        "full": "دفع المبلغ كاملاً",
-        "half": "دفع النصف",
-        "custom": "دفع مبلغ مخصص",
-        "customAmount": "تأكيد المبلغ المخصص",
-        "customQuantityKeep": "الاحتفاظ بالكمية",
-        "customQuantitySetOne": "تعيين الكمية إلى 1",
-        "reservationDetails": "الانتقال إلى تفاصيل الحجز"
-      },
-      "table": {
-        "createdAt": "وقت الإنشاء",
-        "app": "التطبيق",
-        "sessionNumber": "الجلسة",
-        "userId": "معرف المستخدم",
-        "ref": "الإحالة",
-        "ip": "IP",
-        "action": "الإجراء",
-        "path": "المسار",
-        "productName": "المنتج",
-        "buttonLabel": "الزر",
-        "choice": "الخيار"
       }
     },
     "storageManager": {
@@ -1831,7 +1780,6 @@
         "categories": "الفئات",
         "admins": "المشرفين",
         "referrals": "الإحالات",
-        "refTracker": "متتبع الإحالات",
         "activityLogs": "سجل النشاطات",
         "appearance": "المظهر",
         "exchange": "أسعار الصرف",
@@ -1842,6 +1790,16 @@
         "crm": "إدارة العلاقات",
         "orderDesignLogs": "سجل التصاميم",
         "shares": "الأسهم"
+      },
+      "achievementsModal": {
+        "title": "{name} — الإنجازات",
+        "empty": "لا توجد إنجازات بعد",
+        "loadError": "فشل تحميل الإنجازات",
+        "talking": "يتحدث",
+        "paid": "مدفوع",
+        "claimedAt": "تم الاستلام",
+        "paidAt": "دُفع في",
+        "viewAchievements": "عرض الإنجازات"
       },
       "buttons": {
         "cancel": "إلغاء",

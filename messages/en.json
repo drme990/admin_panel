@@ -933,7 +933,6 @@
       "customers": "Customers",
       "analytics": "Analytics",
       "referrals": "Referrals",
-      "refTracker": "Ref Tracker",
       "activityLogs": "Activity Logs",
       "orderDesignLogs": "Design Logs",
       "appearance": "Appearance",
@@ -1069,56 +1068,6 @@
       "view": {
         "list": "List",
         "card": "Card"
-      }
-    },
-    "refTracker": {
-      "title": "Ref Tracker",
-      "description": "Track app sessions, referral sources, and the key clicks that lead into the checkout flow.",
-      "refresh": "Refresh",
-      "emptyMessage": "No tracker events found",
-      "filters": {
-        "session": "Session",
-        "user": "User ID",
-        "ref": "Ref",
-        "ip": "IP Address",
-        "product": "Product",
-        "clear": "Clear filters"
-      },
-      "app": {
-        "all": "All Apps",
-        "manasik": "Manasik",
-        "ghadaq": "Ghadaq"
-      },
-      "actions": {
-        "all": "All Actions",
-        "sessionCreated": "Session Created",
-        "navigateProducts": "Navigate to Products",
-        "selectProduct": "Select Product",
-        "payNow": "Pay Now",
-        "checkoutChoice": "Checkout Choice",
-        "proceedToPayment": "Proceed to Payment"
-      },
-      "choices": {
-        "full": "Pay Full Amount",
-        "half": "Pay Half",
-        "custom": "Pay Custom Amount",
-        "customAmount": "Confirm Custom Amount",
-        "customQuantityKeep": "Keep Quantity",
-        "customQuantitySetOne": "Set Quantity to 1",
-        "reservationDetails": "Proceed to Reservation Details"
-      },
-      "table": {
-        "createdAt": "Created At",
-        "app": "App",
-        "sessionNumber": "Session",
-        "userId": "User ID",
-        "ref": "Ref",
-        "ip": "IP",
-        "action": "Action",
-        "path": "Path",
-        "productName": "Product",
-        "buttonLabel": "Button",
-        "choice": "Choice"
       }
     },
     "storageManager": {
@@ -1831,7 +1780,6 @@
         "categories": "Categories",
         "admins": "Admins",
         "referrals": "Referrals",
-        "refTracker": "Ref Tracker",
         "activityLogs": "Activity Logs",
         "appearance": "Appearance",
         "exchange": "Exchange Rates",
@@ -1842,6 +1790,16 @@
         "crm": "CRM",
         "orderDesignLogs": "Design Logs",
         "shares": "Shares"
+      },
+      "achievementsModal": {
+        "title": "{name} — Achievements",
+        "empty": "No achievements yet",
+        "loadError": "Failed to load achievements",
+        "talking": "Talking",
+        "paid": "Paid",
+        "claimedAt": "Claimed",
+        "paidAt": "Paid at",
+        "viewAchievements": "View achievements"
       },
       "buttons": {
         "cancel": "Cancel",

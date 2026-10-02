@@ -49,6 +49,7 @@ import OrderHistoryModal, {
   type OrderHistoryEntry,
 } from '@/components/order/order-history-modal';
 import EditOrderModal from '@/components/order/edit-order-modal';
+import AdminAchievementsModal from '@/components/admin-achievements-modal';
 import ExecutionTitle from '@/components/order/execution-title';
 import CountrySelector from '@/components/shared/country-selector';
 import ReferralFilter, {
@@ -287,6 +288,10 @@ export default function BookingIntentPage() {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<AdminStats[] | null>(null);
   const [statsLoading, setStatsLoading] = useState(false);
+  const [achievementsAdmin, setAchievementsAdmin] = useState<{
+    _id: string;
+    name: string;
+  } | null>(null);
 
   const [photoPreviewOrder, setPhotoPreviewOrder] = useState<Order | null>(null);
   const [uploadingPhotoOrderId, setUploadingPhotoOrderId] = useState<string | null>(null);
@@ -443,14 +448,27 @@ export default function BookingIntentPage() {
     [statusTab, sourceFilter, categoryFilter, intentionFilter, countryFilter, referralFilter, search, fromDate, toDate, amountSort, page, pageSize, t],
   );
 
+  // One query string shared by the stats fetch and the achievements
+  // modal — both describe the SAME filtered row set the table shows.
+  const statsQuery = useMemo(() => {
+    const params = new URLSearchParams({ status: statusTab });
+    if (sourceFilter !== 'all') params.set('source', sourceFilter);
+    if (categoryFilter !== 'all') params.set('category', categoryFilter);
+    if (intentionFilter !== 'all')
+      params.set('intention', intentionFilter);
+    if (countryFilter) params.set('country', countryFilter);
+    if (referralFilter) params.set('referralId', referralFilter);
+    if (search) params.set('search', search);
+    if (fromDate) params.set('fromDate', fromDate);
+    if (toDate) params.set('toDate', toDate);
+    return params.toString();
+  }, [statusTab, sourceFilter, categoryFilter, intentionFilter, countryFilter, referralFilter, search, fromDate, toDate]);
+
   const fetchStats = useCallback(async () => {
     if (!canSeeStats) return;
     setStatsLoading(true);
     try {
-      const params = new URLSearchParams();
-      if (fromDate) params.set('fromDate', fromDate);
-      if (toDate) params.set('toDate', toDate);
-      const res = await fetch(`/api/booking-intents/stats?${params}`, {
+      const res = await fetch(`/api/booking-intents/stats?${statsQuery}`, {
         cache: 'no-store',
       });
       const json = await res.json();
@@ -460,7 +478,7 @@ export default function BookingIntentPage() {
     } finally {
       setStatsLoading(false);
     }
-  }, [canSeeStats, fromDate, toDate]);
+  }, [canSeeStats, statsQuery]);
 
   useEffect(() => {
     void fetchIntents();
@@ -1795,7 +1813,16 @@ export default function BookingIntentPage() {
                 </thead>
                 <tbody className="divide-y divide-stroke">
                   {stats.map((row) => (
-                    <tr key={row.adminId}>
+                    <tr
+                      key={row.adminId}
+                      onClick={() =>
+                        setAchievementsAdmin({
+                          _id: row.adminId,
+                          name: row.name || row.email,
+                        })
+                      }
+                      className="cursor-pointer hover:bg-muted/50 transition-colors"
+                    >
                       <td className="px-3 py-2 text-sm font-medium text-foreground">
                         {row.name || row.email}
                       </td>
@@ -1817,6 +1844,14 @@ export default function BookingIntentPage() {
           )}
         </div>
       )}
+
+      {/* Per-admin achievements — click a stats row to open */}
+      <AdminAchievementsModal
+        isOpen={achievementsAdmin !== null}
+        onClose={() => setAchievementsAdmin(null)}
+        admin={achievementsAdmin}
+        query={statsQuery}
+      />
 
       {/* Photo gallery lightbox — same as the execution page */}
       <OrderGalleryModal

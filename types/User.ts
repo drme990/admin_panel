@@ -11,7 +11,6 @@ export type AdminPage =
   | 'categories'
   | 'admins'
   | 'referrals'
-  | 'refTracker'
   | 'activityLogs'
   | 'appearance'
   | 'storage-manager'

@@ -49,7 +49,12 @@ import OrderHistoryModal, {
   type OrderHistoryEntry,
 } from '@/components/order/order-history-modal';
 import EditOrderModal from '@/components/order/edit-order-modal';
-import AdminAchievementsModal from '@/components/admin-achievements-modal';
+import AdminAchievementsModal from '@/components/booking-intent/admin-achievements-modal';
+import AdminAchievementCards, {
+  type AdminStatsCategory,
+  type AdminStatsRow,
+} from '@/components/booking-intent/admin-achievement-cards';
+import AdminCategoryOrdersModal from '@/components/booking-intent/admin-category-orders-modal';
 import ExecutionTitle from '@/components/order/execution-title';
 import CountrySelector from '@/components/shared/country-selector';
 import ReferralFilter, {
@@ -123,15 +128,7 @@ interface IntentListResponse {
   displayDelayMinutes: number;
 }
 
-interface AdminStats {
-  adminId: string;
-  name: string;
-  email: string;
-  claimed: number;
-  contacted: number;
-  converted: number;
-  conversionRate: number;
-}
+type AdminStats = AdminStatsRow;
 
 // The page tracks 3 visual states only:
 //   notConnected (gray)   — nobody talked to this customer yet
@@ -291,6 +288,10 @@ export default function BookingIntentPage() {
   const [achievementsAdmin, setAchievementsAdmin] = useState<{
     _id: string;
     name: string;
+  } | null>(null);
+  const [categoryOrders, setCategoryOrders] = useState<{
+    admin: { _id: string; name: string };
+    category: AdminStatsCategory;
   } | null>(null);
 
   const [photoPreviewOrder, setPhotoPreviewOrder] = useState<Order | null>(null);
@@ -1844,6 +1845,28 @@ export default function BookingIntentPage() {
           )}
         </div>
       )}
+
+      {/* Per-admin achievement cards — separate component under the
+          stats table, gated by the same `achievements` permission. */}
+      {canSeeStats && (
+        <AdminAchievementCards
+          stats={stats}
+          onOpenAdmin={(admin) => setAchievementsAdmin(admin)}
+          onCategoryClick={(admin, category) =>
+            setCategoryOrders({ admin, category })
+          }
+        />
+      )}
+
+      {/* Category orders modal — orders this admin owns in the clicked
+          category, under the same filters */}
+      <AdminCategoryOrdersModal
+        isOpen={categoryOrders !== null}
+        onClose={() => setCategoryOrders(null)}
+        admin={categoryOrders?.admin ?? null}
+        category={categoryOrders?.category ?? null}
+        query={statsQuery}
+      />
 
       {/* Per-admin achievements — click a stats row to open */}
       <AdminAchievementsModal

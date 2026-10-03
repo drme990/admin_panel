@@ -2308,7 +2308,13 @@
         "claimed": "المستلمة",
         "contacted": "قيد التواصل",
         "converted": "المحوَّلة",
-        "rate": "نسبة التحويل"
+        "rate": "نسبة التحويل",
+        "showDetails": "عرض التفاصيل",
+        "hideDetails": "إخفاء التفاصيل",
+        "uncategorized": "غير مصنف",
+        "noItems": "لا توجد منتجات في هذه الطلبات",
+        "totalOrders": "إجمالي الطلبات",
+        "totalProducts": "المنتجات"
       }
     },
     "exchange": {

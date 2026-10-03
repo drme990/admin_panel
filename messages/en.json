@@ -2308,7 +2308,13 @@
         "claimed": "Claimed",
         "contacted": "Talking",
         "converted": "Converted",
-        "rate": "Conv. rate"
+        "rate": "Conv. rate",
+        "showDetails": "Show details",
+        "hideDetails": "Hide details",
+        "uncategorized": "Uncategorized",
+        "noItems": "No items on these orders",
+        "totalOrders": "Total orders",
+        "totalProducts": "Products"
       }
     },
     "exchange": {
